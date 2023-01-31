@@ -75,6 +75,7 @@ typedef struct RcModelV2SmtCtx_t {
 	RK_U32          drop_cnt;
 	RK_S32          on_drop;
 	RK_S32          on_pskip;
+	RK_S32          ptz_keep_cnt;
 } RcModelV2SmtCtx;
 
 MPP_RET bits_model_smt_deinit(RcModelV2SmtCtx * ctx)
@@ -480,7 +481,7 @@ static MPP_RET calc_smt_debreath_qp(RcModelV2SmtCtx * ctx)
 }
 
 static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
-				 RK_S32 *fm_min_pqp, RK_S32 *fm_max_pqp)
+				 RK_S32 *fm_min_pqp, RK_S32 *fm_max_iqp, RK_S32 *fm_max_pqp)
 {
 	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
 	EncFrmStatus *frm = &task->frm;
@@ -519,6 +520,20 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 		*fm_min_pqp = p->usr_cfg.mt_st_swth_frm_qp;
 	}
 
+	if (MPP_ENC_SCENE_MODE_IPC_PTZ == info->scene_mode) {
+		if (mpp_data_sum_v2(p->complex_level) <= 15) {
+			if (*fm_max_iqp > 34)
+				*fm_max_iqp = 34;
+			if (*fm_max_pqp > 37)
+				*fm_max_pqp = 37;
+		} else {
+			if (*fm_max_iqp > 35)
+				*fm_max_iqp = 35;
+			if (*fm_max_pqp > 38)
+				*fm_max_pqp = 38;
+		}
+	}
+
 	if (frm->is_intra)
 		p->frame_type = INTRA_FRAME;
 
@@ -527,6 +542,18 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 
 	if (frm->ref_mode == REF_TO_PREV_INTRA)
 		p->frame_type = INTER_VI_FRAME;
+
+
+	if (p->ptz_keep_cnt || (MPP_ENC_SCENE_MODE_IPC == info->scene_mode &&
+				MPP_ENC_SCENE_MODE_IPC_PTZ == info->last_scene_mode)) {
+		if (p->frame_type != INTRA_FRAME) {
+			RK_S32 fqp = 28;
+			*fm_max_iqp = *fm_max_pqp = fqp;
+			*fm_min_iqp = *fm_min_pqp = fqp;
+			p->ptz_keep_cnt++;
+		} else
+			p->ptz_keep_cnt = 0;
+	}
 
 	switch (p->gop_mode) {
 	case MPP_GOP_ALL_INTER: {
@@ -709,7 +736,7 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 	if (frm->reencode)
 		return MPP_OK;
 
-	smt_start_prepare(ctx, task, &fm_min_iqp, &fm_min_pqp, &fm_max_pqp);
+	smt_start_prepare(ctx, task, &fm_min_iqp, &fm_min_pqp, &fm_max_iqp, &fm_max_pqp);
 	bit_target_use = info->bit_max;
 	avg_pqp = mpp_data_avg(p->qp_p, -1, 1, 1);
 	if (p->frm_num == 0) {
@@ -867,6 +894,9 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 		qp_add_p++;
 	}
 
+	if (p->ptz_keep_cnt)
+		qp_add = 0;
+
 	if (p->frame_type == INTRA_FRAME) {
 		p->qp_out = mpp_clip(p->qp_out, fm_min_iqp + qp_add, fm_max_iqp);
 		p->qp_out = (fm_max_iqp == fm_min_iqp) ? fm_max_iqp : p->qp_out;
@@ -874,12 +904,14 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 		p->qp_out = mpp_clip(p->qp_out, fm_min_pqp + qp_add_p, fm_max_pqp);
 		p->qp_out = (fm_max_pqp == fm_min_pqp) ? fm_max_pqp : p->qp_out;
 	}
+
 	if (p->frame_type == INTER_VI_FRAME) {
 		p->qp_out -= 1;
 		p->qp_out = mpp_clip(p->qp_out, fm_min_pqp + qp_add - 1, fm_max_pqp);
 		p->qp_out = (fm_max_pqp == fm_min_pqp) ? fm_max_pqp : p->qp_out;
 	}
 	p->qp_out = mpp_clip(p->qp_out, p->qp_min, p->qp_max);
+
 	info->quality_target = p->qp_out;
 	info->complex_scene = 0;
 	if (p->frame_type == INTER_P_FRAME && avg_pqp >= fm_max_pqp - 1 &&
@@ -1056,6 +1088,12 @@ MPP_RET rc_model_v2_smt_end(void *ctx, EncRcTask * task)
 	RcModelV2SmtCtx *p = (RcModelV2SmtCtx *) ctx;
 	EncRcTaskInfo *cfg = (EncRcTaskInfo *) & task->info;
 	RK_S32 bit_real = cfg->bit_real;
+
+	if (p->ptz_keep_cnt) {
+		bit_real /= 3;
+		if (p->ptz_keep_cnt > 0)
+			p->ptz_keep_cnt = 0;
+	}
 
 	rc_dbg_func("enter ctx %p cfg %p\n", ctx, cfg);
 	rc_dbg_rc("motion_level %u, complex_level %u\n", cfg->motion_level, cfg->complex_level);

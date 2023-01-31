@@ -1211,27 +1211,26 @@ static void setup_vepu540c_rdo_pred(HalH264eVepu540cCtx *ctx, H264eSps *sps,
 				    H264ePps *pps, H264eSlice *slice)
 {
 	HalVepu540cRegSet *regs = ctx->regs_set;
+	MppEncSceneMode sm = ctx->cfg->tune.scene_mode;
+	Vepu540cBaseCfg *base = &regs->reg_base;
+	Vepu540cRcRoiCfg *roi = &regs->reg_rc_roi;
 	hal_h264e_dbg_func("enter\n");
 
 	if (slice->slice_type == H264_I_SLICE)
-		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 6;
-
+		roi->klut_ofst.chrm_klut_ofst = 6;
 	else
-		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC ?
-							    9 : 6;
+		roi->klut_ofst.chrm_klut_ofst = (sm == MPP_ENC_SCENE_MODE_IPC) ? 9 : 6;
 
-	regs->reg_base.rdo_cfg.rect_size =
-		(sps->profile_idc == H264_PROFILE_BASELINE
-		 && sps->level_idc <= H264_LEVEL_3_0) ? 1 : 0;
-	regs->reg_base.rdo_cfg.vlc_lmt = (sps->profile_idc < H264_PROFILE_MAIN)
-					 && !pps->entropy_coding_mode;
-	regs->reg_base.rdo_cfg.chrm_spcl = 1;
-	regs->reg_base.rdo_cfg.ccwa_e = 1;
-	regs->reg_base.rdo_cfg.scl_lst_sel = pps->scaling_list_mode;
-	regs->reg_base.rdo_cfg.atf_e = ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC ? 1 : 0;
-	regs->reg_base.rdo_cfg.atr_e = ctx->cfg->tune.atr_str > 0;
-	regs->reg_base.rdo_cfg.intra_mode_cost_e = 1;
-	regs->reg_base.iprd_csts.rdo_mark_mode = 0;
+	base->rdo_cfg.rect_size = (sps->profile_idc == H264_PROFILE_BASELINE
+				   && sps->level_idc <= H264_LEVEL_3_0) ? 1 : 0;
+	base->rdo_cfg.vlc_lmt = (sps->profile_idc < H264_PROFILE_MAIN) && !pps->entropy_coding_mode;
+	base->rdo_cfg.chrm_spcl = 1;
+	base->rdo_cfg.ccwa_e = 1;
+	base->rdo_cfg.scl_lst_sel = pps->scaling_list_mode;
+	base->rdo_cfg.atf_e = sm == MPP_ENC_SCENE_MODE_IPC || sm == MPP_ENC_SCENE_MODE_IPC_PTZ;
+	base->rdo_cfg.atr_e = ctx->cfg->tune.atr_str > 0;
+	base->rdo_cfg.intra_mode_cost_e = 1;
+	base->iprd_csts.rdo_mark_mode = 0;
 
 	hal_h264e_dbg_func("leave\n");
 }
@@ -1459,6 +1458,22 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 		p_rdo_noskip->atf_wgt.wgt0 = 16;
 		p_rdo_noskip->atf_wgt.wgt1 = 16;
 		p_rdo_noskip->atf_wgt.wgt2 = 16;
+		p_rdo_noskip->atf_wgt.wgt3 = 16;
+	} else if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC_PTZ) {
+		p_rdo_skip = &reg->rdo_b16_skip;
+		p_rdo_skip->atf_wgt0.wgt0 = 16;
+		p_rdo_noskip->atf_wgt.wgt0 = 16;
+		p_rdo_noskip->atf_wgt.wgt1 = 16;
+		p_rdo_noskip->atf_wgt.wgt2 = 16;
+		p_rdo_noskip->atf_wgt.wgt3 = 16;
+
+		p_rdo_noskip = &reg->rdo_b16_intra;
+		p_rdo_noskip->ratf_thd0.madp_thd0 = 20;
+		p_rdo_noskip->ratf_thd0.madp_thd1 = 40;
+		p_rdo_noskip->ratf_thd1.madp_thd2 = 72;
+		p_rdo_noskip->atf_wgt.wgt0 = 28;
+		p_rdo_noskip->atf_wgt.wgt1 = 27;
+		p_rdo_noskip->atf_wgt.wgt2 = 25;
 		p_rdo_noskip->atf_wgt.wgt3 = 16;
 	}
 	hal_h264e_dbg_func("leave\n");

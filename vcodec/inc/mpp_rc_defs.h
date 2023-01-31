@@ -175,7 +175,9 @@ typedef struct EncRcCommonInfo_t {
 	RK_U32          motion_level;
 	RK_U32          complex_level;
 	RK_S32          complex_scene;
-	RK_S32          reserve[12];
+	RK_S32          scene_mode;
+	RK_S32          last_scene_mode;
+	RK_S32          reserve[10];
 } EncRcTaskInfo;
 
 typedef struct EncRcTask_s {

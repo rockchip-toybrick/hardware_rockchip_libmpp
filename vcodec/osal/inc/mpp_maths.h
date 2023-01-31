@@ -208,12 +208,15 @@ static __inline RK_S32 mpp_ceil_log2(RK_S32 x)
 	return mpp_log2((x - 1) << 1);
 } static __inline RK_S32 mpp_clip(RK_S32 a, RK_S32 amin, RK_S32 amax)
 {
-	if (a < amin)
-		return amin;
-	else if (a > amax)
+	if (amin <= amax) {
+		if (a < amin)
+			return amin;
+		else if (a > amax)
+			return amax;
+		else
+			return a;
+	} else
 		return amax;
-	else
-		return a;
 }
 
 RK_S32 axb_div_c(RK_S32 a, RK_S32 b, RK_S32 c);

@@ -1464,7 +1464,9 @@ static MPP_RET mpp_enc_normal_cfg(MppEncImpl *enc, EncTask *task)
 	MppPacket packet = hal_task->packet;
 	MppEncRefFrmUsrCfg *frm_cfg = &enc->frm_cfg;
 	MPP_RET ret = MPP_OK;
-
+	rc_task->info.scene_mode = (RK_S32)enc->cfg.tune.scene_mode;
+	rc_task->info.last_scene_mode = enc->last_scene_mode;
+	enc->last_scene_mode = rc_task->info.scene_mode;
 	if (enc->qpmap_en) {
 		hal_task->mv_info = enc->mv_info;
 		hal_task->qpmap = enc->qpmap;

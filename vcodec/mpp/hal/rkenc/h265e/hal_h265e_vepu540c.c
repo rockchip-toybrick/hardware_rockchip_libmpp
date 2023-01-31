@@ -1042,7 +1042,8 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 			step[i] = hw->aq_step_p[i] & 0x3f;
 		}
 		reg_wgt->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
-		if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC)
+		if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC ||
+		    ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC_PTZ)
 			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0],
 			       &lamd_modb_qp[lambda_idx], H265E_LAMBDA_TAB_SIZE);
 		else

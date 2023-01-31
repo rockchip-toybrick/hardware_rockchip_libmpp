@@ -1314,6 +1314,7 @@ typedef struct VepuPpInfo_t {
 typedef enum MppEncSceneMode_e {
 	MPP_ENC_SCENE_MODE_DEFAULT,
 	MPP_ENC_SCENE_MODE_IPC,
+	MPP_ENC_SCENE_MODE_IPC_PTZ,
 	MPP_ENC_SCENE_MODE_BUTT,
 } MppEncSceneMode;
 
