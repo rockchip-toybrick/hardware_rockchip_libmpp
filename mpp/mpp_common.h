@@ -648,6 +648,14 @@ int mpp_task_dump_reg(struct mpp_dev *mpp,
 int mpp_task_dump_hw_reg(struct mpp_dev *mpp);
 void mpp_free_task(struct kref *ref);
 
+void mpp_taskqueue_trigger_work(struct mpp_dev *mpp);
+struct mpp_task *mpp_taskqueue_get_pending_task(struct mpp_taskqueue *queue);
+struct mpp_task *mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue);
+int mpp_taskqueue_pop_running(struct mpp_taskqueue *queue, struct mpp_task *task);
+struct mpp_task *mpp_session_get_pending_task(struct mpp_session *session);
+int mpp_session_pop_pending(struct mpp_session *session, struct mpp_task *task);
+
+void mpp_session_clean_detach(struct mpp_taskqueue *queue);
 int mpp_session_deinit(struct mpp_session *session);
 
 int mpp_dev_probe(struct mpp_dev *mpp,

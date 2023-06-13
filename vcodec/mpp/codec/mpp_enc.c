@@ -138,6 +138,7 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 
 	sema_init(&p->enc_sem, 1);
 	p->stop_flag = 1;
+	atomic_set(&p->hw_run, 0);
 	p->rb_userdata.free_cnt = MAX_USRDATA_CNT;
 
 	if (!get_vsm_ops())
@@ -162,7 +163,7 @@ void mpp_enc_deinit_frame(MppEnc ctx)
 	if (!enc || !enc->frame || !enc->packet)
 		return;
 
-	enc->hw_run = 0;
+	atomic_set(&enc->hw_run, 0);
 	mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
 	mpp_packet_deinit(&enc->packet);
 	mpp_frame_deinit(&enc->frame);
@@ -274,7 +275,7 @@ MPP_RET mpp_enc_stop(MppEnc ctx)
 	down(&enc->enc_sem);
 	enc_dbg_func("%p in\n", enc);
 	enc->stop_flag = 1;
-	ret = enc->hw_run;
+	ret = atomic_read(&enc->hw_run);
 	enc_dbg_func("%p out\n", enc);
 	up(&enc->enc_sem);
 
@@ -392,7 +393,7 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 	enc->enc_status = ENC_STATUS_START_DONE;
 
 	if (MPP_OK == ret)
-		enc->hw_run = 1;
+		atomic_set(&enc->hw_run, 1);
 	up(&enc->enc_sem);
 	enc_dbg_func("%p out\n", enc);
 
@@ -475,9 +476,7 @@ MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
 	enc->enc_status = ENC_STATUS_INT_IN;
 	ret = mpp_enc_impl_int(ctx, jpeg_ctx, packet, jpeg_packet);
 	enc->enc_status = ENC_STATUS_INT_DONE;
-	down(&enc->enc_sem);
-	enc->hw_run = 0;
-	up(&enc->enc_sem);
+	atomic_set(&enc->hw_run, 0);
 	enc_dbg_func("%p out\n", enc);
 
 	return ret;

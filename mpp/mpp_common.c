@@ -103,9 +103,6 @@ const char *enc_info_item_name[ENC_INFO_BUTT] = {
 
 static void mpp_attach_workqueue(struct mpp_dev *mpp,
 				 struct mpp_taskqueue *queue);
-static int
-mpp_session_pop_pending(struct mpp_session *session,
-			struct mpp_task *task);
 
 static int
 mpp_taskqueue_pop_pending(struct mpp_taskqueue *queue,
@@ -124,8 +121,7 @@ mpp_taskqueue_pop_pending(struct mpp_taskqueue *queue,
 	return 0;
 }
 
-static struct mpp_task *
-mpp_taskqueue_get_pending_task(struct mpp_taskqueue *queue)
+struct mpp_task *mpp_taskqueue_get_pending_task(struct mpp_taskqueue *queue)
 {
 	struct mpp_task *task = NULL;
 	unsigned long flags;
@@ -192,8 +188,7 @@ mpp_taskqueue_pending_to_run(struct mpp_taskqueue *queue,
 	return 0;
 }
 
-static struct mpp_task *
-mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue)
+struct mpp_task *mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue)
 {
 	unsigned long flags;
 	struct mpp_task *task = NULL;
@@ -207,9 +202,7 @@ mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue)
 	return task;
 }
 
-static int
-mpp_taskqueue_pop_running(struct mpp_taskqueue *queue,
-			  struct mpp_task *task)
+int mpp_taskqueue_pop_running(struct mpp_taskqueue *queue, struct mpp_task *task)
 {
 	unsigned long flags;
 
@@ -224,8 +217,7 @@ mpp_taskqueue_pop_running(struct mpp_taskqueue *queue,
 	return 0;
 }
 
-static void
-mpp_taskqueue_trigger_work(struct mpp_dev *mpp)
+void mpp_taskqueue_trigger_work(struct mpp_dev *mpp)
 {
 	kthread_queue_work(&mpp->queue->worker, &mpp->work);
 }
@@ -560,9 +552,7 @@ mpp_session_push_pending(struct mpp_session *session,
 	return 0;
 }
 
-static int
-mpp_session_pop_pending(struct mpp_session *session,
-			struct mpp_task *task)
+int mpp_session_pop_pending(struct mpp_session *session, struct mpp_task *task)
 {
 	unsigned long flags;
 
@@ -574,8 +564,7 @@ mpp_session_pop_pending(struct mpp_session *session,
 	return 0;
 }
 
-static struct mpp_task *
-mpp_session_get_pending_task(struct mpp_session *session)
+struct mpp_task *mpp_session_get_pending_task(struct mpp_session *session)
 {
 	struct mpp_task *task = NULL;
 	unsigned long flags;
@@ -985,11 +974,8 @@ again:
 	/* run task */
 	mpp = mpp_get_task_used_device(task, task->session);
 	mpp_taskqueue_pending_to_run(queue, task);
-	set_bit(TASK_STATE_RUNNING, &task->state);
 	mpp_reset_down_read(mpp->reset_group);
 	mpp_time_record(task);
-	schedule_delayed_work(&task->timeout_work,
-			      msecs_to_jiffies(MPP_WORK_TIMEOUT_DELAY));
 	if (mpp->dev_ops->run)
 		mpp->dev_ops->run(mpp, task);
 	set_bit(TASK_STATE_START, &task->state);
@@ -2216,11 +2202,12 @@ int mpp_time_record(struct mpp_task *task)
 int mpp_time_diff(struct mpp_task *task)
 {
 	struct timespec64 end;
-	struct mpp_dev *mpp = mpp_get_task_used_device(task, task->session);
+	struct mpp_session *session = task->session;
+	struct mpp_dev *mpp = mpp_get_task_used_device(task, session);
 
 	ktime_get_real_ts64(&end);
-	mpp_debug(DEBUG_TIMING, "%s: pid: %d, session: %p, time: %lld us\n",
-		  dev_name(mpp->dev), task->session->pid, task->session,
+	mpp_debug(DEBUG_TIMING, "%s: session %d:%d task %d time: %lld us\n",
+		  dev_name(mpp->dev), session->device_type, session->index, task->task_index,
 		  (end.tv_sec  - task->start.tv_sec)  * 1000000 +
 		  (end.tv_nsec - task->start.tv_nsec) / 1000);
 

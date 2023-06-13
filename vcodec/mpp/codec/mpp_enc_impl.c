@@ -2110,7 +2110,7 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 		   "hw_run", "enc_status", "pkt_fail_cnt",
 		   "ring_fail_cnt", "cfg_fail_cnt", "start_fail_cnt", "pkt_full_cnt");
 	seq_printf(seq, "%8d|%8d|%12d|%14u|%14u|%14u|%16u|%14u\n", chl_id,
-		   enc->hw_run, enc->enc_status, enc->pkt_fail_cnt,
+		   atomic_read(&enc->hw_run), enc->enc_status, enc->pkt_fail_cnt,
 		   enc->ringbuf_fail_cnt, enc->cfg_fail_cnt, enc->start_fail_cnt, enc->pkt_full_cnt);
 
 	if (cfg->roi.number > 0) {

@@ -110,7 +110,7 @@ typedef struct MppEncImpl_t {
 	GopMode  gop_mode;
 	RK_U32   real_fps;
 	RK_U32   stop_flag;
-	RK_U32   hw_run;
+	atomic_t   hw_run;
 	RK_U32   enc_status;
 	RK_U32   online;
 	RK_U32   ref_buf_shared;

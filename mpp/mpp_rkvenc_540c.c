@@ -441,6 +441,7 @@ static struct mpp_trans_info trans_rkvenc_rv1106[] = {
 };
 
 static int rkvenc_reset(struct mpp_dev *mpp);
+static void rkvenc_task_timeout(struct work_struct *work_s);
 static bool req_over_class(struct mpp_request *req,
 			   struct rkvenc_task *task, int class)
 {
@@ -1178,22 +1179,27 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 		if (st_ppl & BIT(10))
 			mpp_err("enc started status %08x\n", st_ppl);
 
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-		if (dvbm_en) {
-			enc->dvbm_overflow = 0;
-			rk_dvbm_link(enc->port);
-			update_online_info(mpp);
-			priv->dvbm_link = 1;
-			mpp_write_relaxed(mpp, hw->dvbm_cfg, dvbm_en);
-			mpp->always_on = 1;
+		if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
+			if (dvbm_en) {
+				enc->dvbm_overflow = 0;
+				rk_dvbm_link(enc->port);
+				update_online_info(mpp);
+				priv->dvbm_link = 1;
+				mpp_write_relaxed(mpp, hw->dvbm_cfg, dvbm_en);
+				mpp->always_on = 1;
+			}
 		}
-#endif
 		priv->dvbm_en = dvbm_en;
 		/* Flush the register before the start the device */
 		wmb();
+		preempt_disable();
+		INIT_DELAYED_WORK(&mpp_task->timeout_work, rkvenc_task_timeout);
+		schedule_delayed_work(&mpp_task->timeout_work, msecs_to_jiffies(200));
+		set_bit(TASK_STATE_RUNNING, &mpp_task->state);
 		if (!dvbm_en)
 			mpp_write(mpp, hw->enc_start_base, enc_start_val);
 		atomic_set(&enc->on_work, 1);
+		preempt_enable();
 	} break;
 	case RKVENC_MODE_LINK_ONEFRAME: {
 		atomic_set(&enc->link_task_cnt, 0);
@@ -1303,7 +1309,6 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 	mpp_debug_enter();
 
 	mpp->irq_status = mpp_read(mpp, hw->int_sta_base);
-	//pr_info("irq_status: %s %08x\n", __func__, (u32)mpp->irq_status);
 	if (!mpp->irq_status)
 		return IRQ_NONE;
 	mpp_write(mpp, hw->int_mask_base, 0x100);
@@ -1313,11 +1318,104 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 		return IRQ_HANDLED;
 	if (rkvenc_check_bs_overflow(mpp))
 		return IRQ_HANDLED;
+
 	enc->line_cnt = mpp_read(mpp, 0x18) & 0x3fff;
 	rkvenc_clear_dvbm_info(mpp);
+
 	mpp_debug_leave();
 
 	return IRQ_WAKE_THREAD;
+}
+
+irqreturn_t mpp_rkvenc_irq(int irq, void *param)
+{
+	struct mpp_dev *mpp = param;
+	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
+	struct rkvenc_hw_info *hw = enc->hw_info;
+	struct mpp_task *mpp_task = mpp_taskqueue_get_running_task(mpp->queue);
+	struct rkvenc_task *task;
+	struct mpp_session *session;
+	struct rkvenc2_session_priv *priv;
+
+	mpp_debug_enter();
+
+	/* get irq status */
+	mpp->irq_status = mpp_read(mpp, hw->int_sta_base);
+	if (!mpp->irq_status)
+		return IRQ_NONE;
+	/* clear irq regs */
+	mpp_write(mpp, hw->int_mask_base, 0x100);
+	mpp_write(mpp, hw->int_clr_base, mpp->irq_status);
+	mpp_write(mpp, hw->int_sta_base, 0);
+
+	/* check irq status */
+	if (mpp->irq_status == RKVENC_DVBM_DISCONNECT)
+		return IRQ_HANDLED;
+	if (rkvenc_check_bs_overflow(mpp))
+		return IRQ_HANDLED;
+
+	if (!mpp_task) {
+		dev_err(mpp->dev, "found null task in irq\n");
+		return IRQ_HANDLED;
+	}
+
+	task = to_rkvenc_task(mpp_task);
+	session = mpp_task->session;
+	priv = mpp_task->session->priv;
+
+	if (test_and_set_bit(TASK_STATE_HANDLE, &mpp_task->state)) {
+		mpp_err("task %d has been handled state %#lx\n",
+			mpp_task->task_index, mpp_task->state);
+		return IRQ_HANDLED;
+	}
+	cancel_delayed_work(&mpp_task->timeout_work);
+	set_bit(TASK_STATE_IRQ, &mpp_task->state);
+	/* get wrap info */
+	enc->line_cnt = mpp_read(mpp, 0x18) & 0x3fff;
+	rkvenc_clear_dvbm_info(mpp);
+	/* check irq status again */
+	if (priv->dvbm_en) {
+		/*
+		* Workaround:
+		* The line cnt is updated in the mcu.
+		* When line cnt is set to max value 0x3fff,
+		* the cur frame has overflow.
+		*/
+		if (enc->line_cnt == 0x3fff) {
+			enc->dvbm_overflow = 1;
+			dev_err(mpp->dev, "current frame has overflow\n");
+		}
+		if (enc->dvbm_overflow) {
+			mpp->irq_status |= BIT(6);
+			enc->dvbm_overflow = 0;
+		}
+	}
+	task->irq_status = (mpp->irq_status | mpp->overflow_status);
+	mpp_debug(DEBUG_IRQ_STATUS, "task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
+		  mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
+
+
+	mpp_time_diff(mpp_task);
+	set_bit(TASK_STATE_DONE, &mpp_task->state);
+	mpp_taskqueue_pop_running(mpp->queue, mpp_task);
+	/* get enc task info */
+	if (mpp->dev_ops->finish)
+		mpp->dev_ops->finish(mpp, mpp_task);
+	if (session->callback && mpp_task->clbk_en)
+		session->callback(session->chn_id);
+
+	if (mpp->irq_status & enc->hw_info->err_mask) {
+		dev_err(mpp->dev, "task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
+			mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
+		if (mpp->hw_ops->reset)
+			mpp->hw_ops->reset(mpp);
+	}
+
+	mpp_taskqueue_trigger_work(mpp);
+
+	mpp_debug_leave();
+
+	return IRQ_HANDLED;
 }
 
 static int rkvenc_link_set_int_sta(struct rkvenc_link_dev *link,
@@ -1458,7 +1556,6 @@ static int rkvenc_isr(struct mpp_dev *mpp)
 		mpp_time_diff(mpp_task);
 		mpp->cur_task = NULL;
 		task = to_rkvenc_task(mpp_task);
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
 		if (priv->dvbm_en) {
 			/*
 			* Workaround:
@@ -1475,7 +1572,6 @@ static int rkvenc_isr(struct mpp_dev *mpp)
 				enc->dvbm_overflow = 0;
 			}
 		}
-#endif
 		task->irq_status = (mpp->irq_status | mpp->overflow_status);
 		mpp->overflow_status = 0;
 		mpp_debug(DEBUG_IRQ_STATUS, "task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
@@ -1543,9 +1639,6 @@ static int rkvenc_finish(struct mpp_dev *mpp,
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	struct rkvenc_task *task = to_rkvenc_task(mpp_task);
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-	struct rkvenc2_session_priv *priv = mpp_task->session->priv;
-#endif
 
 	mpp_debug_enter();
 
@@ -1555,6 +1648,7 @@ static int rkvenc_finish(struct mpp_dev *mpp,
 		u32 i, j;
 		u32 *reg;
 		struct mpp_request *req;
+		struct mpp_session *session = mpp_task->session;
 
 		if (mpp->irq_status & 0x100 || mpp->dump_regs)
 			rkvenc_dump_dbg(mpp);
@@ -1575,10 +1669,13 @@ static int rkvenc_finish(struct mpp_dev *mpp,
 		reg = rkvenc_get_class_reg(task, task->hw_info->int_sta_base);
 		if (reg)
 			*reg = task->irq_status;
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-		if (priv->dvbm_en)
-			rk_dvbm_unlink(enc->port);
-#endif
+
+		if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
+			struct rkvenc2_session_priv *priv = session->priv;
+
+			if (priv->dvbm_en)
+				rk_dvbm_unlink(enc->port);
+		}
 	} break;
 	default:
 		break;
@@ -1623,6 +1720,8 @@ static int rkvenc_result(struct mpp_dev *mpp,
 	switch (enc->link_mode) {
 	case RKVENC_MODE_ONEFRAME:
 	case RKVENC_MODE_LINK_ONEFRAME: {
+		if (test_bit(TASK_STATE_TIMEOUT, &mpp_task->state))
+			return -1;
 	} break;
 	case RKVENC_MODE_LINK_ADD: {
 		u32 i;
@@ -1741,19 +1840,19 @@ static int rkvenc_free_session(struct mpp_session *session)
 				kfree(task);
 			}
 		}
-	}
-	if (session) {
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-		struct rkvenc2_session_priv *priv = (struct rkvenc2_session_priv *)session->priv;
-		struct rkvenc_dev *enc = to_rkvenc_dev(session->mpp);
 
-		if (priv->dvbm_link) {
-			rk_dvbm_unlink(enc->port);
-			priv->dvbm_link = 0;
+		if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
+			struct rkvenc2_session_priv *priv =
+				(struct rkvenc2_session_priv *)session->priv;
+			struct rkvenc_dev *enc = to_rkvenc_dev(session->mpp);
+
+			if (priv->dvbm_link) {
+				rk_dvbm_unlink(enc->port);
+				priv->dvbm_link = 0;
+			}
+			if (priv->dvbm_en)
+				session->mpp->always_on = 0;
 		}
-		if (priv->dvbm_en)
-			session->mpp->always_on = 0;
-#endif
 	}
 	if (session && session->priv) {
 		kfree(session->priv);
@@ -1818,6 +1917,130 @@ fail:
 		}
 	}
 	return -ENOMEM;
+}
+
+static void rkvenc_task_timeout(struct work_struct *work_s)
+{
+	struct mpp_dev *mpp;
+	struct mpp_session *session;
+	struct mpp_task *task = container_of(to_delayed_work(work_s),
+					     struct mpp_task,
+					     timeout_work);
+	u32 clbk_en = task->clbk_en;
+
+	if (test_and_set_bit(TASK_STATE_HANDLE, &task->state)) {
+		mpp_err("task has been handled\n");
+		return;
+	}
+
+	mpp_err("task %d state %#lx processing time out!\n",
+		task->task_index, task->state);
+
+	if (!task->session) {
+		mpp_err("task %p, task->session is null.\n", task);
+		return;
+	}
+	session = task->session;
+
+	if (!session->mpp) {
+		mpp_err("session %p, session->mpp is null.\n", session);
+		return;
+	}
+
+	mpp = session->mpp;
+
+	disable_irq(mpp->irq);
+	rkvenc_dump_dbg(mpp);
+
+	set_bit(TASK_STATE_TIMEOUT, &task->state);
+
+	mpp_time_diff(task);
+	set_bit(TASK_STATE_DONE, &task->state);
+	mpp_taskqueue_pop_running(mpp->queue, task);
+
+	if (session->callback && clbk_en)
+		session->callback(session->chn_id);
+	if (mpp->hw_ops->reset)
+		mpp->hw_ops->reset(mpp);
+	mpp_taskqueue_trigger_work(mpp);
+	enable_irq(mpp->irq);
+}
+
+static void mpp_rkvenc_worker(struct kthread_work *work_s)
+{
+	struct mpp_task *mpp_task;
+	struct mpp_dev *mpp = container_of(work_s, struct mpp_dev, work);
+	struct mpp_taskqueue *queue = mpp->queue;
+	unsigned long flags;
+
+	mpp_debug_enter();
+	spin_lock_irqsave(&queue->dev_lock, flags);
+
+	/* 1. check reset process */
+	if (atomic_read(&mpp->reset_request) && !list_empty(&queue->running_list)) {
+		disable_irq(mpp->irq);
+		mpp_dev_reset(mpp);
+		enable_irq(mpp->irq);
+	}
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
+
+	mpp_power_on(mpp);
+
+	spin_lock_irqsave(&queue->dev_lock, flags);
+	if (!list_empty(&queue->running_list))
+		goto done;
+	/* 2. check and process pending mpp_task */
+	mpp_task = mpp_taskqueue_get_pending_task(queue);
+	if (!mpp_task)
+		goto done;
+
+	spin_lock(&queue->pending_lock);
+	list_move_tail(&mpp_task->queue_link, &queue->running_list);
+	spin_unlock(&queue->pending_lock);
+
+	mpp_time_record(mpp_task);
+	set_bit(TASK_STATE_START, &mpp_task->state);
+	mpp->overflow_status = 0;
+	rkvenc_run(mpp, mpp_task);
+
+done:
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
+	if (list_empty(&queue->running_list))
+		mpp_power_off(mpp);
+	mpp_session_clean_detach(queue);
+}
+
+static int mpp_rkvenc_wait_result(struct mpp_session *session,
+				  struct mpp_task_msgs *msgs)
+{
+	int ret;
+	struct mpp_task *task;
+	struct mpp_dev *mpp;
+
+	task = mpp_session_get_pending_task(session);
+	if (!task) {
+		mpp_err("session %p pending list is empty!\n", session);
+		return -EIO;
+	}
+
+	if (!test_bit(TASK_STATE_HANDLE, &task->state)) {
+		mpp_err("task %d wrong state %#lx\n", task->task_index, task->state);
+		return -EIO;
+	}
+
+	mpp = session->mpp;
+	if (mpp->dev_ops->result)
+		ret = mpp->dev_ops->result(mpp, task, msgs);
+
+	mpp_debug_func(DEBUG_TASK_INFO,
+		       "session %d:%d task %d state 0x%lx kref_rd %d ret %d\n",
+		       session->device_type,
+		       session->index, task->task_index, task->state,
+		       kref_read(&task->ref), ret);
+
+	mpp_session_pop_pending(session, task);
+
+	return ret;
 }
 
 #ifdef CONFIG_PROC_FS
@@ -2004,20 +2227,6 @@ static int rkvenc_reset(struct mpp_dev *mpp)
 	mpp_write(mpp, hw->int_sta_base, 0);
 	mpp_write(mpp, hw->enc_clr_base, 0);
 
-#if 0
-	/* cru reset */
-	if (enc->rst_a && enc->rst_h && enc->rst_core) {
-		mpp_pmu_idle_request(mpp, true);
-		mpp_safe_reset(enc->rst_a);
-		mpp_safe_reset(enc->rst_h);
-		mpp_safe_reset(enc->rst_core);
-		udelay(5);
-		mpp_safe_unreset(enc->rst_a);
-		mpp_safe_unreset(enc->rst_h);
-		mpp_safe_unreset(enc->rst_core);
-		mpp_pmu_idle_request(mpp, false);
-	}
-#endif
 	rkvenc_clear_dvbm_info(mpp);
 
 	mpp_debug_leave();
@@ -2270,9 +2479,11 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	kthread_init_work(&mpp->work, mpp_rkvenc_worker);
+	mpp->dev_ops->wait_result = mpp_rkvenc_wait_result;
 	ret = devm_request_threaded_irq(dev, mpp->irq,
-					mpp_dev_irq,
-					mpp_dev_isr_sched,
+					mpp_rkvenc_irq,
+					NULL,
 					IRQF_SHARED,
 					dev_name(dev), mpp);
 	if (ret) {
@@ -2283,8 +2494,8 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	enc->hw_info = to_rkvenc_info(mpp->var->hw_info);
 	rkvenc_procfs_init(mpp);
 	mpp_dev_register_srv(mpp, mpp->srv);
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-	{
+
+	if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
 		struct device_node *np_dvbm = NULL;
 		struct platform_device *pdev_dvbm = NULL;
 
@@ -2306,7 +2517,7 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 			}
 		}
 	}
-#endif
+
 	enc->link_mode = RKVENC_MODE_ONEFRAME;
 	/* init for link device */
 	rkvenc_link_init(pdev, enc);
@@ -2340,12 +2551,12 @@ static int rkvenc_remove(struct platform_device *pdev)
 	struct rkvenc_dev *enc = platform_get_drvdata(pdev);
 
 	dev_info(dev, "remove device\n");
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-	if (enc->port) {
-		rk_dvbm_put(enc->port);
-		enc->port = NULL;
+	if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
+		if (enc->port) {
+			rk_dvbm_put(enc->port);
+			enc->port = NULL;
+		}
 	}
-#endif
 	mpp_dev_remove(&enc->mpp);
 	rkvenc_procfs_remove(&enc->mpp);
 	rkvenc_link_remove(enc, enc->link);
