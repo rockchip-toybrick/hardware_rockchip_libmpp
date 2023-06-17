@@ -127,6 +127,7 @@ typedef struct MppEncImpl_t {
 	RK_U32 ringbuf_fail_cnt;
 	RK_U32 cfg_fail_cnt;
 	RK_U32 start_fail_cnt;
+	RK_U32 pkt_full_cnt;
 	struct hal_shared_buf *shared_buf;
 	MppBuffer mv_info;
 	MppBuffer qpmap;
@@ -158,6 +159,7 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet, MppPac
 MPP_RET mpp_enc_impl_hw_start(MppEnc ctx, MppEnc jpeg_ctx);
 void    mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id);
 MPP_RET mpp_enc_unref_osd_buf(MppEncOSDData3 *osd);
+void mpp_enc_impl_pkt_full_inc(MppEnc ctx);
 #ifdef __cplusplus
 }
 #endif

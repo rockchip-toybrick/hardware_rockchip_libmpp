@@ -614,3 +614,8 @@ MPP_RET mpp_enc_control(MppEnc ctx, MpiCmd cmd, void *param)
 
 	return ret;
 }
+
+void mpp_enc_pkt_full_inc(MppEnc ctx)
+{
+	mpp_enc_impl_pkt_full_inc(ctx);
+}

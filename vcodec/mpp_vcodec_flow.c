@@ -175,6 +175,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		if ((atomic_read(&chan_entry->stream_count) + atomic_read(&chan_entry->str_out_cnt) >
 		     max_packet_num) && !chan_entry->reenc) {
 			mpp_frame_deinit(&frame);
+			mpp_enc_pkt_full_inc((MppEnc)chan_entry->handle);
 			ret = MPP_NOK;
 		} else
 			ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);

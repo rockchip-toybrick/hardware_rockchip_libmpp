@@ -2039,6 +2039,12 @@ TASK_DONE:
 	return ret;
 }
 
+void mpp_enc_impl_pkt_full_inc(MppEnc ctx)
+{
+	MppEncImpl *enc = (MppEncImpl *)ctx;
+	enc->pkt_full_cnt++;
+}
+
 void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 {
 	MppEncImpl *enc = (MppEncImpl *)ctx;
@@ -2087,12 +2093,12 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 
 	seq_puts(seq,
 		 "\n--------hw status---------------------------------------------------------------------------------\n");
-	seq_printf(seq, "%8s|%8s|%12s|%14s|%14s|%14s|%16s\n", "ID",
+	seq_printf(seq, "%8s|%8s|%12s|%14s|%14s|%14s|%16s|%14s\n", "ID",
 		   "hw_run", "enc_status", "pkt_fail_cnt",
-		   "ring_fail_cnt", "cfg_fail_cnt", "start_fail_cnt");
-	seq_printf(seq, "%8d|%8d|%12d|%14u|%14u|%14u|%16u\n", chl_id,
+		   "ring_fail_cnt", "cfg_fail_cnt", "start_fail_cnt", "pkt_full_cnt");
+	seq_printf(seq, "%8d|%8d|%12d|%14u|%14u|%14u|%16u|%14u\n", chl_id,
 		   enc->hw_run, enc->enc_status, enc->pkt_fail_cnt,
-		   enc->ringbuf_fail_cnt, enc->cfg_fail_cnt, enc->start_fail_cnt);
+		   enc->ringbuf_fail_cnt, enc->cfg_fail_cnt, enc->start_fail_cnt, enc->pkt_full_cnt);
 
 	if (cfg->roi.number > 0) {
 		int i;
