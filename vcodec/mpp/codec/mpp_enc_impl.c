@@ -1851,6 +1851,15 @@ TASK_DONE:
 			mpp_enc_terminate_task(jpeg_enc, jpeg_task);
 		}
 		enc->cfg_fail_cnt++;
+	} else {
+		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
+
+		if (mpidev_fn && mpidev_fn->notify) {
+			RK_U64 dts = mpp_frame_get_dts(hal_task->frame);
+
+			if (enc->online)
+				mpidev_fn->notify(enc->chan_id, NOTIFY_ENC_TASK_READY, &dts);
+		}
 	}
 	return ret;
 }
