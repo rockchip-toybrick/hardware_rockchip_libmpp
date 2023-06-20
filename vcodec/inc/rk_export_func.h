@@ -63,6 +63,10 @@ struct vcodec_set_dev_fn {
 
 };
 
+enum notify_cmd {
+	NOTIFY_ENC_TASK_READY,
+};
+
 struct vcodec_mpidev_fn {
 	struct mpi_dev *(*create_dev)(const char *name, struct vcodec_set_dev_fn *dev_fn);
 	int (*destory_dev)(struct mpi_dev *dev);
@@ -72,6 +76,7 @@ struct vcodec_mpidev_fn {
 	int (*get_chnl_type)(void *out_parm);
 	int (*set_intra_info)(RK_S32 chn_id, RK_U64 dts, RK_U64 pts, RK_U32 is_intra);
 	int (*notify_drop_frm)(RK_S32 chn_id);
+	int (*notify)(RK_S32 chn_id, int cmd, void *arg);
 };
 
 struct vcodec_mppdev_svr_fn {
