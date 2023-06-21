@@ -75,6 +75,7 @@ static MPP_RET enc_chan_get_buf_info(struct mpi_buf *buf,
 	mpp_frame_set_is_gray(*frame, frm_info->is_gray);
 	mpp_frame_set_is_full(*frame, frm_info->is_full);
 	mpp_frame_set_phy_addr(*frame, frm_info->phy_addr);
+	mpp_frame_set_idr_request(*frame, frm_info->idr_request);
 	if (frm_info->osd_buf)
 		frame_add_osd(*frame, (MppEncOSDData3 *)frm_info->osd_buf);
 	if (frm_info->pp_info)

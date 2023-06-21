@@ -32,7 +32,8 @@ struct mpp_frame_infos {
 	RK_U32  phy_addr;
 	RK_U64  dts;
 	void    *pp_info;
-	RK_U32  res[2];
+	RK_U32	idr_request;
+	RK_U32  reserved;
 };
 
 struct vcodec_mpibuf_fn {

@@ -1740,6 +1740,10 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)
 		ret = MPP_NOK;
 		goto TASK_DONE;
 	}
+	if (mpp_frame_get_idr_request(frame)) {
+		enc->frm_cfg.force_flag |= ENC_FORCE_IDR;
+		enc->hdr_status.val = 0;
+	}
 	reset_hal_enc_task(hal_task);
 	reset_enc_rc_task(rc_task);
 	frm->seq_idx = task->seq_idx++;
