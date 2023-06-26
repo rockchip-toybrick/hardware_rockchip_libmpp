@@ -40,9 +40,9 @@ $(shell [ -d "$(TOP)/.git/" ] && [ -d "$(TOP)/tools/hooks" ] && cp -rf $(TOP)/to
 ifeq ($(BUILD_ONE_KO), y)
 	EXTRA_CFLAGS += -DBUILD_ONE_KO
 endif
-include $(TOP)/mpp/Makefile
-include $(TOP)/vcodec/Makefile
-include $(TOP)/vproc/Makefile
+-include $(TOP)/mpp/Makefile
+-include $(TOP)/vcodec/Makefile
+-include $(TOP)/vproc/Makefile
 
 ifeq ($(BUILD_ONE_KO), y)
 
