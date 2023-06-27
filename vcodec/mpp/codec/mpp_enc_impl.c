@@ -1765,6 +1765,10 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)
 		ret = MPP_NOK;
 		goto TASK_DONE;
 	}
+
+	if (frm_cfg->force_flag)
+		mpp_enc_refs_set_usr_cfg(enc->refs, frm_cfg);
+
 	hal_task->valid = 1;
 	mpp_assert(hal_task->valid);
 	ret = mpp_enc_alloc_output(enc);
@@ -1809,9 +1813,6 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)
 
 	enc_dbg_detail("task %d enc start\n", frm->seq_idx);
 	ENC_RUN_FUNC2(enc_impl_start, enc->impl, hal_task, enc, ret);
-
-	if (frm_cfg->force_flag)
-		mpp_enc_refs_set_usr_cfg(enc->refs, frm_cfg);
 
 	mpp_enc_refs_stash(enc->refs);
 	ENC_RUN_FUNC2(mpp_enc_normal_cfg, enc, task, enc, ret);
