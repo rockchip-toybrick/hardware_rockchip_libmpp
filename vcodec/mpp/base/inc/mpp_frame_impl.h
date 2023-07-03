@@ -128,6 +128,8 @@ struct MppFrameImpl_t {
 	 * pointer for multiple frame output at one time
 	 */
 	MppFrameImpl *next;
+
+	RK_U32 idr_request;
 };
 
 #ifdef __cplusplus
