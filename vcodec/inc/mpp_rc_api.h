@@ -151,6 +151,7 @@ typedef struct RcCfg_s {
 	RK_S32      fm_lv_min_i_quality;
 	RK_S32      fm_lv_max_quality;
 	RK_S32      fm_lv_max_i_quality;
+	RK_S32      mt_st_swth_frm_qp;
 	/* layer quality proportion */
 	RK_S32      layer_quality_delta[4];
 
