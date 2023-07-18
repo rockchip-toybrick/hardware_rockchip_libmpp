@@ -93,7 +93,7 @@ static struct mpp_chan *mpp_vcodec_get_chn_handle(struct mpi_obj *obj)
 
 static int mpp_vcodec_msg_handle(struct mpi_obj *obj, int event, void *args)
 {
-	int ret = 0;
+	int ret = -1;
 	struct vcodec_threads *thd;
 	struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
 	struct mpp_chan *entry = NULL;
@@ -126,10 +126,12 @@ static int mpp_vcodec_msg_handle(struct mpi_obj *obj, int event, void *args)
 
 	spin_unlock(&entry->chan_lock);
 
-	if (ret && thd)
+	if (ret == 1 && thd) {
 		vcodec_thread_trigger(thd);
+		ret = 0;
+	}
 
-	return 0;
+	return ret;
 }
 
 struct vcodec_set_dev_fn gdev_fn = {
