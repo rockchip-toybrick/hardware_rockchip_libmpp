@@ -570,8 +570,12 @@ static MPP_RET
 vepu540c_jpeg_set_uv_offset(Vepu540cJpegReg * regs, JpegeSyntax * syn,
 			    Vepu541Fmt input_fmt, HalEncTask * task)
 {
-	RK_U32 hor_stride = syn->hor_stride;
-	RK_U32 ver_stride = syn->ver_stride ? syn->ver_stride : syn->height;
+	RK_U32 hor_stride = mpp_frame_get_hor_stride(task->frame) ?
+			    mpp_frame_get_hor_stride(task->frame) :
+			    mpp_frame_get_width(task->frame);
+	RK_U32 ver_stride = mpp_frame_get_ver_stride(task->frame) ?
+			    mpp_frame_get_ver_stride(task->frame) :
+			    mpp_frame_get_height(task->frame);
 	RK_U32 frame_size = hor_stride * ver_stride;
 	RK_U32 u_offset = 0, v_offset = 0;
 	MPP_RET ret = MPP_OK;
@@ -637,6 +641,20 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	VepuFmtCfg *fmt = (VepuFmtCfg *) cfg->input_fmt;
 	RK_S32 stridey = 0;
 	RK_S32 stridec = 0;
+	MppFrame frame = task->frame;
+	RK_U32 width = syn->width;
+	RK_U32 height = syn->height;
+	RK_U32 slice_en = (mpp_frame_get_height(frame) < height) && syn->restart_ri;
+
+	if (slice_en) {
+		width = mpp_frame_get_width(frame);
+		height = mpp_frame_get_height(frame);
+		/* if not first marker, do not write header */
+		if (cfg->rst_marker) {
+			task->length = 0;
+			mpp_packet_set_length(task->packet, 0);
+		}
+	}
 
 	if (!cfg->online) {
 		regs->reg0264_adr_src0 = mpp_dev_get_iova_address(cfg->dev, task->input, 264);
@@ -664,10 +682,10 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 		regs->reg0256_adr_bsbt = regs->reg0257_adr_bsbb + size;
 	}
 
-	regs->reg0272_enc_rsl.pic_wd8_m1 = MPP_ALIGN(syn->width, 16) / 8 - 1;
-	regs->reg0273_src_fill.pic_wfill = MPP_ALIGN(syn->width, 16) - syn->width;
-	regs->reg0272_enc_rsl.pic_hd8_m1 = MPP_ALIGN(syn->height, 16) / 8 - 1;
-	regs->reg0273_src_fill.pic_hfill = MPP_ALIGN(syn->height, 16) - syn->height;
+	regs->reg0272_enc_rsl.pic_wd8_m1 = MPP_ALIGN(width, 16) / 8 - 1;
+	regs->reg0273_src_fill.pic_wfill = MPP_ALIGN(width, 16) - width;
+	regs->reg0272_enc_rsl.pic_hd8_m1 = MPP_ALIGN(height, 16) / 8 - 1;
+	regs->reg0273_src_fill.pic_hfill = MPP_ALIGN(height, 16) - height;
 
 	regs->reg0274_src_fmt.src_cfmt = fmt->format;
 	regs->reg0274_src_fmt.alpha_swap = fmt->alpha_swap;
@@ -730,10 +748,20 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	regs->reg0285_u_cfg.bias_u = 0;
 	regs->reg0286_v_cfg.bias_v = 0;
 
-	regs->reg0287_base_cfg.jpeg_ri = 0;
+	regs->reg0287_base_cfg.jpeg_ri = syn->restart_ri;
 	regs->reg0287_base_cfg.jpeg_out_mode = 0;
-	regs->reg0287_base_cfg.jpeg_start_rst_m = 0;
-	regs->reg0287_base_cfg.jpeg_pic_last_ecs = 1;
+	regs->reg0287_base_cfg.jpeg_start_rst_m = cfg->rst_marker & 0x7;
+	if (slice_en) {
+		if (mpp_frame_get_eos(frame)) {
+			regs->reg0287_base_cfg.jpeg_pic_last_ecs = 1;
+			cfg->rst_marker = 0;
+		} else {
+			regs->reg0287_base_cfg.jpeg_pic_last_ecs = 0;
+			cfg->rst_marker++;
+		}
+	} else
+		regs->reg0287_base_cfg.jpeg_pic_last_ecs = 1;
+
 	regs->reg0287_base_cfg.jpeg_slen_fifo = 0;
 	regs->reg0287_base_cfg.jpeg_stnd = 1;	//enable
 

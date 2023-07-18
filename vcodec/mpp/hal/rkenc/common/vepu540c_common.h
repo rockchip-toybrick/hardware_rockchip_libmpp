@@ -1923,6 +1923,7 @@ typedef struct Vepu540cJpegCfg_t {
 	void *enc_task;
 	void *input_fmt;
 	RK_U32 online;
+	RK_U32 rst_marker;
 } Vepu540cJpegCfg;
 
 #ifdef __cplusplus

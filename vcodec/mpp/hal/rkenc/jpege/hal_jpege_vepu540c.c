@@ -73,6 +73,7 @@ typedef struct jpegeV540cHalContext_t {
 	RK_S32	online;
 	RK_U32	session_run;
 	HalJpegeRc hal_rc;
+	Vepu540cJpegCfg jpeg_cfg;
 } jpegeV540cHalContext;
 
 MPP_RET hal_jpege_vepu_rc(jpegeV540cHalContext *ctx, HalEncTask *task)
@@ -262,15 +263,15 @@ MPP_RET hal_jpege_v540c_gen_regs(void *hal, HalEncTask * task)
 	RK_U8 *buf = mpp_buffer_get_ptr(task->output->buf) + task->output->start_offset;
 	size_t size = task->output->size;
 	JpegeSyntax *syntax = &ctx->syntax;
-	Vepu540cJpegCfg cfg;
+	Vepu540cJpegCfg *cfg = &ctx->jpeg_cfg;
 	RK_S32 bitpos;
 
 	hal_jpege_enter();
-	cfg.enc_task = task;
-	cfg.jpeg_reg_base = &reg_base->jpegReg;
-	cfg.dev = ctx->dev;
-	cfg.input_fmt = ctx->input_fmt;
-	cfg.online = ctx->online;
+	cfg->enc_task = task;
+	cfg->jpeg_reg_base = &reg_base->jpegReg;
+	cfg->dev = ctx->dev;
+	cfg->input_fmt = ctx->input_fmt;
+	cfg->online = ctx->online;
 	memset(regs, 0, sizeof(JpegV540cRegSet));
 
 	/* write header to output buffer */
@@ -333,7 +334,7 @@ MPP_RET hal_jpege_v540c_gen_regs(void *hal, HalEncTask * task)
 
 	if (ctx->online)
 		vepu540c_jpeg_set_dvbm(regs);
-	vepu540c_set_jpeg_reg(&cfg);
+	vepu540c_set_jpeg_reg(cfg);
 	vepu540c_set_osd(&ctx->osd_cfg);
 	{
 		RK_U16 *tbl = &regs->jpeg_table.qua_tab0[0];

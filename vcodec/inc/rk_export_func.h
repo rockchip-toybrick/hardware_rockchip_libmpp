@@ -33,7 +33,12 @@ struct mpp_frame_infos {
 	RK_U64  dts;
 	void    *pp_info;
 	RK_U32	idr_request;
-	RK_U32  reserved;
+	union {
+		RK_U32 val;
+		struct {
+			RK_U32  eos : 1;
+		};
+	};
 };
 
 struct vcodec_mpibuf_fn {
