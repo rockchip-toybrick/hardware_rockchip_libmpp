@@ -765,7 +765,7 @@ mpp_reset_control_get(struct mpp_dev *mpp, enum MPP_RESET_TYPE type, const char 
 
 int mpp_dev_reset(struct mpp_dev *mpp)
 {
-	dev_info(mpp->dev, "resetting...\n");
+	mpp_dbg_warning("resetting...\n");
 
 	/*
 	 * before running, we have to switch grf ctrl bit to ensure
@@ -795,7 +795,7 @@ int mpp_dev_reset(struct mpp_dev *mpp)
 	mpp_reset_up_write(mpp->reset_group);
 	mpp_iommu_up_write(mpp->iommu_info);
 
-	dev_info(mpp->dev, "reset done\n");
+	mpp_dbg_warning("reset done\n");
 
 	return 0;
 }

@@ -301,10 +301,9 @@ void mpp_vcodec_enc_int_handle(int chan_id)
 	if (packet)
 		mpp_vcodec_enc_add_packet_list(chan_entry, packet);
 
-	if (ret) {
-		mpp_err("enc %d handle int err", chan_id);
+	if (ret)
 		chan_entry->reenc = 0;
-	}
+
 	atomic_dec(&chan_entry->runing);
 	wake_up(&chan_entry->stop_wait);
 	vcodec_thread_trigger(venc->thd);

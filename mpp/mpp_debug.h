@@ -41,7 +41,7 @@
 #define DEBUG_IRQ_CHECK				0x00008000
 #define DEBUG_DVBM_INFO				0x00010000
 
-#define DEBUG_RESET					0x00020000
+#define DEBUG_RESET				0x00020000
 #define DEBUG_SET_REG_L2			0x00040000
 #define DEBUG_GET_REG_L2			0x00080000
 #define DEBUG_GET_PERF_VAL			0x00100000
@@ -55,6 +55,9 @@
 
 #define PRINT_FUNCTION				0x80000000
 #define PRINT_LINE				0x40000000
+
+/* reuse debug flag */
+#define DEBUG_WARNING				0x00040000
 
 extern unsigned int mpp_dev_debug;
 
@@ -127,6 +130,13 @@ extern unsigned int mpp_dev_debug;
 #define mpp_dbg_dvbm(fmt, args...)				\
 	do {							\
 		if (unlikely(mpp_dev_debug & DEBUG_DVBM_INFO)) {	\
+			pr_info(fmt, ##args);			\
+		}						\
+	} while (0)
+
+#define mpp_dbg_warning(fmt, args...)				\
+	do {							\
+		if (unlikely(mpp_dev_debug & DEBUG_WARNING)) {	\
 			pr_info(fmt, ##args);			\
 		}						\
 	} while (0)

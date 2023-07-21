@@ -24,6 +24,7 @@
 #define HAL_H265E_DBG_RDO_REGS          (0x000000C0)
 
 #define HAL_H265E_DBG_WRAP_INFO         (0x00000100)
+#define HAL_H265E_DBG_WARNING           (0x00000200)
 
 #define HAL_H265E_DBG_INPUT             (0x00020000)
 #define HAL_H265E_DBG_OUTPUT            (0x00040000)
@@ -45,6 +46,7 @@
 #define hal_h265e_dbg_rdo(fmt, ...)     hal_h265e_dbg(HAL_H265E_DBG_RDO_REGS, fmt, ## __VA_ARGS__)
 
 #define hal_h265e_dbg_wrap(fmt, ...)    hal_h265e_dbg(HAL_H265E_DBG_WRAP_INFO, fmt, ## __VA_ARGS__)
+#define hal_h265e_dbg_warning(fmt, ...) hal_h265e_dbg(HAL_H265E_DBG_WARNING, fmt, ## __VA_ARGS__)
 
 #define hal_h265e_dbg_input(fmt, ...)   hal_h265e_dbg(HAL_H265E_DBG_INPUT, fmt, ## __VA_ARGS__)
 #define hal_h265e_dbg_output(fmt, ...)  hal_h265e_dbg(HAL_H265E_DBG_OUTPUT, fmt, ## __VA_ARGS__)

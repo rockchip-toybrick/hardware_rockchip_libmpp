@@ -467,24 +467,26 @@ static MPP_RET hal_jpege_vepu540c_status_check(void *hal)
 	if (hw_status & RKV_ENC_INT_SAFE_CLEAR_FINISH)
 		hal_jpege_dbg_detail("RKV_ENC_INT_SAFE_CLEAR_FINISH");
 
-	if (hw_status & RKV_ENC_INT_BIT_STREAM_OVERFLOW)
-		mpp_err_f("RKV_ENC_INT_BIT_STREAM_OVERFLOW");
+	if (hw_status & RKV_ENC_INT_BIT_STREAM_OVERFLOW) {
+		hal_jpege_dbg_warning("RKV_ENC_INT_BIT_STREAM_OVERFLOW");
+		return MPP_ERR_INT_BS_OVFL;
+	}
 
 	if (hw_status & RKV_ENC_INT_BUS_WRITE_FULL)
-		mpp_err_f("RKV_ENC_INT_BUS_WRITE_FULL");
+		hal_jpege_dbg_warning("RKV_ENC_INT_BUS_WRITE_FULL");
 
 	if (hw_status & RKV_ENC_INT_BUS_WRITE_ERROR)
-		mpp_err_f("RKV_ENC_INT_BUS_WRITE_ERROR");
+		hal_jpege_dbg_warning("RKV_ENC_INT_BUS_WRITE_ERROR");
 
 	if (hw_status & RKV_ENC_INT_BUS_READ_ERROR)
-		mpp_err_f("RKV_ENC_INT_BUS_READ_ERROR");
+		hal_jpege_dbg_warning("RKV_ENC_INT_BUS_READ_ERROR");
 
 	if (hw_status & RKV_ENC_INT_TIMEOUT_ERROR)
-		mpp_err_f("RKV_ENC_INT_TIMEOUT_ERROR");
+		hal_jpege_dbg_warning("RKV_ENC_INT_TIMEOUT_ERROR");
 
 	if (hw_status & RKV_ENC_INT_JPEG_OVERFLOW) {
-		mpp_err_f("JPEG BIT_STREAM_OVERFLOW");
-		return MPP_NOK;
+		hal_jpege_dbg_warning("JPEG BIT_STREAM_OVERFLOW");
+		return MPP_ERR_INT_BS_OVFL;
 	}
 
 	return MPP_OK;

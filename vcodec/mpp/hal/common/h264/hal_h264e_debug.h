@@ -27,6 +27,7 @@ extern RK_U32 hal_h264e_debug;
 #define HAL_H264E_DBG_WRAP_INFO         (0x00000080)
 
 #define HAL_H264E_DBG_RC                (0x00000100)
+#define HAL_H264E_DBG_WARNING            (0x00000200)
 
 #define hal_h264e_dbg(flag, fmt, ...)   _mpp_dbg(hal_h264e_debug, flag, fmt, ## __VA_ARGS__)
 #define hal_h264e_dbg_f(flag, fmt, ...) _mpp_dbg_f(hal_h264e_debug, flag, fmt, ## __VA_ARGS__)
@@ -41,6 +42,7 @@ extern RK_U32 hal_h264e_debug;
 #define hal_h264e_dbg_wrap(fmt, ...)   hal_h264e_dbg_f(HAL_H264E_DBG_WRAP_INFO, fmt, ## __VA_ARGS__)
 
 #define hal_h264e_dbg_rc(fmt, ...)      hal_h264e_dbg_f(HAL_H264E_DBG_RC, fmt, ## __VA_ARGS__)
+#define hal_h264e_dbg_warning(fmt, ...)      hal_h264e_dbg_f(HAL_H264E_DBG_WARNING, fmt, ## __VA_ARGS__)
 
 #define hal_h264e_enter()               hal_h264e_dbg_func("enter\n");
 #define hal_h264e_leave()               hal_h264e_dbg_func("leave\n");

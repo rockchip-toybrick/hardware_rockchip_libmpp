@@ -18,6 +18,8 @@
 #define HAL_JPEGE_DBG_INPUT             (0x00000010)
 #define HAL_JPEGE_DBG_OUTPUT            (0x00000020)
 
+#define HAL_JPEGE_DBG_WARNING           (0x00000200)
+
 #define hal_jpege_dbg(flag, fmt, ...)   _mpp_dbg(hal_jpege_debug, flag, fmt, ## __VA_ARGS__)
 #define hal_jpege_dbg_f(flag, fmt, ...) _mpp_dbg_f(hal_jpege_debug, flag, fmt, ## __VA_ARGS__)
 
@@ -26,6 +28,7 @@
 #define hal_jpege_dbg_detail(fmt, ...)  hal_jpege_dbg(HAL_JPEGE_DBG_DETAIL, fmt, ## __VA_ARGS__)
 #define hal_jpege_dbg_input(fmt, ...)   hal_jpege_dbg(HAL_JPEGE_DBG_INPUT, fmt, ## __VA_ARGS__)
 #define hal_jpege_dbg_output(fmt, ...)  hal_jpege_dbg(HAL_JPEGE_DBG_OUTPUT, fmt, ## __VA_ARGS__)
+#define hal_jpege_dbg_warning(fmt, ...)  hal_jpege_dbg(HAL_JPEGE_DBG_WARNING, fmt, ## __VA_ARGS__)
 
 #define hal_jpege_enter()               hal_jpege_dbg_func("(%d) enter\n", __LINE__);
 #define hal_jpege_leave()               hal_jpege_dbg_func("(%d) leave\n", __LINE__);

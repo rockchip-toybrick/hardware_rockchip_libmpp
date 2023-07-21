@@ -1505,8 +1505,9 @@ static MPP_RET mpp_enc_end(MppEncImpl *enc, EncTask *task, EncTask *jpeg_task)
 	ENC_RUN_FUNC2(rc_hal_end, enc->rc_ctx, rc_task, enc, ret);
 
 	enc_dbg_detail("task %d hal ret task\n", frm->seq_idx);
-	ENC_RUN_FUNC3(mpp_enc_hal_ret_task, hal, hal_task, jpeg_hal_task, enc,
-		      ret);
+	ret = mpp_enc_hal_ret_task(hal, hal_task, jpeg_hal_task);
+	if (ret)
+		goto TASK_DONE;
 
 	enc_dbg_detail("task %d rc frame check reenc\n", frm->seq_idx);
 	ENC_RUN_FUNC2(rc_frm_check_reenc, enc->rc_ctx, rc_task, enc, ret);
@@ -1958,8 +1959,14 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
 		jpeg_task = (EncTask *)jpeg_enc->enc_task;
 	}
 	enc_dbg_detail("task %d hal wait\n", frm->seq_idx);
-	ENC_RUN_FUNC2(mpp_enc_hal_wait, hal, hal_task, enc, ret);
-	ENC_RUN_FUNC3(mpp_enc_end, enc, task, jpeg_task, enc, ret);
+	ret = mpp_enc_hal_wait(hal, hal_task);
+	if (ret)
+		goto TASK_DONE;
+
+	ret = mpp_enc_end(enc, task, jpeg_task);
+	if (ret)
+		goto TASK_DONE;
+
 	if (frm->reencode && frm->reencode_times < enc->cfg.rc.max_reenc_times) {
 		hal_task->length -= hal_task->hw_length;
 		hal_task->hw_length = 0;

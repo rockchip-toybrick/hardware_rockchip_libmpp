@@ -1257,8 +1257,8 @@ static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 			top_adr = mpp_read(mpp, RKVENC_JPEG_BSBT);
 			bot_adr = mpp_read(mpp, RKVENC_JPEG_BSBB);
 
-			pr_err("task %d jpeg bs overflow, buf[t:%d b:%d w:%d r:%d]\n",
-			       task->task_index, top_adr, bot_adr, enc->jpeg_wr_addr, r_adr);
+			mpp_dbg_warning("task %d jpeg bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
+					task->task_index, top_adr, bot_adr, enc->jpeg_wr_addr, r_adr);
 			if (enc->jpeg_wr_addr == r_adr)
 				enc->jpeg_wr_addr += 1;
 			if (enc->jpeg_wr_addr >= top_adr)
@@ -1273,8 +1273,8 @@ static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 			top_adr = mpp_read(mpp, RKVENC_VIDEO_BSBT);
 			bot_adr = mpp_read(mpp, RKVENC_VIDEO_BSBB);
 
-			pr_err("task %d video bs overflow, buf[t:%d b:%d w:%d r:%d]\n",
-			       task->task_index, top_adr, bot_adr, enc->video_wr_addr, r_adr);
+			mpp_dbg_warning("task %d video bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
+					task->task_index, top_adr, bot_adr, enc->video_wr_addr, r_adr);
 			if (enc->video_wr_addr == r_adr)
 				enc->video_wr_addr += 1;
 			if (enc->video_wr_addr >= top_adr)
@@ -1383,7 +1383,7 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 		*/
 		if (enc->line_cnt == 0x3fff) {
 			enc->dvbm_overflow = 1;
-			dev_err(mpp->dev, "current frame has overflow\n");
+			mpp_dbg_warning("current frame has overflow\n");
 		}
 		if (enc->dvbm_overflow) {
 			mpp->irq_status |= BIT(6);
@@ -1405,8 +1405,8 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 		session->callback(session->chn_id);
 
 	if (mpp->irq_status & enc->hw_info->err_mask) {
-		dev_err(mpp->dev, "task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
-			mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
+		mpp_dbg_warning("task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
+				mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
 		if (mpp->hw_ops->reset)
 			mpp->hw_ops->reset(mpp);
 	}

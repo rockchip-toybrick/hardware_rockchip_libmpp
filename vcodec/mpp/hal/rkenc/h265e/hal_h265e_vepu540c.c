@@ -2466,39 +2466,39 @@ static MPP_RET vepu540c_h265_set_feedback(H265eV540cHalContext *ctx,
 
 	fb->hw_status = hw_status;
 	if (hw_status & RKV_ENC_INT_LINKTABLE_FINISH)
-		hal_h265e_err("RKV_ENC_INT_LINKTABLE_FINISH");
+		hal_h265e_dbg_detail("RKV_ENC_INT_LINKTABLE_FINISH");
 
 	if (hw_status & RKV_ENC_INT_ONE_FRAME_FINISH)
 		hal_h265e_dbg_detail("RKV_ENC_INT_ONE_FRAME_FINISH");
 
 	if (hw_status & RKV_ENC_INT_ONE_SLICE_FINISH)
-		hal_h265e_err("RKV_ENC_INT_ONE_SLICE_FINISH");
+		hal_h265e_dbg_detail("RKV_ENC_INT_ONE_SLICE_FINISH");
 
 	if (hw_status & RKV_ENC_INT_SAFE_CLEAR_FINISH)
-		hal_h265e_err("RKV_ENC_INT_SAFE_CLEAR_FINISH");
+		hal_h265e_dbg_detail("RKV_ENC_INT_SAFE_CLEAR_FINISH");
 
 	if (hw_status & RKV_ENC_INT_BIT_STREAM_OVERFLOW) {
-		hal_h265e_err("RKV_ENC_INT_BIT_STREAM_OVERFLOW");
-		return MPP_NOK;
+		hal_h265e_dbg_warning("RKV_ENC_INT_BIT_STREAM_OVERFLOW");
+		return MPP_ERR_INT_BS_OVFL;
 	}
 
 	if (hw_status & RKV_ENC_INT_BUS_WRITE_FULL) {
-		hal_h265e_err("RKV_ENC_INT_BUS_WRITE_FULL");
+		hal_h265e_dbg_warning("RKV_ENC_INT_BUS_WRITE_FULL");
 		return MPP_NOK;
 	}
 
 	if (hw_status & RKV_ENC_INT_BUS_WRITE_ERROR) {
-		hal_h265e_err("RKV_ENC_INT_BUS_WRITE_ERROR");
+		hal_h265e_dbg_warning("RKV_ENC_INT_BUS_WRITE_ERROR");
 		return MPP_NOK;
 	}
 
 	if (hw_status & RKV_ENC_INT_BUS_READ_ERROR) {
-		hal_h265e_err("RKV_ENC_INT_BUS_READ_ERROR");
+		hal_h265e_dbg_warning("RKV_ENC_INT_BUS_READ_ERROR");
 		return MPP_NOK;
 	}
 
 	if (hw_status & RKV_ENC_INT_TIMEOUT_ERROR) {
-		hal_h265e_err("RKV_ENC_INT_TIMEOUT_ERROR");
+		hal_h265e_dbg_warning("RKV_ENC_INT_TIMEOUT_ERROR");
 		return MPP_NOK;
 	}
 

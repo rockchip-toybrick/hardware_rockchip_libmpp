@@ -2567,22 +2567,22 @@ static MPP_RET hal_h264e_vepu540c_status_check(void *hal)
 		hal_h264e_dbg_detail("safe clear finsh");
 
 	if (regs_set->reg_ctl.int_sta.vbsf_oflw_sta) {
-		mpp_err_f("bit stream overflow");
-		return MPP_NOK;
+		hal_h264e_dbg_warning("bit stream overflow");
+		return MPP_ERR_INT_BS_OVFL;
 	}
 
 	if (regs_set->reg_ctl.int_sta.vbuf_lens_sta) {
-		mpp_err_f("bus write full");
+		hal_h264e_dbg_warning("bus write full");
 		return MPP_NOK;
 	}
 
 	if (regs_set->reg_ctl.int_sta.enc_err_sta) {
-		mpp_err_f("bus error");
+		hal_h264e_dbg_warning("bus error");
 		return MPP_NOK;
 	}
 
 	if (regs_set->reg_ctl.int_sta.wdg_sta) {
-		mpp_err_f("wdg timeout");
+		hal_h264e_dbg_warning("wdg timeout");
 		return MPP_NOK;
 	}
 
