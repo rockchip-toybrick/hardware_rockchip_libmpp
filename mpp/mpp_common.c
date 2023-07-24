@@ -2565,6 +2565,36 @@ static struct device *mpp_chnl_get_dev(struct mpp_session *session)
 	return mpp->dev;
 }
 
+int mpp_show_session_info(struct seq_file *seq, u32 chan_id)
+{
+	struct mpp_session *session = NULL, *n;
+	struct mpp_service *srv = g_srv;
+
+	mutex_lock(&srv->session_lock);
+	list_for_each_entry_safe(session, n,
+				 &srv->session_list,
+				 service_link) {
+		struct  mpp_dev *mpp;
+
+		if (session->chn_id != chan_id)
+			continue;
+
+		if (!session->priv)
+			continue;
+
+		if (!session->mpp)
+			continue;
+		mpp = session->mpp;
+
+		if (mpp->dev_ops->dump_session)
+			mpp->dev_ops->dump_session(session, seq);
+	}
+	mutex_unlock(&srv->session_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(mpp_show_session_info);
+
 u32 mpp_srv_get_phy(struct dma_buf *buf)
 {
 	return mpp_dma_get_iova(buf, g_srv->dev);

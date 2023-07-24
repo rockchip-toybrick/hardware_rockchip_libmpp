@@ -246,6 +246,19 @@ struct rkvenc_link_dev {
 	struct mutex list_mutex;
 };
 
+struct rkvenc_debug_info {
+	/* normal info */
+	u32 hw_running;
+
+	/* err info */
+	u32 wrap_overflow_cnt;
+	u32 bsbuf_overflow_cnt;
+	/* record bs buf top/bot/write/read addr */
+	u32 bsbuf_info[4];
+	u32 enc_err_cnt;
+	u32 enc_err_status;
+};
+
 struct rkvenc2_session_priv {
 	struct rw_semaphore rw_sem;
 	u32 dvbm_en;
@@ -257,6 +270,7 @@ struct rkvenc2_session_priv {
 		/* item data */
 		u64 val;
 	} codec_info[ENC_INFO_BUTT];
+	struct rkvenc_debug_info info;
 };
 
 struct rkvenc_dev {
@@ -1190,6 +1204,7 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 			}
 		}
 		priv->dvbm_en = dvbm_en;
+		priv->info.hw_running = 1;
 		/* Flush the register before the start the device */
 		wmb();
 		preempt_disable();
@@ -1249,6 +1264,7 @@ static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 	int ret = 0;
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	struct mpp_task *task = mpp->cur_task;
+	struct rkvenc2_session_priv *priv = task->session->priv;
 
 	if (!(mpp->irq_status & RKVENC_ENC_DONE_STATUS)) {
 		if (mpp->irq_status & RKVENC_JPEG_OVERFLOW) {
@@ -1257,6 +1273,10 @@ static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 			top_adr = mpp_read(mpp, RKVENC_JPEG_BSBT);
 			bot_adr = mpp_read(mpp, RKVENC_JPEG_BSBB);
 
+			priv->info.bsbuf_info[0] = top_adr;
+			priv->info.bsbuf_info[1] = bot_adr;
+			priv->info.bsbuf_info[2] = enc->jpeg_wr_addr;
+			priv->info.bsbuf_info[3] = r_adr;
 			mpp_dbg_warning("task %d jpeg bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
 					task->task_index, top_adr, bot_adr, enc->jpeg_wr_addr, r_adr);
 			if (enc->jpeg_wr_addr == r_adr)
@@ -1272,6 +1292,10 @@ static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 			r_adr = mpp_read(mpp, RKVENC_VIDEO_BSBR);
 			top_adr = mpp_read(mpp, RKVENC_VIDEO_BSBT);
 			bot_adr = mpp_read(mpp, RKVENC_VIDEO_BSBB);
+			priv->info.bsbuf_info[0] = top_adr;
+			priv->info.bsbuf_info[1] = bot_adr;
+			priv->info.bsbuf_info[2] = enc->video_wr_addr;
+			priv->info.bsbuf_info[3] = r_adr;
 
 			mpp_dbg_warning("task %d video bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
 					task->task_index, top_adr, bot_adr, enc->video_wr_addr, r_adr);
@@ -1388,12 +1412,14 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 		if (enc->dvbm_overflow) {
 			mpp->irq_status |= BIT(6);
 			enc->dvbm_overflow = 0;
+			priv->info.wrap_overflow_cnt++;
 		}
 	}
+	if (mpp->overflow_status)
+		priv->info.bsbuf_overflow_cnt++;
 	task->irq_status = (mpp->irq_status | mpp->overflow_status);
 	mpp_debug(DEBUG_IRQ_STATUS, "task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
 		  mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
-
 
 	mpp_time_diff(mpp_task);
 	set_bit(TASK_STATE_DONE, &mpp_task->state);
@@ -1407,10 +1433,13 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	if (mpp->irq_status & enc->hw_info->err_mask) {
 		mpp_dbg_warning("task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
 				mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
+		priv->info.enc_err_status = task->irq_status;
+		priv->info.enc_err_cnt++;
 		if (mpp->hw_ops->reset)
 			mpp->hw_ops->reset(mpp);
 	}
 
+	priv->info.hw_running = 0;
 	mpp_taskqueue_trigger_work(mpp);
 
 	mpp_debug_leave();
@@ -2063,19 +2092,22 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 
 	down_read(&priv->rw_sem);
 	/* item name */
-	seq_puts(seq, "------------------------------------------------------");
+	seq_puts(seq, "\n--------hw session infos");
 	seq_puts(seq, "------------------------------------------------------\n");
-	seq_printf(seq, "%8s|", (const char *)"session");
-	seq_printf(seq, "%8s|", (const char *)"device");
+	seq_printf(seq, "%8s|", "ID");
+	seq_printf(seq, "%8s|", "device");
 	for (i = ENC_INFO_BASE; i < ENC_INFO_BUTT; i++) {
 		bool show = priv->codec_info[i].flag;
 
 		if (show)
 			seq_printf(seq, "%8s|", enc_info_item_name[i]);
 	}
+	seq_printf(seq, "%15s|%10s|%12s|%10s|%13s|%13s",
+		   "hw_running", "online", "wrap_ovfl", "bs_ovfl",
+		   "enc_err_cnt", "enc_err_st");
 	seq_puts(seq, "\n");
 	/* item data*/
-	seq_printf(seq, "%8p|", session);
+	seq_printf(seq, "%8d|", session->chn_id);
 	seq_printf(seq, "%8s|", mpp_device_name[session->device_type]);
 	for (i = ENC_INFO_BASE; i < ENC_INFO_BUTT; i++) {
 		u32 flag = priv->codec_info[i].flag;
@@ -2093,7 +2125,21 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 		} else
 			seq_printf(seq, "%8s|", (const char *)"null");
 	}
+	seq_printf(seq, "%15d|%10d|%12d|%10d|%13d|%13x",
+		   priv->info.hw_running, priv->dvbm_en ? 1 : 0, priv->info.wrap_overflow_cnt,
+		   priv->info.bsbuf_overflow_cnt,
+		   priv->info.enc_err_cnt, priv->info.enc_err_status);
 	seq_puts(seq, "\n");
+
+	if (priv->info.bsbuf_overflow_cnt) {
+		seq_puts(seq, "\n--------bitstream buffer addr");
+		seq_puts(seq, "------------------------------------------------------\n");
+		seq_printf(seq, "%10s|%10s|%10s|%10s|\n",
+			   "top", "bot", "wr", "rd");
+		seq_printf(seq, "%10x|%10x|%10x|%10x|\n",
+			   priv->info.bsbuf_info[0], priv->info.bsbuf_info[1],
+			   priv->info.bsbuf_info[2], priv->info.bsbuf_info[3]);
+	}
 	up_read(&priv->rw_sem);
 
 	return 0;
