@@ -26,9 +26,6 @@
 #include "mpp_time.h"
 #include <linux/module.h>
 
-int max_packet_num = 100;
-module_param(max_packet_num, int, 0644);
-
 static MPP_RET frame_add_osd(MppFrame frame, MppEncOSDData3 *osd_data)
 {
 	RK_U32 i = 0;
@@ -181,13 +178,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 
 		cfg_start = mpp_time();
 		atomic_inc(&chan_entry->runing);
-		if ((atomic_read(&chan_entry->stream_count) + atomic_read(&chan_entry->str_out_cnt) >
-		     max_packet_num) && !chan_entry->reenc) {
-			mpp_frame_deinit(&frame);
-			mpp_enc_pkt_full_inc((MppEnc)chan_entry->handle);
-			ret = MPP_NOK;
-		} else
-			ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
+		ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
 
 		chan_entry->seq_encoding = frm_info.dts;
 		if (MPP_OK == ret) {

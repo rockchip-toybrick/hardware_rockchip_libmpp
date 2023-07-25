@@ -129,7 +129,7 @@ void *mpp_mem_pool_get_f(const char *caller, MppMemPool pool)
 		}
 	}
 
-	if ((impl->unused_count + impl->used_count) >= impl->max_cnt) {
+	if (impl->max_cnt > 0 && (impl->unused_count + impl->used_count) >= impl->max_cnt) {
 		mpp_log("%s pool %d reach max cnt %d\n", impl->name, impl->size, impl->max_cnt);
 		goto DONE;
 	}

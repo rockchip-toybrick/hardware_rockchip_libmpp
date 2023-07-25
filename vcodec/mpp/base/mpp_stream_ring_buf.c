@@ -25,6 +25,8 @@ RK_U32 ring_buf_debug = 0;
 module_param(ring_buf_debug, uint, 0644);
 MODULE_PARM_DESC(ring_buf_debug, "bits ring_buf debug information");
 
+#define DEFAULT_MIN_ZISE (10 * SZ_1K)
+
 MPP_RET ring_buf_init(ring_buf_pool *ctx, MppBuffer buf, RK_U32 max_strm_cnt)
 {
 	if (!ctx || ctx->init_done)
@@ -39,7 +41,7 @@ MPP_RET ring_buf_init(ring_buf_pool *ctx, MppBuffer buf, RK_U32 max_strm_cnt)
 	ctx->buf = buf;
 	ctx->mpi_buf_id = mpp_buffer_get_mpi_buf_id(buf);
 	ctx->init_done = 1;
-	ctx->min_buf_size = 10 * SZ_1K;
+	ctx->min_buf_size = DEFAULT_MIN_ZISE;
 	ring_buf_dbg("ctx->len = %d, max_strm_cnt = %d, ctx->min_buf_size = %d", ctx->len,
 		     max_strm_cnt, ctx->min_buf_size);
 
@@ -169,6 +171,7 @@ MPP_RET ring_buf_get_free(ring_buf_pool *ctx, ring_buf *buf, RK_U32 align,
 		buf->r_pos = align_r_pos;
 		buf->buf = ctx->buf;
 		buf->size = r_pos - w_pos - align_offset;
+		ctx->min_buf_size = DEFAULT_MIN_ZISE;
 		return MPP_OK;
 	}
 
@@ -180,8 +183,19 @@ MPP_RET ring_buf_get_free(ring_buf_pool *ctx, ring_buf *buf, RK_U32 align,
 		buf->size = ctx->len - align_w_pos + r_pos;
 		buf->r_pos = align_r_pos;
 		buf->buf = ctx->buf;
+		ctx->min_buf_size = DEFAULT_MIN_ZISE;
 		return MPP_OK;
 	}
 
 	return MPP_NOK;
+}
+
+MPP_RET ring_buf_update_min_size(ring_buf_pool *ctx, RK_U32 min_size)
+{
+	if (!ctx)
+		return MPP_NOK;
+
+	ctx->min_buf_size = min_size;
+
+	return MPP_OK;
 }

@@ -33,7 +33,7 @@ RK_U32 mpp_vcodec_debug = 0;
 #define CHAN_MAX_YUV_POOL_SIZE  1
 #define CHAN_MAX_STREAM_POOL_SIZE  2
 
-int max_stream_cnt = 512;
+int max_stream_cnt = 0;
 module_param(max_stream_cnt, int, 0644);
 
 static struct vcodec_entry g_vcodec_entry;

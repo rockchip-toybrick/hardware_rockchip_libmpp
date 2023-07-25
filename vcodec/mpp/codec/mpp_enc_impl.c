@@ -1935,7 +1935,9 @@ static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, MppPacket *packet)
 	struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
 
 	hal_task->length -= hal_task->hw_length;
-	ENC_RUN_FUNC3(mpp_enc_hal_ret_task, hal, hal_task, NULL, enc, ret);
+	ret = mpp_enc_hal_ret_task(hal, hal_task, NULL);
+	if (ret)
+		goto TASK_DONE;
 	ENC_RUN_FUNC2(rc_hal_end, enc->rc_ctx, rc_task, enc, ret);
 	enc_dbg_detail("task %d hal wait\n", frm->seq_idx);
 	ENC_RUN_FUNC2(rc_hal_end, enc->rc_ctx, rc_task, enc, ret);
@@ -1961,6 +1963,8 @@ TASK_DONE:
 
 	/* setup output packet and meta data */
 	if (ret) {
+		if (ret == MPP_ERR_INT_BS_OVFL && enc->ring_pool)
+			ring_buf_update_min_size(enc->ring_pool, enc->pkt_buf->size);
 		enc->frame_force_drop++;
 		mpp_packet_set_length(enc->packet, 0);
 		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
@@ -2079,6 +2083,8 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
 TASK_DONE:
 
 	if (ret) {
+		if (ret == MPP_ERR_INT_BS_OVFL && enc->ring_pool)
+			ring_buf_update_min_size(enc->ring_pool, enc->pkt_buf->size);
 		enc->frame_force_drop++;
 		if (force_idr) {
 			enc->frm_cfg.force_flag |= ENC_FORCE_IDR;
