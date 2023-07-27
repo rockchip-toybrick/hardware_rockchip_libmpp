@@ -1440,6 +1440,7 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	}
 
 	priv->info.hw_running = 0;
+	mpp->overflow_status = 0;
 	mpp_taskqueue_trigger_work(mpp);
 
 	mpp_debug_leave();
@@ -2029,7 +2030,6 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 
 	mpp_time_record(mpp_task);
 	set_bit(TASK_STATE_START, &mpp_task->state);
-	mpp->overflow_status = 0;
 	rkvenc_run(mpp, mpp_task);
 
 done:
