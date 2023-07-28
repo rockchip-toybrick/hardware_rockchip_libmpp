@@ -365,44 +365,24 @@ static RK_U8 qscale2qp[96] = {
 	44,  44,  44,  44,  45,  45, 45, 45,
 };
 
-static RK_U8 avg_qp0[52] = {
-	1,    1,    1,    1,     1,    2,    3,    4,
-	5,    6,    7,    8,     9,   10,   11,   12,
-	13,   14,   15,   17,   18,   19,   20,   21,
-	21,   21,   22,   23,   24,   25,   26,   26,
-	27,   28,   28,   28,   29,   29,   30,   31,
-	31,   32,   32,   33,   33,   34,   35,   35,
-	35,   36,   36,   37
-};
-
-static RK_U8 avg_qp1[52] = {
-	4,     4,    5,    6,    7,    8,    9,    10,
-	11,   12,   13,   14,   16,   17,   18,    19,
-	20,   21,   22,   23,   24,   24,   25,    25,
-	25,   25,   26,   27,   27,   28,   29,    29,
-	29,   29,   30,   31,   31,   32,   32,    33,
-	33,   34,   35,   36,   37,   37,   38,    38,
-	38,   39,   40,   41
-};
-
-static RK_U8 prev_qp0[52] = {
+static RK_U8 avg_prev_qp0[52] = {
 	1,    1,    1,    1,    1,    2,    3,    4,
 	5,    6,    7,    8,    9,    10,    11,    12,
-	13,    14,    15,    17,    18,    19,    20,    20,
-	20,    21,    22,    23,    24,    24,    25,    26,
-	27,    28,    28,    29,    29,    29,    29,    30,
-	30,    31,    31,    32,    33,    33,    33,    33,
-	33,    33,    33,    33
+	13,    14,    15,    17,    18,    19,    20,    21,
+	21,    21,    22,    23,    24,    25,    26,    26,
+	27,    28,    28,    29,    29,    29,    30,    31,
+	31,    32,    32,    33,    33,    34,    35,    35,
+	35,    36,    36,    36
 };
 
-static RK_U8 prev_qp1[52] = {
+static RK_U8 avg_prev_qp1[52] = {
 	1,    1,    2,    3,    4,    5,    6,    7,
 	8,    9,    10,    11,    12,    13,    14,    15,
 	16,    17,    18,    19,    20,    20,    21,    22,
 	23,    24,    25,    26,    26,    27,    28,    29,
-	29,    30,    31,    31,    31,    32,    32,    33,
-	33,    34,    34,    35,    35,    35,    36,    36,
-	36,    36,    36,    36
+	29,    30,    31,    31,    32,    32,    33,    33,
+	34,    34,    35,    35,    36,    36,    37,    37,
+	38,    39,    40,    41
 };
 
 static RK_U8 intra_preqp0[52] = {
@@ -632,7 +612,7 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask * task)
 
 	if (p->frame_type == INTRA_FRAME) {
 		if (p->frm_num > 0) {
-			RK_S32 avg_qp = mpp_clip(mpp_data_avg(p->qp_p, -1, 1, 1), 20, 37);
+			RK_S32 avg_qp = mpp_clip(mpp_data_avg(p->qp_p, -1, 1, 1), p->qp_min, p->qp_max);
 
 			p->qp_out = p->intra_preqp;
 			if (bit_target_use <= p->intra_prerealbit) {
@@ -652,8 +632,8 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask * task)
 			}
 			if (!p->reenc_cnt && p->usr_cfg.debreath_cfg.enable)
 				calc_smt_debreath_qp(p);
-			p->qp_out = mpp_clip(p->qp_out, avg_qp0[avg_qp], avg_qp1[avg_qp]);
-			p->qp_out = mpp_clip(p->qp_out, prev_qp0[p->qp_prev_out], prev_qp1[p->qp_prev_out]);
+			p->qp_out = mpp_clip(p->qp_out, avg_prev_qp0[avg_qp], avg_prev_qp1[avg_qp]);
+			p->qp_out = mpp_clip(p->qp_out, avg_prev_qp0[p->qp_prev_out], avg_prev_qp1[p->qp_prev_out]);
 			p->qp_out = mpp_clip(p->qp_out, intra_preqp0[p->intra_preqp], intra_preqp1[p->intra_preqp]);
 		}
 	} else {
