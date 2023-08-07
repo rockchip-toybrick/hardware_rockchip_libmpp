@@ -326,12 +326,10 @@ static void vepu_pp_md_cfg(struct mpp_dev *mpp, struct pp_task *task)
 {
 	struct vepu_pp_params *cfg = &task->params;
 
-	if (cfg->md_con_base & 1) {
-		mpp_write_relaxed(mpp, VEPU_PP_MD_BASE_ADR, cfg->adr_md_base);
-		mpp_write_relaxed(mpp, VEPU_PP_MD_CON_BASE, cfg->md_con_base);
-		mpp_write_relaxed(mpp, VEPU_PP_MD_CON_FLY_CHECK, cfg->md_fly_chk);
-		mpp_write_relaxed(mpp, VEPU_PP_MD_CON_STO_STRIDE, cfg->md_sto_strd);
-	}
+	mpp_write_relaxed(mpp, VEPU_PP_MD_BASE_ADR, cfg->adr_md_base);
+	mpp_write_relaxed(mpp, VEPU_PP_MD_CON_BASE, cfg->md_con_base);
+	mpp_write_relaxed(mpp, VEPU_PP_MD_CON_FLY_CHECK, cfg->md_fly_chk);
+	mpp_write_relaxed(mpp, VEPU_PP_MD_CON_STO_STRIDE, cfg->md_sto_strd);
 }
 
 static void vepu_pp_od_cfg(struct mpp_dev *mpp, struct pp_task *task)
