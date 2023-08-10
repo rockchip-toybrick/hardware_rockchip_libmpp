@@ -354,7 +354,7 @@ static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void 
 		p->od_con_cmplx.od_thres_complex = cfg->thres_complex;
 		p->od_con_cmplx.od_thres_area_complex = cfg->thres_area_complex;
 		p->od_con_sad.od_thres_sad = 7;
-		p->od_con_sad.od_thres_area_sad = cfg->thres_area_complex;
+		p->od_con_sad.od_thres_area_sad = 0; //cfg->thres_area_complex;
 		break;
 	}
 	case PP_CMD_SET_SMEAR_CFG: {
