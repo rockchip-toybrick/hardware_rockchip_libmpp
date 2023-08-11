@@ -1427,9 +1427,6 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	/* get enc task info */
 	if (mpp->dev_ops->finish)
 		mpp->dev_ops->finish(mpp, mpp_task);
-	if (session->callback && mpp_task->clbk_en)
-		session->callback(session->chn_id);
-
 	if (mpp->irq_status & enc->hw_info->err_mask) {
 		mpp_dbg_warning("task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
 				mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
@@ -1438,10 +1435,12 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 		if (mpp->hw_ops->reset)
 			mpp->hw_ops->reset(mpp);
 	}
-
 	priv->info.hw_running = 0;
 	mpp->overflow_status = 0;
 	mpp_taskqueue_trigger_work(mpp);
+
+	if (session->callback && mpp_task->clbk_en)
+		session->callback(session->chn_id);
 
 	mpp_debug_leave();
 

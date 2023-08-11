@@ -289,7 +289,7 @@ static int mpp_service_probe(struct platform_device *pdev)
 	struct mpp_taskqueue *queue;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 10 };
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 5 };
 
 	dev_info(dev, "%s\n", mpp_version);
 	dev_info(dev, "probe start\n");
