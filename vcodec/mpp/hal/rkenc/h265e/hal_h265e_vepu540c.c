@@ -748,7 +748,7 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 		p_rdo_skip->atf_wgt0.wgt1 = 16;
 		p_rdo_skip->atf_wgt0.wgt2 = 16;
 		p_rdo_skip->atf_wgt0.wgt3 = 16;
-		p_rdo_skip->atf_wgt1.wgt4 = 24;
+		p_rdo_skip->atf_wgt1.wgt4 = 16;
 		if (ctx->smart_en) {
 			p_rdo_skip->atf_thd0.madp_thd0 = 1;
 			p_rdo_skip->atf_thd0.madp_thd1 = 7;
@@ -770,7 +770,7 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 		p_rdo_noskip->atf_wgt.wgt0 = 16;
 		p_rdo_noskip->atf_wgt.wgt1 = 16;
 		p_rdo_noskip->atf_wgt.wgt2 = 16;
-		p_rdo_noskip->atf_wgt.wgt3 = 24;
+		p_rdo_noskip->atf_wgt.wgt3 = 16;
 	} else {
 		p_rdo_noskip->atf_wgt.wgt0 = 16;
 		p_rdo_noskip->atf_wgt.wgt1 = 16;
@@ -786,7 +786,7 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 		p_rdo_noskip->atf_wgt.wgt0 = 27;
 		p_rdo_noskip->atf_wgt.wgt1 = 25;
 		p_rdo_noskip->atf_wgt.wgt2 = 20;
-		p_rdo_noskip->atf_wgt.wgt3 = 24;
+		p_rdo_noskip->atf_wgt.wgt3 = 19;
 	} else {
 		p_rdo_noskip->atf_wgt.wgt0 = 16;
 		p_rdo_noskip->atf_wgt.wgt1 = 16;
