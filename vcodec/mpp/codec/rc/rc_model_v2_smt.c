@@ -868,6 +868,9 @@ MPP_RET check_re_enc_smt(RcModelV2SmtCtx *ctx, EncRcTaskInfo *cfg)
 	if (ctx->reenc_cnt >= usr_cfg->max_reencode_times)
 		return MPP_OK;
 
+	if (usr_cfg->shared_buf_en)
+		return MPP_OK;
+
 	if (check_super_frame_smt(ctx, cfg))
 		return MPP_NOK;
 
