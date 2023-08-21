@@ -353,9 +353,9 @@ static RK_U8 inter_pqp1[52] = {
 	8,    9,    10,    11,    12,    13,    14,    15,
 	16,    17,    18,    19,    20,    20,    21,    22,
 	23,    24,    25,    26,    26,    27,    28,    29,
-	29,    30,    31,    31,    32,    32,    33,    33,
-	34,    34,    35,    35,    36,    36,    37,    37,
-	38,    39,    40,    41
+	29,    30,    31,    31,    32,    33,    34,    35,
+	36,    37,    38,    39,    40,    41,    42,    42,
+	42,    43,    43,    44
 };
 
 static RK_U8 intra_pqp0[52] = {
@@ -546,8 +546,11 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 	break;
 	}
 
-	if (NULL == p->qp_p)
-		mpp_data_init(&p->qp_p, mpp_clip(MPP_MIN(p->igop, 2 * fps_out), 20, 50));
+	if (NULL == p->qp_p) {
+		RK_S32 nfps = fps_out < 15 ? 4 * fps_out : (fps_out < 25 ? 3 * fps_out :
+							    2 * fps_out);
+		mpp_data_init(&p->qp_p, mpp_clip(MPP_MAX(p->igop, nfps), 20, 50));
+	}
 	info->bit_max = (p->bits_target_lr + p->bits_target_hr) / 2;
 	if (info->bit_max < 100)
 		info->bit_max = 100;
@@ -814,6 +817,10 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 	}
 	p->qp_out = mpp_clip(p->qp_out, p->qp_min, p->qp_max);
 	info->quality_target = p->qp_out;
+	info->complex_scene = 0;
+	if (p->frame_type == INTER_P_FRAME && avg_pqp >= fm_max_pqp - 1 &&
+	    p->qp_out == fm_max_pqp && p->qp_prev_out == fm_max_pqp)
+		info->complex_scene = 1;
 	info->quality_max = p->usr_cfg.max_quality;
 	info->quality_min = p->usr_cfg.min_quality;
 	p->frm_num++;

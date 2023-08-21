@@ -2353,7 +2353,8 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 	if (ctx->osd_cfg.osd_data3)
 		vepu540c_set_osd(&ctx->osd_cfg);
 
-	if (ctx->qpmap_en && ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
+	if (!task->rc_task->info.complex_scene && ctx->qpmap_en &&
+	    ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
 		MPP_RET ret;
 		if (ctx->smart_en)
 			vepu540c_set_qpmap_smart(&ctx->regs_set->reg_rc_roi.roi_cfg,
