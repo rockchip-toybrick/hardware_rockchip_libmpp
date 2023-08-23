@@ -259,6 +259,7 @@ static MPP_RET h265e_proc_hal(void *ctx, HalEncTask * task)
 	h265e_syntax_fill(ctx);
 	task->valid = 1;
 	task->syntax.data = syntax;
+	p->cfg->codec.h265.change = 0;
 	h265e_dbg_func("leave ctx %p \n", ctx);
 	return MPP_OK;
 }
