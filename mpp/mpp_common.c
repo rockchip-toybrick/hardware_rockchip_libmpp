@@ -945,6 +945,8 @@ again:
 		goto done;
 	}
 
+	if (atomic_read(&mpp->suspend_en))
+		goto done;
 	/* if task timeout and aborted, remove it */
 	if (atomic_read(&task->abort_request) > 0) {
 		mpp_taskqueue_pop_pending(queue, task);
@@ -975,6 +977,7 @@ again:
 	mpp = mpp_get_task_used_device(task, task->session);
 	mpp_taskqueue_pending_to_run(queue, task);
 	mpp_reset_down_read(mpp->reset_group);
+	down_read(&mpp->work_sem);
 	mpp_time_record(task);
 	if (mpp->dev_ops->run)
 		mpp->dev_ops->run(mpp, task);
@@ -1978,6 +1981,8 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 	mpp->dev_ops = mpp->var->dev_ops;
 	atomic_set(&mpp->power_enabled, 0);
 	mpp->always_on = 0;
+	atomic_set(&mpp->suspend_en, 0);
+	init_rwsem(&mpp->work_sem);
 
 	/* Get and attach to service */
 	ret = mpp_attach_service(mpp, dev);

@@ -366,6 +366,9 @@ struct mpp_dev {
 	/* power info */
 	atomic_t power_enabled;
 	u32 always_on;
+
+	struct rw_semaphore work_sem;
+	atomic_t suspend_en;
 };
 
 struct mpp_session {

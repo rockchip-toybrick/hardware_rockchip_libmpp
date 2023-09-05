@@ -1442,6 +1442,7 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	if (session->callback && mpp_task->clbk_en)
 		session->callback(session->chn_id);
 
+	up_read(&mpp->work_sem);
 	mpp_debug_leave();
 
 	return IRQ_HANDLED;
@@ -1992,6 +1993,7 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	if (mpp->hw_ops->reset)
 		mpp->hw_ops->reset(mpp);
 	mpp_taskqueue_trigger_work(mpp);
+	up_read(&mpp->work_sem);
 	enable_irq(mpp->irq);
 }
 
@@ -2018,11 +2020,14 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 	spin_lock_irqsave(&queue->dev_lock, flags);
 	if (!list_empty(&queue->running_list))
 		goto done;
+	if (atomic_read(&mpp->suspend_en))
+		goto done;
 	/* 2. check and process pending mpp_task */
 	mpp_task = mpp_taskqueue_get_pending_task(queue);
 	if (!mpp_task)
 		goto done;
 
+	down_read(&mpp->work_sem);
 	spin_lock(&queue->pending_lock);
 	list_move_tail(&mpp_task->queue_link, &queue->running_list);
 	spin_unlock(&queue->pending_lock);
@@ -2629,6 +2634,38 @@ static void rkvenc_shutdown(struct platform_device *pdev)
 	dev_info(dev, "shutdown success\n");
 }
 
+static int __maybe_unused rkvenc_runtime_suspend(struct device *dev)
+{
+	struct rkvenc_dev *enc = dev_get_drvdata(dev);
+	struct mpp_dev *mpp = &enc->mpp;
+
+	mpp_debug(DEBUG_POWER, "%s suspend device ++\n", dev_name(dev));
+	if (!atomic_xchg(&mpp->suspend_en, 1))
+		down_write(&mpp->work_sem);
+
+	mpp_debug(DEBUG_POWER, "%s suspend device --\n", dev_name(dev));
+
+	return 0;
+}
+
+static int __maybe_unused rkvenc_runtime_resume(struct device *dev)
+{
+	struct rkvenc_dev *enc = dev_get_drvdata(dev);
+	struct mpp_dev *mpp = &enc->mpp;
+
+	mpp_debug(DEBUG_POWER, "%s resume device ++\n", dev_name(dev));
+	if (atomic_xchg(&mpp->suspend_en, 0))
+		up_write(&mpp->work_sem);
+
+	mpp_debug(DEBUG_POWER, "%s resume device --\n", dev_name(dev));
+
+	return 0;
+}
+
+static const struct dev_pm_ops rkvenc_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rkvenc_runtime_suspend, rkvenc_runtime_resume)
+};
+
 struct platform_driver rockchip_rkvenc540c_driver = {
 	.probe = rkvenc_probe,
 	.remove = rkvenc_remove,
@@ -2636,5 +2673,6 @@ struct platform_driver rockchip_rkvenc540c_driver = {
 	.driver = {
 		.name = RKVENC_DRIVER_NAME,
 		.of_match_table = of_match_ptr(mpp_rkvenc_dt_match),
+		.pm = &rkvenc_pm_ops,
 	},
 };
