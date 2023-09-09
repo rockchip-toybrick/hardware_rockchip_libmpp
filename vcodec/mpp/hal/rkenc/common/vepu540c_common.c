@@ -117,17 +117,18 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 	RK_S32 i;
 	RK_S32 mb_w, mb_h;
 	RK_U32 *mdr = NULL;
-	RK_U32 qpmap_index = 0;
-	Vepu540cQpmapCfg *qpmap_cfg = NULL;
+	RK_U32 qpmap_idx = 0;
+	Vepu540cAvcQpmapCfg *qpmap_avc = NULL;
+	Vepu540cHevcQpmapCfg *qpmap_hevc = NULL;
 	RK_S32 cnt = 0;
 	RK_U8 mv_final_flag;
 	RK_U8 max_mv_final_flag;
 	RK_S32 qp_delta_base;
-	RK_S32 delta_qp_m;
+	RK_S32 dqp;
 	RK_S32 mv_blk_cnt = 0;
 	RK_S32 mv_blk_cnt1 = 0;
 	RK_S32 coef_move, coef_move1;
-	RK_U8 *p0 = NULL;
+	RK_U8 *p = NULL;
 
 	if (!mv_info || !qpmap || !mv_flag)
 		return MPP_NOK;
@@ -138,24 +139,25 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 	roi_cfg->bmap_cfg.bmap_qpmax = 51;
 	roi_cfg->bmap_cfg.bmap_mdc_dpth = 0;
 
-	p0 = mv_flag;
+	p = mv_flag;
 	if (!is_hevc) {
 		mdr = (RK_U32 *)mpp_buffer_get_ptr(mv_info);
-		qpmap_cfg = (Vepu540cQpmapCfg *)mpp_buffer_get_ptr(qpmap);
+		qpmap_avc = (Vepu540cAvcQpmapCfg *)mpp_buffer_get_ptr(qpmap);
 		mb_w = MPP_ALIGN(w, 64) / 16;
 		mb_h = MPP_ALIGN(h, 16) / 16;
 		if (is_idr) {
 			memset(mv_flag, 0, mb_w * mb_h);
 			return MPP_NOK;
 		}
-		memset(qpmap_cfg, 0, sizeof(Vepu540cQpmapCfg) * mb_w * mb_h);
+		memset(qpmap_avc, 0, sizeof(Vepu540cAvcQpmapCfg) * mb_w * mb_h);
 		cnt = mb_h * mb_w;
 		for (i = 0; i < cnt; i++) {
-			p0[i] = (md_idx1[(mdr[i] & 0x0f00) >> 8] | md_idx0[((mdr[i] & 0xff) + 7) >> 3]) | ((
-														   p0[i] << 2) & 0x3f);
-			if ((p0[i] & 0x3) > 0)
+			p[i] = (md_idx1[(mdr[i] & 0x0f00) >> 8] |
+				md_idx0[((mdr[i] & 0xff) + 7) >> 3]) |
+			       ((p[i] << 2) & 0x3f);
+			if ((p[i] & 0x3) > 0)
 				mv_blk_cnt1 ++;
-			else if ((p0[i] & 0xc) >= 8 || (p0[i] & 0x30) >= 32)
+			else if ((p[i] & 0x8) || ((p[i] & 0x30) && (p[i] & 0xc)))
 				mv_blk_cnt ++;
 		}
 
@@ -179,16 +181,16 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 				else
 					roi_cfg->bmap_cfg.bmap_qpmin = 23;
 
-				delta_qp_m = qp_delta_base;
+				dqp = qp_delta_base;
 				if (coef_move1 < cnt / 2)
-					delta_qp_m += 5;
+					dqp += 5;
 				else if (coef_move1 < cnt)
-					delta_qp_m += 4;
+					dqp += 4;
 				else
-					delta_qp_m += 3;
+					dqp += 3;
 				for (i = 0; i < cnt; i++) {
-					if ((p0[i] & 0x3) > 0)
-						qpmap_cfg[i].roi_qp_adju = 0x80 - delta_qp_m;
+					if ((p[i] & 0x3) > 0)
+						qpmap_avc[i].qp_adju = 0x80 - dqp;
 				}
 			} else if (coef_move < 10 * cnt) {
 				if (qp_out > 40)
@@ -198,39 +200,39 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 				else
 					roi_cfg->bmap_cfg.bmap_qpmin = 23;
 
-				delta_qp_m = qp_delta_base;
-				if (coef_move < 1 * cnt)
-					delta_qp_m += 5;
-				else if (coef_move < 3 * cnt)
-					delta_qp_m += 4;
-				else if (coef_move < 5 * cnt)
-					delta_qp_m += 3;
+				dqp = qp_delta_base;
+				if (coef_move < 2 * cnt)
+					dqp += 2;
 				else
-					delta_qp_m += 2;
+					dqp += 1;
 				for (i = 0; i < cnt; i++) {
-					if (0 == (p0[i] & 0x3) && ((p0[i] & 0xc) >= 8 || (p0[i] & 0x30) >= 32))
-						qpmap_cfg[i].roi_qp_adju = 0x80 - delta_qp_m;
+					if ((!(p[i] & 0x3)) && ((p[i] & 0x8) ||
+								((p[i] & 0x30) && (p[i] & 0xc)))) {
+						qpmap_avc[i].qp_adju = 0x80 - dqp;
+						qpmap_avc[i].mdc_adju_intra = 3;
+					}
 				}
 			}
 		}
 		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
 	} else {
 		mdr = (RK_U32 *)mpp_buffer_get_ptr(mv_info);
-		qpmap_cfg = (Vepu540cQpmapCfg *)mpp_buffer_get_ptr(qpmap);
+		qpmap_hevc = (Vepu540cHevcQpmapCfg *)mpp_buffer_get_ptr(qpmap);
 		mb_w = MPP_ALIGN(w, 32) / 16;
 		mb_h = MPP_ALIGN(h, 32) / 16;
 		if (is_idr) {
 			memset(mv_flag, 0, mb_w * mb_h);
 			return MPP_NOK;
 		}
-		memset(qpmap_cfg, 0, sizeof(Vepu540cQpmapCfg) * mb_w * mb_h / 4);
+		memset(qpmap_hevc, 0, sizeof(Vepu540cHevcQpmapCfg) * mb_w * mb_h / 4);
 		cnt = mb_h * mb_w;
 		for (i = 0; i < cnt; i++) {
-			p0[i] = (md_idx1[(mdr[i] & 0x0f00) >> 8] | md_idx0[((mdr[i] & 0xff) + 7) >> 3]) | ((
-														   p0[i] << 2) & 0x3f);
-			if ((p0[i] & 0x3) > 0)
+			p[i] = (md_idx1[(mdr[i] & 0x0f00) >> 8] |
+				md_idx0[((mdr[i] & 0xff) + 7) >> 3]) |
+			       ((p[i] << 2) & 0x3f);
+			if ((p[i] & 0x3) > 0)
 				mv_blk_cnt1 ++;
-			else if ((p0[i] & 0xc) >= 8 || (p0[i] & 0x30) >= 32)
+			else if ((p[i] & 0x8) || (p[i] & 0x20) || ((p[i] & 0x30) && (p[i] & 0xc)))
 				mv_blk_cnt ++;
 		}
 
@@ -255,16 +257,16 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 				else
 					roi_cfg->bmap_cfg.bmap_qpmin = 23;
 
-				delta_qp_m = qp_delta_base;
+				dqp = qp_delta_base;
 				if (coef_move1 <  cnt / 2)
-					delta_qp_m += 5;
+					dqp += 5;
 				else if (coef_move1 < cnt)
-					delta_qp_m += 4;
+					dqp += 4;
 				else
-					delta_qp_m += 3;
+					dqp += 3;
 				for (i = 0; i < cnt; i++) {
 					mv_final_flag = 0;
-					if ((p0[i] & 0x3) > 0)
+					if ((p[i] & 0x3) > 0)
 						mv_final_flag = 1;
 					max_mv_final_flag = max(max_mv_final_flag, mv_final_flag);
 
@@ -272,11 +274,8 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 						continue;
 					else {
 						if (max_mv_final_flag > 0)
-							qpmap_cfg[qpmap_index++].roi_qp_adju = 0x80 - delta_qp_m;
-
-						else
-							qpmap_index++;
-
+							qpmap_hevc[qpmap_idx].qp_adju = 0x80 - dqp;
+						qpmap_idx++;
 						max_mv_final_flag = 0;
 					}
 				}
@@ -288,29 +287,30 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 				else
 					roi_cfg->bmap_cfg.bmap_qpmin = 23;
 
-				delta_qp_m = qp_delta_base;
+				dqp = qp_delta_base;
 				if (coef_move < 1 * cnt)
-					delta_qp_m += 5;
+					dqp += 5;
 				else if (coef_move < 3 * cnt)
-					delta_qp_m += 4;
+					dqp += 4;
 				else if (coef_move < 5 * cnt)
-					delta_qp_m += 3;
+					dqp += 3;
 				else
-					delta_qp_m += 2;
+					dqp += 2;
 				for (i = 0; i < cnt; i++) {
 					mv_final_flag = 0;
-					if (0 == (p0[i] & 0x3) && ((p0[i] & 0xc) >= 8 || (p0[i] & 0x30) >= 32))
+					if ((!(p[i] & 0x3)) && ((p[i] & 0x8) || (p[i] & 0x20) ||
+								((p[i] & 0x30) && (p[i] & 0xc))))
 						mv_final_flag = 1;
 					max_mv_final_flag = max(max_mv_final_flag, mv_final_flag);
 
 					if ((i + 1) % 4)
 						continue;
 					else {
-						if (max_mv_final_flag > 0)
-							qpmap_cfg[qpmap_index++].roi_qp_adju = 0x80 - delta_qp_m;
-
-						else
-							qpmap_index++;
+						if (max_mv_final_flag > 0) {
+							qpmap_hevc[qpmap_idx].qp_adju = 0x80 - dqp;
+							//qpmap_hevc[qpmap_idx].mdc_adju_skip = 12;
+						}
+						qpmap_idx++;
 
 						max_mv_final_flag = 0;
 					}
@@ -330,13 +330,14 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 	RK_S32 i;
 	RK_S32 mb_w, mb_h;
 	RK_U32 *mdr = NULL;
-	RK_U32 qpmap_index = 0;
-	Vepu540cQpmapCfg *qpmap_cfg = NULL;
+	RK_U32 qpmap_idx = 0;
+	Vepu540cAvcQpmapCfg *qpmap_avc = NULL;
+	Vepu540cHevcQpmapCfg *qpmap_hevc = NULL;
 	RK_S32 cnt = 0;
 	RK_U8 mv_final_flag;
 	RK_U8 max_mv_final_flag;
 	RK_S32 qp_delta_base;
-	RK_S32 delta_qp_m;
+	RK_S32 dqp;
 	RK_S32 mv_blk_cnt = 0;
 	RK_S32 coef_move;
 	RK_U8 *p0 = NULL;
@@ -353,19 +354,20 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 	p0 = mv_flag;
 	if (!is_hevc) {
 		mdr = (RK_U32 *)mpp_buffer_get_ptr(mv_info);
-		qpmap_cfg = (Vepu540cQpmapCfg *)mpp_buffer_get_ptr(qpmap);
+		qpmap_avc = (Vepu540cAvcQpmapCfg *)mpp_buffer_get_ptr(qpmap);
 		mb_w = MPP_ALIGN(w, 64) / 16;
 		mb_h = MPP_ALIGN(h, 16) / 16;
 		if (is_idr) {
 			memset(mv_flag, 0, mb_w * mb_h);
 			return MPP_NOK;
 		}
-		memset(qpmap_cfg, 0, sizeof(Vepu540cQpmapCfg) * mb_w * mb_h);
+		memset(qpmap_avc, 0, sizeof(Vepu540cAvcQpmapCfg) * mb_w * mb_h);
 		cnt = mb_h * mb_w;
 		for (i = 0; i < cnt; i++) {
-			p0[i] = (md_idx1[(mdr[i] & 0x0f00) >> 8] | md_idx0[((mdr[i] & 0xff) + 7) >> 3]) | ((
-														   p0[i] << 2) & 0x3f);
-			if ((0 == (p0[i] & 0x3)) && ((p0[i] & 0xc) >= 8 || (p0[i] & 0x30) >= 32))
+			p0[i] = (md_idx1[(mdr[i] & 0x0f00) >> 8] |
+				 md_idx0[((mdr[i] & 0xff) + 7) >> 3]) |
+				((p0[i] << 2) & 0x3f);
+			if ((!(p0[i] & 0x3)) && ((p0[i] & 0x8) || (p0[i] & 0x20)))
 				mv_blk_cnt ++;
 		}
 
@@ -388,36 +390,37 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 		}
 		dma_buf_begin_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
 		if (coef_move < 15 * cnt && coef_move > 0) {
-			delta_qp_m = qp_delta_base;
+			dqp = qp_delta_base;
 			if (coef_move < 1 * cnt)
-				delta_qp_m += 7;
+				dqp += 7;
 			else if (coef_move < 3 * cnt)
-				delta_qp_m += 6;
+				dqp += 6;
 			else if (coef_move < 7 * cnt)
-				delta_qp_m += 5;
+				dqp += 5;
 			else
-				delta_qp_m += 4;
+				dqp += 4;
 			for (i = 0; i < cnt; i++) {
-				if (0 == (p0[i] & 0x3) && ((p0[i] & 0xc) >= 8 || (p0[i] & 0x30) >= 32))
-					qpmap_cfg[i].roi_qp_adju = 0x80 - delta_qp_m;
+				if ((!(p0[i] & 0x3)) && ((p0[i] & 0x8) || (p0[i] & 0x20)))
+					qpmap_avc[i].qp_adju = 0x80 - dqp;
 			}
 		}
 		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
 	} else {
 		mdr = (RK_U32 *)mpp_buffer_get_ptr(mv_info);
-		qpmap_cfg = (Vepu540cQpmapCfg *)mpp_buffer_get_ptr(qpmap);
+		qpmap_hevc = (Vepu540cHevcQpmapCfg *)mpp_buffer_get_ptr(qpmap);
 		mb_w = MPP_ALIGN(w, 32) / 16;
 		mb_h = MPP_ALIGN(h, 32) / 16;
 		if (is_idr) {
 			memset(mv_flag, 0, mb_w * mb_h);
 			return MPP_NOK;
 		}
-		memset(qpmap_cfg, 0, sizeof(Vepu540cQpmapCfg) * mb_w * mb_h / 4);
+		memset(qpmap_hevc, 0, sizeof(Vepu540cHevcQpmapCfg) * mb_w * mb_h / 4);
 		cnt = mb_h * mb_w;
 		for (i = 0; i < cnt; i++) {
-			p0[i] = (md_idx1[(mdr[i] & 0x0f00) >> 8] | md_idx0[((mdr[i] & 0xff) + 7) >> 3]) | ((
-														   p0[i] << 2) & 0x3f);
-			if ((0 == (p0[i] & 0x3)) && ((p0[i] & 0xc) >= 8 || (p0[i] & 0x30) >= 32))
+			p0[i] = (md_idx1[(mdr[i] & 0x0f00) >> 8] |
+				 md_idx0[((mdr[i] & 0xff) + 7) >> 3]) |
+				((p0[i] << 2) & 0x3f);
+			if ((!(p0[i] & 0x3)) && ((p0[i] & 0x8) || (p0[i] & 0x20)))
 				mv_blk_cnt ++;
 		}
 
@@ -442,18 +445,18 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 
 		dma_buf_begin_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
 		if (coef_move < 15 * cnt && coef_move > 0) {
-			delta_qp_m = qp_delta_base;
+			dqp = qp_delta_base;
 			if (coef_move < 1 * cnt)
-				delta_qp_m += 7;
+				dqp += 7;
 			else if (coef_move < 3 * cnt)
-				delta_qp_m += 6;
+				dqp += 6;
 			else if (coef_move < 7 * cnt)
-				delta_qp_m += 5;
+				dqp += 5;
 			else
-				delta_qp_m += 4;
+				dqp += 4;
 			for (i = 0; i < cnt; i++) {
 				mv_final_flag = 0;
-				if (0 == (p0[i] & 0x3) && ((p0[i] & 0xc) >= 8 || (p0[i] & 0x30) >= 32))
+				if ((!(p0[i] & 0x3)) && ((p0[i] & 0x8) || (p0[i] & 0x20)))
 					mv_final_flag = 1;
 				max_mv_final_flag = max(max_mv_final_flag, mv_final_flag);
 
@@ -461,10 +464,8 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 					continue;
 				else {
 					if (max_mv_final_flag > 0)
-						qpmap_cfg[qpmap_index++].roi_qp_adju = 0x80 - delta_qp_m;
-
-					else
-						qpmap_index++;
+						qpmap_hevc[qpmap_idx].qp_adju = 0x80 - dqp;
+					qpmap_idx++;
 
 					max_mv_final_flag = 0;
 				}

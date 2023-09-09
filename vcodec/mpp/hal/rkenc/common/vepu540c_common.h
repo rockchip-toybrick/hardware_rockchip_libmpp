@@ -918,13 +918,22 @@ typedef struct Vepu540cRoiCfg_t {
  * Vepu540cQpmapCfg
  *
  */
-typedef struct Vepu540cQpmapCfg {
-	RK_U32 roi_qp_adju: 8;
+typedef struct Vepu540cHevcQpmapCfg {
+	RK_U32 qp_adju: 8;
 	RK_U32 reserved: 12;
 	RK_U32 mdc_adju_inter: 4;
 	RK_U32 mdc_adju_skip: 4;
 	RK_U32 mdc_adju_intra: 4;
-} Vepu540cQpmapCfg;
+} Vepu540cHevcQpmapCfg;
+
+typedef struct Vepu540cAvcQpmapCfg {
+	RK_U32 qp_adju: 8;
+	RK_U32 mdc_adju_inter: 4;
+	RK_U32 mdc_adju_skip: 4;
+	RK_U32 mdc_adju_intra: 4;
+	RK_U32 reserved: 12;
+} Vepu540cAvcQpmapCfg;
+
 
 /* class: osd */
 /* 0x00003000 reg3072 - 0x00003084 reg3105*/

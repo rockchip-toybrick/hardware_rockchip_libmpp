@@ -131,7 +131,7 @@ static RK_S32 h264_I_aq_step_default[16] = {
 	-8, -7, -6, -5,
 	-4, -3, -2, -1,
 	0, 1, 2, 3,
-	4, 5, 8, 8,
+	4, 5, 7, 8,
 };
 
 static RK_S32 h264_aq_tthd_cvr[16] = {
@@ -1977,6 +1977,7 @@ static RK_U32 h264e_lambda_cvr[60] = {
 	0x0004f5c3, 0x0006e785, 0x0008b2ef, 0x000af5c3,
 	0x000f1e7a, 0x00130c7f, 0x00180000, 0x001e3cf4,
 	0x002618fe, 0x00300000, 0x003c79e8, 0x004c31fc,
+	0x00600000, 0x0078f3d0, 0x009863f8, 0x0c000000,
 };
 
 static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
