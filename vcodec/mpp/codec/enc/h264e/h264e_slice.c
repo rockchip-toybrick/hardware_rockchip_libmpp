@@ -71,7 +71,7 @@ RK_S32 h264e_slice_update(H264eSlice *slice, MppEncCfgSet *cfg,
 			slice->next_idr_pic_id = 0;
 	}
 
-	slice->pic_order_cnt_lsb = frm->poc;
+	slice->pic_order_cnt_lsb = frm->poc & ((1 << slice->log2_max_poc_lsb) - 1);
 	slice->num_ref_idx_active = 1;
 	slice->no_output_of_prior_pics = 0;
 	if (slice->idr_flag)
