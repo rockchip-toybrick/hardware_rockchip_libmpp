@@ -547,6 +547,15 @@ MPP_RET mpp_enc_proc_hw_cfg(MppEncHwCfg *dst, MppEncHwCfg *src)
 		if (change & MPP_ENC_HW_CFG_CHANGE_QP_ROW_I)
 			dst->qp_delta_row_i = src->qp_delta_row_i;
 
+		if (change & MPP_ENC_HW_CFG_CHANGE_QBIAS_I)
+			dst->qbias_i = src->qbias_i;
+
+		if (change & MPP_ENC_HW_CFG_CHANGE_QBIAS_P)
+			dst->qbias_p = src->qbias_p;
+
+		if (change & MPP_ENC_HW_CFG_CHANGE_QBIAS_EN)
+			dst->qbias_en = src->qbias_en;
+
 		if (change & MPP_ENC_HW_CFG_CHANGE_AQ_THRD_I)
 			memcpy(dst->aq_thrd_i, src->aq_thrd_i,
 			       sizeof(dst->aq_thrd_i));
@@ -566,6 +575,17 @@ MPP_RET mpp_enc_proc_hw_cfg(MppEncHwCfg *dst, MppEncHwCfg *src)
 		if (dst->qp_delta_row < 0 || dst->qp_delta_row_i < 0) {
 			mpp_err("invalid hw qp delta row [%d:%d]\n",
 				dst->qp_delta_row_i, dst->qp_delta_row);
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (dst->qbias_en < 0) {
+			mpp_err("invalid hw qbias_en [%d]\n", dst->qbias_en);
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (dst->qbias_i < 0 || dst->qbias_p < 0) {
+			mpp_err("invalid hw qp bias [%d:%d]\n",
+				dst->qbias_i, dst->qbias_p);
 			ret = MPP_ERR_VALUE;
 		}
 
