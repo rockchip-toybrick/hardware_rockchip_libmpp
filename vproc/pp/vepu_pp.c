@@ -337,9 +337,9 @@ static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void 
 
 		p->md_fly_chk.night_mode_en = cfg->night_mode;
 		p->md_fly_chk.flycatkin_flt_en = cfg->filter_switch;
-		p->md_fly_chk.thres_dust_move = 3;
-		p->md_fly_chk.thres_dust_blk = 3;
-		p->md_fly_chk.thres_dust_chng = 50;
+		p->md_fly_chk.thres_dust_move = cfg->thres_dust_move;
+		p->md_fly_chk.thres_dust_blk = cfg->thres_dust_blk;
+		p->md_fly_chk.thres_dust_chng = cfg->thres_dust_chng;
 		p->md_sto_strd = 64; /* ?? */
 
 		p->adr_rfmw = info->buf_rfmwr->iova;

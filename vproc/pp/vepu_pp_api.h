@@ -65,7 +65,10 @@ struct pp_md_cfg {
 	int thres_move;
 	int night_mode;
 	int filter_switch;
-	int reserved[8];
+	int thres_dust_move;
+	int thres_dust_blk;
+	int thres_dust_chng;
+	int reserved[5];
 };
 
 struct pp_od_cfg {
