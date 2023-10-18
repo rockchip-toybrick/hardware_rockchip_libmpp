@@ -556,6 +556,12 @@ MPP_RET mpp_enc_proc_hw_cfg(MppEncHwCfg *dst, MppEncHwCfg *src)
 		if (change & MPP_ENC_HW_CFG_CHANGE_QBIAS_EN)
 			dst->qbias_en = src->qbias_en;
 
+		if (change & MPP_ENC_HW_CFG_CHANGE_FLT_STR_I)
+			dst->flt_str_i = src->flt_str_i;
+
+		if (change & MPP_ENC_HW_CFG_CHANGE_FLT_STR_P)
+			dst->flt_str_p = src->flt_str_p;
+
 		if (change & MPP_ENC_HW_CFG_CHANGE_AQ_THRD_I)
 			memcpy(dst->aq_thrd_i, src->aq_thrd_i,
 			       sizeof(dst->aq_thrd_i));
@@ -586,6 +592,12 @@ MPP_RET mpp_enc_proc_hw_cfg(MppEncHwCfg *dst, MppEncHwCfg *src)
 		if (dst->qbias_i < 0 || dst->qbias_p < 0) {
 			mpp_err("invalid hw qp bias [%d:%d]\n",
 				dst->qbias_i, dst->qbias_p);
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (dst->flt_str_i < 0 || dst->flt_str_p < 0) {
+			mpp_err("invalid filter strength [%d:%d]\n",
+				dst->flt_str_i, dst->flt_str_p);
 			ret = MPP_ERR_VALUE;
 		}
 

@@ -997,6 +997,15 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 		reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = hw->qbias_i;
 		reg_wgt->reg1484_qnt_bias_comb.qnt_bias_p = hw->qbias_p;
 	}
+	if (ctx->frame_type == INTRA_FRAME) {
+		regs->reg_base.reg0207_src_flt_cfg.pp_corner_filter_strength = hw->flt_str_i;
+		regs->reg_base.reg0207_src_flt_cfg.pp_edge_filter_strength = hw->flt_str_i;
+		regs->reg_base.reg0207_src_flt_cfg.pp_internal_filter_strength = hw->flt_str_i;
+	} else {
+		regs->reg_base.reg0207_src_flt_cfg.pp_corner_filter_strength = hw->flt_str_p;
+		regs->reg_base.reg0207_src_flt_cfg.pp_edge_filter_strength = hw->flt_str_p;
+		regs->reg_base.reg0207_src_flt_cfg.pp_internal_filter_strength = hw->flt_str_p;
+	}
 	{
 		/* 0x1760 */
 		regs->reg_wgt.me_sqi_cfg.cime_pmv_num = 1;
@@ -1126,6 +1135,8 @@ MPP_RET hal_h265e_v540c_init(void *hal, MppEncHalCfg *cfg)
 		hw->qbias_i = 171;
 		hw->qbias_p = 85;
 		hw->qbias_en = 0;
+		hw->flt_str_i = 0;
+		hw->flt_str_p = 0;
 
 		if (ctx->smart_en) {
 			memcpy(hw->aq_step_i, aq_qp_dealt_smart, sizeof(hw->aq_step_i));

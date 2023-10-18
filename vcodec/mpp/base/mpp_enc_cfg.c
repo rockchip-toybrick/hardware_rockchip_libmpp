@@ -240,6 +240,8 @@ RK_U32 mpp_enc_cfg_debug = 0;
     ENTRY(hw,   qbias_i,        S32, RK_S32,            MPP_ENC_HW_CFG_CHANGE_QBIAS_I,          hw, qbias_i)                                                        \
     ENTRY(hw,   qbias_p,        S32, RK_S32,            MPP_ENC_HW_CFG_CHANGE_QBIAS_P,          hw, qbias_p)                                                        \
     ENTRY(hw,   qbias_en,       S32, RK_S32,            MPP_ENC_HW_CFG_CHANGE_QBIAS_EN,         hw, qbias_en)                                                       \
+    ENTRY(hw,   flt_str_i,      S32, RK_S32,            MPP_ENC_HW_CFG_CHANGE_FLT_STR_I,        hw, flt_str_i)                                                      \
+    ENTRY(hw,   flt_str_p,      S32, RK_S32,            MPP_ENC_HW_CFG_CHANGE_FLT_STR_P,        hw, flt_str_p)                                                      \
     /* quality fine tuning config */                                                                                                                                \
     ENTRY(tune, scene_mode,     S32, MppEncSceneMode,   MPP_ENC_TUNE_CFG_CHANGE_SCENE_MODE,     tune, scene_mode)                                                   \
     ENTRY(tune, motion_static_switch_enable,     S32, RK_S32,   MPP_ENC_TUNE_CFG_CHANGE_MOTION_STATIC_SWITCH_ENABLE,     tune, motion_static_switch_enable)

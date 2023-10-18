@@ -250,6 +250,8 @@ static MPP_RET hal_h264e_vepu540c_init(void *hal, MppEncHalCfg *cfg)
 		hw->qbias_i = 683;
 		hw->qbias_p = 341;
 		hw->qbias_en = 0;
+		hw->flt_str_i = 0;
+		hw->flt_str_p = 0;
 		if (p->smart_en) {
 			memcpy(hw->aq_thrd_i, h264_aq_tthd_smart, sizeof(hw->aq_thrd_i));
 			memcpy(hw->aq_thrd_p, h264_aq_tthd_smart, sizeof(hw->aq_thrd_p));
@@ -2010,6 +2012,16 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 	if (hw->qbias_en) {
 		regs->reg_s3.RDO_QUANT.quant_f_bias_I = ctx->cfg->hw.qbias_i;
 		regs->reg_s3.RDO_QUANT.quant_f_bias_P = ctx->cfg->hw.qbias_p;
+	}
+
+	if (slice->slice_type == H264_I_SLICE) {
+		regs->reg_base.src_flt_cfg.pp_corner_filter_strength = hw->flt_str_i;
+		regs->reg_base.src_flt_cfg.pp_edge_filter_strength = hw->flt_str_i;
+		regs->reg_base.src_flt_cfg.pp_internal_filter_strength = hw->flt_str_i;
+	} else {
+		regs->reg_base.src_flt_cfg.pp_corner_filter_strength = hw->flt_str_p;
+		regs->reg_base.src_flt_cfg.pp_edge_filter_strength = hw->flt_str_p;
+		regs->reg_base.src_flt_cfg.pp_internal_filter_strength = hw->flt_str_p;
 	}
 
 	regs->reg_s3.iprd_tthdy4_0.iprd_tthdy4_0 = 1;
