@@ -637,8 +637,8 @@ static int vepu_pp_probe(struct platform_device *pdev)
 	mpp = &pp->mpp;
 	platform_set_drvdata(pdev, pp);
 
-	if (pdev->dev.of_node) {
-		match = of_match_node(mpp_vepu_pp_match, pdev->dev.of_node);
+	if (mpp_dev_of_node(dev)) {
+		match = of_match_node(mpp_vepu_pp_match, mpp_dev_of_node(dev));
 		if (match)
 			mpp->var = (struct mpp_dev_var *)match->data;
 	}

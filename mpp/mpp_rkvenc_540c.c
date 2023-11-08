@@ -2173,13 +2173,18 @@ static int rkvenc_procfs_init(struct mpp_dev *mpp)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	char name[32];
+	struct device_node *of_node;
 
-	if (!mpp->dev || !mpp->dev->of_node || !mpp->dev->of_node->name ||
+	if (!mpp->dev || !mpp_dev_of_node(mpp->dev) ||
 	    !mpp->srv || !mpp->srv->procfs)
 		return -EINVAL;
 
+	of_node = mpp_dev_of_node(mpp->dev);
+	if (!of_node->name)
+		return -EINVAL;
+
 	snprintf(name, sizeof(name) - 1, "%s%d",
-		 mpp->dev->of_node->name, mpp->core_id);
+		 of_node->name, mpp->core_id);
 
 	enc->procfs = proc_mkdir(name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(enc->procfs)) {
@@ -2226,6 +2231,7 @@ static int rkvenc_init(struct mpp_dev *mpp)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	int ret = 0;
+	struct device_node *of_node = mpp_dev_of_node(mpp->dev);
 
 	mpp->grf_info = &mpp->srv->grf_infos[MPP_DRIVER_RKVENC];
 
@@ -2240,7 +2246,7 @@ static int rkvenc_init(struct mpp_dev *mpp)
 	if (ret)
 		mpp_err("failed on clk_get clk_core\n");
 	/* Get normal max workload from dtsi */
-	of_property_read_u32(mpp->dev->of_node,
+	of_property_read_u32(of_node,
 			     "rockchip,default-max-load",
 			     &enc->default_max_load);
 	/* Set default rates */
@@ -2459,7 +2465,7 @@ static int rkvenc_link_init(struct platform_device *pdev,
 	int ret;
 	struct rkvenc_link_dev *link;
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = mpp_dev_of_node(dev);;
 
 	mpp_debug_enter();
 
@@ -2514,14 +2520,13 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	mpp = &enc->mpp;
 	platform_set_drvdata(pdev, enc);
 
-	if (pdev->dev.of_node) {
-		match = of_match_node(mpp_rkvenc_dt_match, pdev->dev.of_node);
-		if (match)
-			mpp->var = (struct mpp_dev_var *)match->data;
-		else {
+	if (mpp_dev_of_node(dev)) {
+		match = of_match_device(mpp_rkvenc_dt_match, &pdev->dev);
+		if (!match) {
 			dev_err(dev, "dt match failed!\n");
 			return -ENODEV;
 		}
+		mpp->var = (struct mpp_dev_var *)match->data;
 	}
 
 	ret = mpp_dev_probe(mpp, pdev);
@@ -2548,10 +2553,9 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 		struct device_node *np_dvbm = NULL;
 		struct platform_device *pdev_dvbm = NULL;
 
-		np_dvbm = of_parse_phandle(dev->of_node, "dvbm", 0);
+		np_dvbm = of_parse_phandle(mpp_dev_of_node(dev), "dvbm", 0);
 		if (!np_dvbm || !of_device_is_available(np_dvbm))
 			mpp_err("failed to get device node\n");
-
 		else {
 			pdev_dvbm = of_find_device_by_node(np_dvbm);
 			enc->port = rk_dvbm_get_port(pdev_dvbm, DVBM_VEPU_PORT);

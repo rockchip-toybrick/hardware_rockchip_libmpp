@@ -24,6 +24,7 @@
 #include <linux/poll.h>
 #include <linux/platform_device.h>
 #include <soc/rockchip/pm_domains.h>
+#include "mpp_osal.h"
 
 #define MHZ			(1000 * 1000)
 

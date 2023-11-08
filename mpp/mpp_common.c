@@ -226,7 +226,7 @@ int mpp_power_on(struct mpp_dev *mpp)
 {
 	if (!atomic_xchg(&mpp->power_enabled, 1)) {
 		pm_runtime_get_sync(mpp->dev);
-		pm_stay_awake(mpp->dev);
+		mpp_pm_stay_awake(mpp->dev);
 
 		if (mpp->hw_ops->clk_on)
 			mpp->hw_ops->clk_on(mpp);
@@ -243,7 +243,7 @@ int mpp_power_off(struct mpp_dev *mpp)
 		if (mpp->hw_ops->clk_off)
 			mpp->hw_ops->clk_off(mpp);
 
-		pm_relax(mpp->dev);
+		mpp_pm_relax(mpp->dev);
 		if (mpp_taskqueue_get_pending_task(mpp->queue) ||
 		    mpp_taskqueue_get_running_task(mpp->queue)) {
 			pm_runtime_mark_last_busy(mpp->dev);
@@ -719,9 +719,10 @@ mpp_reset_control_get(struct mpp_dev *mpp, enum MPP_RESET_TYPE type, const char 
 	struct reset_control *rst = NULL;
 	char shared_name[32] = "shared_";
 	struct mpp_reset_group *group;
+	void *of_node = mpp_dev_of_node(mpp->dev);
 
 	/* check reset whether belone to device alone */
-	index = of_property_match_string(mpp->dev->of_node, "reset-names", name);
+	index = of_property_match_string(of_node, "reset-names", name);
 	if (index >= 0) {
 		rst = devm_reset_control_get(mpp->dev, name);
 		mpp_safe_unreset(rst);
@@ -732,7 +733,7 @@ mpp_reset_control_get(struct mpp_dev *mpp, enum MPP_RESET_TYPE type, const char 
 	/* check reset whether is shared */
 	strncat(shared_name, name,
 		sizeof(shared_name) - strlen(shared_name) - 1);
-	index = of_property_match_string(mpp->dev->of_node,
+	index = of_property_match_string(of_node,
 					 "reset-names", shared_name);
 	if (index < 0) {
 		dev_err(mpp->dev, "%s is not found!\n", shared_name);
@@ -1049,7 +1050,7 @@ static int mpp_attach_service(struct mpp_dev *mpp, struct device *dev)
 	struct mpp_taskqueue *queue = NULL;
 	int ret = 0;
 
-	np = of_parse_phandle(dev->of_node, "rockchip,srv", 0);
+	np = of_parse_phandle(mpp_dev_of_node(dev), "rockchip,srv", 0);
 	if (!np || !of_device_is_available(np)) {
 		dev_err(dev, "failed to get the mpp service node\n");
 		return -ENODEV;
@@ -1069,7 +1070,7 @@ static int mpp_attach_service(struct mpp_dev *mpp, struct device *dev)
 		return -EINVAL;
 	}
 
-	ret = of_property_read_u32(dev->of_node,
+	ret = of_property_read_u32(mpp_dev_of_node(dev),
 				   "rockchip,taskqueue-node", &taskqueue_node);
 	if (ret) {
 		dev_err(dev, "failed to get taskqueue-node\n");
@@ -1088,7 +1089,7 @@ static int mpp_attach_service(struct mpp_dev *mpp, struct device *dev)
 	}
 	mpp_attach_workqueue(mpp, queue);
 
-	ret = of_property_read_u32(dev->of_node,
+	ret = of_property_read_u32(mpp_dev_of_node(dev),
 				   "rockchip,resetgroup-node", &reset_group_node);
 	if (!ret) {
 		/* set resetgroup according dtsi */
@@ -2008,7 +2009,7 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 	atomic_set(&mpp->task_count, 0);
 	atomic_set(&mpp->task_index, 0);
 
-	device_init_wakeup(dev, true);
+	mpp_device_init_wakeup(dev, true);
 	pm_runtime_enable(dev);
 
 	mpp->irq = platform_get_irq(pdev, 0);
@@ -2066,7 +2067,7 @@ failed_init:
 	pm_runtime_put_sync(dev);
 failed:
 	mpp_detach_workqueue(mpp);
-	device_init_wakeup(dev, false);
+	mpp_device_init_wakeup(dev, false);
 	pm_runtime_disable(dev);
 
 	return ret;
@@ -2079,7 +2080,7 @@ int mpp_dev_remove(struct mpp_dev *mpp)
 
 	mpp_iommu_remove(mpp->iommu_info);
 	mpp_detach_workqueue(mpp);
-	device_init_wakeup(mpp->dev, false);
+	mpp_device_init_wakeup(mpp->dev, false);
 	pm_runtime_disable(mpp->dev);
 
 	return 0;
@@ -2248,18 +2249,19 @@ int mpp_get_clk_info(struct mpp_dev *mpp,
 		     struct mpp_clk_info *clk_info,
 		     const char *name)
 {
-	int index = of_property_match_string(mpp->dev->of_node,
+	void *of_node = mpp_dev_of_node(mpp->dev);
+	int index = of_property_match_string(of_node,
 					     "clock-names", name);
 
 	if (index < 0)
 		return -EINVAL;
 
 	clk_info->clk = devm_clk_get(mpp->dev, name);
-	of_property_read_u32_index(mpp->dev->of_node,
+	of_property_read_u32_index(of_node,
 				   "rockchip,normal-rates",
 				   index,
 				   &clk_info->normal_rate_hz);
-	of_property_read_u32_index(mpp->dev->of_node,
+	of_property_read_u32_index(of_node,
 				   "rockchip,advanced-rates",
 				   index,
 				   &clk_info->advanced_rate_hz);
