@@ -182,6 +182,7 @@ typedef struct RcCfg_s {
 	RK_U32          shared_buf_en;
 	RK_S32          scene_mode;
 	RK_S32          motion_static_switch_enable;
+	RK_S32          deblur_str;
 } RcCfg;
 
 /*

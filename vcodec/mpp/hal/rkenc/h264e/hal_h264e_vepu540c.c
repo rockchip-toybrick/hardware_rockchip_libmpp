@@ -71,6 +71,7 @@ typedef struct vepu540c_h264_fbk_t {
 	RK_U32 st_mb_num;
 	RK_U32 st_ctu_num;
 	RK_U32 st_smear_cnt[5];
+	RK_S8 tgt_sub_real_lvl[6];
 } vepu540c_h264_fbk;
 
 typedef struct HalH264eVepu540cCtx_t {
@@ -1273,30 +1274,69 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	vepu540c_h264_fbk *last_fb = &ctx->last_frame_fb;
 	RK_U32 mb_cnt = last_fb->st_mb_num;
 	RK_U32 *smear_cnt = last_fb->st_smear_cnt;
+	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
+	RK_S32 flg0 = smear_cnt[4] < (mb_cnt >> 6);
+	RK_S32 flg1 = 1;
+	RK_S32 flg2 = 0;
+	RK_S32 flg3 = 0;
+	RK_S32 smear_multi[4] = {9, 12, 16, 16};
 	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
 
 	hal_h264e_dbg_func("enter\n");
 
+	if (smear_cnt[3] < ((5 * mb_cnt) >> 10))
+		flg1 = 0;
+	else if (smear_cnt[3] < ((1126 * max(max(smear_cnt[0], smear_cnt[1]), smear_cnt[2])) >> 10))
+		flg1 = 0;
+	flg1 = ((deblur_str == 6) || (deblur_str == 7)) ? 0 : flg1;
+
+	if (flg1)
+		flg3 = 3;
+	else if (smear_cnt[4] > ((102 * mb_cnt) >> 10))
+		flg3 = 2;
+	else if (smear_cnt[4] > ((66 * mb_cnt) >> 10))
+		flg3 = 1;
+	else
+		flg3 = 0;
+
 	if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
 		reg->rdo_smear_cfg_comb.rdo_smear_en = 1;
-		reg->rdo_smear_cfg_comb.rdo_smear_lvl16_multi = 9;
-		if (ctx->smart_en)
-			reg->rdo_smear_cfg_comb.rdo_smear_lvl16_multi = 16;
+		if (ctx->qpmap_en && deblur_str > 3) //hw param
+			reg->rdo_smear_cfg_comb.rdo_smear_lvl16_multi = smear_multi[flg3];
+		else
+			reg->rdo_smear_cfg_comb.rdo_smear_lvl16_multi = flg0 ? 9 : 12;
 	} else {
 		reg->rdo_smear_cfg_comb.rdo_smear_en = 0;
 		reg->rdo_smear_cfg_comb.rdo_smear_lvl16_multi = 16;
 	}
 
-	if (smear_cnt[2] + smear_cnt[3] > smear_cnt[4] / 2)
-		delta_qp = 1;
-	if (smear_cnt[4] < (mb_cnt >> 8))
-		delta_qp -= 8;
-	else if (smear_cnt[4] < (mb_cnt >> 7))
-		delta_qp -= 6;
-	else if (smear_cnt[4] < (mb_cnt >> 6))
-		delta_qp -= 4;
-	else
-		delta_qp -= 1;
+	if (ctx->qpmap_en && deblur_str > 3) { //hw param
+		flg2 = 1;
+		if (smear_cnt[2] + smear_cnt[3] > (3 * smear_cnt[4] / 4))
+			delta_qp = 1;
+		if (smear_cnt[4] < (mb_cnt >> 4))
+			delta_qp -= 8;
+		else if (smear_cnt[4] < ((3 * mb_cnt) >> 5))
+			delta_qp -= 7;
+		else
+			delta_qp -= 6;
+
+		if (flg3 == 2)
+			delta_qp = 0;
+		else if (flg3 == 1)
+			delta_qp = -2;
+	} else {
+		if (smear_cnt[2] + smear_cnt[3] > smear_cnt[4] / 2)
+			delta_qp = 1;
+		if (smear_cnt[4] < (mb_cnt >> 8))
+			delta_qp -= (deblur_str < 2) ? 6 : 8;
+		else if (smear_cnt[4] < (mb_cnt >> 7))
+			delta_qp -= (deblur_str < 2) ? 5 : 6;
+		else if (smear_cnt[4] < (mb_cnt >> 6))
+			delta_qp -= (deblur_str < 2) ? 3 : 4;
+		else
+			delta_qp -= 1;
+	}
 	reg->rdo_smear_cfg_comb.rdo_smear_dlt_qp = delta_qp;
 
 	reg->rdo_smear_cfg_comb.rdo_smear_order_state = 0;
@@ -1344,19 +1384,19 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	}
 
 	reg->rdo_smear_madp_thd0_comb.rdo_smear_madp_cur_thd0 = 0;
-	reg->rdo_smear_madp_thd0_comb.rdo_smear_madp_cur_thd1 = 24;
-	reg->rdo_smear_madp_thd1_comb.rdo_smear_madp_cur_thd2 = 48;
-	reg->rdo_smear_madp_thd1_comb.rdo_smear_madp_cur_thd3 = 64;
-	reg->rdo_smear_madp_thd2_comb.rdo_smear_madp_around_thd0 = 16;
+	reg->rdo_smear_madp_thd0_comb.rdo_smear_madp_cur_thd1 = flg2 ? 48 : 24;
+	reg->rdo_smear_madp_thd1_comb.rdo_smear_madp_cur_thd2 = flg2 ? 64 : 48;
+	reg->rdo_smear_madp_thd1_comb.rdo_smear_madp_cur_thd3 = flg2 ? 72 : 64;
+	reg->rdo_smear_madp_thd2_comb.rdo_smear_madp_around_thd0 = flg2 ? 4095 : 16;
 	reg->rdo_smear_madp_thd2_comb.rdo_smear_madp_around_thd1 = 32;
 	reg->rdo_smear_madp_thd3_comb.rdo_smear_madp_around_thd2 = 48;
-	reg->rdo_smear_madp_thd3_comb.rdo_smear_madp_around_thd3 = 96;
+	reg->rdo_smear_madp_thd3_comb.rdo_smear_madp_around_thd3 = flg2 ? 0 : 96;
 	reg->rdo_smear_madp_thd4_comb.rdo_smear_madp_around_thd4 = 48;
 	reg->rdo_smear_madp_thd4_comb.rdo_smear_madp_around_thd5 = 24;
-	reg->rdo_smear_madp_thd5_comb.rdo_smear_madp_ref_thd0 = 96;
+	reg->rdo_smear_madp_thd5_comb.rdo_smear_madp_ref_thd0 = flg2 ? 64 : 96;
 	reg->rdo_smear_madp_thd5_comb.rdo_smear_madp_ref_thd1 = 48;
-	reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd0 = 1;
-	reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd1 = 3;
+	reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd0 = flg2 ?  2 : 1;
+	reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd1 = flg2 ?  5 : 3;
 	reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd2 = 1;
 	reg->rdo_smear_cnt_thd0_comb.rdo_smear_cnt_cur_thd3 = 3;
 	reg->rdo_smear_cnt_thd1_comb.rdo_smear_cnt_around_thd0 = 1;
@@ -1383,14 +1423,14 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	reg->rdo_smear_resi_thd2_comb.rdo_smear_resi_big_around_th3 = 20;
 	reg->rdo_smear_resi_thd3_comb.rdo_smear_resi_small_ref_th0 = 7;
 	reg->rdo_smear_resi_thd3_comb.rdo_smear_resi_big_ref_th0 = 16;
-	reg->rdo_smear_st_thd0_comb.rdo_smear_resi_th0 = 10;
-	reg->rdo_smear_st_thd0_comb.rdo_smear_resi_th1 = 6;
-	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th0 = 1;
-	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th1 = 5;
-	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th2 = 1;
-	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th3 = 3;
-	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th4 = 9;
-	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th5 = 10;
+	reg->rdo_smear_st_thd0_comb.rdo_smear_resi_th0 = flg2 ? 0 : 10;
+	reg->rdo_smear_st_thd0_comb.rdo_smear_resi_th1 = flg2 ? 0 : 6;
+	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th0 = flg2 ? 0 : 1;
+	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th1 = flg2 ? 0 : 5;
+	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th2 = flg2 ? 0 : 1;
+	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th3 = flg2 ? 0 : 3;
+	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th4 = flg2 ? 0 : 9;
+	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th5 = flg2 ? 0 : 10;
 
 	p_rdo_skip = &reg->rdo_b16_skip;
 	p_rdo_skip->atf_thd0.madp_thd0 = 1;
@@ -1403,7 +1443,9 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	p_rdo_skip->atf_wgt0.wgt3 = 16;
 	p_rdo_skip->atf_wgt1.wgt4 = 16;
 	if (ctx->smart_en) {
+		p_rdo_skip->atf_thd0.madp_thd0 = 0;
 		p_rdo_skip->atf_thd0.madp_thd1 = 7;
+		p_rdo_skip->atf_wgt0.wgt0 = 16;
 		p_rdo_skip->atf_wgt0.wgt1 = 14;
 	}
 
@@ -1540,6 +1582,7 @@ static void setup_vepu540c_rc_base(HalH264eVepu540cCtx *ctx, H264eSps *sps,
 	RK_S32 negative_bits_thd;
 	RK_S32 positive_bits_thd;
 	HalVepu540cRegSet *regs = ctx->regs_set;
+	MppEncRcCfg *rc = &ctx->cfg->rc;
 
 	hal_h264e_dbg_rc("bittarget %d qp [%d %d %d]\n", rc_info->bit_target,
 			 qp_min, qp_target, qp_max);
@@ -1566,6 +1609,18 @@ static void setup_vepu540c_rc_base(HalH264eVepu540cCtx *ctx, H264eSps *sps,
 		regs->reg_base.rc_qp.rc_qp_range = 0;
 	regs->reg_base.rc_qp.rc_max_qp = qp_max;
 	regs->reg_base.rc_qp.rc_min_qp = qp_min;
+
+	if (slice->slice_type == H264_I_SLICE) {
+		if (rc->fm_lvl_qp_min_i == rc->fm_lvl_qp_max_i) {
+			regs->reg_base.enc_pic.pic_qp = rc->fm_lvl_qp_min_i;
+			regs->reg_base.rc_qp.rc_qp_range = 0;
+		}
+	} else {
+		if (rc->fm_lvl_qp_min_p == rc->fm_lvl_qp_max_p) {
+			regs->reg_base.enc_pic.pic_qp = rc->fm_lvl_qp_min_p;
+			regs->reg_base.rc_qp.rc_qp_range = 0;
+		}
+	}
 
 	regs->reg_base.rc_tgt.ctu_ebit = mb_target_bits_mul_16;
 
@@ -2016,6 +2071,7 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 {
 	RK_U32 i;
 	HalVepu540cRegSet *regs = ctx->regs_set;
+	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
 
 	hal_h264e_dbg_func("enter\n");
 
@@ -2043,14 +2099,26 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 		regs->reg_s3.RDO_QUANT.quant_f_bias_P = ctx->cfg->hw.qbias_p;
 	}
 
-	if (slice->slice_type == H264_I_SLICE) {
-		regs->reg_base.src_flt_cfg.pp_corner_filter_strength = hw->flt_str_i;
-		regs->reg_base.src_flt_cfg.pp_edge_filter_strength = hw->flt_str_i;
-		regs->reg_base.src_flt_cfg.pp_internal_filter_strength = hw->flt_str_i;
+	if (ctx->qpmap_en && (deblur_str % 2 == 0) && (hw->flt_str_i == 0) && (hw->flt_str_p == 0)) {
+		if (ctx->last_frame_fb.tgt_sub_real_lvl[5] == 2 && slice->slice_type != H264_I_SLICE) {
+			regs->reg_base.src_flt_cfg.pp_corner_filter_strength = 2;
+			regs->reg_base.src_flt_cfg.pp_edge_filter_strength = 2;
+			regs->reg_base.src_flt_cfg.pp_internal_filter_strength = 2;
+		} else if (ctx->last_frame_fb.tgt_sub_real_lvl[5] > 0) {
+			regs->reg_base.src_flt_cfg.pp_corner_filter_strength = 1;
+			regs->reg_base.src_flt_cfg.pp_edge_filter_strength = 1;
+			regs->reg_base.src_flt_cfg.pp_internal_filter_strength = 1;
+		}
 	} else {
-		regs->reg_base.src_flt_cfg.pp_corner_filter_strength = hw->flt_str_p;
-		regs->reg_base.src_flt_cfg.pp_edge_filter_strength = hw->flt_str_p;
-		regs->reg_base.src_flt_cfg.pp_internal_filter_strength = hw->flt_str_p;
+		if (slice->slice_type == H264_I_SLICE) {
+			regs->reg_base.src_flt_cfg.pp_corner_filter_strength = hw->flt_str_i;
+			regs->reg_base.src_flt_cfg.pp_edge_filter_strength = hw->flt_str_i;
+			regs->reg_base.src_flt_cfg.pp_internal_filter_strength = hw->flt_str_i;
+		} else {
+			regs->reg_base.src_flt_cfg.pp_corner_filter_strength = hw->flt_str_p;
+			regs->reg_base.src_flt_cfg.pp_edge_filter_strength = hw->flt_str_p;
+			regs->reg_base.src_flt_cfg.pp_internal_filter_strength = hw->flt_str_p;
+		}
 	}
 
 	regs->reg_s3.iprd_tthdy4_0.iprd_tthdy4_0 = 1;
@@ -2405,18 +2473,19 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 		vepu540c_set_osd(&ctx->osd_cfg);
 
 	if (!task->rc_task->info.complex_scene && ctx->qpmap_en &&
+	    ctx->cfg->tune.deblur_str <= 3 &&
 	    ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
 		MPP_RET ret;
 		if (ctx->smart_en)
-			vepu540c_set_qpmap_smart(&ctx->regs_set->reg_rc_roi.roi_cfg,
-						 task->mv_info, task->qpmap,
-						 task->mv_flag, regs->reg_base.enc_pic.pic_qp,
-						 prep->width, prep->height, 0, slice->idr_flag);
+			ret = vepu540c_set_qpmap_smart(&ctx->regs_set->reg_rc_roi.roi_cfg,
+						       task->mv_info, task->qpmap, task->mv_flag,
+						       regs->reg_base.enc_pic.pic_qp, prep->width, prep->height,
+						       0, slice->idr_flag, frm->reencode, ctx->cfg->tune.deblur_str);
 		else
-			vepu540c_set_qpmap_normal(&ctx->regs_set->reg_rc_roi.roi_cfg,
-						  task->mv_info, task->qpmap,
-						  task->mv_flag, regs->reg_base.enc_pic.pic_qp,
-						  prep->width, prep->height, 0, slice->idr_flag);
+			ret = vepu540c_set_qpmap_normal(&ctx->regs_set->reg_rc_roi.roi_cfg,
+							task->mv_info, task->qpmap, task->mv_flag,
+							regs->reg_base.enc_pic.pic_qp, prep->width, prep->height,
+							0, slice->idr_flag, frm->reencode, ctx->cfg->tune.deblur_str);
 		if (ret == MPP_OK)
 			regs->reg_base.adr_roir =
 				mpp_dev_get_iova_address(ctx->dev, task->qpmap, 186);
@@ -2666,6 +2735,7 @@ static MPP_RET hal_h264e_vepu540c_ret_task(void *hal, HalEncTask *task)
 	RK_U32 mbs = mb_w * mb_h;
 	MPP_RET ret = 0;
 	RK_U32 madi_cnt = 0, madp_cnt = 0;
+	RK_S32 i = 0, tgt_sub_real_lvl = 0;
 	vepu540c_h264_fbk *fb = &ctx->feedback;
 
 	HalVepu540cRegSet *regs_set = (HalVepu540cRegSet *) ctx->regs_set;
@@ -2747,7 +2817,41 @@ static MPP_RET hal_h264e_vepu540c_ret_task(void *hal, HalEncTask *task)
 	// setup bit length for rate control
 	rc_info->bit_real = task->hw_length * 8;
 	rc_info->quality_real = regs_set->reg_st.qp_sum / mbs;
+	memcpy(fb->tgt_sub_real_lvl, ctx->last_frame_fb.tgt_sub_real_lvl, 6 * sizeof(RK_S8));
+	for (i = 3; i >= 0; i --)
+		fb->tgt_sub_real_lvl[i + 1] = fb->tgt_sub_real_lvl[i];
 
+	if (rc_info->bit_target > rc_info->bit_real) {
+		if (rc_info->bit_target > rc_info->bit_real * 6 / 4)
+			fb->tgt_sub_real_lvl[0] = 3;
+		else if (rc_info->bit_target > rc_info->bit_real * 5 / 4)
+			fb->tgt_sub_real_lvl[0] = 2;
+		else if (rc_info->bit_target > rc_info->bit_real * 9 / 8)
+			fb->tgt_sub_real_lvl[0] = 1;
+		else
+			fb->tgt_sub_real_lvl[0] = 0;
+	} else {
+		if (rc_info->bit_real > rc_info->bit_target * 2)
+			fb->tgt_sub_real_lvl[0] = -5;
+		else if (rc_info->bit_real > rc_info->bit_target * 7 / 4)
+			fb->tgt_sub_real_lvl[0] = -4;
+		else if (rc_info->bit_real > rc_info->bit_target * 6 / 4)
+			fb->tgt_sub_real_lvl[0] = -3;
+		else if (rc_info->bit_real > rc_info->bit_target * 5 / 4)
+			fb->tgt_sub_real_lvl[0] = -2;
+		else
+			fb->tgt_sub_real_lvl[0] = -1;
+	}
+
+	tgt_sub_real_lvl = 0;
+	for (i = 0; i < 5; i ++)
+		tgt_sub_real_lvl += fb->tgt_sub_real_lvl[i];
+	if (task->rc_task->frm.is_intra)
+		fb->tgt_sub_real_lvl[5] = 0;
+	if (tgt_sub_real_lvl < -9)
+		fb->tgt_sub_real_lvl[5] = 2;
+	else if (tgt_sub_real_lvl < -2 && fb->tgt_sub_real_lvl[5] < 2)
+		fb->tgt_sub_real_lvl[5] = 1;
 
 	rc_info->madi = madi_th_cnt0 * regs_set->reg_rc_roi.madi_st_thd.madi_th0 +
 			madi_th_cnt1 * (regs_set->reg_rc_roi.madi_st_thd.madi_th0 +

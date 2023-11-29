@@ -867,22 +867,32 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 		qp_add_p++;
 	}
 
-	if (p->frame_type == INTRA_FRAME)
+	if (p->frame_type == INTRA_FRAME) {
 		p->qp_out = mpp_clip(p->qp_out, fm_min_iqp + qp_add, fm_max_iqp);
-	else
+		p->qp_out = (fm_max_iqp == fm_min_iqp) ? fm_max_iqp : p->qp_out;
+	} else {
 		p->qp_out = mpp_clip(p->qp_out, fm_min_pqp + qp_add_p, fm_max_pqp);
+		p->qp_out = (fm_max_pqp == fm_min_pqp) ? fm_max_pqp : p->qp_out;
+	}
 	if (p->frame_type == INTER_VI_FRAME) {
 		p->qp_out -= 1;
 		p->qp_out = mpp_clip(p->qp_out, fm_min_pqp + qp_add - 1, fm_max_pqp);
+		p->qp_out = (fm_max_pqp == fm_min_pqp) ? fm_max_pqp : p->qp_out;
 	}
 	p->qp_out = mpp_clip(p->qp_out, p->qp_min, p->qp_max);
 	info->quality_target = p->qp_out;
 	info->complex_scene = 0;
 	if (p->frame_type == INTER_P_FRAME && avg_pqp >= fm_max_pqp - 1 &&
-	    p->qp_out == fm_max_pqp && p->qp_prev_out == fm_max_pqp)
+	    p->qp_out == fm_max_pqp && p->qp_prev_out == fm_max_pqp) {
 		info->complex_scene = 1;
+		if (p->frame_type == INTRA_FRAME)
+			info->complex_scene &= (fm_max_iqp != fm_min_iqp);
+		else
+			info->complex_scene &= (fm_max_pqp != fm_min_pqp);
+	}
 	info->quality_max = p->usr_cfg.max_quality;
 	info->quality_min = p->usr_cfg.min_quality;
+	info->bit_target = p->bits_target_hr;
 	p->frm_num++;
 	p->reenc_cnt = 0;
 	rc_dbg_func("leave %p\n", ctx);

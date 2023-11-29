@@ -294,7 +294,10 @@ static RK_S32 check_rc_cfg_update(MpiCmd cmd, MppEncCfgSet *cfg)
 			return 1;
 
 		change = cfg->tune.change;
-		check_flag = MPP_ENC_TUNE_CFG_CHANGE_MOTION_STATIC_SWITCH_ENABLE;
+		check_flag = MPP_ENC_TUNE_CFG_CHANGE_SCENE_MODE |
+			     MPP_ENC_TUNE_CFG_CHANGE_MOTION_STATIC_SWITCH_ENABLE |
+			     MPP_ENC_TUNE_CFG_CHANGE_DEBLUR_STR;
+
 		if (change & check_flag)
 			return 1;
 	}
@@ -776,6 +779,14 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			ret = MPP_ERR_VALUE;
 		}
 
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_DEBLUR_STR)
+			dst->deblur_str = src->deblur_str;
+
+		if (dst->deblur_str < 0 || dst->deblur_str > 7) {
+			mpp_err("invalid deblur strength enable not in range [0 : 7]\n");
+			ret = MPP_ERR_VALUE;
+		}
+
 		dst->change |= change;
 
 		if (ret) {
@@ -1038,6 +1049,7 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	cfg->bps_min = rc->bps_min;
 	cfg->scene_mode = cfg_set->tune.scene_mode;
 	cfg->motion_static_switch_enable = cfg_set->tune.motion_static_switch_enable;
+	cfg->deblur_str = cfg_set->tune.deblur_str;
 
 	cfg->hier_qp_cfg.hier_qp_en = rc->hier_qp_en;
 	memcpy(cfg->hier_qp_cfg.hier_frame_num, rc->hier_frame_num,
