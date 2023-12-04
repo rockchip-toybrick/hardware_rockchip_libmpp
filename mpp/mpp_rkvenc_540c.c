@@ -1436,6 +1436,7 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	}
 	priv->info.hw_running = 0;
 	mpp->overflow_status = 0;
+	wake_up(&mpp_task->wait);
 	mpp_taskqueue_trigger_work(mpp);
 
 	if (session->callback && mpp_task->clbk_en)
@@ -2042,39 +2043,6 @@ done:
 	mpp_session_clean_detach(queue);
 }
 
-static int mpp_rkvenc_wait_result(struct mpp_session *session,
-				  struct mpp_task_msgs *msgs)
-{
-	int ret;
-	struct mpp_task *task;
-	struct mpp_dev *mpp;
-
-	task = mpp_session_get_pending_task(session);
-	if (!task) {
-		mpp_err("session %p pending list is empty!\n", session);
-		return -EIO;
-	}
-
-	if (!test_bit(TASK_STATE_HANDLE, &task->state)) {
-		mpp_err("task %d wrong state %#lx\n", task->task_index, task->state);
-		return -EIO;
-	}
-
-	mpp = session->mpp;
-	if (mpp->dev_ops->result)
-		ret = mpp->dev_ops->result(mpp, task, msgs);
-
-	mpp_debug_func(DEBUG_TASK_INFO,
-		       "session %d:%d task %d state 0x%lx kref_rd %d ret %d\n",
-		       session->device_type,
-		       session->index, task->task_index, task->state,
-		       kref_read(&task->ref), ret);
-
-	mpp_session_pop_pending(session, task);
-
-	return ret;
-}
-
 #ifdef CONFIG_PROC_FS
 static int rkvenc_procfs_remove(struct mpp_dev *mpp)
 {
@@ -2534,7 +2502,6 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 		return ret;
 
 	kthread_init_work(&mpp->work, mpp_rkvenc_worker);
-	mpp->dev_ops->wait_result = mpp_rkvenc_wait_result;
 	ret = devm_request_threaded_irq(dev, mpp->irq,
 					mpp_rkvenc_irq,
 					NULL,
