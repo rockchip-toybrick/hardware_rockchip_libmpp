@@ -513,6 +513,8 @@ static h265_dpb_frm *h265e_find_cpb_frame(h265_dpb_frm * frms, RK_S32 cnt,
 		if (p->valid && p->seq_idx == seq_idx) {
 			h265e_dbg_dpb("frm %d match slot %d valid %d\n",
 				      p->seq_idx, i, p->valid);
+			if (frm->save_pass1)
+				return &frms[i];
 			mpp_assert(p->is_non_ref == frm->is_non_ref);
 			mpp_assert(p->is_lt_ref == frm->is_lt_ref);
 			mpp_assert(p->lt_idx == frm->lt_idx);
