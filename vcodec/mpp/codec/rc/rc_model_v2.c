@@ -1880,7 +1880,7 @@ void rc_model_v2_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 		seq_printf(seq, "%7d|%10s|%10s|%18u\n", chl_id, strof_bool(usr_cfg->debreath_cfg.enable), "N/A", 0);
 
 	seq_puts(seq,
-		 "\n--------RC run info1------------------------------------------------------------------------------\n");
+		 "\n--------RC run CBR/VBR info1------------------------------------------------------------------------------\n");
 	seq_printf(seq, "%7s|%14s|%8s|%8s|%12s|%12s|%10s|%10s|%8s|%8s\n",
 		   "ChnId", "InsBr(kbps)", "InsFr", "WatL", "CfgBt(kb)",
 		   "RealBt(kb)", "IPRatio", "StartQp", "MinQp", "MaxQp");

@@ -2111,6 +2111,7 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 {
 	MppEncImpl *enc = (MppEncImpl *)ctx;
 	MppEncCfgSet *cfg = &enc->cfg;
+	MppEncHwCfg *hw = &cfg->hw;
 	EncTask *task = (EncTask *)enc->enc_task;
 	struct seq_file *seq = (struct seq_file *)seq_file;
 	RK_S32 source_frate, target_frame_rate;
@@ -2161,6 +2162,40 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 	seq_printf(seq, "%8d|%8d|%12d|%14u|%14u|%14u|%16u|%14u\n", chl_id,
 		   atomic_read(&enc->hw_run), enc->enc_status, enc->pkt_fail_cnt,
 		   enc->ringbuf_fail_cnt, enc->cfg_fail_cnt, enc->start_fail_cnt, enc->pkt_full_cnt);
+
+	if (cfg->codec.coding == MPP_VIDEO_CodingAVC || cfg->codec.coding == MPP_VIDEO_CodingHEVC) {
+		seq_puts(seq,
+			 "\n--------hw param----------------------------------------------------------------------------------\n");
+		seq_printf(seq, "%8s|%14s|%12s|%12s|%12s|%12s|%12s|%12s|\n", "ID",
+			   "qp_dlt_row_i", "qp_dlt_row", "qbias_en", "qbias_i", "qbias_p", "flt_str_i", "flt_str_p");
+		seq_printf(seq, "%8u|%14d|%12d|%12d|%12d|%12d|%12d|%12d\n", chl_id,
+			   hw->qp_delta_row_i, hw->qp_delta_row, hw->qbias_en, hw->qbias_i, hw->qbias_p,
+			   hw->flt_str_i, hw->flt_str_p);
+		seq_printf(seq, "%8s|%24s\n", "ID", "thrd_i[0] ~ thrd_i[15]");
+		seq_printf(seq, "%8u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u\n",
+			   chl_id, hw->aq_thrd_i[0], hw->aq_thrd_i[1], hw->aq_thrd_i[2], hw->aq_thrd_i[3],
+			   hw->aq_thrd_i[4], hw->aq_thrd_i[5], hw->aq_thrd_i[6], hw->aq_thrd_i[7],
+			   hw->aq_thrd_i[8], hw->aq_thrd_i[9], hw->aq_thrd_i[10], hw->aq_thrd_i[11],
+			   hw->aq_thrd_i[12], hw->aq_thrd_i[13], hw->aq_thrd_i[14], hw->aq_thrd_i[15]);
+		seq_printf(seq, "%8s|%24s\n", "ID", "thrd_p[0] ~ thrd_p[15]");
+		seq_printf(seq, "%8u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u|%4u\n",
+			   chl_id, hw->aq_thrd_p[0], hw->aq_thrd_p[1], hw->aq_thrd_p[2], hw->aq_thrd_p[3],
+			   hw->aq_thrd_p[4], hw->aq_thrd_p[5], hw->aq_thrd_p[6], hw->aq_thrd_p[7],
+			   hw->aq_thrd_p[8], hw->aq_thrd_p[9], hw->aq_thrd_p[10], hw->aq_thrd_p[11],
+			   hw->aq_thrd_p[12], hw->aq_thrd_p[13], hw->aq_thrd_p[14], hw->aq_thrd_p[15]);
+		seq_printf(seq, "%8s|%24s\n", "ID", "step_i[0] ~ step_i[15]");
+		seq_printf(seq, "%8u|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d\n",
+			   chl_id, hw->aq_step_i[0], hw->aq_step_i[1], hw->aq_step_i[2], hw->aq_step_i[3],
+			   hw->aq_step_i[4], hw->aq_step_i[5], hw->aq_step_i[6], hw->aq_step_i[7],
+			   hw->aq_step_i[8], hw->aq_step_i[9], hw->aq_step_i[10], hw->aq_step_i[11],
+			   hw->aq_step_i[12], hw->aq_step_i[13], hw->aq_step_i[14], hw->aq_step_i[15]);
+		seq_printf(seq, "%8s|%24s\n", "ID", "step_p[0] ~ step_p[15]");
+		seq_printf(seq, "%8u|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d\n",
+			   chl_id, hw->aq_step_p[0], hw->aq_step_p[1], hw->aq_step_p[2], hw->aq_step_p[3],
+			   hw->aq_step_p[4], hw->aq_step_p[5], hw->aq_step_p[6], hw->aq_step_p[7],
+			   hw->aq_step_p[8], hw->aq_step_p[9], hw->aq_step_p[10], hw->aq_step_p[11],
+			   hw->aq_step_p[12], hw->aq_step_p[13], hw->aq_step_p[14], hw->aq_step_p[15]);
+	}
 
 	if (cfg->roi.number > 0) {
 		int i;

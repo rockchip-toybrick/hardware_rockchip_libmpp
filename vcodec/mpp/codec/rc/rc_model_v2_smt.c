@@ -1096,10 +1096,9 @@ void rc_model_v2_smt_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 	if (usr_cfg->mode == RC_CBR)
 		target_bps = usr_cfg->bps_target;
 	seq_puts(seq,
-		 "\n--------------------------RC base param 1--------------------------\n");
+		 "\n--------RC base param----------------------------------------------------------------------------\n");
 	seq_printf(seq, "%7s|%7s|%8s|%6s|%6s|%8s|%13s|%13s|%5s|%5s \n",
-		   "ChnId", "Gop", "StatTm",
-		   "ViFr", "TrgFr",
+		   "ChnId", "Gop", "StatTm", "ViFr", "TrgFr",
 		   "RcMode", "MinBr(kbps)", "MaxBr(kbps)", "IQp", "PQp");
 
 	if (usr_cfg->mode == RC_FIXQP) {
@@ -1118,10 +1117,24 @@ void rc_model_v2_smt_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 	}
 
 	seq_puts(seq,
-		 "\n--------------------------RC gop mode attr-------------------------\n");
+		 "\n--------RC run comm param 1----------------------------------------------------------------------\n");
+	seq_printf(seq, "%7s|%8s|%12s|%12s|%10s \n",
+		   "ChnId", "bLost", "LostThr", "LostFrmStr", "EncGap");
+	seq_printf(seq, "%7d|%8s|%12u|%12d|%10u \n",
+		   chl_id, strof_drop(usr_cfg->drop_mode), usr_cfg->drop_thd, p->drop_cnt, usr_cfg->drop_gap);
+
+	seq_puts(seq,
+		 "\n--------RC run comm param 2----------------------------------------------------------------------\n");
+	seq_printf(seq, "%7s|%12s|%12s|%12s|%12s \n",
+		   "ChnId", "SprFrmMod", "SprIFrm", "SprPFrm", "RCPriority");
+	seq_printf(seq, "%7d|%12s|%12u|%12u|%12u \n",
+		   chl_id, strof_suprmode(usr_cfg->super_cfg.super_mode), usr_cfg->super_cfg.super_i_thd,
+		   usr_cfg->super_cfg.super_p_thd, usr_cfg->super_cfg.rc_priority);
+
+	seq_puts(seq,
+		 "\n--------RC gop mode attr-------------------------------------------------------------------------\n");
 	seq_printf(seq, "%7s|%10s|%10s|%12s|%10s \n",
-		   "ChnId", "GopMode", "IpQpDelta",
-		   "BgInterval", "ViQpDelta");
+		   "ChnId", "GopMode", "IpQpDelta", "BgInterval", "ViQpDelta");
 	if (usr_cfg->gop_mode == SMART_P) {
 		seq_printf(seq, "%7d|%10s|%10d|%12u|%10d\n",
 			   chl_id, strof_gop_mode(usr_cfg->gop_mode), usr_cfg->i_quality_delta,
@@ -1137,7 +1150,7 @@ void rc_model_v2_smt_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 	} break;
 	case RC_VBR: {
 		seq_puts(seq,
-			 "\n-------------------RC run smart common param-------------------\n");
+			 "\n--------RC run smart common param----------------------------------------------------------------\n");
 		seq_printf(seq, "%7s|%8s|%8s|%8s|%8s|%10s|%10s|%10s|%10s|%15s\n",
 			   "ChnId", "MaxQp", "MinQp", "MaxIQp", "MinIQp",
 			   "FrmMaxQp", "FrmMinQp", "FrmMaxIQp", "FrmMinIQp",
@@ -1159,7 +1172,7 @@ void rc_model_v2_smt_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 	}
 
 	seq_puts(seq,
-		 "\n-----------------------RC HierarchicalQp INFO-----------------------\n");
+		 "\n--------RC HierarchicalQp INFO-------------------------------------------------------------------\n");
 	seq_printf(seq, "%7s|%10s|%12s|%12s|%12s|%12s|%12s|%12s|%12s|%12s\n",
 		   "ChnId", "bEnable",
 		   "FrameNum[0]", "FrameNum[1]",
@@ -1174,7 +1187,7 @@ void rc_model_v2_smt_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 		   usr_cfg->hier_qp_cfg.hier_qp_delta[2], usr_cfg->hier_qp_cfg.hier_qp_delta[3]);
 
 	seq_puts(seq,
-		 "\n-----------------------RC debreath_effect info------------------------\n");
+		 "\n--------RC debreath_effect info------------------------------------------------------------------\n");
 	seq_printf(seq, "%7s|%10s|%10s|%18s\n", "ChnId", "bEnable", "Strength0", "DeBrthEfctCnt");
 	if (usr_cfg->debreath_cfg.enable)
 		seq_printf(seq, "%7d|%10s|%10d|%18u\n",
@@ -1183,6 +1196,14 @@ void rc_model_v2_smt_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 	else
 		seq_printf(seq, "%7d|%10s|%10s|%18u\n", chl_id,
 			   strof_bool(usr_cfg->debreath_cfg.enable), "N/A", 0);
+
+	seq_puts(seq,
+		 "\n--------RC run smart info1-----------------------------------------------------------------------------\n");
+	seq_printf(seq, "%7s|%12s|%10s|%10s|%15s|%15s|%12s\n",
+		   "ChnId", "RealBt(kb)", "IPRatio", "StartQp", "md_switch_en", "md_switch_qp", "scene_mode");
+	seq_printf(seq, "%7d|%12u|%10d|%10u|%15d|%15d|%12d\n",	 chl_id, p->last_fps_bits / 1000,
+		   usr_cfg->init_ip_ratio, usr_cfg->init_quality, usr_cfg->motion_static_switch_enable,
+		   usr_cfg->mt_st_swth_frm_qp, usr_cfg->scene_mode);
 }
 
 const RcImplApi smt_h264e = {

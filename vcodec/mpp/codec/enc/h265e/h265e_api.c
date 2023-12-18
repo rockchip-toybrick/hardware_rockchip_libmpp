@@ -597,16 +597,16 @@ static void h265e_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 
 	seq_puts(seq,
 		 "--------Syntax INFO2------------------------------------------------------------------------------\n");
-	seq_printf(seq, "%7s|%10s|%8s|%8s|%10s|%10s|%15s\n",
+	seq_printf(seq, "%7s|%10s|%8s|%8s|%10s|%10s|%15s|%12s\n",
 		   "ID", "DblkEn",
 		   "Tc", "Beta",
 		   "Saoluma", "Saochroma",
-		   "IntraSmoothing");
-	seq_printf(seq, "%7d|%10s|%8d|%8d|%10d|%10d|%12d\n",
+		   "IntraSmoothing", "ScalingMode");
+	seq_printf(seq, "%7d|%10s|%8d|%8d|%10d|%10d|%15d|%12d\n",
 		   chl_id, strof_bool(1 - h265->dblk_cfg.slice_deblocking_filter_disabled_flag),
 		   h265->dblk_cfg.slice_tc_offset_div2, h265->dblk_cfg.slice_beta_offset_div2,
-		   h265->sao_cfg.slice_sao_luma_disable, h265->sao_cfg.slice_sao_chroma_disable,
-		   h265->pu_cfg.strg_intra_smth_disable);
+		   !h265->sao_cfg.slice_sao_luma_disable, !h265->sao_cfg.slice_sao_chroma_disable,
+		   !h265->pu_cfg.strg_intra_smth_disable, h265->trans_cfg.scaling_list_mode);
 
 
 	seq_puts(seq,

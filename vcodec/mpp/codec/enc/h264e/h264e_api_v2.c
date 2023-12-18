@@ -788,15 +788,15 @@ static void h264e_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 
 	seq_puts(seq,
 		 "-----Syntax INFO2---------------------------------------------------------------------------------\n");
-	seq_printf(seq, "%7s|%10s|%10s|%10s|%8s|%6s|%8s|%8s\n",
+	seq_printf(seq, "%7s|%10s|%10s|%10s|%12s|%6s|%8s|%8s\n",
 		   "ID", "profile",
 		   "Cabac", "trans8",
-		   "QMatrix", "POC",
+		   "ScalingMode", "POC",
 		   "alpha", "beta");
-	seq_printf(seq, "%7d|%10s|%10s|%10s|%8s|%6d|%8d|%8d\n",
+	seq_printf(seq, "%7d|%10s|%10s|%10s|%12d|%6d|%8d|%8d\n",
 		   chl_id, strof_profle(MPP_VIDEO_CodingAVC, h264->profile),
 		   strof_bool(h264->entropy_coding_mode), strof_bool(h264->transform8x8_mode),
-		   strof_bool(h264->scaling_list_mode), h264->poc_type,
+		   h264->scaling_list_mode, h264->poc_type,
 		   h264->deblock_offset_alpha, h264->deblock_offset_beta);
 }
 
