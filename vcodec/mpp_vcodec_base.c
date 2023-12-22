@@ -741,8 +741,8 @@ int mpp_vcodec_clear_buf_resource(void)
 }
 EXPORT_SYMBOL(mpp_vcodec_clear_buf_resource);
 
-int mpp_vcodec_run_task(RK_U32 chan_id)
+int mpp_vcodec_run_task(RK_U32 chan_id, RK_S64 pts, RK_S64 dts)
 {
-	return mpp_vcodec_enc_run_task(chan_id);
+	return mpp_vcodec_enc_run_task(chan_id, pts, dts);
 }
 EXPORT_SYMBOL(mpp_vcodec_run_task);

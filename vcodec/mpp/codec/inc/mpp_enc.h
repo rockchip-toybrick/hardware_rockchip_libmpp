@@ -166,7 +166,7 @@ MPP_RET mpp_enc_deinit(MppEnc ctx);
 
 MPP_RET mpp_enc_start(MppEnc ctx);
 MPP_RET mpp_enc_stop(MppEnc ctx);
-MPP_RET mpp_enc_run_task(MppEnc ctx);
+MPP_RET mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts);
 RK_S32 mpp_enc_check_hw_running(MppEnc ctx);
 RK_S32 mpp_enc_unbind_jpeg_task(MppEnc ctx);
 bool mpp_enc_check_is_int_process(MppEnc ctx);

@@ -400,7 +400,7 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 	return ret;
 }
 
-RK_S32 mpp_enc_run_task(MppEnc ctx)
+RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
@@ -413,6 +413,16 @@ RK_S32 mpp_enc_run_task(MppEnc ctx)
 	enc_dbg_func("%p in\n", enc);
 
 	ret = mpp_dev_ioctl(enc->dev, MPP_DEV_CMD_RUN_TASK, NULL);
+
+	/*
+	 * The frame configuration is gennerated in advance,
+	 * so the pts/dts info may not match to per frame.
+	 * So, re-update the pts/dts here.
+	 */
+	if (ret == MPP_OK && enc->packet) {
+		mpp_packet_set_pts(enc->packet, pts);
+		mpp_packet_set_dts(enc->packet, dts);
+	}
 
 	enc_dbg_func("%p out\n", enc);
 

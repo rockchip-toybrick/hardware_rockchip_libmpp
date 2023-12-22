@@ -313,7 +313,7 @@ void mpp_vcodec_enc_int_handle(int chan_id)
 	return;
 }
 
-int mpp_vcodec_enc_run_task(RK_U32 chan_id)
+int mpp_vcodec_enc_run_task(RK_U32 chan_id, RK_S64 pts, RK_S64 dts)
 {
 	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
 	unsigned long lock_flag;
@@ -328,7 +328,7 @@ int mpp_vcodec_enc_run_task(RK_U32 chan_id)
 	}
 	spin_unlock_irqrestore(&chan_entry->chan_lock, lock_flag);
 
-	return mpp_enc_run_task(chan_entry->handle);
+	return mpp_enc_run_task(chan_entry->handle, pts, dts);
 }
 
 int mpp_vcodec_enc_routine(void *param)
