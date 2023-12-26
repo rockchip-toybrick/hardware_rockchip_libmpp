@@ -97,12 +97,6 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 
 	rc_init(&p->rc_ctx, coding, cfg->smart_en ? &smart : NULL);
 
-	/*  ret = hal_info_init(&p->hal_info, MPP_CTX_ENC, coding);
-		if (ret) {
-		mpp_err_f("could not init hal info\n");
-		goto ERR_RET;
-		} */
-
 	p->coding = coding;
 	p->impl = impl;
 	p->enc_hal = enc_hal;
@@ -182,12 +176,6 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 		mpp_err_f("found NULL input\n");
 		return MPP_ERR_NULL_PTR;
 	}
-#if 0
-	if (enc->hal_info) {
-		hal_info_deinit(enc->hal_info);
-		enc->hal_info = NULL;
-	}
-#endif
 	if (enc->online)
 		mpp_enc_deinit_frame(enc);
 	mpp_enc_impl_free_task(enc);

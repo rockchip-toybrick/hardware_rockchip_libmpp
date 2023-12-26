@@ -30,28 +30,6 @@ struct MppFrameImpl_t {
 	RK_U32 offset_y;
 
 	/*
-	 * interlaced related mode status
-	 *
-	 * 0 - frame
-	 * 1 - top field
-	 * 2 - bottom field
-	 * 3 - paired top and bottom field
-	 * 4 - deinterlaced flag
-	 * 7 - deinterlaced paired field
-	 */
-	RK_U32 mode;
-	/*
-	 * current decoded frame whether to display
-	 *
-	 * 0 - reserve
-	 * 1 - discard
-	 */
-	RK_U32 discard;
-	/*
-	 * send decoded frame belong which view
-	 */
-	RK_U32 viewid;
-	/*
 	 * poc - picture order count
 	 */
 	RK_U32 poc;
@@ -67,8 +45,6 @@ struct MppFrameImpl_t {
 	 * info_change - set when buffer resized or frame infomation changed
 	 */
 	RK_U32 eos;
-	RK_U32 info_change;
-	RK_U32 errinfo;
 	MppFrameColorRange color_range;
 	MppFrameColorPrimaries color_primaries;
 	MppFrameColorTransferCharacteristic color_trc;
@@ -86,8 +62,6 @@ struct MppFrameImpl_t {
 	MppFrameFormat fmt;
 
 	MppFrameRational sar;
-	MppFrameMasteringDisplayMetadata mastering_display;
-	MppFrameContentLightMetadata content_light;
 
 	/*
 	 * buffer information
@@ -100,7 +74,6 @@ struct MppFrameImpl_t {
 	 * meta data information
 	 */
 //    MppMeta         meta;
-//    MppStopwatch    stopwatch;
 
 	/*
 	 * frame buffer compression (FBC) information
@@ -124,11 +97,6 @@ struct MppFrameImpl_t {
 	RK_U32   phy_addr;
 	MppPpInfo pp_info;
 
-	/*
-	 * pointer for multiple frame output at one time
-	 */
-	MppFrameImpl *next;
-
 	RK_U32 idr_request;
 };
 
@@ -136,16 +104,9 @@ struct MppFrameImpl_t {
 extern "C" {
 #endif
 
-MPP_RET mpp_frame_set_next(MppFrame frame, MppFrame next);
 MPP_RET mpp_frame_info_cmp(MppFrame frame0, MppFrame frame1);
 RK_U32 mpp_frame_get_fbc_offset(MppFrame frame);
 RK_U32 mpp_frame_get_fbc_stride(MppFrame frame);
-
-/*
- * Debug for frame process timing
- */
-void mpp_frame_set_stopwatch_enable(MppFrame frame, RK_S32 enable);
-MppStopwatch mpp_frame_get_stopwatch(const MppFrame frame);
 
 MPP_RET check_is_mpp_frame(void *pointer);
 

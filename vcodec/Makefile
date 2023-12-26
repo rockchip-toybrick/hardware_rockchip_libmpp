@@ -12,7 +12,6 @@ include $(TOP)/vcodec/mpp/codec/rc/rc_make.cfg
 
 mpp_vcodec-objs := vcodec/mpp_vcodec_base.o \
 		   vcodec/mpp_vcodec_chan.o \
-		   vcodec/mpp_vcodec_event.o \
 		   vcodec/mpp_vcodec_flow.o \
 		   vcodec/mpp_vcodec_thread.o \
 		   vcodec/mpp_vcodec_driver.o

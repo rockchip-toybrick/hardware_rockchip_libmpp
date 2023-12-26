@@ -16,7 +16,6 @@
 #include "mpp_enc_refs.h"
 
 #include "rc.h"
-#include "hal_info.h"
 #define  MAX_USRDATA_CNT 4
 
 typedef union MppEncHeaderStatus_u {
@@ -52,14 +51,11 @@ typedef struct MppEncImpl_t {
 
 	/* device from hal */
 	MppDev dev;
-	HalInfo hal_info;
 	RK_S64 time_base;
 	RK_S64 time_end;
 	RK_S64 init_time;
 	RK_S32 frame_count;
 	RK_S32 frame_force_drop;
-	RK_S32 hal_info_updated;
-
 	/*
 	 * Rate control plugin parameters
 	 */

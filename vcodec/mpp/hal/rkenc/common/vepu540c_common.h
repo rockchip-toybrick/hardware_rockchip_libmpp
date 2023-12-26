@@ -12,6 +12,7 @@
 
 #include "rk_venc_cmd.h"
 #include "mpp_device.h"
+#include "vepu5xx_common.h"
 
 #define VEPU540C_CTL_OFFSET		(0 * sizeof(RK_U32))
 #define VEPU540C_BASE_OFFSET		(156 * sizeof(RK_U32))

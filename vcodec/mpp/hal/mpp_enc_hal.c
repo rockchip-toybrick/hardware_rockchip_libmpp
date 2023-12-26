@@ -76,14 +76,6 @@ MPP_RET mpp_enc_hal_init(MppEncHal * ctx, MppEncHalCfg * cfg)
 					  hw_enc_apis[i]->name, ret);
 				break;
 			}
-#if 0
-			ret = hal_task_group_init(&p->tasks, p->task_count);
-			if (ret) {
-				mpp_err_f("hal_task_group_init failed ret %d\n",
-					  ret);
-				break;
-			}
-#endif
 			*ctx = p;
 			return MPP_OK;
 		}

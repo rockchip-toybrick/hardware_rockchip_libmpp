@@ -99,7 +99,6 @@ typedef enum {
 
 typedef void* MppFrame;
 typedef void* MppPacket;
-typedef void* MppStopwatch;
 typedef void* MppMeta;
 typedef void* MppBuffer;
 typedef void* MppBufferGroup;
@@ -112,21 +111,21 @@ typedef void* MppPpInfo;
 
 
 struct vcodec_attr {
-	MppCtxType		type;
+	MppCtxType	type;
 	MppCodingType	coding;
 	RK_S32		chan_id;
 	RK_S32		online;
 	RK_U32		buf_size;
 	RK_U32		max_strm_cnt;
 	RK_U32		shared_buf_en;
-	RK_U32      smart_en;
-	RK_U32      max_width;
-	RK_U32      max_height;
-	RK_U32      max_lt_cnt;
-	RK_U32      qpmap_en;
-	RK_U32      chan_dup;
-	RK_U32      tmvp_enable;
-	RK_U32      only_smartp;
+	RK_U32      	smart_en;
+	RK_U32      	max_width;
+	RK_U32      	max_height;
+	RK_U32      	max_lt_cnt;
+	RK_U32      	qpmap_en;
+	RK_U32      	chan_dup;
+	RK_U32      	tmvp_enable;
+	RK_U32      	only_smartp;
 };
 
 struct hal_shared_buf {

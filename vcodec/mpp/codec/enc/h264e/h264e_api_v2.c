@@ -101,12 +101,12 @@ static void init_h264e_cfg_set(MppEncCfgSet *cfg, MppClientType type)
 	cfg->tune.atf_str = 2;
 
 	switch (type) {
-	case VPU_CLIENT_VEPU1 :
-	case VPU_CLIENT_VEPU2 : {
-		h264->poc_type = 2;
-		h264->log2_max_poc_lsb = 12;
-		h264->log2_max_frame_num = 12;
-	} break;
+	// case VPU_CLIENT_VEPU1 :
+	// case VPU_CLIENT_VEPU2 : {
+	// 	h264->poc_type = 2;
+	// 	h264->log2_max_poc_lsb = 12;
+	// 	h264->log2_max_frame_num = 12;
+	// } break;
 	case VPU_CLIENT_RKVENC : {
 		h264->poc_type = 0;
 		h264->log2_max_poc_lsb = 12;

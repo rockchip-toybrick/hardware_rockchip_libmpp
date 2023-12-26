@@ -17,7 +17,8 @@
 #include "mpp_mem.h"
 #include "mpp_maths.h"
 #include "jpege_syntax.h"
-#include "vepu541_common.h"
+// #include "vepu541_common.h"
+#include "vepu5xx_common.h"
 #include "vepu540c_common.h"
 #include "hal_enc_task.h"
 #include "mpp_frame_impl.h"
@@ -52,7 +53,7 @@ MPP_RET vepu540c_set_roi(void *roi_reg_base, MppEncROICfg * roi,
 			ret = MPP_NOK;
 
 		if (region->intra > 1
-		    || region->qp_area_idx >= VEPU541_MAX_ROI_NUM
+		    || region->qp_area_idx >= VEPU540C_MAX_ROI_NUM
 		    || region->area_map_en > 1 || region->abs_qp_en > 1)
 			ret = MPP_NOK;
 
@@ -509,7 +510,7 @@ MPP_RET vepu540c_set_osd(Vepu540cOsdCfg * cfg)
 		vepu540c_osd_com *reg = (vepu540c_osd_com *) & regs->osd_cfg[i];
 		VepuFmtCfg fmt_cfg;
 		MppFrameFormat fmt = tmp->fmt;
-		vepu541_set_fmt(&fmt_cfg, fmt);
+		vepu5xx_set_fmt(&fmt_cfg, fmt);
 		reg->cfg0.osd_en = tmp->enable;
 		reg->cfg0.osd_range_trns_en = tmp->range_trns_en;
 		reg->cfg0.osd_range_trns_sel = tmp->range_trns_sel;
@@ -576,7 +577,7 @@ MPP_RET vepu540c_set_osd(Vepu540cOsdCfg * cfg)
 }
 static MPP_RET
 vepu540c_jpeg_set_uv_offset(Vepu540cJpegReg * regs, JpegeSyntax * syn,
-			    Vepu541Fmt input_fmt, HalEncTask * task)
+			    VepuFmt input_fmt, HalEncTask * task)
 {
 	RK_U32 hor_stride = mpp_frame_get_hor_stride(task->frame) ?
 			    mpp_frame_get_hor_stride(task->frame) :
@@ -668,7 +669,7 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 		regs->reg0264_adr_src0 = mpp_dev_get_iova_address(cfg->dev, task->input, 264);
 		regs->reg0265_adr_src1 = regs->reg0264_adr_src0;
 		regs->reg0266_adr_src2 = regs->reg0264_adr_src0;
-		vepu540c_jpeg_set_uv_offset(regs, syn, (Vepu541Fmt) fmt->format, task);
+		vepu540c_jpeg_set_uv_offset(regs, syn, (VepuFmt) fmt->format, task);
 	}
 
 	if (!task->output->cir_flag) {
@@ -790,7 +791,7 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 			regs->reg0264_adr_src0 = phy_addr;
 			regs->reg0265_adr_src1 = regs->reg0264_adr_src0;
 			regs->reg0266_adr_src2 = regs->reg0264_adr_src0;
-			vepu540c_jpeg_set_uv_offset(regs, syn, (Vepu541Fmt) fmt->format, task);
+			vepu540c_jpeg_set_uv_offset(regs, syn, (VepuFmt) fmt->format, task);
 		}
 	}
 

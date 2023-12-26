@@ -99,21 +99,6 @@ MPP_RET mpp_dev_ioctl(MppDev ctx, RK_S32 cmd, void *param)
 			ret = api->reg_rd(impl_ctx, param);
 	}
 	break;
-	case MPP_DEV_REG_OFFSET: {
-		if (api->reg_offset)
-			ret = api->reg_offset(impl_ctx, param);
-	}
-	break;
-	case MPP_DEV_RCB_INFO: {
-		if (api->rcb_info)
-			ret = api->rcb_info(impl_ctx, param);
-	}
-	break;
-	case MPP_DEV_SET_INFO: {
-		if (api->set_info)
-			ret = api->set_info(impl_ctx, param);
-	}
-	break;
 	case MPP_DEV_CMD_SEND: {
 		if (api->cmd_send)
 			ret = api->cmd_send(impl_ctx);
@@ -136,18 +121,6 @@ MPP_RET mpp_dev_ioctl(MppDev ctx, RK_S32 cmd, void *param)
 	}
 
 	return ret;
-}
-
-MPP_RET mpp_dev_set_reg_offset(MppDev dev, RK_S32 index, RK_U32 offset)
-{
-	MppDevRegOffsetCfg trans_cfg;
-
-	trans_cfg.reg_idx = index;
-	trans_cfg.offset = offset;
-
-	mpp_dev_ioctl(dev, MPP_DEV_REG_OFFSET, &trans_cfg);
-
-	return MPP_OK;
 }
 
 RK_U32 mpp_dev_get_iova_address(MppDev ctx, MppBuffer mpp_buf, RK_U32 reg_idx)
@@ -173,17 +146,6 @@ RK_U32 mpp_dev_get_iova_address(MppDev ctx, MppBuffer mpp_buf, RK_U32 reg_idx)
 			mpp_buffer_set_phy(mpp_buf, phy_addr);
 	}
 	return (RK_U32)phy_addr;
-}
-
-RK_U32 mpp_dev_get_iova_address2(MppDev ctx, struct dma_buf *dma_buf, RK_U32 reg_idx)
-{
-	MppDevImpl *p = (MppDevImpl *) ctx;
-	const MppDevApi *api = p->api;
-	void *impl_ctx = p->ctx;
-	mpp_assert(dma_buf);
-	if (api->get_address)
-		return api->get_address(impl_ctx, dma_buf, reg_idx);
-	return -EINVAL;
 }
 
 RK_U32 mpp_dev_get_mpi_ioaddress(MppDev ctx, MpiBuf mpi_buf, RK_U32 offset)

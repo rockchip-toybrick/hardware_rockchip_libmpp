@@ -18,13 +18,8 @@
 #define __MPP_HAL_H__
 
 #include "rk_mpi_cmd.h"
-
-//#include "mpp_buf_slot.h"
-//#include "mpp_platform.h"
-
 #include "hal_task.h"
 #include "mpp_enc_cfg.h"
-//#include "mpp_dec_cfg.h"
 #include "mpp_device.h"
 
 typedef enum VpuHwMode_e {
@@ -40,16 +35,6 @@ typedef struct MppHalCfg_t {
 	// input
 	MppCtxType type;
 	MppCodingType coding;
-	//  MppBufSlots         frame_slots;
-	//  MppBufSlots         packet_slots;
-	//  MppDecCfgSet        *cfg;
-//   MppCbCtx            *dec_cb;
-
-	// output from mpp_hal
-//   HalTaskGroup        tasks;
-	// output from hardware module
-//const MppDecHwCap   *hw_info;
-	// codec dev
 	MppDev dev;
 } MppHalCfg;
 

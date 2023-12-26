@@ -146,8 +146,6 @@ struct rkvenc_task {
 		u32 *data;
 		u32 size;
 	} reg[RKVENC_CLASS_BUTT];
-	/* register offset info */
-	struct reg_offset_info off_inf;
 
 	enum MPP_CLOCK_MODE clk_mode;
 	u32 irq_status;
@@ -175,13 +173,6 @@ struct rkvenc2_rcb_info {
 
 struct rkvenc2_session_priv {
 	struct rw_semaphore rw_sem;
-	/* codec info from user */
-	struct {
-		/* show mode */
-		u32 flag;
-		/* item data */
-		u64 val;
-	} codec_info[ENC_INFO_BUTT];
 	/* rcb_info for sram */
 	struct rkvenc2_rcb_info rcb_inf;
 };
@@ -525,7 +516,6 @@ static int rkvenc_extract_task_msg(struct mpp_session *session,
 			}
 		} break;
 		case MPP_CMD_SET_REG_ADDR_OFFSET: {
-			mpp_extract_reg_offset_info(&task->off_inf, req);
 		} break;
 		case MPP_CMD_SET_RCB_INFO: {
 			struct rkvenc2_session_priv *priv = session->priv;
@@ -715,8 +705,6 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 	return mpp_task;
 
 fail:
-	mpp_task_dump_mem_region(mpp, mpp_task);
-	mpp_task_dump_reg(mpp, mpp_task);
 	mpp_task_finalize(session, mpp_task);
 	/* free class register buffer */
 	rkvenc_free_class_msg(task);
@@ -894,9 +882,6 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 		}
 	}
 
-	/* flush tlb before starting hardware */
-	mpp_iommu_flush_tlb(mpp->iommu_info);
-
 	/* init current task */
 	mpp->cur_task = mpp_task;
 
@@ -962,12 +947,9 @@ static int rkvenc_isr(struct mpp_dev *mpp)
 	mpp_debug(DEBUG_IRQ_STATUS, "%s irq_status: %08x\n",
 		  dev_name(mpp->dev), task->irq_status);
 
-	if (task->irq_status & enc->hw_info->err_mask) {
+	if (task->irq_status & enc->hw_info->err_mask)
 		atomic_inc(&mpp->reset_request);
-		/* dump register */
 
-		mpp_task_dump_hw_reg(mpp);
-	}
 	mpp_task_finish(mpp_task->session, mpp_task);
 
 	set_bit(mpp->core_id, &queue->core_idle);
@@ -1057,35 +1039,6 @@ static int rkvenc_control(struct mpp_session *session, struct mpp_request *req)
 {
 	switch (req->cmd) {
 	case MPP_CMD_SEND_CODEC_INFO: {
-		int i;
-		int cnt;
-		struct codec_info_elem elem;
-		struct rkvenc2_session_priv *priv;
-
-		if (!session || !session->priv) {
-			mpp_err("session info null\n");
-			return -EINVAL;
-		}
-		priv = session->priv;
-
-		cnt = req->size / sizeof(elem);
-		cnt = (cnt > ENC_INFO_BUTT) ? ENC_INFO_BUTT : cnt;
-		mpp_debug(DEBUG_IOCTL, "codec info count %d\n", cnt);
-		for (i = 0; i < cnt; i++) {
-			if (copy_from_user(&elem, req->data + i * sizeof(elem), sizeof(elem))) {
-				mpp_err("copy_from_user failed\n");
-				continue;
-			}
-			if (elem.type > ENC_INFO_BASE && elem.type < ENC_INFO_BUTT &&
-			    elem.flag > CODEC_INFO_FLAG_NULL && elem.flag < CODEC_INFO_FLAG_BUTT) {
-				elem.type = array_index_nospec(elem.type, ENC_INFO_BUTT);
-				priv->codec_info[elem.type].flag = elem.flag;
-				priv->codec_info[elem.type].val = elem.data;
-			} else {
-				mpp_err("codec info invalid, type %d, flag %d\n",
-					elem.type, elem.flag);
-			}
-		}
 	} break;
 	default: {
 		mpp_err("unknown mpp ioctl cmd %x\n", req->cmd);
@@ -1198,32 +1151,10 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 	seq_puts(seq, "------------------------------------------------------\n");
 	seq_printf(seq, "%8s|", (const char *)"session");
 	seq_printf(seq, "%8s|", (const char *)"device");
-	for (i = ENC_INFO_BASE; i < ENC_INFO_BUTT; i++) {
-		bool show = priv->codec_info[i].flag;
-
-		if (show)
-			seq_printf(seq, "%8s|", enc_info_item_name[i]);
-	}
 	seq_puts(seq, "\n");
 	/* item data*/
 	seq_printf(seq, "%8p|", session);
 	seq_printf(seq, "%8s|", mpp_device_name[session->device_type]);
-	for (i = ENC_INFO_BASE; i < ENC_INFO_BUTT; i++) {
-		u32 flag = priv->codec_info[i].flag;
-
-		if (!flag)
-			continue;
-		if (flag == CODEC_INFO_FLAG_NUMBER) {
-			u32 data = priv->codec_info[i].val;
-
-			seq_printf(seq, "%8d|", data);
-		} else if (flag == CODEC_INFO_FLAG_STRING) {
-			const char *name = (const char *)&priv->codec_info[i].val;
-
-			seq_printf(seq, "%8s|", name);
-		} else
-			seq_printf(seq, "%8s|", (const char *)"null");
-	}
 	seq_puts(seq, "\n");
 	up_read(&priv->rw_sem);
 
@@ -1274,8 +1205,6 @@ static int rkvenc_procfs_init(struct mpp_dev *mpp)
 			      enc->procfs, &enc->aclk_info.debug_rate_hz);
 	mpp_procfs_create_u32("clk_core", 0644,
 			      enc->procfs, &enc->core_clk_info.debug_rate_hz);
-	mpp_procfs_create_u32("session_buffers", 0644,
-			      enc->procfs, &mpp->session_max_buffers);
 	/* for show session info */
 	proc_create_single_data("sessions-info", 0444,
 				enc->procfs, rkvenc_show_session_info, mpp);
@@ -1322,8 +1251,6 @@ static int rkvenc_init(struct mpp_dev *mpp)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	int ret = 0;
-
-	mpp->grf_info = &mpp->srv->grf_infos[MPP_DRIVER_RKVENC];
 
 	/* Get clock info from dtsi */
 	ret = mpp_get_clk_info(mpp, &enc->aclk_info, "aclk_vcodec");
@@ -1717,7 +1644,6 @@ static int rkvenc_core_probe(struct platform_device *pdev)
 		dev_err(dev, "register interrupter runtime failed\n");
 		return -EINVAL;
 	}
-	mpp->session_max_buffers = RKVENC_SESSION_MAX_BUFFERS;
 	enc->hw_info = to_rkvenc_info(mpp->var->hw_info);
 	rkvenc_procfs_init(mpp);
 	rkvenc_procfs_ccu_init(mpp);
@@ -1765,7 +1691,6 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 		dev_err(dev, "register interrupter runtime failed\n");
 		goto failed_get_irq;
 	}
-	mpp->session_max_buffers = RKVENC_SESSION_MAX_BUFFERS;
 	enc->hw_info = to_rkvenc_info(mpp->var->hw_info);
 	rkvenc_procfs_init(mpp);
 	mpp_dev_register_srv(mpp, mpp->srv);

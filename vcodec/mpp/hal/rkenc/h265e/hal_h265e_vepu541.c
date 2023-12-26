@@ -185,7 +185,7 @@ static MPP_RET vepu54x_h265_setup_hal_bufs(H265eV541HalContext * ctx)
 	MPP_RET ret = MPP_OK;
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
 	RK_U32 frame_size;
-	Vepu541Fmt input_fmt = VEPU541_FMT_YUV420P;
+	VepuFmt input_fmt = VEPU541_FMT_YUV420P;
 	RK_S32 mb_wd64, mb_h64;
 	MppEncRefCfg ref_cfg = ctx->cfg->ref_cfg;
 	MppEncPrepCfg *prep = &ctx->cfg->prep;
@@ -198,8 +198,8 @@ static MPP_RET vepu54x_h265_setup_hal_bufs(H265eV541HalContext * ctx)
 	mb_h64 = (prep->height + 63) / 64;
 
 	frame_size = MPP_ALIGN(prep->width, 16) * MPP_ALIGN(prep->height, 16);
-	vepu541_set_fmt(fmt, ctx->cfg->prep.format);
-	input_fmt = (Vepu541Fmt) fmt->format;
+	vepu5xx_set_fmt(fmt, ctx->cfg->prep.format);
+	input_fmt = (VepuFmt) fmt->format;
 	switch (input_fmt) {
 	case VEPU541_FMT_YUV420P:
 	case VEPU541_FMT_YUV420SP: {
@@ -766,7 +766,7 @@ static MPP_RET hal_h265e_vepu54x_prepare(void *hal)
 
 static MPP_RET
 vepu541_h265_uv_address(H265eV541RegSet * regs, H265eSyntax_new * syn,
-			Vepu541Fmt input_fmt, HalEncTask * task)
+			VepuFmt input_fmt, HalEncTask * task)
 {
 	RK_U32 hor_stride = syn->pp.hor_stride;
 	RK_U32 ver_stride =
@@ -1386,7 +1386,7 @@ void vepu54x_h265_set_hw_address(H265eV541HalContext * ctx,
 		mpp_dev_get_iova_address(ctx->dev, enc_task->input, 70);
 	regs->adr_srcu_hevc = regs->adr_srcy_hevc;
 	regs->adr_srcv_hevc = regs->adr_srcy_hevc;
-	vepu541_h265_uv_address(regs, syn, (Vepu541Fmt) fmt->format, task);
+	vepu541_h265_uv_address(regs, syn, (VepuFmt) fmt->format, task);
 
 	recon_buf = hal_bufs_get_buf(ctx->dpb_bufs, syn->sp.recon_pic.slot_idx);
 	ref_buf = hal_bufs_get_buf(ctx->dpb_bufs, syn->sp.ref_pic.slot_idx);

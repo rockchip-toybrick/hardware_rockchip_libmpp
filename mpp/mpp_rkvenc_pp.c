@@ -171,7 +171,6 @@ struct pp_task {
 	struct vepu_pp_params params;
 	struct vepu_pp_output output;
 
-	struct reg_offset_info off_inf;
 	u32 irq_status;
 	/* req for current task */
 	u32 w_req_cnt;
@@ -214,7 +213,6 @@ static int vepu_pp_extract_task_msg(struct pp_task *task,
 			       req, sizeof(*req));
 		} break;
 		case MPP_CMD_SET_REG_ADDR_OFFSET: {
-			mpp_extract_reg_offset_info(&task->off_inf, req);
 		} break;
 		default:
 			break;
@@ -487,8 +485,6 @@ static int vepu_pp_procfs_init(struct mpp_dev *mpp)
 	}
 	mpp_procfs_create_u32("aclk", 0644,
 			      pp->procfs, &pp->aclk_info.debug_rate_hz);
-	mpp_procfs_create_u32("session_buffers", 0644,
-			      pp->procfs, &mpp->session_max_buffers);
 
 	return 0;
 }
@@ -508,8 +504,6 @@ static int vepu_pp_init(struct mpp_dev *mpp)
 {
 	int ret;
 	struct vepu_pp_dev *pp = to_vepu_pp_dev(mpp);
-
-	mpp->grf_info = &mpp->srv->grf_infos[MPP_DRIVER_IEP2];
 
 	/* Get clock info from dtsi */
 	ret = mpp_get_clk_info(mpp, &pp->aclk_info, "aclk_vepu_pp");
@@ -659,7 +653,6 @@ static int vepu_pp_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	mpp->session_max_buffers = VEPU_PP_SESSION_MAX_BUFFERS;
 	vepu_pp_procfs_init(mpp);
 	/* register current device to mpp service */
 	mpp_dev_register_srv(mpp, mpp->srv);

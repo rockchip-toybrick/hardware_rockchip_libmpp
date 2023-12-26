@@ -451,7 +451,7 @@ static MPP_RET setup_vepu580_prep(HalVepu580RegSet * regs, MppEncPrepCfg * prep)
 {
 	VepuFmtCfg cfg;
 	MppFrameFormat fmt = prep->format;
-	MPP_RET ret = vepu541_set_fmt(&cfg, fmt);
+	MPP_RET ret = vepu5xx_set_fmt(&cfg, fmt);
 	RK_U32 hw_fmt = cfg.format;
 	RK_S32 y_stride;
 	RK_S32 c_stride;
@@ -1211,7 +1211,7 @@ static void setup_vepu580_io_buf(HalVepu580RegSet * regs, MppDev dev,
 	} else if (MPP_FRAME_FMT_IS_YUV(fmt)) {
 		VepuFmtCfg cfg;
 
-		vepu541_set_fmt(&cfg, fmt);
+		vepu5xx_set_fmt(&cfg, fmt);
 		switch (cfg.format) {
 		case VEPU541_FMT_BGRA8888:
 		case VEPU541_FMT_BGR888:

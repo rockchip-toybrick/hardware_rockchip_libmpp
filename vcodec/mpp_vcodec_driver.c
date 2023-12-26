@@ -332,7 +332,6 @@ struct vcodec_dev {
 	struct device *child_dev;
 #ifdef CONFIG_PROC_FS
 	struct proc_dir_entry *procfs;
-	struct proc_dir_entry *vdec_procfs;
 	struct proc_dir_entry *venc_procfs;
 #endif
 };
@@ -349,14 +348,9 @@ static int vcodec_procfs_remove(struct vcodec_dev *vdev)
 		vdev->procfs = NULL;
 	}
 
-	if (vdev->vdec_procfs) {
-		proc_remove(vdev->vdec_procfs);
-		vdev->vdec_procfs = NULL;
-	}
-
-	if (vdev->procfs) {
-		proc_remove(vdev->procfs);
-		vdev->procfs = NULL;
+	if (vdev->venc_procfs) {
+		proc_remove(vdev->venc_procfs);
+		vdev->venc_procfs = NULL;
 	}
 
 	return 0;
@@ -414,12 +408,6 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 	return 0;
 }
 
-static int vdec_proc_debug(struct seq_file *seq, void *offset)
-{
-	return 0;
-}
-
-
 static int vcodec_procfs_init(struct vcodec_dev *vdev)
 {
 
@@ -437,20 +425,9 @@ static int vcodec_procfs_init(struct vcodec_dev *vdev)
 		return -EIO;
 	}
 
-	vdev->vdec_procfs = proc_mkdir(MPP_DEC_NAME, vdev->procfs);
-	if (IS_ERR_OR_NULL(vdev->vdec_procfs)) {
-		mpp_err("failed on open procfs %s\n", MPP_DEC_NAME);
-		vdev->vdec_procfs = NULL;
-		return -EIO;
-	}
-
-	/* for debug */
 	/* for show enc chnl info */
 	proc_create_single_data("venc_info", 0444,
 				vdev->venc_procfs, venc_proc_debug, NULL);
-
-	proc_create_single_data("vdec_info", 0444,
-				vdev->vdec_procfs, vdec_proc_debug, NULL);
 
 
 	return 0;

@@ -121,7 +121,6 @@ enum PP_RET pp_service_cmd_send(void *ctx)
 			p->reqs[i].flag |= MPP_FLAGS_MULTI_MSG;
 	}
 	p->reqs[p->req_cnt - 1].flag |= MPP_FLAGS_LAST_MSG;
-	p->reqs[p->req_cnt - 1].flag |= MPP_FLAGS_REG_FD_NO_TRANS;
 	if (p->mppdev_ops->chnl_add_req)
 		ret = p->mppdev_ops->chnl_add_req(p->chnl, &p->reqs[0]);
 	p->req_cnt = 0;

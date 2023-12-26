@@ -12,6 +12,7 @@
 
 #include "rk_venc_cmd.h"
 #include "mpp_device.h"
+#include "vepu5xx_common.h"
 
 #define VEPU541_REG_BASE_HW_STATUS  0x0000001C
 #define VEPU541_REG_BASE_STATISTICS 0x00000210
@@ -19,40 +20,6 @@
 #define VEPU541_REG_BASE_L2         0x00010004
 
 #define VEPU541_MAX_ROI_NUM         8
-
-typedef enum Vepu541Fmt_e {
-	VEPU541_FMT_BGRA8888,	// 0
-	VEPU541_FMT_BGR888,	// 1
-	VEPU541_FMT_BGR565,	// 2
-	VEPU541_FMT_ARGB1555,   // 3
-	VEPU541_FMT_YUV422SP,	// 4
-	VEPU541_FMT_YUV422P,	// 5
-	VEPU541_FMT_YUV420SP,	// 6
-	VEPU541_FMT_YUV420P,	// 7
-	VEPU541_FMT_YUYV422,	// 8
-	VEPU541_FMT_UYVY422,	// 9
-	VEPU541_FMT_BUTT,	// 10
-
-	/* vepu540 add YUV400 support */
-	VEPU540_FMT_YUV400 = VEPU541_FMT_BUTT,	// 10
-	VEPU540C_FMT_AYUV2BPP,
-	VEPU540C_FMT_YUV444SP,
-	VEPU540C_FMT_YUV444P,
-	VEPU540C_FMT_ARGB4444,      //[15:0] : ARGB
-	VEPU540C_FMT_ARGB2BPP,
-	VEPU540C_FMT_BUTT,	// 11
-
-} Vepu541Fmt;
-
-typedef struct VepuFmtCfg_t {
-	Vepu541Fmt format;
-	RK_U32 alpha_swap;
-	RK_U32 rbuv_swap;
-	RK_U32 src_range;
-	RK_U32 src_endian;
-	const RK_S32 *weight;
-	const RK_S32 *offset;
-} VepuFmtCfg;
 
 /*
  * Vepu541RoiCfg
@@ -138,8 +105,6 @@ typedef struct Vepu541OsdCfg_t {
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-MPP_RET vepu541_set_fmt(VepuFmtCfg * cfg, MppFrameFormat format);
 
 /*
  * roi function

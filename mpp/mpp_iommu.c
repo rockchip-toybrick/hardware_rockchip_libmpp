@@ -66,43 +66,6 @@ int mpp_dma_free(struct mpp_dma_buffer *buffer)
 	return 0;
 }
 
-int mpp_iommu_remove(struct mpp_iommu_info *info)
-{
-	if (!info)
-		return 0;
-
-	iommu_group_put(info->group);
-	platform_device_put(info->pdev);
-
-	return 0;
-}
-
-int mpp_iommu_refresh(struct mpp_iommu_info *info, struct device *dev)
-{
-	int ret;
-
-	if (!info || info->skip_refresh)
-		return 0;
-
-	/* disable iommu */
-	ret = rockchip_iommu_disable(dev);
-	if (ret)
-		return ret;
-	/* re-enable iommu */
-	return rockchip_iommu_enable(dev);
-}
-
-int mpp_iommu_flush_tlb(struct mpp_iommu_info *info)
-{
-	if (!info)
-		return 0;
-
-	if (info->domain && info->domain->ops)
-		iommu_flush_iotlb_all(info->domain);
-
-	return 0;
-}
-
 int mpp_dma_get_iova(struct dma_buf *dmabuf, struct device *dev)
 {
 	struct dma_buf_attachment *attach;

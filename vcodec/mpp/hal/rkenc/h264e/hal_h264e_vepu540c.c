@@ -24,7 +24,6 @@
 #include "hal_h264e_debug.h"
 #include "hal_bufs.h"
 #include "mpp_enc_hal.h"
-#include "vepu541_common.h"
 #include "vepu540c_common.h"
 
 #include "hal_h264e_vepu540c_reg.h"
@@ -808,7 +807,7 @@ static MPP_RET setup_vepu540c_prep(HalVepu540cRegSet *regs,
 {
 	VepuFmtCfg cfg;
 	MppFrameFormat fmt = prep->format;
-	MPP_RET ret = vepu541_set_fmt(&cfg, fmt);
+	MPP_RET ret = vepu5xx_set_fmt(&cfg, fmt);
 	RK_U32 hw_fmt = cfg.format;
 	RK_S32 y_stride;
 	RK_S32 c_stride;
@@ -1656,7 +1655,7 @@ static void setup_vepu540c_io_buf(HalH264eVepu540cCtx *ctx,
 	} else if (MPP_FRAME_FMT_IS_YUV(fmt)) {
 		VepuFmtCfg cfg;
 
-		vepu541_set_fmt(&cfg, fmt);
+		vepu5xx_set_fmt(&cfg, fmt);
 		switch (cfg.format) {
 		case VEPU541_FMT_BGRA8888:
 		case VEPU541_FMT_BGR888:
@@ -1758,7 +1757,6 @@ static void setup_vepu540c_recn_refr(HalH264eVepu540cCtx *ctx,
 	RK_U32 recn_ref_wrap = ctx->recn_ref_wrap;
 	HalBuf *curr = hal_bufs_get_buf(bufs, frms->curr_idx);
 	HalBuf *refr = hal_bufs_get_buf(bufs, frms->refr_idx);
-	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
 
 	hal_h264e_dbg_func("enter\n");
 
@@ -1804,11 +1802,8 @@ static void setup_vepu540c_recn_refr(HalH264eVepu540cCtx *ctx,
 		regs->reg_base.rfpt_b_addr = 0xffffffff;
 		regs->reg_base.rfpb_b_addr  = 0;
 	}
-	regs->reg_base.adr_smear_wr =  mpp_dev_get_iova_address(dev, curr->buf[SMEAR_TYPE], 185);
-	if (0/*ppinfo && ppinfo->smrw_buf*/)
-		regs->reg_base.adr_smear_rd =  mpp_dev_get_iova_address2(dev, ppinfo->smrw_buf, 184);
-	else
-		regs->reg_base.adr_smear_rd =  mpp_dev_get_iova_address(dev, refr->buf[SMEAR_TYPE], 184);
+	regs->reg_base.adr_smear_wr = mpp_dev_get_iova_address(dev, curr->buf[SMEAR_TYPE], 185);
+	regs->reg_base.adr_smear_rd = mpp_dev_get_iova_address(dev, refr->buf[SMEAR_TYPE], 184);
 	hal_h264e_dbg_func("leave\n");
 }
 
@@ -2858,7 +2853,7 @@ static MPP_RET hal_h264e_vepu540c_comb_start(void *hal, HalEncTask *task, HalEnc
 	hal_h264e_dbg_func("enter %p\n", hal);
 
 	regs->reg_ctl.dtrns_map.jpeg_bus_edin = 7;
-	vepu541_set_fmt(&cfg, fmt);
+	vepu5xx_set_fmt(&cfg, fmt);
 	jpeg_cfg.dev = ctx->dev;
 	jpeg_cfg.jpeg_reg_base = &ctx->regs_set->reg_base.jpegReg;
 	jpeg_cfg.reg_tab = &ctx->regs_set->jpeg_table;

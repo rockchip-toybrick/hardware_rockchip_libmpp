@@ -12,10 +12,7 @@
 #include <linux/string.h>
 #include <linux/dma-buf.h>
 
-//#include "mpp_env.h"
 #include "mpp_mem.h"
-//#include "mpp_soc.h"
-//#include "mpp_common.h"
 #include "mpp_packet.h"
 #include "mpp_frame_impl.h"
 #include "mpp_maths.h"
@@ -24,7 +21,6 @@
 #include "h265e_syntax_new.h"
 #include "hal_bufs.h"
 #include "rkv_enc_def.h"
-#include "vepu541_common.h"
 #include "vepu540c_common.h"
 #include "hal_h265e_vepu540c.h"
 #include "hal_h265e_vepu540c_reg.h"
@@ -79,8 +75,6 @@ typedef struct H265eV540cHalContext_t {
 
 	vepu540c_h265_fbk feedback;
 	vepu540c_h265_fbk last_frame_fb;
-	void *dump_files;
-	RK_U32 frame_cnt_gen_ready;
 
 	RK_S32 frame_type;
 
@@ -96,8 +90,6 @@ typedef struct H265eV540cHalContext_t {
 	/* two-pass deflicker */
 	MppBuffer  buf_pass1;
 
-
-
 	RK_U32 enc_mode;
 	RK_U32 frame_size;
 	RK_U32 smear_size;
@@ -110,7 +102,6 @@ typedef struct H265eV540cHalContext_t {
 	RK_U32 frame_num;
 	HalBufs dpb_bufs;
 	RK_S32 fbc_header_len;
-	RK_U32 title_num;
 	RK_S32 online;
 	/* recn and ref buffer offset */
 	RK_U32 recn_ref_wrap;
@@ -442,7 +433,7 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 	MPP_RET ret = MPP_OK;
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
 	RK_U32 frame_size;
-	Vepu541Fmt input_fmt = VEPU541_FMT_YUV420P;
+	VepuFmt input_fmt = VEPU541_FMT_YUV420P;
 	RK_S32 mb_wd64, mb_h64;
 	MppEncRefCfg ref_cfg = ctx->cfg->ref_cfg;
 	MppEncPrepCfg *prep = &ctx->cfg->prep;
@@ -459,9 +450,9 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 
 	frame_size = MPP_ALIGN(prep->max_width, 16) * MPP_ALIGN(prep->max_height, 16);
 
-	vepu541_set_fmt(fmt, ctx->cfg->prep.format);
+	vepu5xx_set_fmt(fmt, ctx->cfg->prep.format);
 
-	input_fmt = (Vepu541Fmt) fmt->format;
+	input_fmt = (VepuFmt) fmt->format;
 	switch (input_fmt) {
 	case VEPU541_FMT_YUV420P:
 	case VEPU541_FMT_YUV420SP: {
@@ -1145,7 +1136,7 @@ MPP_RET hal_h265e_v540c_init(void *hal, MppEncHalCfg *cfg)
 	H265eV540cHalContext *ctx = (H265eV540cHalContext *) hal;
 	RK_U32 i = 0;
 	H265eV540cRegSet *regs = NULL;
-	// mpp_env_get_u32("hal_h265e_debug", &hal_h265e_debug, 0);
+
 	hal_h265e_enter();
 
 	for (i = 0; i < MAX_TITLE_NUM; i++)
@@ -1164,7 +1155,6 @@ MPP_RET hal_h265e_v540c_init(void *hal, MppEncHalCfg *cfg)
 	//hal_bufs_init(&ctx->dpb_bufs);
 
 	ctx->frame_cnt = 0;
-	ctx->frame_cnt_gen_ready = 0;
 	ctx->enc_mode = 1;
 	cfg->type = VPU_CLIENT_RKVENC;
 	ret = mpp_dev_init(&cfg->dev, cfg->type);
@@ -1301,7 +1291,7 @@ static void vepu540c_h265_set_ext_line_buf(H265eV540cRegSet *regs,
 
 static MPP_RET
 vepu540c_h265_uv_address(hevc_vepu540c_base *reg_base, H265eSyntax_new *syn,
-			 Vepu541Fmt input_fmt, HalEncTask *task)
+			 VepuFmt input_fmt, HalEncTask *task)
 {
 	RK_U32 hor_stride = syn->pp.hor_stride;
 	RK_U32 ver_stride =
@@ -1408,8 +1398,7 @@ static MPP_RET vepu540c_h265_set_rc_regs(H265eV540cHalContext *ctx,
 		reg_base->reg212_rc_cfg.aq_mode = 1;
 		reg_base->reg212_rc_cfg.rc_ctu_num = mb_wd32;
 		reg_base->reg213_rc_qp.rc_qp_range =
-			(ctx->frame_type ==
-			 INTRA_FRAME) ? hw->qp_delta_row_i : hw->qp_delta_row;
+			(ctx->frame_type == INTRA_FRAME) ? hw->qp_delta_row_i : hw->qp_delta_row;
 		if (ctx->smart_en)
 			reg_base->reg213_rc_qp.rc_qp_range = 0;
 		reg_base->reg213_rc_qp.rc_max_qp = rc_cfg->quality_max;
@@ -1889,7 +1878,6 @@ void vepu540c_h265_set_hw_address(H265eV540cHalContext *ctx,
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
 	RK_U32 len = mpp_packet_get_length(task->packet);
 	RK_U32 is_phys = mpp_frame_get_is_full(task->frame);
-	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
 
 	hal_h265e_enter();
 
@@ -1899,7 +1887,7 @@ void vepu540c_h265_set_hw_address(H265eV540cHalContext *ctx,
 		regs->reg0161_adr_src1 = regs->reg0160_adr_src0;
 		regs->reg0162_adr_src2 = regs->reg0160_adr_src0;
 
-		vepu540c_h265_uv_address(regs, syn, (Vepu541Fmt) fmt->format, task);
+		vepu540c_h265_uv_address(regs, syn, (VepuFmt) fmt->format, task);
 	}
 
 	recon_buf = hal_bufs_get_buf(ctx->dpb_bufs, syn->sp.recon_pic.slot_idx);
@@ -1926,12 +1914,8 @@ void vepu540c_h265_set_hw_address(H265eV540cHalContext *ctx,
 	}
 	regs->reg0185_adr_smr_wr =
 		mpp_dev_get_iova_address(ctx->dev, recon_buf->buf[SMEAR_TYPE], 185);
-	if (0/*ppinfo && ppinfo->smrw_buf*/)
-		regs->reg0184_adr_smr_rd =
-			mpp_dev_get_iova_address2(ctx->dev, (struct dma_buf *)ppinfo->smrw_buf, 184);
-	else
-		regs->reg0184_adr_smr_rd =
-			mpp_dev_get_iova_address(ctx->dev, ref_buf->buf[SMEAR_TYPE], 184);
+	regs->reg0184_adr_smr_rd =
+		mpp_dev_get_iova_address(ctx->dev, ref_buf->buf[SMEAR_TYPE], 184);
 
 
 	if (ctx->cfg->codec.h265.tmvp_enable) {

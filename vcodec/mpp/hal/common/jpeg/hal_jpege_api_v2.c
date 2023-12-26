@@ -15,7 +15,7 @@
 //#include "mpp_platform.h"
 
 #include "mpp_enc_hal.h"
-#include "vepu5xx.h"
+#include "vepu5xx_common.h"
 #include "hal_jpege_debug.h"
 #include "hal_jpege_api_v2.h"
 #include "hal_jpege_vepu540c.h"

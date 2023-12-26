@@ -169,8 +169,6 @@ struct rkvenc_task {
 		u32 *data;
 		u32 size;
 	} reg[RKVENC_CLASS_BUTT];
-	/* register offset info */
-	struct reg_offset_info off_inf;
 
 	enum MPP_CLOCK_MODE clk_mode;
 	u32 irq_status;
@@ -264,13 +262,6 @@ struct rkvenc2_session_priv {
 	struct rw_semaphore rw_sem;
 	u32 dvbm_en;
 	u32 dvbm_link;
-	/* codec info from user */
-	struct {
-		/* show mode */
-		u32 flag;
-		/* item data */
-		u64 val;
-	} codec_info[ENC_INFO_BUTT];
 	struct rkvenc_debug_info info;
 };
 
@@ -389,70 +380,6 @@ static struct rkvenc_hw_info rkvenc_rv1106_hw_info = {
 	.link_addr_base = 0x0070,
 	.link_status_base = 0x4024,
 	.link_node_base = 0x4028,
-};
-
-/*
- * file handle translate information for v2
- */
-/* rv1106 trans table */
-static const u16 trans_tbl_h264e_rv1106[] = {
-	7, 8, 9, 10, 11, 12, 13, 14,
-	15, 16, 17, 18, 19, 20, 21, 22, 23,
-	/* jpege */
-	100, 101, 102, 103,
-};
-
-static const u16 trans_tbl_h264e_rv1106_osd[] = {
-	3, 4, 12, 13, 21, 22, 30, 31,
-	39, 40, 48, 49, 57, 58, 66, 67,
-};
-
-static const u16 trans_tbl_h265e_rv1106[] = {
-	7, 8, 9, 10, 11, 12, 13, 14,
-	15, 16, 17, 18, 19, 20, 21, 22, 23,
-	/* jpege */
-	100, 101, 102, 103,
-};
-
-static const u16 trans_tbl_h265e_rv1106_osd[] = {
-	3, 4, 12, 13, 21, 22, 30, 31,
-	39, 40, 48, 49, 57, 58, 66, 67,
-};
-
-static const u16 trans_tbl_jpege_rv1106[] = {
-	100, 101, 102, 103,
-};
-
-static const u16 trans_tbl_jpege_osd_rv1106[] = {
-	81, 82, 90, 91, 99, 100, 108, 109,
-	117, 118, 126, 127, 135, 136, 144, 145,
-};
-
-static struct mpp_trans_info trans_rkvenc_rv1106[] = {
-	[RKVENC_FMT_H264E] = {
-		.count = ARRAY_SIZE(trans_tbl_h264e_rv1106),
-		.table = trans_tbl_h264e_rv1106,
-	},
-	[RKVENC_FMT_H264E_OSD] = {
-		.count = ARRAY_SIZE(trans_tbl_h264e_rv1106_osd),
-		.table = trans_tbl_h264e_rv1106_osd,
-	},
-	[RKVENC_FMT_H265E] = {
-		.count = ARRAY_SIZE(trans_tbl_h265e_rv1106),
-		.table = trans_tbl_h265e_rv1106,
-	},
-	[RKVENC_FMT_H265E_OSD] = {
-		.count = ARRAY_SIZE(trans_tbl_h265e_rv1106_osd),
-		.table = trans_tbl_h265e_rv1106_osd,
-	},
-	[RKVENC_FMT_JPEGE] = {
-		.count = ARRAY_SIZE(trans_tbl_jpege_rv1106),
-		.table = trans_tbl_jpege_rv1106,
-	},
-	[RKVENC_FMT_JPEGE_OSD] = {
-		.count = ARRAY_SIZE(trans_tbl_jpege_osd_rv1106),
-		.table = trans_tbl_jpege_osd_rv1106,
-	},
 };
 
 static int rkvenc_reset(struct mpp_dev *mpp);
@@ -642,7 +569,6 @@ static int rkvenc_extract_task_msg(struct mpp_session *session,
 			}
 		} break;
 		case MPP_CMD_SET_REG_ADDR_OFFSET: {
-			mpp_extract_reg_offset_info(&task->off_inf, req);
 		} break;
 		default:
 			break;
@@ -1331,32 +1257,6 @@ static void rkvenc_clear_dvbm_info(struct mpp_dev *mpp)
 		       dvbm_info, dvbm_en);
 }
 
-static int rkvenc_irq(struct mpp_dev *mpp)
-{
-	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
-	struct rkvenc_hw_info *hw = enc->hw_info;
-
-	mpp_debug_enter();
-
-	mpp->irq_status = mpp_read(mpp, hw->int_sta_base);
-	if (!mpp->irq_status)
-		return IRQ_NONE;
-	mpp_write(mpp, hw->int_mask_base, 0x100);
-	mpp_write(mpp, hw->int_clr_base, mpp->irq_status);
-	mpp_write(mpp, hw->int_sta_base, 0);
-	if (mpp->irq_status == RKVENC_DVBM_DISCONNECT)
-		return IRQ_HANDLED;
-	if (rkvenc_check_bs_overflow(mpp))
-		return IRQ_HANDLED;
-
-	enc->line_cnt = mpp_read(mpp, 0x18) & 0x3fff;
-	rkvenc_clear_dvbm_info(mpp);
-
-	mpp_debug_leave();
-
-	return IRQ_WAKE_THREAD;
-}
-
 irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 {
 	struct mpp_dev *mpp = param;
@@ -1460,219 +1360,6 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 		session->callback(session->chn_id);
 
 	up_read(&mpp->work_sem);
-	mpp_debug_leave();
-
-	return IRQ_HANDLED;
-}
-
-static int rkvenc_link_set_int_sta(struct rkvenc_link_dev *link,
-				   struct rkvenc_task *task,
-				   u32 irq_status)
-{
-	u32 *tb_reg;
-	u32 int_sta_off;
-	struct rkvenc_hw_info *hw = task->hw_info;
-
-	tb_reg = (u32 *)task->table->vaddr;
-	int_sta_off = link->class_off[RKVENC_CLASS_CTL] + hw->int_sta_base;
-	tb_reg[int_sta_off / sizeof(u32)] = irq_status;
-
-	return 0;
-}
-
-static int rkvenc_link_isr(struct mpp_dev *mpp,
-			   struct rkvenc_dev *enc,
-			   struct rkvenc_link_dev *link)
-{
-	struct mpp_task *mpp_task = NULL, *n;
-	struct rkvenc_task *task = NULL;
-	struct rkvenc_link_status *status;
-	struct rkvenc_hw_info *hw = enc->hw_info;
-	struct rkvenc2_session_priv *priv =
-		(struct rkvenc2_session_priv *)task->mpp_task.session;
-
-	//u32 node_iova = mpp_read_relaxed(mpp, hw->link_node_base);
-	//u32 irq_status = mpp_read_relaxed(mpp, hw->int_sta_base);
-	u32 link_status = mpp_read_relaxed(mpp, hw->link_status_base);
-
-	status = (struct rkvenc_link_status *)&link_status;
-	//mpp_err("node_iova=%08x, mpp->irq_status=%08x, irq_status=%08x, num_cfg_done=%d, num_cfg=%d, num_int=%d, num_enc_done=%d\n",
-	//	node_iova, (u32)mpp->irq_status, irq_status, status->cfg_done_num, status->cfg_num, status->int_num, status->enc_num);
-
-	/* deal with the task done */
-	// mutex_lock(&mpp->queue->running_lock);
-	list_for_each_entry_safe(mpp_task, n,
-				 &mpp->queue->running_list,
-				 queue_link) {
-		int task_diff;
-
-		task = to_rkvenc_task(mpp_task);
-		task_diff = (task->task_no + 256 - status->enc_num) % 256;
-		//mpp_err("task->task_no=%d, enc_num=%d, task_diff=%d\n", task->task_no, status->enc_num, task_diff);
-		if (task_diff > 0)
-			break;
-
-		//mpp_err("cancle_delayed_work %px\n", mpp_task);
-		cancel_delayed_work(&mpp_task->timeout_work);
-		mpp_time_diff(mpp_task);
-		/* set task done ready */
-		task->irq_status = mpp->irq_status;
-		mpp_debug(DEBUG_IRQ_STATUS, "link_irq_status: %08x\n", task->irq_status);
-		rkvenc_link_set_int_sta(link, task, task->irq_status);
-		if (!atomic_read(&mpp_task->abort_request)) {
-			set_bit(TASK_STATE_DONE, &mpp_task->state);
-			/* Wake up the GET thread */
-			wake_up(&mpp_task->wait);
-		}
-		mutex_lock(&link->list_mutex);
-		list_move_tail(&task->table->link, &link->unused_list);
-		mutex_unlock(&link->list_mutex);
-
-		set_bit(TASK_STATE_FINISH, &mpp_task->state);
-		list_del_init(&mpp_task->queue_link);
-		kref_put(&mpp_task->ref, mpp_free_task);
-	}
-	//mpp_err("list_empty=%d\n", list_empty(&mpp->queue->running_list));
-	if (list_empty(&mpp->queue->running_list) && priv->dvbm_en) {
-		if (mpp->irq_status & hw->err_mask)
-			rkvenc_reset(mpp);
-	}
-#if 0
-	/* when meet error which cannot continue, hardware will stop */
-	if (mpp->irq_status & hw->link_stop_mask) {
-		list_for_each_entry_safe(mpp_task, n,
-					 &mpp->queue->running_list,
-					 queue_link) {
-			int task_diff;
-
-			task = to_rkvenc_task(mpp_task);
-			//mpp_err("cancle_delayed_work %px\n", mpp_task);
-			cancel_delayed_work(&mpp_task->timeout_work);
-			task_diff = (task->task_no + 256 - status->enc_num) % 256;
-			//mpp_err("task->task_no=%d, enc_num=%d, task_diff=%d\n", task->task_no, status->enc_num, task_diff);
-			if (task_diff > 0) {
-				clear_bit(TASK_STATE_HANDLE, &mpp_task->state);
-				clear_bit(TASK_STATE_IRQ, &mpp_task->state);
-			} else {
-				task->irq_status = mpp->irq_status; 2
-				rkvenc_link_set_int_sta(link, task, task->irq_status);
-				if (!atomic_read(&mpp_task->abort_request)) {
-					set_bit(TASK_STATE_DONE, &mpp_task->state);
-					/* Wake up the GET thread */
-					wake_up(&mpp_task->wait);
-				}
-				mutex_lock(&link->list_mutex);
-				list_move_tail(&task->table->link, &link->unused_list);
-				mutex_unlock(&link->list_mutex);
-
-				set_bit(TASK_STATE_FINISH, &mpp_task->state);
-				list_del_init(&mpp_task->queue_link);
-				kref_put(&mpp_task->ref, mpp_free_task);
-			}
-		}
-		/* reset hardware */
-		atomic_inc(&mpp->reset_request);
-		mpp_dev_reset(mpp);
-	}
-	//mpp_err("list_empty=%d\n", list_empty(&mpp->queue->running_list));
-#endif
-	// mutex_unlock(&mpp->queue->running_lock);
-
-	mpp_debug_leave();
-	return 0;
-}
-
-static int rkvenc_isr(struct mpp_dev *mpp)
-{
-	struct rkvenc_task *task = NULL;
-	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
-
-	mpp_debug_enter();
-
-	switch (enc->link_mode) {
-	case RKVENC_MODE_ONEFRAME: {
-		struct mpp_task *mpp_task = mpp->cur_task;
-		struct rkvenc2_session_priv *priv = mpp_task->session->priv;
-
-		if (!mpp_task)
-			return IRQ_HANDLED;
-
-		mpp_time_diff(mpp_task);
-		mpp->cur_task = NULL;
-		task = to_rkvenc_task(mpp_task);
-		if (priv->dvbm_en) {
-			/*
-			* Workaround:
-			* The line cnt is updated in the mcu.
-			* When line cnt is set to max value 0x3fff,
-			* the cur frame has overflow.
-			*/
-			if (enc->line_cnt == 0x3fff) {
-				enc->dvbm_overflow = 1;
-				dev_err(mpp->dev, "current frame has overflow\n");
-			}
-			if (enc->dvbm_overflow) {
-				mpp->irq_status |= BIT(6);
-				enc->dvbm_overflow = 0;
-			}
-		}
-		task->irq_status = (mpp->irq_status | mpp->overflow_status);
-		mpp->overflow_status = 0;
-		mpp_debug(DEBUG_IRQ_STATUS, "task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
-			  mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
-
-		if (mpp->irq_status & enc->hw_info->err_mask) {
-			dev_err(mpp->dev, "task %d fmt %d dvbm_en %d irq_status 0x%08x\n",
-				mpp_task->task_index, task->fmt, priv->dvbm_en, task->irq_status);
-			atomic_inc(&mpp->reset_request);
-			/* dump register */
-			if (mpp_debug_unlikely(DEBUG_DUMP_ERR_REG)) {
-				mpp_debug(DEBUG_DUMP_ERR_REG, "irq_status: %08x\n",
-					  task->irq_status);
-				rkvenc_dump_dbg(mpp);
-			}
-		}
-		mpp_task_finish(mpp_task->session, mpp_task);
-	} break;
-	case RKVENC_MODE_LINK_ONEFRAME: {
-		struct mpp_task *mpp_task = mpp->cur_task;
-
-		/* FIXME use a spin lock here */
-		if (!mpp_task) {
-			dev_err(mpp->dev, "no current task\n");
-			return IRQ_HANDLED;
-		}
-
-		mpp_time_diff(mpp_task);
-		mpp->cur_task = NULL;
-		task = to_rkvenc_task(mpp_task);
-		task->irq_status = mpp->irq_status;
-		mpp_debug(DEBUG_IRQ_STATUS, "irq_status: %08x\n", task->irq_status);
-
-		if (task->irq_status & enc->hw_info->err_mask) {
-			atomic_inc(&mpp->reset_request);
-			/* dump register */
-			if (mpp_debug_unlikely(DEBUG_DUMP_ERR_REG)) {
-				mpp_debug(DEBUG_DUMP_ERR_REG, "irq_status: %08x\n",
-					  task->irq_status);
-				// mpp_task_dump_hw_reg(mpp);
-			}
-		}
-		mpp_task_finish(mpp_task->session, mpp_task);
-		/* move link */
-		mutex_lock(&enc->link->list_mutex);
-		list_move_tail(&task->table->link, &enc->link->unused_list);
-		mutex_unlock(&enc->link->list_mutex);
-	} break;
-	case RKVENC_MODE_LINK_ADD: {
-		if (mpp->irq_status & 0x100 || mpp->dump_regs)
-			rkvenc_dump_dbg(mpp);
-		rkvenc_link_isr(mpp, enc, enc->link);
-	} break;
-	default:
-		break;
-	}
-
 	mpp_debug_leave();
 
 	return IRQ_HANDLED;
@@ -1825,35 +1512,6 @@ static int rkvenc_control(struct mpp_session *session, struct mpp_request *req)
 {
 	switch (req->cmd) {
 	case MPP_CMD_SEND_CODEC_INFO: {
-		int i;
-		int cnt;
-		struct codec_info_elem elem;
-		struct rkvenc2_session_priv *priv;
-
-		if (!session || !session->priv) {
-			mpp_err("session info null\n");
-			return -EINVAL;
-		}
-		priv = session->priv;
-
-		cnt = req->size / sizeof(elem);
-		cnt = (cnt > ENC_INFO_BUTT) ? ENC_INFO_BUTT : cnt;
-		mpp_debug(DEBUG_IOCTL, "codec info count %d\n", cnt);
-		for (i = 0; i < cnt; i++) {
-			if (copy_from_user(&elem, req->data + i * sizeof(elem), sizeof(elem))) {
-				mpp_err("copy_from_user failed\n");
-				continue;
-			}
-			if (elem.type > ENC_INFO_BASE && elem.type < ENC_INFO_BUTT &&
-			    elem.flag > CODEC_INFO_FLAG_NULL && elem.flag < CODEC_INFO_FLAG_BUTT) {
-				elem.type = array_index_nospec(elem.type, ENC_INFO_BUTT);
-				priv->codec_info[elem.type].flag = elem.flag;
-				priv->codec_info[elem.type].val = elem.data;
-			} else {
-				mpp_err("codec info invalid, type %d, flag %d\n",
-					elem.type, elem.flag);
-			}
-		}
 	} break;
 	case MPP_CMD_UNBIND_JPEG_TASK: {
 		return rkvenc_unbind_jpeg_task(session);
@@ -2062,7 +1720,6 @@ static int rkvenc_procfs_remove(struct mpp_dev *mpp)
 
 static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq)
 {
-	int i;
 	struct rkvenc2_session_priv *priv = session->priv;
 
 	down_read(&priv->rw_sem);
@@ -2071,12 +1728,6 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 	seq_puts(seq, "------------------------------------------------------\n");
 	seq_printf(seq, "%8s|", "ID");
 	seq_printf(seq, "%8s|", "device");
-	for (i = ENC_INFO_BASE; i < ENC_INFO_BUTT; i++) {
-		bool show = priv->codec_info[i].flag;
-
-		if (show)
-			seq_printf(seq, "%8s|", enc_info_item_name[i]);
-	}
 	seq_printf(seq, "%15s|%10s|%12s|%10s|%15s|%13s|%13s",
 		   "hw_running", "online", "wrap_ovfl", "bs_ovfl",
 		   "wrap_src_mis", "enc_err_cnt", "enc_err_st");
@@ -2084,22 +1735,6 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 	/* item data*/
 	seq_printf(seq, "%8d|", session->chn_id);
 	seq_printf(seq, "%8s|", mpp_device_name[session->device_type]);
-	for (i = ENC_INFO_BASE; i < ENC_INFO_BUTT; i++) {
-		u32 flag = priv->codec_info[i].flag;
-
-		if (!flag)
-			continue;
-		if (flag == CODEC_INFO_FLAG_NUMBER) {
-			u32 data = priv->codec_info[i].val;
-
-			seq_printf(seq, "%8d|", data);
-		} else if (flag == CODEC_INFO_FLAG_STRING) {
-			const char *name = (const char *)&priv->codec_info[i].val;
-
-			seq_printf(seq, "%8s|", name);
-		} else
-			seq_printf(seq, "%8s|", (const char *)"null");
-	}
 	seq_printf(seq, "%15d|%10d|%12d|%10d|%15d|%13d|%13x",
 		   priv->info.hw_running, priv->dvbm_en ? 1 : 0, priv->info.wrap_overflow_cnt,
 		   priv->info.bsbuf_overflow_cnt, priv->info.wrap_source_mis_cnt,
@@ -2169,8 +1804,6 @@ static int rkvenc_procfs_init(struct mpp_dev *mpp)
 			      enc->procfs, &enc->aclk_info.debug_rate_hz);
 	mpp_procfs_create_u32("clk_core", 0644,
 			      enc->procfs, &enc->core_clk_info.debug_rate_hz);
-	mpp_procfs_create_u32("session_buffers", 0644,
-			      enc->procfs, &mpp->session_max_buffers);
 	mpp_procfs_create_u32("dump_regs", 0644,
 			      enc->procfs, &mpp->dump_regs);
 	/* for show session info */
@@ -2204,8 +1837,6 @@ static int rkvenc_init(struct mpp_dev *mpp)
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	int ret = 0;
 	struct device_node *of_node = mpp_dev_of_node(mpp->dev);
-
-	mpp->grf_info = &mpp->srv->grf_infos[MPP_DRIVER_RKVENC];
 
 	/* Get clock info from dtsi */
 	ret = mpp_get_clk_info(mpp, &enc->aclk_info, "aclk_vcodec");
@@ -2306,8 +1937,8 @@ static struct mpp_dev_ops rkvenc_dev_ops_v2 = {
 	.alloc_task = rkvenc_alloc_task,
 	.prepare = rkvenc_prepare,
 	.run = rkvenc_run,
-	.irq = rkvenc_irq,
-	.isr = rkvenc_isr,
+	.irq = NULL,
+	.isr = NULL,
 	.finish = rkvenc_finish,
 	.result = rkvenc_result,
 	.free_task = rkvenc_free_task,
@@ -2321,7 +1952,6 @@ static struct mpp_dev_ops rkvenc_dev_ops_v2 = {
 static const struct mpp_dev_var rkvenc_rv1106_data = {
 	.device_type = MPP_DEVICE_RKVENC,
 	.hw_info = &rkvenc_rv1106_hw_info.hw,
-	.trans_info = trans_rkvenc_rv1106,
 	.hw_ops = &rkvenc_hw_ops,
 	.dev_ops = &rkvenc_dev_ops_v2,
 };
@@ -2516,7 +2146,6 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 		dev_err(dev, "register interrupter runtime failed\n");
 		goto failed_get_irq;
 	}
-	mpp->session_max_buffers = RKVENC_SESSION_MAX_BUFFERS;
 	enc->hw_info = to_rkvenc_info(mpp->var->hw_info);
 	rkvenc_procfs_init(mpp);
 	mpp_dev_register_srv(mpp, mpp->srv);

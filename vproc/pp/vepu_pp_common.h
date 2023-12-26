@@ -22,15 +22,11 @@ struct dma_buf;
 #define REQ_DATA_PTR(ptr) ((u64)ptr)
 #endif
 
-#define MPP_DEVICE_RKVENC_PP  (25)
+#define MPP_DEVICE_RKVENC_PP  (2)
 
 /* define flags for mpp_request */
 #define MPP_FLAGS_MULTI_MSG         (0x00000001)
 #define MPP_FLAGS_LAST_MSG          (0x00000002)
-#define MPP_FLAGS_REG_FD_NO_TRANS   (0x00000004)
-#define MPP_FLAGS_SCL_FD_NO_TRANS   (0x00000008)
-#define MPP_FLAGS_REG_OFFSET_ALONE  (0x00000010)
-#define MPP_FLAGS_SECURE_MODE       (0x00010000)
 
 #define PP_ALIGN(x, a)         (((x)+(a)-1)&~((a)-1))
 

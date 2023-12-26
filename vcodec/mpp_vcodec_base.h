@@ -16,7 +16,7 @@
 #include "mpp_err.h"
 #include "mpp_packet.h"
 
-#define MAX_ENC_NUM 64
+#define MAX_ENC_NUM 16
 
 typedef enum {
 	CHAN_STATE_NULL = 0,

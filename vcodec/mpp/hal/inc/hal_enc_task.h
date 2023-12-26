@@ -69,9 +69,6 @@ typedef struct HalEncTask_t {
 	MppFrame frame;
 	MppBuffer input;
 
-	// task stopwatch for timing
-	MppStopwatch stopwatch;
-
 	// current mv info output buffer (not used)
 	MppBuffer mv_info;
 	MppBuffer qpmap;

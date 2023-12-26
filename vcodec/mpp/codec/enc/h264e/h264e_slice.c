@@ -11,7 +11,6 @@
 #include <linux/string.h>
 
 #include "mpp_mem.h"
-#include "mpp_bitread.h"
 #include "mpp_bitwrite.h"
 
 #include "h264e_debug.h"

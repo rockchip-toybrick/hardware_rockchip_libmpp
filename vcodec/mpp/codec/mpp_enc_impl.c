@@ -141,27 +141,6 @@ static void reset_enc_task(MppEncImpl *enc)
 	enc->hdr_status.val = enc->hdr_status.ready;
 }
 
-static void update_enc_hal_info(MppEncImpl *enc)
-{
-	//    MppDevInfoCfg data[32];
-	//    RK_S32 size = sizeof(data);
-	//    RK_S32 i;
-
-	if (NULL == enc->hal_info || NULL == enc->dev)
-		return;
-
-	//hal_info_from_enc_cfg(enc->hal_info, &enc->cfg);
-
-	//hal_info_get(enc->hal_info, data, &size);
-#if 0
-	if (size) {
-		size /= sizeof(data[0]);
-		for (i = 0; i < size; i++)
-			mpp_dev_ioctl(enc->dev, MPP_DEV_SET_INFO, &data[i]);
-	}
-#endif
-}
-
 static void update_hal_info_fps(MppEncImpl *enc)
 {
 	RK_S32 time_diff = ((RK_S32)(enc->time_end - enc->time_base) / 1000);
@@ -309,16 +288,6 @@ static RK_S32 check_rc_gop_update(MpiCmd cmd, MppEncCfgSet *cfg)
 {
 	if (((cmd == MPP_ENC_SET_RC_CFG) || (cmd == MPP_ENC_SET_CFG)) &&
 	    (cfg->rc.change & MPP_ENC_RC_CFG_CHANGE_GOP))
-		return 1;
-
-	return 0;
-}
-
-static RK_S32 check_hal_info_update(MpiCmd cmd)
-{
-	if (cmd == MPP_ENC_SET_CFG || cmd == MPP_ENC_SET_RC_CFG ||
-	    cmd == MPP_ENC_SET_CODEC_CFG || cmd == MPP_ENC_SET_PREP_CFG ||
-	    cmd == MPP_ENC_SET_REF_CFG)
 		return 1;
 
 	return 0;
@@ -980,9 +949,6 @@ MPP_RET mpp_enc_proc_cfg(MppEncImpl *enc, MpiCmd cmd, void *param)
 		enc->rc_api_user_cfg = 1;
 	if (check_rc_gop_update(cmd, &enc->cfg))
 		mpp_enc_refs_set_rc_igop(enc->refs, enc->cfg.rc.gop);
-
-	if (check_hal_info_update(cmd))
-		enc->hal_info_updated = 0;
 
 	return ret;
 }
@@ -1828,7 +1794,6 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)
 	MppEncHeaderStatus *hdr_status = &enc->hdr_status;
 	EncTaskStatus *status = &task->status;
 	HalEncTask *hal_task = &task->info.enc;
-	MppStopwatch stopwatch = NULL;
 
 	/* online will no support reenc */
 	if (status->rc_reenc) {
@@ -1853,7 +1818,6 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)
 
 	hal_task->rc_task = rc_task;
 	hal_task->frm_cfg = frm_cfg;
-	hal_task->stopwatch = stopwatch;
 
 	rc_task->frame = enc->frame;
 	enc_dbg_detail("task seq idx %d start\n", frm->seq_idx);
@@ -1889,11 +1853,6 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)
 
 	mpp_enc_impl_get_roi_osd(enc, enc->frame);
 
-	/* check hal info update */
-	if (!enc->hal_info_updated) {
-		update_enc_hal_info(enc);
-		enc->hal_info_updated = 1;
-	}
 	/* generate header before hardware stream */
 	if (!hdr_status->ready) {
 		enc_impl_gen_hdr(enc->impl, enc->hdr_pkt);
@@ -2105,7 +2064,6 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
 
 TASK_DONE:
 
-	//mpp_stopwatch_record(hal_task->stopwatch, "encode task done");
 	if (ret) {
 		enc->frame_force_drop++;
 		enc->frm_cfg.force_flag |= ENC_FORCE_IDR;

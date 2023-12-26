@@ -33,63 +33,17 @@
 #define HAS_RKVENC540C	IS_ENABLED(RKVEPU540C_ENABLE)
 #define HAS_RKVENC540C_PP	IS_ENABLED(RKVEPU540C_PP_ENABLE)
 
-#define MPP_REGISTER_DRIVER(srv, flag, X, x) {\
-	if (flag)\
-		mpp_add_driver(srv, MPP_DRIVER_##X, &rockchip_##x##_driver, "grf_"#x);\
-	}
-
 unsigned int mpp_dev_debug = 0x0;
 module_param(mpp_dev_debug, uint, 0644);
 MODULE_PARM_DESC(mpp_dev_debug, "bit switch for mpp debug information");
 
 static const char mpp_version[] = MPP_VERSION;
 
-static int mpp_init_grf(struct device_node *np,
-			struct mpp_grf_info *grf_info,
-			const char *grf_name)
-{
-	int ret;
-	int index;
-	u32 grf_offset = 0;
-	u32 grf_value = 0;
-	struct regmap *grf;
-
-	grf = syscon_regmap_lookup_by_phandle(np, "rockchip,grf");
-	if (IS_ERR_OR_NULL(grf))
-		return -EINVAL;
-
-	ret = of_property_read_u32(np, "rockchip,grf-offset", &grf_offset);
-	if (ret)
-		return -ENODATA;
-
-	index = of_property_match_string(np, "rockchip,grf-names", grf_name);
-	if (index < 0)
-		return -ENODATA;
-
-	ret = of_property_read_u32_index(np, "rockchip,grf-values",
-					 index, &grf_value);
-	if (ret)
-		return -ENODATA;
-
-	grf_info->grf = grf;
-	grf_info->offset = grf_offset;
-	grf_info->val = grf_value;
-
-	mpp_set_grf(grf_info);
-
-	return 0;
-}
-
 static int mpp_add_driver(struct mpp_service *srv,
 			  enum MPP_DRIVER_TYPE type,
-			  struct platform_driver *driver,
-			  const char *grf_name)
+			  struct platform_driver *driver)
 {
 	int ret;
-
-	mpp_init_grf(mpp_dev_of_node(srv->dev),
-		     &srv->grf_infos[type],
-		     grf_name);
 
 	ret = platform_driver_register(driver);
 	if (ret)
@@ -103,7 +57,6 @@ static int mpp_add_driver(struct mpp_service *srv,
 static int mpp_remove_driver(struct mpp_service *srv, int i)
 {
 	if (srv && srv->sub_drivers[i]) {
-		mpp_set_grf(&srv->grf_infos[i]);
 		platform_driver_unregister(srv->sub_drivers[i]);
 		srv->sub_drivers[i] = NULL;
 	}
@@ -359,9 +312,15 @@ static int mpp_service_probe(struct platform_device *pdev)
 	mpp_procfs_init(srv);
 
 	/* register sub drivers */
-	MPP_REGISTER_DRIVER(srv, HAS_RKVENC580, RKVENC2, rkvenc2);
-	MPP_REGISTER_DRIVER(srv, HAS_RKVENC540C, RKVENC540C, rkvenc540c);
-	MPP_REGISTER_DRIVER(srv, HAS_RKVENC540C_PP, VEPU_PP, vepu_pp);
+#ifdef RKVEPU580_ENABLE
+	mpp_add_driver(srv, MPP_DRIVER_RKVENC, &rockchip_rkvenc2_driver);
+#endif
+#ifdef RKVEPU540C_ENABLE
+	mpp_add_driver(srv, MPP_DRIVER_RKVENC, &rockchip_rkvenc540c_driver);
+#endif
+#ifdef RKVEPU540C_PP_ENABLE
+	mpp_add_driver(srv, MPP_DRIVER_RKVENC, &rockchip_vepu_pp_driver);
+#endif
 
 	dev_info(dev, "probe success\n");
 	g_srv = srv;

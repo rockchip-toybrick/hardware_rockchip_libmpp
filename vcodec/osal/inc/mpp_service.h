@@ -27,26 +27,6 @@
 /* define flags for mpp_request */
 #define MPP_FLAGS_MULTI_MSG         (0x00000001)
 #define MPP_FLAGS_LAST_MSG          (0x00000002)
-#define MPP_FLAGS_REG_FD_NO_TRANS   (0x00000004)
-#define MPP_FLAGS_SCL_FD_NO_TRANS   (0x00000008)
-#define MPP_FLAGS_REG_OFFSET_ALONE  (0x00000010)
-#define MPP_FLAGS_SECURE_MODE       (0x00010000)
-
-/* mpp service capability description */
-typedef enum MppDevCmd_e {
-	MPP_DEV_GET_START = 0,
-	MPP_DEV_GET_MAX_WIDTH,
-	MPP_DEV_GET_MAX_HEIGHT,
-	MPP_DEV_GET_MIN_WIDTH,
-	MPP_DEV_GET_MIN_HEIGHT,
-	MPP_DEV_GET_MMU_STATUS,
-
-	MPP_DEV_SET_START = 0x01000000,
-	MPP_DEV_SET_HARD_PLATFORM,	// set paltform by user
-	MPP_DEV_ENABLE_POSTPROCCESS,
-
-	MPP_DEV_PROP_BUTT,
-} MppDevCmd;
 
 typedef enum MppServiceCmdType_e {
 	MPP_CMD_QUERY_BASE        	= 0,
@@ -91,15 +71,6 @@ typedef struct mppReqV1_t {
 	RK_U64 data_ptr;
 } MppReqV1;
 
-typedef struct MppServiceCmdCap_t {
-	RK_U32 support_cmd;
-	RK_U32 query_cmd;
-	RK_U32 init_cmd;
-	RK_U32 send_cmd;
-	RK_U32 poll_cmd;
-	RK_U32 ctrl_cmd;
-} MppServiceCmdCap;
-
 typedef struct MppTaskInfo_t {
 	/* indentify the id of isp pipe */
 	RK_U32 pipe_id;
@@ -113,11 +84,6 @@ typedef struct MppTaskInfo_t {
 #ifdef  __cplusplus
 extern "C" {
 #endif
-
-void check_mpp_service_cap(RK_U32 * codec_type, RK_U32 * hw_ids,
-			   MppServiceCmdCap * cap);
-const MppServiceCmdCap *mpp_get_mpp_service_cmd_cap(void);
-const char *mpp_get_mpp_service_name(void);
 
 #ifdef  __cplusplus
 }

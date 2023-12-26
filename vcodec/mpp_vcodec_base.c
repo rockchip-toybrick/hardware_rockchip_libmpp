@@ -20,7 +20,6 @@
 #include "mpp_vcodec_flow.h"
 #include "mpp_log.h"
 #include "mpp_vcodec_thread.h"
-#include "mpp_vcodec_intf.h"
 #include "mpp_buffer.h"
 #include "rk_export_func.h"
 #include "mpp_packet_impl.h"

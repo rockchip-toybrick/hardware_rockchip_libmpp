@@ -26,49 +26,24 @@
 #include <soc/rockchip/pm_domains.h>
 #include "mpp_osal.h"
 
-#define MHZ			(1000 * 1000)
+#define MHZ				(1000 * 1000)
 
 #define MPP_MAX_MSG_NUM			(16)
-#define MPP_MAX_REG_TRANS_NUM		(60)
 #define MPP_MAX_TASK_CAPACITY		(16)
 /* define flags for mpp_request */
 #define MPP_FLAGS_MULTI_MSG		(0x00000001)
 #define MPP_FLAGS_LAST_MSG		(0x00000002)
-#define MPP_FLAGS_REG_FD_NO_TRANS	(0x00000004)
-#define MPP_FLAGS_SCL_FD_NO_TRANS	(0x00000008)
-#define MPP_FLAGS_REG_NO_OFFSET		(0x00000010)
-#define MPP_FLAGS_SECURE_MODE		(0x00010000)
-#define MAX_TASK_CNT		(2)
-
-
-/* grf mask for get value */
-#define MPP_GRF_VAL_MASK		(0xFFFF)
+#define MAX_TASK_CNT			(2)
 
 /* max 4 cores supported */
-#define MPP_MAX_CORE_NUM		(4)
+#define MPP_MAX_CORE_NUM		(1)
 
 /**
  * Device type: classified by hardware feature
  */
 enum MPP_DEVICE_TYPE {
-	MPP_DEVICE_VDPU1	= 0, /* 0x00000001 */
-	MPP_DEVICE_VDPU2	= 1, /* 0x00000002 */
-	MPP_DEVICE_VDPU1_PP	= 2, /* 0x00000004 */
-	MPP_DEVICE_VDPU2_PP	= 3, /* 0x00000008 */
-	MPP_DEVICE_AV1DEC	= 4, /* 0x00000010 */
-
-	MPP_DEVICE_HEVC_DEC	= 8, /* 0x00000100 */
-	MPP_DEVICE_RKVDEC	= 9, /* 0x00000200 */
-	MPP_DEVICE_AVSPLUS_DEC	= 12, /* 0x00001000 */
-	MPP_DEVICE_JPGDEC	= 13, /* 0x00002000 */
-
-	MPP_DEVICE_RKVENC	= 16, /* 0x00010000 */
-	MPP_DEVICE_VEPU1	= 17, /* 0x00020000 */
-	MPP_DEVICE_VEPU2	= 18, /* 0x00040000 */
-	MPP_DEVICE_VEPU22	= 24, /* 0x01000000 */
-	MPP_DEVICE_RKVENC_PP	= 25, /* 0x02000000 */
-
-	MPP_DEVICE_IEP2		= 28, /* 0x10000000 */
+	MPP_DEVICE_RKVENC	= 1, /* 0x00000001 */
+	MPP_DEVICE_RKVENC_PP	= 2, /* 0x00000002 */
 	MPP_DEVICE_BUTT,
 };
 
@@ -77,20 +52,7 @@ enum MPP_DEVICE_TYPE {
  */
 enum MPP_DRIVER_TYPE {
 	MPP_DRIVER_NULL = 0,
-	MPP_DRIVER_VDPU1,
-	MPP_DRIVER_VEPU1,
-	MPP_DRIVER_VDPU2,
-	MPP_DRIVER_VEPU2,
-	MPP_DRIVER_VEPU22,
-	MPP_DRIVER_RKVDEC,
 	MPP_DRIVER_RKVENC,
-	MPP_DRIVER_IEP,
-	MPP_DRIVER_IEP2,
-	MPP_DRIVER_JPGDEC,
-	MPP_DRIVER_RKVDEC2,
-	MPP_DRIVER_RKVENC2,
-	MPP_DRIVER_RKVENC540C,
-	MPP_DRIVER_AV1DEC,
 	MPP_DRIVER_VEPU_PP,
 	MPP_DRIVER_BUTT,
 };
@@ -148,52 +110,12 @@ enum MPP_RESET_TYPE {
 	RST_TYPE_BASE		= 0,
 	RST_TYPE_A		= RST_TYPE_BASE,
 	RST_TYPE_H,
-	RST_TYPE_NIU_A,
-	RST_TYPE_NIU_H,
 	RST_TYPE_CORE,
-	RST_TYPE_CABAC,
-	RST_TYPE_HEVC_CABAC,
 	RST_TYPE_BUTT,
-};
-
-enum ENC_INFO_TYPE {
-	ENC_INFO_BASE		= 0,
-	ENC_INFO_WIDTH,
-	ENC_INFO_HEIGHT,
-	ENC_INFO_FORMAT,
-	ENC_INFO_FPS_IN,
-	ENC_INFO_FPS_OUT,
-	ENC_INFO_RC_MODE,
-	ENC_INFO_BITRATE,
-	ENC_INFO_GOP_SIZE,
-	ENC_INFO_FPS_CALC,
-	ENC_INFO_PROFILE,
-
-	ENC_INFO_BUTT,
-};
-
-enum DEC_INFO_TYPE {
-	DEC_INFO_BASE		= 0,
-	DEC_INFO_WIDTH,
-	DEC_INFO_HEIGHT,
-	DEC_INFO_FORMAT,
-	DEC_INFO_BITDEPTH,
-	DEC_INFO_FPS,
-
-	DEC_INFO_BUTT,
-};
-
-enum CODEC_INFO_FLAGS {
-	CODEC_INFO_FLAG_NULL	= 0,
-	CODEC_INFO_FLAG_NUMBER,
-	CODEC_INFO_FLAG_STRING,
-
-	CODEC_INFO_FLAG_BUTT,
 };
 
 struct mpp_task;
 struct mpp_session;
-struct mpp_dma_session;
 struct mpp_taskqueue;
 
 /* data common struct for parse out */
@@ -216,22 +138,12 @@ struct mpp_task_msgs {
 	struct mpp_task *task;
 	struct mpp_dev *mpp;
 
-	/* for fd reference */
-	int ext_fd;
-	struct fd f;
-
 	u32 flags;
 	u32 req_cnt;
 	u32 set_cnt;
 	u32 poll_cnt;
 
 	struct mpp_request reqs[MPP_MAX_MSG_NUM];
-};
-
-struct mpp_grf_info {
-	u32 offset;
-	u32 val;
-	struct regmap *grf;
 };
 
 /**
@@ -256,22 +168,6 @@ struct mpp_trans_info {
 	const u16 * const table;
 };
 
-struct reg_offset_elem {
-	u32 index;
-	u32 offset;
-};
-
-struct reg_offset_info {
-	u32 cnt;
-	struct reg_offset_elem elem[MPP_MAX_REG_TRANS_NUM];
-};
-
-struct codec_info_elem {
-	__u32 type;
-	__u32 flag;
-	__u64 data;
-};
-
 struct mpp_clk_info {
 	struct clk *clk;
 
@@ -293,24 +189,9 @@ struct mpp_dev_var {
 
 	/* info for each hardware */
 	struct mpp_hw_info *hw_info;
-	struct mpp_trans_info *trans_info;
 	struct mpp_hw_ops *hw_ops;
 	struct mpp_dev_ops *dev_ops;
 };
-
-struct mpp_mem_region {
-	struct list_head reg_link;
-	/* address for iommu */
-	dma_addr_t iova;
-	unsigned long len;
-	u32 reg_idx;
-	void *hdl;
-	int fd;
-	struct dma_buf *buf;
-	/* whether is dup import entity */
-	bool is_dup;
-};
-
 
 struct mpp_dev {
 	struct device *dev;
@@ -343,8 +224,6 @@ struct mpp_dev {
 	u32 overflow_status;
 
 	void __iomem *reg_base;
-	struct mpp_grf_info *grf_info;
-	struct mpp_iommu_info *iommu_info;
 
 	atomic_t reset_request;
 	atomic_t session_index;
@@ -352,8 +231,6 @@ struct mpp_dev {
 	atomic_t task_index;
 	/* current task in running */
 	struct mpp_task *cur_task;
-	/* set session max buffers */
-	u32 session_max_buffers;
 	struct mpp_taskqueue *queue;
 	struct mpp_reset_group *reset_group;
 	/* point to MPP Service */
@@ -378,7 +255,6 @@ struct mpp_session {
 	/* the session related device private data */
 	struct mpp_service *srv;
 	struct mpp_dev *mpp;
-	struct mpp_dma_session *dma;
 
 	/* lock for session task pending list */
 	spinlock_t pending_lock;
@@ -389,8 +265,6 @@ struct mpp_session {
 	atomic_t task_count;
 	atomic_t release_request;
 	/* trans info set by user */
-	int trans_count;
-	u16 trans_table[MPP_MAX_REG_TRANS_NUM];
 	u32 msg_flags;
 	/* link to mpp_service session_list */
 	struct list_head service_link;
@@ -414,11 +288,6 @@ struct mpp_session {
 	int (*wait_result)(struct mpp_session *session,
 			   struct mpp_task_msgs *msgs);
 	void (*deinit)(struct mpp_session *session);
-	/* max message count */
-	int msgs_cnt;
-	struct list_head list_msgs;
-	struct list_head list_msgs_idle;
-	spinlock_t lock_msgs;
 	void (*callback)(u32 chn_id);
 };
 
@@ -448,14 +317,8 @@ struct mpp_task {
 
 	/* link to pending list in session */
 	struct list_head pending_link;
-	/* link to done list in session */
-	struct list_head done_link;
 	/* link to list in taskqueue */
 	struct list_head queue_link;
-	/* The DMA buffer used in this task */
-	struct list_head mem_region_list;
-	u32 mem_count;
-	struct mpp_mem_region mem_regions[MPP_MAX_REG_TRANS_NUM];
 
 	/* state in the taskqueue */
 	unsigned long state;
@@ -512,9 +375,6 @@ struct mpp_taskqueue {
 
 	/* point to MPP Service */
 	struct mpp_service *srv;
-	/* lock for mmu list */
-	struct mutex mmu_lock;
-	struct list_head mmu_list;
 	/* lock for dev list */
 	spinlock_t dev_lock;
 	struct list_head dev_list;
@@ -552,7 +412,6 @@ struct mpp_service {
 	unsigned long hw_support;
 	atomic_t shutdown_request;
 	/* follows for device probe */
-	struct mpp_grf_info grf_infos[MPP_DRIVER_BUTT];
 	struct platform_driver *sub_drivers[MPP_DRIVER_BUTT];
 	/* follows for attach service */
 	struct mpp_dev *sub_devices[MPP_DEVICE_BUTT];
@@ -647,24 +506,12 @@ struct mpp_taskqueue *mpp_taskqueue_init(struct device *dev);
 
 int mpp_check_req(struct mpp_request *req, int base,
 		  int max_size, u32 off_s, u32 off_e);
-int mpp_extract_reg_offset_info(struct reg_offset_info *off_inf,
-				struct mpp_request *req);
-int mpp_query_reg_offset_info(struct reg_offset_info *off_inf,
-			      u32 index);
-int mpp_translate_reg_offset_info(struct mpp_task *task,
-				  struct reg_offset_info *off_inf,
-				  u32 *reg);
 int mpp_task_init(struct mpp_session *session,
 		  struct mpp_task *task);
 int mpp_task_finish(struct mpp_session *session,
 		    struct mpp_task *task);
 int mpp_task_finalize(struct mpp_session *session,
 		      struct mpp_task *task);
-int mpp_task_dump_mem_region(struct mpp_dev *mpp,
-			     struct mpp_task *task);
-int mpp_task_dump_reg(struct mpp_dev *mpp,
-		      struct mpp_task *task);
-int mpp_task_dump_hw_reg(struct mpp_dev *mpp);
 void mpp_free_task(struct kref *ref);
 
 void mpp_taskqueue_trigger_work(struct mpp_dev *mpp);
@@ -693,10 +540,6 @@ irqreturn_t mpp_dev_isr_sched(int irq, void *param);
 struct reset_control *mpp_reset_control_get(struct mpp_dev *mpp,
 					    enum MPP_RESET_TYPE type,
 					    const char *name);
-
-u32 mpp_get_grf(struct mpp_grf_info *grf_info);
-bool mpp_grf_is_changed(struct mpp_grf_info *grf_info);
-int mpp_set_grf(struct mpp_grf_info *grf_info);
 
 int mpp_time_record(struct mpp_task *task);
 int mpp_time_diff(struct mpp_task *task);
@@ -857,7 +700,6 @@ mpp_procfs_create_u32(const char *name, umode_t mode,
 
 #ifdef CONFIG_PROC_FS
 extern const char *mpp_device_name[MPP_DEVICE_BUTT];
-extern const char *enc_info_item_name[ENC_INFO_BUTT];
 #endif
 
 extern const struct file_operations rockchip_mpp_fops;

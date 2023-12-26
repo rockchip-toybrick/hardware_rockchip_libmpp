@@ -21,7 +21,6 @@
 #include "jpege_syntax.h"
 #include "hal_bufs.h"
 #include "rkv_enc_def.h"
-#include "vepu541_common.h"
 #include "vepu540c_common.h"
 #include "hal_jpege_vepu540c.h"
 #include "hal_jpege_vepu540c_reg.h"
@@ -197,7 +196,7 @@ static MPP_RET hal_jpege_vepu540c_prepare(void *hal)
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
 
 	hal_jpege_dbg_func("enter %p\n", hal);
-	vepu541_set_fmt(fmt, ctx->cfg->prep.format);
+	vepu5xx_set_fmt(fmt, ctx->cfg->prep.format);
 	hal_jpege_dbg_func("leave %p\n", hal);
 
 	return MPP_OK;
@@ -323,7 +322,7 @@ MPP_RET hal_jpege_vepu540c_set_osd(jpegeV540cHalContext *ctx)
 			rb_y -= cur_lt_y;
 		}
 
-		vepu541_set_fmt(&fmt_cfg, fmt);
+		vepu5xx_set_fmt(&fmt_cfg, fmt);
 		reg->cfg0.osd_en = tmp->enable;
 		reg->cfg0.osd_range_trns_en = tmp->range_trns_en;
 		reg->cfg0.osd_range_trns_sel = tmp->range_trns_sel;
