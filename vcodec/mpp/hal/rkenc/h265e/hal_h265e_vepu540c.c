@@ -49,6 +49,7 @@ extern RK_U32 vepu540c_h265_customer_scl_tab[680];
 
 typedef struct vepu540c_h265_fbk_t {
 	RK_U32 hw_status;       /* 0:corret, 1:error */
+	RK_U32 frame_type;
 	RK_U32 qp_sum;
 	RK_U32 out_strm_size;
 	RK_U32 out_hw_strm_size;
@@ -76,14 +77,11 @@ typedef struct H265eV540cHalContext_t {
 	void *reg_out[MAX_TITLE_NUM];
 
 	vepu540c_h265_fbk feedback;
+	vepu540c_h265_fbk last_frame_fb;
 	void *dump_files;
 	RK_U32 frame_cnt_gen_ready;
 
 	RK_S32 frame_type;
-	RK_S32 last_frame_type;
-
-	RK_U32 mb_num;
-	RK_U32 smear_cnt[5];
 
 	/* @frame_cnt starts from ZERO */
 	RK_U32 frame_cnt;
@@ -607,9 +605,10 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	rdo_noskip_par *p_rdo_noskip = NULL;
 	pre_cst_par *p_pre_cst = NULL;
 	RK_S32 delta_qp = 0;
-	RK_U32 *smear_cnt = ctx->smear_cnt;
-	RK_U32 mb_cnt = ctx->mb_num;
 	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
+	vepu540c_h265_fbk *last_fb = &ctx->last_frame_fb;
+	RK_U32 *smear_cnt = last_fb->st_smear_cnt;
+	RK_U32 mb_cnt = last_fb->st_mb_num;
 
 	if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
 		reg->rdo_segment_cfg.rdo_segment_multi = 28;
@@ -648,7 +647,7 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	reg->rdo_smear_cfg_comb.rdo_smear_order_state = 0;
 	if (INTRA_FRAME == ctx->frame_type)
 		reg->rdo_smear_cfg_comb.stated_mode = 1;
-	else if (INTRA_FRAME == ctx->last_frame_type)
+	else if (INTRA_FRAME == last_fb->frame_type)
 		reg->rdo_smear_cfg_comb.stated_mode = 1;
 	else
 		reg->rdo_smear_cfg_comb.stated_mode = 2;
@@ -1665,7 +1664,7 @@ static void vepu540c_h265_set_me_regs(H265eV540cHalContext *ctx,
 
 	if (syn->pp.sps_temporal_mvp_enabled_flag &&
 	    (ctx->frame_type != INTRA_FRAME)) {
-		if (ctx->last_frame_type == INTRA_FRAME)
+		if (ctx->last_frame_fb.frame_type == INTRA_FRAME)
 			regs->reg0222_me_cach.colmv_load = 0;
 
 		else
@@ -2565,6 +2564,8 @@ static MPP_RET vepu540c_h265_set_feedback(H265eV540cHalContext *ctx,
 	fb->st_smear_cnt[4] = fb->st_smear_cnt[0] + fb->st_smear_cnt[1]
 			      + fb->st_smear_cnt[2] + fb->st_smear_cnt[3];
 
+	fb->frame_type = enc_task->rc_task->frm.is_intra ? INTRA_FRAME : INTER_P_FRAME;
+
 	hal_rc_ret->bit_real += fb->out_strm_size * 8;
 
 	if (fb->st_mb_num)
@@ -2689,27 +2690,20 @@ static MPP_RET hal_h265e_v540c_get_task(void *hal, HalEncTask *task)
 
 	hal_h265e_enter();
 
-	if (vepu540c_h265_setup_hal_bufs(ctx)) {
-		hal_h265e_err
-		("vepu541_h265_allocate_buffers failed, free buffers and return\n");
-		task->flags.err |= HAL_ENC_TASK_ERR_ALLOC;
-		return MPP_ERR_MALLOC;
-	}
-
-	ctx->last_frame_type = ctx->frame_type;
-	if (frm_status->is_intra)
-		ctx->frame_type = INTRA_FRAME;
-
-	else
-		ctx->frame_type = INTER_P_FRAME;
-
 	ctx->roi_data = mpp_frame_get_roi(task->frame);
 
 	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
+	ctx->frame_type = frm_status->is_intra ? INTRA_FRAME : INTER_P_FRAME;
 
-	ctx->mb_num = ctx->feedback.st_mb_num;
+	if (!task->rc_task->frm.reencode) {
+		if (vepu540c_h265_setup_hal_bufs(ctx)) {
+			hal_h265e_err("setup hal bufs failed, free buffers and return\n");
+			task->flags.err |= HAL_ENC_TASK_ERR_ALLOC;
+			return MPP_ERR_MALLOC;
+		}
 
-	memcpy(ctx->smear_cnt, ctx->feedback.st_smear_cnt, sizeof(ctx->smear_cnt));
+		ctx->last_frame_fb = ctx->feedback;
+	}
 
 	memset(&ctx->feedback, 0, sizeof(vepu540c_h265_fbk));
 

@@ -50,6 +50,29 @@ const static RefType ref_type_map[2][2] = {
 	/* cur_lt = 1 */{LT_REF_TO_ST, LT_REF_TO_LT},
 };
 
+typedef struct vepu540c_h264_fbk_t {
+	RK_U32 hw_status;       /* 0:corret, 1:error */
+	RK_U32 frame_type;
+	RK_U32 qp_sum;
+	RK_U32 out_strm_size;
+	RK_U32 out_hw_strm_size;
+	RK_S64 sse_sum;
+	RK_U32 st_lvl64_inter_num;
+	RK_U32 st_lvl32_inter_num;
+	RK_U32 st_lvl16_inter_num;
+	RK_U32 st_lvl8_inter_num;
+	RK_U32 st_lvl32_intra_num;
+	RK_U32 st_lvl16_intra_num;
+	RK_U32 st_lvl8_intra_num;
+	RK_U32 st_lvl4_intra_num;
+	RK_U32 st_cu_num_qp[52];
+	RK_U32 st_madp;
+	RK_U32 st_madi;
+	RK_U32 st_mb_num;
+	RK_U32 st_ctu_num;
+	RK_U32 st_smear_cnt[5];
+} vepu540c_h264_fbk;
+
 typedef struct HalH264eVepu540cCtx_t {
 	MppEncCfgSet *cfg;
 
@@ -89,9 +112,6 @@ typedef struct HalH264eVepu540cCtx_t {
 	/* syntax for output to enc_impl */
 	EncRcTaskInfo hal_rc_cfg;
 
-	RK_U32 mb_num;
-	RK_U32 smear_cnt[5];
-
 	/* roi */
 	void *roi_data;
 
@@ -100,6 +120,9 @@ typedef struct HalH264eVepu540cCtx_t {
 
 	/* register */
 	HalVepu540cRegSet *regs_set;
+	/* feedback infos */
+	vepu540c_h264_fbk feedback;
+	vepu540c_h264_fbk last_frame_fb;
 
 	MppBuffer ext_line_buf;
 	RK_S32	online;
@@ -705,16 +728,20 @@ static MPP_RET hal_h264e_vepu540c_get_task(void *hal, HalEncTask *task)
 {
 	HalH264eVepu540cCtx *ctx = (HalH264eVepu540cCtx *) hal;
 	RK_U32 updated = update_vepu540c_syntax(ctx, &task->syntax);
-	//    EncFrmStatus *frm_status = &task->rc_task->frm;
-	hal_h264e_dbg_func("enter %p\n", hal);
+	EncFrmStatus *frm_status = &task->rc_task->frm;
 
-	if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))
-		setup_hal_bufs(ctx);
+	hal_h264e_dbg_func("enter %p\n", hal);
 
 	ctx->osd_cfg.reg_base = &ctx->regs_set->reg_osd_cfg.osd_comb_cfg;
 
 	ctx->roi_data = mpp_frame_get_roi(task->frame);
 	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
+
+	if (!frm_status->reencode) {
+		if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))
+			setup_hal_bufs(ctx);
+		ctx->last_frame_fb = ctx->feedback;
+	}
 
 	hal_h264e_dbg_func("leave %p\n", hal);
 
@@ -1243,9 +1270,11 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	vepu540c_rdo_cfg *reg = &ctx->regs_set->reg_rdo;
 	H264eSlice *slice = ctx->slice;
 	RK_S32 delta_qp = 0;
-	RK_U32 *smear_cnt = ctx->smear_cnt;
-	RK_U32 mb_cnt = ctx->mb_num;
+	vepu540c_h264_fbk *last_fb = &ctx->last_frame_fb;
+	RK_U32 mb_cnt = last_fb->st_mb_num;
+	RK_U32 *smear_cnt = last_fb->st_smear_cnt;
 	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
+
 	hal_h264e_dbg_func("enter\n");
 
 	if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
@@ -1273,7 +1302,7 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	reg->rdo_smear_cfg_comb.rdo_smear_order_state = 0;
 	if (H264_I_SLICE == slice->slice_type)
 		reg->rdo_smear_cfg_comb.stated_mode = 1;
-	else if (H264_I_SLICE == slice->last_slice_type)
+	else if (H264_I_SLICE == last_fb->frame_type)
 		reg->rdo_smear_cfg_comb.stated_mode = 1;
 	else
 		reg->rdo_smear_cfg_comb.stated_mode = 2;
@@ -2637,6 +2666,7 @@ static MPP_RET hal_h264e_vepu540c_ret_task(void *hal, HalEncTask *task)
 	RK_U32 mbs = mb_w * mb_h;
 	MPP_RET ret = 0;
 	RK_U32 madi_cnt = 0, madp_cnt = 0;
+	vepu540c_h264_fbk *fb = &ctx->feedback;
 
 	HalVepu540cRegSet *regs_set = (HalVepu540cRegSet *) ctx->regs_set;
 	vepu540c_status *reg_st = (vepu540c_status *)&regs_set->reg_st;
@@ -2751,15 +2781,15 @@ static MPP_RET hal_h264e_vepu540c_ret_task(void *hal, HalEncTask *task)
 	ctx->hal_rc_cfg.bit_real = rc_info->bit_real;
 	ctx->hal_rc_cfg.quality_real = rc_info->quality_real;
 	ctx->hal_rc_cfg.iblk4_prop = rc_info->iblk4_prop;
-	ctx->slice->last_slice_type = ctx->slice->slice_type;
 
-	ctx->mb_num = mbs;
-	ctx->smear_cnt[0] = regs_set->reg_st.st_smear_cnt.rdo_smear_cnt0 * 4;
-	ctx->smear_cnt[1] = regs_set->reg_st.st_smear_cnt.rdo_smear_cnt1 * 4;
-	ctx->smear_cnt[2] = regs_set->reg_st.st_smear_cnt.rdo_smear_cnt2 * 4;
-	ctx->smear_cnt[3] = regs_set->reg_st.st_smear_cnt.rdo_smear_cnt3 * 4;
-	ctx->smear_cnt[4] = ctx->smear_cnt[0] + ctx->smear_cnt[1]
-			    + ctx->smear_cnt[2] + ctx->smear_cnt[3];
+	fb->st_mb_num = mbs;
+	fb->st_smear_cnt[0] = regs_set->reg_st.st_smear_cnt.rdo_smear_cnt0 * 4;
+	fb->st_smear_cnt[1] = regs_set->reg_st.st_smear_cnt.rdo_smear_cnt1 * 4;
+	fb->st_smear_cnt[2] = regs_set->reg_st.st_smear_cnt.rdo_smear_cnt2 * 4;
+	fb->st_smear_cnt[3] = regs_set->reg_st.st_smear_cnt.rdo_smear_cnt3 * 4;
+	fb->st_smear_cnt[4] = fb->st_smear_cnt[0] + fb->st_smear_cnt[1]
+			      + fb->st_smear_cnt[2] + fb->st_smear_cnt[3];
+	fb->frame_type = ctx->slice->slice_type;
 
 	task->hal_ret.data = &ctx->hal_rc_cfg;
 	task->hal_ret.number = 1;
