@@ -251,6 +251,27 @@ static void vepu540c_jpeg_set_dvbm(JpegV540cRegSet *regs)
 }
 #endif
 
+static void hal_jpege_vepu540c_set_qtable(JpegV540cRegSet *regs, const RK_U8 **qtable)
+{
+	RK_U16 *tbl = &regs->jpeg_table.qua_tab0[0];
+	RK_U32 i, j;
+
+	for (i = 0; i < 8; i++) {
+		for (j = 0; j < 8; j++)
+			tbl[i * 8 + j] = 0x8000 / qtable[0][j * 8 + i];
+	}
+	tbl += 64;
+	for (i = 0; i < 8; i++) {
+		for (j = 0; j < 8; j++)
+			tbl[i * 8 + j] = 0x8000 / qtable[1][j * 8 + i];
+	}
+	tbl += 64;
+	for (i = 0; i < 8; i++) {
+		for (j = 0; j < 8; j++)
+			tbl[i * 8 + j] = 0x8000 / qtable[1][j * 8 + i];
+	}
+}
+
 MPP_RET hal_jpege_vepu540c_set_osd(jpegeV540cHalContext *ctx)
 {
 	Vepu540cJpegCfg *jpeg_cfg = &ctx->jpeg_cfg;
@@ -461,25 +482,7 @@ MPP_RET hal_jpege_v540c_gen_regs(void *hal, HalEncTask * task)
 		vepu540c_jpeg_set_dvbm(regs);
 	hal_jpege_vepu540c_set_osd(ctx);
 	vepu540c_set_jpeg_reg(cfg);
-	{
-		RK_U16 *tbl = &regs->jpeg_table.qua_tab0[0];
-		RK_U32 i, j;
-
-		for (i = 0; i < 8; i++) {
-			for (j = 0; j < 8; j++)
-				tbl[i * 8 + j] = 0x8000 / qtable[0][j * 8 + i];
-		}
-		tbl += 64;
-		for (i = 0; i < 8; i++) {
-			for (j = 0; j < 8; j++)
-				tbl[i * 8 + j] = 0x8000 / qtable[1][j * 8 + i];
-		}
-		tbl += 64;
-		for (i = 0; i < 8; i++) {
-			for (j = 0; j < 8; j++)
-				tbl[i * 8 + j] = 0x8000 / qtable[1][j * 8 + i];
-		}
-	}
+	hal_jpege_vepu540c_set_qtable(regs, qtable);
 	task->jpeg_osd_reg = &regs->reg_osd_cfg.osd_jpeg_cfg;
 	task->jpeg_tlb_reg = &regs->jpeg_table;
 	ctx->frame_num++;
