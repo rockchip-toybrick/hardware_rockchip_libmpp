@@ -251,6 +251,131 @@ static void vepu540c_jpeg_set_dvbm(JpegV540cRegSet *regs)
 }
 #endif
 
+MPP_RET hal_jpege_vepu540c_set_osd(jpegeV540cHalContext *ctx)
+{
+	Vepu540cJpegCfg *jpeg_cfg = &ctx->jpeg_cfg;
+	Vepu540cOsdCfg *osd_cfg = &ctx->osd_cfg;
+	vepu540c_osd_reg *regs = (vepu540c_osd_reg *) (osd_cfg->reg_base);
+	MppEncOSDData3 *osd = osd_cfg->osd_data3;
+	MppEncOSDRegion3 *region = osd->region;
+	MppEncOSDRegion3 *tmp = region;
+	HalEncTask *task = (HalEncTask *) jpeg_cfg->enc_task;
+	JpegeSyntax *syn = (JpegeSyntax *) task->syntax.data;
+	MppFrame frame = task->frame;
+	RK_U32 width = syn->width;
+	RK_U32 height = syn->height;
+	RK_U32 slice_en = (mpp_frame_get_height(frame) < height) && syn->restart_ri;
+	RK_U32 num;
+	RK_U32 i = 0;
+	RK_U32 cur_lt_x, cur_lt_y;
+	RK_U32 cur_rb_x, cur_rb_y;
+
+	if (!osd || osd->num_region == 0)
+		return MPP_OK;
+
+	if (osd->num_region > 8) {
+		mpp_err_f("do NOT support more than 8 regions invalid num %d\n",
+			  osd->num_region);
+		mpp_assert(osd->num_region <= 8);
+		return MPP_NOK;
+	}
+
+	if (slice_en) {
+		RK_U32 mcu_w = MPP_ALIGN(width, 16) / 16;
+		RK_U32 slice_height = syn->restart_ri / mcu_w * 16;
+		RK_U32 cur_slice_index = jpeg_cfg->rst_marker;
+
+		cur_lt_x = 0;
+		cur_lt_y = cur_slice_index * slice_height;
+		cur_rb_x = MPP_ALIGN(width, 16);
+		cur_rb_y = (cur_slice_index + 1) * slice_height;
+	}
+
+	num = osd->num_region;
+	for (i = 0; i < num; i++, tmp++) {
+		vepu540c_osd_com *reg = (vepu540c_osd_com *) & regs->osd_cfg[i];
+		VepuFmtCfg fmt_cfg;
+		MppFrameFormat fmt = tmp->fmt;
+		RK_U32 lt_x = tmp->lt_x, lt_y = tmp->lt_y;
+		RK_U32 rb_x = tmp->rb_x, rb_y = tmp->rb_y;
+
+		if (slice_en) {
+			if (tmp->lt_x < cur_lt_x || tmp->lt_y < cur_lt_y ||
+			    tmp->rb_x > cur_rb_x || tmp->rb_y > cur_rb_y)
+				continue;
+
+			lt_x -= cur_lt_x;
+			lt_y -= cur_lt_y;
+			rb_x -= cur_lt_x;
+			rb_y -= cur_lt_y;
+		}
+
+		vepu541_set_fmt(&fmt_cfg, fmt);
+		reg->cfg0.osd_en = tmp->enable;
+		reg->cfg0.osd_range_trns_en = tmp->range_trns_en;
+		reg->cfg0.osd_range_trns_sel = tmp->range_trns_sel;
+		reg->cfg0.osd_fmt = fmt_cfg.format;
+		reg->cfg0.osd_rbuv_swap = tmp->rbuv_swap;
+		reg->cfg1.osd_lt_xcrd = lt_x;
+		reg->cfg1.osd_lt_ycrd = lt_y;
+		reg->cfg2.osd_rb_xcrd = rb_x;
+		reg->cfg2.osd_rb_ycrd = rb_y;
+		reg->cfg1.osd_endn = tmp->osd_endn;
+		reg->cfg5.osd_stride = tmp->stride;
+		reg->cfg5.osd_ch_ds_mode = tmp->ch_ds_mode;
+
+		reg->cfg0.osd_yg_inv_en = tmp->inv_cfg.yg_inv_en;
+		reg->cfg0.osd_uvrb_inv_en = tmp->inv_cfg.uvrb_inv_en;
+		reg->cfg0.osd_alpha_inv_en = tmp->inv_cfg.alpha_inv_en;
+		reg->cfg0.osd_inv_sel = tmp->inv_cfg.inv_sel;
+		reg->cfg2.osd_uv_sw_inv_en = tmp->inv_cfg.uv_sw_inv_en;
+		reg->cfg2.osd_inv_size = tmp->inv_cfg.inv_size;
+		reg->cfg5.osd_inv_stride = tmp->inv_cfg.inv_stride;
+
+		reg->cfg0.osd_alpha_swap = tmp->alpha_cfg.alpha_swap;
+		reg->cfg0.osd_bg_alpha = tmp->alpha_cfg.bg_alpha;
+		reg->cfg0.osd_fg_alpha = tmp->alpha_cfg.fg_alpha;
+		reg->cfg0.osd_fg_alpha_sel = tmp->alpha_cfg.fg_alpha_sel;
+
+		reg->cfg0.osd_qp_adj_en = tmp->qp_cfg.qp_adj_en;
+		reg->cfg8.osd_qp_adj_sel = tmp->qp_cfg.qp_adj_sel;
+		reg->cfg8.osd_qp = tmp->qp_cfg.qp;
+		reg->cfg8.osd_qp_max = tmp->qp_cfg.qp_max;
+		reg->cfg8.osd_qp_min = tmp->qp_cfg.qp_min;
+		reg->cfg8.osd_qp_prj = tmp->qp_cfg.qp_prj;
+		if (tmp->inv_cfg.inv_buf.buf)
+			reg->osd_inv_st_addr = mpp_dev_get_mpi_ioaddress(jpeg_cfg->dev, tmp->inv_cfg.inv_buf.buf, 0);
+		if (tmp->osd_buf.buf)
+			reg->osd_st_addr = mpp_dev_get_mpi_ioaddress(jpeg_cfg->dev, tmp->osd_buf.buf, 0);
+		memcpy(reg->lut, tmp->lut, sizeof(tmp->lut));
+	}
+
+	regs->whi_cfg0.osd_csc_yr = 77;
+	regs->whi_cfg0.osd_csc_yg = 150;
+	regs->whi_cfg0.osd_csc_yb = 29;
+
+	regs->whi_cfg1.osd_csc_ur = -43;
+	regs->whi_cfg1.osd_csc_ug = -85;
+	regs->whi_cfg1.osd_csc_ub = 128;
+
+	regs->whi_cfg2.osd_csc_vr = 128;
+	regs->whi_cfg2.osd_csc_vg = -107;
+	regs->whi_cfg2.osd_csc_vb = -21;
+
+	regs->whi_cfg3.osd_csc_ofst_y = 0;
+	regs->whi_cfg3.osd_csc_ofst_u = 128;
+	regs->whi_cfg3.osd_csc_ofst_v = 128;
+
+	regs->whi_cfg4.osd_inv_yg_max = 255;
+	regs->whi_cfg4.osd_inv_yg_min = 0;
+	regs->whi_cfg4.osd_inv_uvrb_max = 255;
+	regs->whi_cfg4.osd_inv_uvrb_min = 0;
+	regs->whi_cfg5.osd_inv_alpha_max = 255;
+	regs->whi_cfg5.osd_inv_alpha_min = 0;
+
+	return MPP_OK;
+}
+
 MPP_RET hal_jpege_v540c_gen_regs(void *hal, HalEncTask * task)
 {
 	jpegeV540cHalContext *ctx = (jpegeV540cHalContext *) hal;
@@ -334,8 +459,8 @@ MPP_RET hal_jpege_v540c_gen_regs(void *hal, HalEncTask * task)
 
 	if (ctx->online)
 		vepu540c_jpeg_set_dvbm(regs);
+	hal_jpege_vepu540c_set_osd(ctx);
 	vepu540c_set_jpeg_reg(cfg);
-	vepu540c_set_osd(&ctx->osd_cfg);
 	{
 		RK_U16 *tbl = &regs->jpeg_table.qua_tab0[0];
 		RK_U32 i, j;
