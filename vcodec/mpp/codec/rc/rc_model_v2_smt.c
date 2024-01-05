@@ -1148,6 +1148,7 @@ void rc_model_v2_smt_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 	switch (usr_cfg->mode) {
 	case RC_CBR: {
 	} break;
+	case RC_SMT:
 	case RC_VBR: {
 		seq_puts(seq,
 			 "\n--------RC run smart common param----------------------------------------------------------------\n");

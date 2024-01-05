@@ -83,7 +83,8 @@ void mpp_enc_cfg_setup(int chan_id, MppEncCfg cfg)
 	}
 	break;
 	case MPP_ENC_RC_MODE_VBR:
-	case MPP_ENC_RC_MODE_AVBR: {
+	case MPP_ENC_RC_MODE_AVBR:
+	case MPP_ENC_RC_MODE_SMTRC: {
 
 		/* VBR mode has wide bound */
 		mpp_enc_cfg_set_s32(cfg, "rc:bps_max",

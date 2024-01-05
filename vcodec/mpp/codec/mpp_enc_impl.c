@@ -940,6 +940,7 @@ static const char *name_of_rc_mode[] = {
 	"cbr",
 	"fixqp",
 	"avbr",
+	"smtrc",
 };
 
 static void update_rc_cfg_log(MppEncImpl *impl, const char *fmt, ...)
@@ -1008,6 +1009,9 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	} break;
 	case MPP_ENC_RC_MODE_FIXQP: {
 		cfg->mode = RC_FIXQP;
+	} break;
+	case MPP_ENC_RC_MODE_SMTRC: {
+		cfg->mode = RC_SMT;
 	} break;
 	default: {
 		cfg->mode = RC_AVBR;
