@@ -142,8 +142,10 @@ static int vcodec_process_cmd(void *private, struct vcodec_request *req)
 		ctx->chan_create = 1;
 	} break;
 	case VCODEC_CHAN_DESTROY: {
-		if (ctx->chan_create)
+		if (ctx->chan_create) {
 			ret = mpp_vcodec_chan_destory(chan_id, type);
+			ctx->chan_create = 0;
+		}
 		if (ret)
 			goto fail;
 	} break;
