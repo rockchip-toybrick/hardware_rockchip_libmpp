@@ -853,10 +853,11 @@ static int rkvenc_callback(void* ctx, enum dvbm_cb_event event, void* arg)
 	return 0;
 }
 
-static void update_online_info(struct mpp_dev *mpp)
+static void update_online_info(struct mpp_dev *mpp, u32 chan_id)
 {
 	struct dvbm_addr_cfg dvbm_adr;
 
+	dvbm_adr.chan_id = chan_id;
 	rk_dvbm_ctrl(NULL, DVBM_VEPU_GET_ADR, &dvbm_adr);
 	if (!dvbm_adr.ybuf_bot || !dvbm_adr.cbuf_bot)
 		dev_err(mpp->dev, "the dvbm address do not ready!\n");
@@ -1197,7 +1198,7 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 			if (dvbm_en) {
 				enc->dvbm_overflow = 0;
 				rk_dvbm_link(enc->port);
-				update_online_info(mpp);
+				update_online_info(mpp, mpp_task->session->chn_id);
 				priv->dvbm_link = 1;
 				mpp_write_relaxed(mpp, hw->dvbm_cfg, dvbm_en);
 				mpp->always_on = 1;

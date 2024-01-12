@@ -1941,7 +1941,6 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 				  RK_S32 is_idr, RK_S32 reenc, RK_S32 deblur_str);
 MPP_RET vepu540c_set_osd(Vepu540cOsdCfg * cfg);
 MPP_RET vepu540c_osd_put_dma_buf(Vepu540cOsdCfg * cfg);
-void vepu540c_set_dvbm(vepu540c_online *online_addr);
 
 #ifdef __cplusplus
 }

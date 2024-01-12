@@ -228,26 +228,18 @@ static void vepu540c_jpeg_set_dvbm(JpegV540cRegSet *regs)
 #else
 static void vepu540c_jpeg_set_dvbm(JpegV540cRegSet *regs)
 {
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-	struct dvbm_addr_cfg dvbm_adr;
-
-	rk_dvbm_ctrl(NULL, DVBM_VEPU_GET_ADR, &dvbm_adr);
 	regs->reg_ctl.reg0024_dvbm_cfg.dvbm_en = 1;
 	regs->reg_ctl.reg0024_dvbm_cfg.src_badr_sel = 1;
-	regs->reg_ctl.reg0024_dvbm_cfg.vinf_frm_match = 1;
+	regs->reg_ctl.reg0024_dvbm_cfg.vinf_frm_match = 0;
 	regs->reg_ctl.reg0024_dvbm_cfg.vrsp_half_cycle = 8;
 
-	regs->reg_ctl.reg0006_vs_ldly.vswm_lcnt_soft = dvbm_adr.line_cnt;
-	regs->reg_ctl.reg0006_vs_ldly.vswm_fcnt_soft = dvbm_adr.frame_id;
 	regs->reg_ctl.reg0006_vs_ldly.dvbm_ack_sel = 1;
 	regs->reg_ctl.reg0006_vs_ldly.dvbm_ack_soft = 1;
 	regs->reg_ctl.reg0006_vs_ldly.dvbm_inf_sel = 1;
 
 	regs->reg_base.reg0194_dvbm_id.ch_id = 1;
-	regs->reg_base.reg0194_dvbm_id.frame_id = dvbm_adr.frame_id;
+	regs->reg_base.reg0194_dvbm_id.frame_id = 0;
 	regs->reg_base.reg0194_dvbm_id.vrsp_rtn_en = 1;
-#else
-#endif
 }
 #endif
 

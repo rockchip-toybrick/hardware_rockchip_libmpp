@@ -778,56 +778,21 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	regs->reg0288_uvc_cfg.uvc_skip_len = 0;
 
 	if (cfg->online) {
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-		struct dvbm_addr_cfg dvbm_adr;
 		RK_U32 is_full = mpp_frame_get_is_full(task->frame);
 
-		if (!is_full) {
-			rk_dvbm_ctrl(NULL, DVBM_VEPU_GET_ADR, &dvbm_adr);
-
-			regs->reg0260_adr_vsy_b = dvbm_adr.ybuf_bot;
-			regs->reg0261_adr_vsc_b = dvbm_adr.cbuf_bot;
-			regs->reg0262_adr_vsy_t = dvbm_adr.ybuf_top;
-			regs->reg0263_adr_vsc_t = dvbm_adr.cbuf_top;
-			regs->reg0264_adr_src0 = dvbm_adr.ybuf_sadr;
-			regs->reg0265_adr_src1 = dvbm_adr.cbuf_sadr;
-			regs->reg0266_adr_src2 = dvbm_adr.cbuf_sadr;
-		} else {
-
+		if (is_full) {
 			RK_U32 phy_addr = mpp_frame_get_phy_addr(task->frame);
-			if (phy_addr) {
-				regs->reg0264_adr_src0 = phy_addr;
-				regs->reg0265_adr_src1 = regs->reg0264_adr_src0;
-				regs->reg0266_adr_src2 = regs->reg0264_adr_src0;
-				vepu540c_jpeg_set_uv_offset(regs, syn, (Vepu541Fmt) fmt->format, task);
-			} else
+
+			if (!phy_addr) {
 				mpp_err("online case set full frame err");
+				return MPP_NOK;
+			}
+			regs->reg0264_adr_src0 = phy_addr;
+			regs->reg0265_adr_src1 = regs->reg0264_adr_src0;
+			regs->reg0266_adr_src2 = regs->reg0264_adr_src0;
+			vepu540c_jpeg_set_uv_offset(regs, syn, (Vepu541Fmt) fmt->format, task);
 		}
-#else
-		regs->reg0260_adr_vsy_b = 0;
-		regs->reg0261_adr_vsc_b = 0;
-		regs->reg0262_adr_vsy_t = 0;
-		regs->reg0263_adr_vsc_t = 0;
-#endif
 	}
 
 	return MPP_OK;
-}
-
-void vepu540c_set_dvbm(vepu540c_online *online_addr)
-{
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-	struct dvbm_addr_cfg dvbm_adr;
-
-	rk_dvbm_ctrl(NULL, DVBM_VEPU_GET_ADR, &dvbm_adr);
-	online_addr->reg0156_adr_vsy_t = dvbm_adr.ybuf_top;
-	online_addr->reg0157_adr_vsc_t = dvbm_adr.cbuf_top;
-	online_addr->reg0158_adr_vsy_b = dvbm_adr.ybuf_bot;
-	online_addr->reg0159_adr_vsc_b = dvbm_adr.cbuf_bot;
-#else
-	online_addr->reg0156_adr_vsy_t = 0;
-	online_addr->reg0157_adr_vsc_t = 0;
-	online_addr->reg0158_adr_vsy_b = 0;
-	online_addr->reg0159_adr_vsc_b = 0;
-#endif
 }
