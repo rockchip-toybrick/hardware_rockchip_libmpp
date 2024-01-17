@@ -126,6 +126,7 @@ typedef struct H264eSlice_t {
 
 	/* for multi-slice writing */
 	RK_S32      is_multi_slice;
+	H264ePps    *pps;
 } H264eSlice;
 
 #ifdef  __cplusplus

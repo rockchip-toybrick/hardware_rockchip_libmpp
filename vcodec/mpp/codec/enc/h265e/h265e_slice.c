@@ -518,6 +518,27 @@ void h265e_code_slice_header(h265_slice * slice, MppWriteCtx * bitIf)
 				 && slice->num_ref_idx[1] > 1)))
 				mpp_writer_put_ue(bitIf, slice->col_ref_idx);
 		}
+		/* write pred_weight_table() using default 0 value */
+		if (slice->pps->weighted_pred_flag && slice->slice_type != I_SLICE) {
+			RK_U32 i;
+
+			/* luma_log2_weight_denom */
+			mpp_writer_put_ue(bitIf, 0);
+
+			/* delta_chroma_log2_weight_denom */
+			if (slice->sps->chroma_format_idc != 0)
+				mpp_writer_put_se(bitIf, 0);
+
+			/* luma_weight_l0_flag[i] */
+			for (i = 0; i <= slice->pps->num_ref_idx_l0_default_active_minus1 - 1; i++)
+				mpp_writer_put_bits(bitIf, 0, 1);
+
+			/* chroma_weight_l0_flag[i] */
+			if (slice->sps->chroma_format_idc != 0)
+				for (i = 0; i <= slice->pps->num_ref_idx_l0_default_active_minus1 - 1; i++)
+					mpp_writer_put_bits(bitIf, 0, 1);
+		}
+
 		if (slice->slice_type != I_SLICE) {
 			RK_S32 flag =
 				MRG_MAX_NUM_CANDS - slice->max_num_merge_cand;

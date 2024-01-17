@@ -79,6 +79,8 @@ RK_S32 h264e_slice_update(H264eSlice *slice, MppEncCfgSet *cfg,
 	else
 		slice->long_term_reference_flag = 0;
 
+	slice->pps = pps;
+
 	return MPP_OK;
 }
 
@@ -509,6 +511,7 @@ void h264e_slice_write_header(H264eSlice *slice, MppWriteCtx *s)
 	H264eMarkingInfo *marking = slice->marking;
 	H264eRplmo rplmo;
 	MPP_RET ret = MPP_OK;
+	H264ePps *pps = slice->pps;
 
 	/* nal header */
 	/* start_code_prefix 00 00 00 01 */
@@ -632,6 +635,23 @@ void h264e_slice_write_header(H264eSlice *slice, MppWriteCtx *s)
 			h264e_dbg_slice("used bit %2d modification_of_pic_nums_idc 3\n",
 					mpp_writer_bits(s));
 
+		}
+	}
+
+	/* write pred_weight_table() using default 0 value */
+	if (pps && pps->weighted_pred && slice->slice_type == H264_P_SLICE) {
+		RK_U32 i;
+
+		/* luma_log2_weight_denom */
+		mpp_writer_put_ue(s, 0);
+		/* chroma_log2_weight_denom */
+		mpp_writer_put_ue(s, 0);
+
+		for (i = 0; i <= pps->num_ref_idx_l0_default_active - 1; i++) {
+			/* luma_weight_l0_flag */
+			mpp_writer_put_bits(s, 0, 1);
+			/* chroma_weight_l0_flag */
+			mpp_writer_put_bits(s, 0, 1);
 		}
 	}
 
