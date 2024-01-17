@@ -815,6 +815,9 @@ MPP_RET mpp_enc_refs_get_cpb(MppEncRefs refs, EncCpbStatus * status)
 		cleanup_cpb = 1;
 	}
 
+	if (usr_cfg->force_flag & ENC_FORCE_PSKIP)
+		cleanup_cpb = 0;
+
 	if (cleanup_cpb) {
 		/* update seq_idx for igop loop and force idr */
 		cleanup_cpb_refs(cpb);

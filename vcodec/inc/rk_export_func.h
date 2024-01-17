@@ -32,11 +32,14 @@ struct mpp_frame_infos {
 	RK_U32  phy_addr;
 	RK_U64  dts;
 	void    *pp_info;
-	RK_U32	idr_request;
+	/* num of pskip need to gen after normal frame */
+	RK_U32	pskip_num;
 	union {
 		RK_U32 val;
 		struct {
 			RK_U32  eos : 1;
+			RK_U32  pskip : 1;
+			RK_U32  idr_request : 1;
 		};
 	};
 };

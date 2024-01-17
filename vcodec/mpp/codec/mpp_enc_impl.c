@@ -1739,6 +1739,7 @@ static MPP_RET mpp_enc_reenc_force_pskip(MppEncImpl *enc, EncTask *task)
 	enc_dbg_detail("task %d rc frame end\n", frm->seq_idx);
 	ENC_RUN_FUNC2(rc_frm_end, enc->rc_ctx, rc_task, enc, ret);
 	enc->qp_out = rc_task->qp_out;
+	frm_cfg->force_flag = 0;
 
 TASK_DONE:
 	enc_dbg_func("leave\n");
@@ -1829,6 +1830,100 @@ static MPP_RET mpp_enc_check_frm_valid(MppEncImpl *enc)
 	}
 
 	return  MPP_OK;
+}
+
+MPP_RET mpp_enc_impl_force_pskip(MppEnc ctx, MppFrame frame, MppPacket *packet)
+{
+	MppEncImpl *enc = (MppEncImpl *)ctx;
+	MPP_RET ret = MPP_OK;
+	EncTask *task = (EncTask *)enc->enc_task;
+	EncRcTask *rc_task = &enc->rc_task;
+	EncCpbStatus *cpb = &rc_task->cpb;
+	EncFrmStatus *frm = &rc_task->frm;
+	MppEncRefFrmUsrCfg *frm_cfg = &enc->frm_cfg;
+	EncTaskStatus *status = &task->status;
+	HalEncTask *hal_task = &task->info.enc;
+	EncImpl impl = enc->impl;
+
+	if (task->seq_idx == 0) {
+		mpp_err("force pskip should not happen at first frame\n");
+		return MPP_NOK;
+	}
+
+	enc->frame = frame;
+	enc->packet = NULL;
+	reset_hal_enc_task(hal_task);
+	reset_enc_rc_task(rc_task);
+	frm->seq_idx = task->seq_idx++;
+
+	hal_task->rc_task = rc_task;
+	hal_task->frm_cfg = frm_cfg;
+
+	rc_task->frame = enc->frame;
+	enc_dbg_detail("task seq idx %d start\n", frm->seq_idx);
+	ENC_RUN_FUNC2(rc_frm_check_drop, enc->rc_ctx, rc_task, enc, ret);
+	status->rc_check_frm_drop = 1;
+	enc_dbg_detail("task %d drop %d\n", frm->seq_idx, frm->drop);
+
+	frm_cfg->force_pskip++;
+	frm_cfg->force_flag |= ENC_FORCE_PSKIP;
+	mpp_enc_refs_set_usr_cfg(enc->refs, frm_cfg);
+
+	hal_task->valid = 1;
+	mpp_assert(hal_task->valid);
+	ret = mpp_enc_alloc_output(enc);
+	if (ret)
+		goto TASK_DONE;
+	hal_task->frame = enc->frame;
+	hal_task->input = enc->frm_buf;
+	hal_task->packet = enc->packet;
+	hal_task->output = enc->pkt_buf;
+
+	status->pkt_buf_rdy = 1;
+
+	hal_task->output = enc->pkt_buf;
+	mpp_assert(enc->packet);
+
+	enc_dbg_detail("check_hal_task_pkt_len \n");
+
+	enc_dbg_detail("task %d enc start\n", frm->seq_idx);
+	ENC_RUN_FUNC2(enc_impl_start, enc->impl, hal_task, enc, ret);
+
+	mpp_enc_refs_stash(enc->refs);
+
+	enc_dbg_detail("task %d enc proc dpb\n", frm->seq_idx);
+	mpp_enc_refs_get_cpb(enc->refs, cpb);
+	ENC_RUN_FUNC2(enc_impl_proc_dpb, impl, hal_task, enc, ret);
+
+	enc_dbg_detail("task %d enc sw enc start\n", frm->seq_idx);
+	ENC_RUN_FUNC2(enc_impl_sw_enc, impl, hal_task, enc, ret);
+
+	enc_dbg_detail("task %d rc frame end\n", frm->seq_idx);
+	ENC_RUN_FUNC2(rc_frm_end, enc->rc_ctx, rc_task, enc, ret);
+	enc->qp_out = rc_task->qp_out;
+	frm_cfg->force_flag = 0;
+
+TASK_DONE:
+	if (ret) {
+		mpp_enc_terminate_task(enc, task);
+		return ret;
+	}
+	enc->frame_count++;
+	/* setup output packet and meta data */
+	mpp_packet_set_length(enc->packet, hal_task->length);
+	if (enc->frame && mpp_frame_get_eos(enc->frame))
+		mpp_packet_set_flag(enc->packet, MPP_PACKET_FLAG_EOS);
+	mpp_packet_set_temporal_id(enc->packet, frm->temporal_id);
+	if (mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev))
+		mpp_err_f("ring_buf_put_used fail \n");
+	*packet = enc->packet;
+	enc->packet = NULL;
+
+	reset_enc_task(enc);
+	mpp_enc_rc_info_backup(enc);
+	task->status.val = 0;
+
+	return ret;
 }
 
 MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)

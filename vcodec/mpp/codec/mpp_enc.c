@@ -313,6 +313,30 @@ MPP_RET mpp_enc_online_task_failed(MppEnc ctx)
 	return mpp_dev_chnl_control(enc->dev, MPP_CMD_VEPU_CONNECT_DVBM, &connect);
 }
 
+MPP_RET mpp_enc_force_pskip(MppEnc ctx, MppFrame frame, MppPacket *packet)
+{
+	MppEncImpl *enc = (MppEncImpl *) ctx;
+	MPP_RET ret = MPP_OK;
+
+	if (NULL == enc) {
+		mpp_err_f("found NULL input enc\n");
+		return MPP_ERR_NULL_PTR;
+	}
+
+	enc_dbg_func("%p in\n", enc);
+	down(&enc->enc_sem);
+	if (enc->stop_flag) {
+		up(&enc->enc_sem);
+		return MPP_NOK;
+	}
+	mpp_enc_proc_rc_update(enc);
+	ret = mpp_enc_impl_force_pskip(enc, frame, packet);
+	up(&enc->enc_sem);
+	enc_dbg_func("%p out\n", enc);
+
+	return ret;
+}
+
 MPP_RET mpp_enc_cfg_reg(MppEnc ctx, MppFrame frame)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
@@ -683,4 +707,20 @@ MPP_RET mpp_enc_control(MppEnc ctx, MpiCmd cmd, void *param)
 void mpp_enc_pkt_full_inc(MppEnc ctx)
 {
 	mpp_enc_impl_pkt_full_inc(ctx);
+}
+
+RK_S32 mpp_enc_get_fps_out(MppEnc ctx)
+{
+	MppEncImpl *enc = (MppEncImpl *) ctx;
+	RK_S32 fps_out = -1;
+
+	if (NULL == enc) {
+		mpp_err_f("found NULL input enc\n");
+		return MPP_ERR_NULL_PTR;
+	}
+
+	if (enc->cfg.rc.fps_out_num && enc->cfg.rc.fps_out_denorm)
+		fps_out = enc->cfg.rc.fps_out_num / enc->cfg.rc.fps_out_denorm;
+
+	return fps_out;
 }

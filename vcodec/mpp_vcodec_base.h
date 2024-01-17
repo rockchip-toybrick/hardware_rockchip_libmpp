@@ -15,6 +15,7 @@
 #include"rk_type.h"
 #include "mpp_err.h"
 #include "mpp_packet.h"
+#include "mpp_frame.h"
 
 #define MAX_ENC_NUM 16
 
@@ -80,6 +81,8 @@ struct mpp_chan {
 	struct hal_shared_buf shared_buf;
 	RK_U32 shared_buf_release;
 	RK_U32 max_lt_cnt;
+	RK_S64 pts_diff;
+	MppFrame pskip_frame;
 };
 
 struct stream_packet {

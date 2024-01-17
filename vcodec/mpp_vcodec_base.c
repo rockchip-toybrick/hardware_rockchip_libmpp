@@ -533,6 +533,8 @@ int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 	}
 
 	spin_lock_irqsave(&entry->chan_lock, lock_flag);
+	if (entry->pskip_frame)
+		mpp_frame_deinit(&entry->pskip_frame);
 	entry->handle = NULL;
 	entry->state = CHAN_STATE_NULL;
 	entry->reenc = 0;

@@ -26,6 +26,8 @@
 #include "mpp_time.h"
 #include <linux/module.h>
 
+void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry, MppPacket packet);
+
 static MPP_RET frame_add_osd(MppFrame frame, MppEncOSDData3 *osd_data)
 {
 	RK_U32 i = 0;
@@ -74,6 +76,8 @@ static MPP_RET enc_chan_get_buf_info(struct mpi_buf *buf,
 	mpp_frame_set_phy_addr(*frame, frm_info->phy_addr);
 	mpp_frame_set_idr_request(*frame, frm_info->idr_request);
 	mpp_frame_set_eos(*frame, frm_info->eos);
+	mpp_frame_set_pskip_request(*frame, frm_info->pskip);
+	mpp_frame_set_pskip_num(*frame, frm_info->pskip_num);
 
 	if (frm_info->osd_buf)
 		frame_add_osd(*frame, (MppEncOSDData3 *)frm_info->osd_buf);
@@ -178,7 +182,27 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 
 		cfg_start = mpp_time();
 		atomic_inc(&chan_entry->runing);
-		ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
+		if (frame && mpp_frame_get_pskip_request(frame)) {
+			MppPacket packet = NULL;
+			struct venc_module *venc = NULL;
+
+			venc = mpp_vcodec_get_enc_module_entry();
+			ret = mpp_enc_force_pskip(chan_entry->handle, frame, &packet);
+			if (packet)
+				mpp_vcodec_enc_add_packet_list(chan_entry, packet);
+			mpp_frame_deinit(&frame);
+			atomic_dec(&chan_entry->runing);
+			wake_up(&chan_entry->stop_wait);
+			vcodec_thread_trigger(venc->thd);
+			goto __RETURN;
+		} else {
+			ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
+
+			if (mpp_frame_get_pskip_num(frame) > 0) {
+				mpp_frame_init(&chan_entry->pskip_frame);
+				mpp_frame_copy(chan_entry->pskip_frame, frame);
+			}
+		}
 
 		chan_entry->seq_encoding = frm_info.dts;
 		if (MPP_OK == ret) {
@@ -235,9 +259,12 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 				mpp_enc_online_task_failed(chan_entry->handle);
 			vcodec_thread_trigger(venc->thd);
 		}
+
 		cfg_end = mpp_time();
 		chan_entry->last_cfg_time = cfg_end - cfg_start;
 	}
+
+__RETURN:
 	if (frm_buf)
 		mpp_buffer_put(frm_buf);
 
@@ -252,7 +279,6 @@ void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry,
 	MppPacketImpl *p = (MppPacketImpl *) packet;
 	unsigned long flags;
 
-	mpp_vcodec_detail("packet size %zu\n", mpp_packet_get_length(packet));
 	if (!get_vsm_ops()) {
 		spin_lock_irqsave(&chan_entry->stream_list_lock, flags);
 		list_add_tail(&p->list, &chan_entry->stream_done);
@@ -309,6 +335,24 @@ static void mpp_vcodec_event_frame(int chan_id)
 
 	if (packet)
 		mpp_vcodec_enc_add_packet_list(chan_entry, packet);
+
+	if (chan_entry->pskip_frame) {
+		RK_U32 i;
+		MPP_RET ret;
+		RK_U32 pskip_num = mpp_frame_get_pskip_num(chan_entry->pskip_frame);
+		RK_S64 pts = mpp_frame_get_pts(chan_entry->pskip_frame);
+		RK_S64 pts_diff = 1000000 / mpp_enc_get_fps_out(chan_entry->handle);
+
+		for (i = 0; i < pskip_num; i++) {
+			packet = NULL;
+			mpp_frame_set_pts(chan_entry->pskip_frame, pts + i * pts_diff);
+			ret = mpp_enc_force_pskip(chan_entry->handle, chan_entry->pskip_frame, &packet);
+			if (packet)
+				mpp_vcodec_enc_add_packet_list(chan_entry, packet);
+		}
+
+		mpp_frame_deinit(&chan_entry->pskip_frame);
+	}
 
 	if (ret)
 		chan_entry->reenc = 0;

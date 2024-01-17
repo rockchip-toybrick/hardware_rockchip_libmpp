@@ -190,6 +190,8 @@ void    mpp_enc_proc_debug(void *seq_file, MppEnc ctx, RK_U32 chl_id);
 RK_S32  mpp_enc_check_pkt_pool(MppEnc ctx);
 void mpp_enc_deinit_frame(MppEnc ctx);
 void mpp_enc_pkt_full_inc(MppEnc ctx);
+MPP_RET mpp_enc_force_pskip(MppEnc ctx, MppFrame frame, MppPacket *packet);
+RK_S32 mpp_enc_get_fps_out(MppEnc ctx);
 
 #ifdef __cplusplus
 }
