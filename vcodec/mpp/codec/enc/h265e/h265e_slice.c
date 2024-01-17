@@ -11,8 +11,10 @@
 #include <linux/string.h>
 
 #include "mpp_log.h"
+#include "mpp_mem.h"
 #include "h265e_codec.h"
 #include "h265e_slice.h"
+
 h265_dpb_frm * get_ref_pic(h265_dpb_frm * frame_list, RK_S32 poc)
 {
 	RK_S32 index = 0;
@@ -865,6 +867,7 @@ RK_S32 h265e_code_slice_skip_frame(void *ctx, h265_slice * slice,
 	RK_U32 offset_x = 0;
 	RK_U32 offset_y = 0;
 	RK_U32 mb_total = mb_wd * mb_h;
+	RK_U32 slice_header_offset, total_size;
 
 	h265e_dbg_func("enter\n");
 	if (!buf || !len) {
@@ -882,6 +885,12 @@ RK_S32 h265e_code_slice_skip_frame(void *ctx, h265_slice * slice,
 	h265e_write_nal(&bitIf);
 	h265e_code_slice_header(slice, &bitIf);
 	h265e_write_algin(&bitIf);
+	slice_header_offset = mpp_writer_bytes(&bitIf);
+	if (p->pskip_buf) {
+		memcpy(buf + slice_header_offset, p->pskip_buf, p->pskip_size);
+
+		return slice_header_offset + p->pskip_size;
+	}
 	h265e_reset_enctropy((void *)slice);
 	h265e_cabac_init(cabac_ctx, &bitIf);
 	memset(&cu, 0, sizeof(DataCu));
@@ -910,6 +919,15 @@ RK_S32 h265e_code_slice_skip_frame(void *ctx, h265_slice * slice,
 	h265e_cabac_encodeBinTrm(cabac_ctx, 1);
 	h265e_cabac_finish(cabac_ctx);
 	h265e_write_algin(&bitIf);
+	total_size = mpp_writer_bytes(&bitIf);
+	if (!p->pskip_buf) {
+		p->pskip_buf = mpp_calloc_size(RK_U8, 1024);
+		if (p->pskip_buf) {
+			p->pskip_size = total_size - slice_header_offset;
+			memcpy(p->pskip_buf, buf + slice_header_offset, p->pskip_size);
+		}
+	}
 	h265e_dbg_func("leave\n");
+
 	return mpp_writer_bytes(&bitIf);
 }

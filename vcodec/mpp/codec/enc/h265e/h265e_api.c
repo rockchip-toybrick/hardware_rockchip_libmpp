@@ -182,6 +182,8 @@ static MPP_RET h265e_deinit(void *ctx)
 
 	h265e_dpb_deinit(p->dpb);
 
+	MPP_FREE(p->pskip_buf);
+
 	h265e_dbg_func("leave ctx %p\n", ctx);
 	return MPP_OK;
 }

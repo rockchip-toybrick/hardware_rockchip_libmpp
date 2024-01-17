@@ -64,6 +64,8 @@ typedef struct H265eCtx_t {
 	MppPacket packeted_param;
 	H265eSyntax_new syntax;
 	H265eFeedback feedback;
+	void *pskip_buf;
+	RK_U32 pskip_size;
 } H265eCtx;
 
 #endif	/*  */
