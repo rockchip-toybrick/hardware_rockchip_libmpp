@@ -346,6 +346,10 @@ RK_U32  mpp_frame_get_phy_addr(const MppFrame frame);
 void    mpp_frame_set_phy_addr(MppFrame frame, RK_U32 phy_addr);
 RK_U32  mpp_frame_get_idr_request(const MppFrame frame);
 void    mpp_frame_set_idr_request(MppFrame frame, RK_U32 idr_request);
+RK_U32  mpp_frame_get_pskip_request(const MppFrame frame);
+void    mpp_frame_set_pskip_request(MppFrame frame, RK_U32 pskip_request);
+RK_U32  mpp_frame_get_pskip_num(const MppFrame frame);
+void    mpp_frame_set_pskip_num(MppFrame frame, RK_U32 pskip_num);
 
 /*
  * flow control parmeter

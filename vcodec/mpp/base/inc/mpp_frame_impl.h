@@ -98,6 +98,8 @@ struct MppFrameImpl_t {
 	MppPpInfo pp_info;
 
 	RK_U32 idr_request;
+	RK_U32 pskip_request;
+	RK_U32 pskip_num;
 };
 
 #ifdef __cplusplus
