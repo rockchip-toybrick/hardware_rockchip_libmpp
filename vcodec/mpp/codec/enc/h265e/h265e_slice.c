@@ -884,6 +884,7 @@ RK_S32 h265e_code_slice_skip_frame(void *ctx, h265_slice * slice,
 	h265e_write_algin(&bitIf);
 	h265e_reset_enctropy((void *)slice);
 	h265e_cabac_init(cabac_ctx, &bitIf);
+	memset(&cu, 0, sizeof(DataCu));
 	cu.mb_w = mb_wd;
 	cu.mb_h = mb_h;
 	slice->is_referenced = 0;
