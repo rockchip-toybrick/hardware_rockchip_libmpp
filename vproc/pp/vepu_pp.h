@@ -13,7 +13,7 @@
 
 #include "vepu_pp_common.h"
 
-#define MAX_CHN_NUM  (2)
+#define MAX_CHN_NUM  (8)
 
 struct pp_buffer_t {
 	struct mpi_buf *buf;
