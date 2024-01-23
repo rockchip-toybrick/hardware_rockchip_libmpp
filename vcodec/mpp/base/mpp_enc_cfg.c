@@ -210,6 +210,7 @@ RK_U32 mpp_enc_cfg_debug = 0;
     ENTRY(h265, sao_luma_disable,   S32, RK_S32,        MPP_ENC_H265_CFG_SAO_CHANGE,            codec.h265, sao_cfg.slice_sao_luma_disable)                         \
     ENTRY(h265, sao_chroma_disable, S32, RK_S32,        MPP_ENC_H265_CFG_SAO_CHANGE,            codec.h265, sao_cfg.slice_sao_chroma_disable)                       \
     ENTRY(h265, sao_bit_ratio, S32, RK_S32,             MPP_ENC_H265_CFG_SAO_CHANGE,            codec.h265, sao_cfg.sao_bit_ratio)                                  \
+    ENTRY(h265, diff_cu_qp_delta_depth, S32, RK_S32,    MPP_ENC_H265_CFG_TRANS_CHANGE,          codec.h265, trans_cfg.diff_cu_qp_delta_depth)                       \
     /* vp8 config */                                                                                                                                                \
     ENTRY(vp8,  qp_init,        S32, RK_S32,            MPP_ENC_RC_CFG_CHANGE_QP_INIT,          rc, qp_init)                                                        \
     ENTRY(vp8,  qp_min,         S32, RK_S32,            MPP_ENC_RC_CFG_CHANGE_QP_RANGE,         rc, qp_min)                                                         \

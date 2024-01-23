@@ -909,6 +909,7 @@ typedef struct MppEncH265TransCfg_t {
 	RK_U32  scaling_list_mode;             /* default: 0 */
 	RK_S32  cb_qp_offset;
 	RK_S32  cr_qp_offset;
+	RK_S32  diff_cu_qp_delta_depth;
 } MppEncH265TransCfg;
 
 typedef struct MppEncH265MergeCfg_t {

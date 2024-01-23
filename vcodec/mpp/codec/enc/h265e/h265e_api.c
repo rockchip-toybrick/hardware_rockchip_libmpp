@@ -99,6 +99,7 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 	h265->merge_cfg.merge_left_flag = 1;
 	h265->merge_cfg.merge_up_flag = 1;
 	h265->trans_cfg.scaling_list_mode = 0;
+	h265->trans_cfg.diff_cu_qp_delta_depth = 1;
 	p->cfg->tune.scene_mode = MPP_ENC_SCENE_MODE_IPC;
 	p->cfg->tune.motion_static_switch_enable = 0;
 	p->cfg->tune.deblur_str = 3;
@@ -445,6 +446,11 @@ static MPP_RET h265e_proc_h265_cfg(MppEncH265Cfg * dst, MppEncH265Cfg * src)
 			mpp_log("cr_qp_offset %d MUST equal to cb_qp_offset %d. FORCE to same value\n",
 				src->trans_cfg.cb_qp_offset, src->trans_cfg.cr_qp_offset);
 			src->trans_cfg.cr_qp_offset = src->trans_cfg.cb_qp_offset;
+		}
+
+		if (src->trans_cfg.diff_cu_qp_delta_depth > 2 || src->trans_cfg.diff_cu_qp_delta_depth < 0) {
+			mpp_log("diff_cu_qp_delta_depth must be in [0, 2]\n");
+			src->trans_cfg.diff_cu_qp_delta_depth = 1;
 		}
 		memcpy(&dst->trans_cfg, &src->trans_cfg, sizeof(src->trans_cfg));
 	}

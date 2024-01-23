@@ -413,7 +413,7 @@ MPP_RET h265e_set_pps(H265eCtx * ctx, h265_pps * pps, h265_sps * sps)
 	pps->cu_qp_delta_enabled_flag = 0;
 	if (rc->rc_mode != MPP_ENC_RC_MODE_FIXQP) {
 		pps->cu_qp_delta_enabled_flag = 1;
-		pps->diff_cu_qp_delta_depth = 1;
+		pps->diff_cu_qp_delta_depth = codec->trans_cfg.diff_cu_qp_delta_depth;
 	}
 
 	pps->sps = sps;
