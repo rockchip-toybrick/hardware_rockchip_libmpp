@@ -183,6 +183,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		} else
 			ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
 
+		chan_entry->seq_encoding = frm_info.dts;
 		if (MPP_OK == ret) {
 			if (comb_chan && comb_chan->handle) {
 				atomic_inc(&comb_chan->runing);
@@ -252,6 +253,8 @@ void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry,
 		spin_lock_irqsave(&chan_entry->stream_list_lock, flags);
 		list_add_tail(&p->list, &chan_entry->stream_done);
 		atomic_inc(&chan_entry->stream_count);
+		atomic_inc(&chan_entry->pkt_total_num);
+		chan_entry->seq_encoded = mpp_packet_get_dts(packet);
 		spin_unlock_irqrestore(&chan_entry->stream_list_lock, flags);
 		wake_up(&chan_entry->wait);
 	} else

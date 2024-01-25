@@ -302,7 +302,9 @@ int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
 	enc_packet->u64packet_addr = (uintptr_t )packet;
 	enc_packet->buf_size = mpp_buffer_get_size(packet->buf.buf);
 
+	chan_entry->seq_user_get = mpp_packet_get_dts(packet);
 	atomic_inc(&chan_entry->str_out_cnt);
+	atomic_inc(&chan_entry->pkt_user_get);
 
 	return MPP_OK;
 }
@@ -322,6 +324,8 @@ int mpp_vcodec_chan_put_stream(int chan_id, MppCtxType type,
 			list_del_init(&packet->list);
 			kref_put(&packet->ref, stream_packet_free);
 			atomic_dec(&chan_entry->str_out_cnt);
+			atomic_inc(&chan_entry->pkt_user_put);
+			chan_entry->seq_user_put = mpp_packet_get_dts(packet);
 			venc = mpp_vcodec_get_enc_module_entry();
 			vcodec_thread_trigger(venc->thd);
 			found = 1;

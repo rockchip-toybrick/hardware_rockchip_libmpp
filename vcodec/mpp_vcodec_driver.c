@@ -396,6 +396,15 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 				   atomic_read(&chan->str_out_cnt),
 				   chan->gap_time, chan->combo_gap_time, chan->last_jeg_combo_start,  chan->last_jeg_combo_end);
 
+			seq_printf(seq, "%8s|%15s|%15s|%15s|%15s|%15s|%15s|%15s\n",
+				   "ID", "pkt_total_cnt", "pkt_user_get", "pkt_user_put", "seq_user_get", "seq_user_put",
+				   "seq_encoded", "seq_encoding");
+
+			seq_printf(seq, "%8d|%15u|%15u|%15u|%15llu|%15llu|%15llu|%15llu\n",
+				   i, atomic_read(&chan->pkt_total_num), atomic_read(&chan->pkt_user_get),
+				   atomic_read(&chan->pkt_user_put), chan->seq_user_get,
+				   chan->seq_user_put, chan->seq_encoded, chan->seq_encoding);
+
 			mpp_enc_proc_debug(seq, chan->handle, i);
 		}
 	}

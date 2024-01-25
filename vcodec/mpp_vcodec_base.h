@@ -55,8 +55,16 @@ struct mpp_chan {
 	spinlock_t stream_list_lock;
 	struct list_head stream_done;
 	struct list_head stream_remove;
+	/* debug info */
 	atomic_t stream_count;
 	atomic_t str_out_cnt;
+	atomic_t pkt_total_num;
+	atomic_t pkt_user_get;
+	atomic_t pkt_user_put;
+	RK_U64 seq_user_get;
+	RK_U64 seq_user_put;
+	RK_U64 seq_encoded;
+	RK_U64 seq_encoding;
 	RK_U32 last_cfg_time;
 	RK_S64 last_yuv_time;
 	RK_S64 last_jeg_combo_start;

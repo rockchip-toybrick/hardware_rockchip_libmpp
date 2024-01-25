@@ -494,6 +494,10 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 	atomic_set(&entry->stream_count, 0);
 	atomic_set(&entry->str_out_cnt, 0);
 
+	atomic_set(&entry->pkt_total_num, 0);
+	atomic_set(&entry->pkt_user_get, 0);
+	atomic_set(&entry->pkt_user_put, 0);
+
 	atomic_set(&entry->runing, 0);
 	atomic_set(&entry->cfg.comb_runing, 0);
 	INIT_LIST_HEAD(&entry->stream_done);
