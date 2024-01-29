@@ -103,6 +103,7 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 	p->cfg->tune.scene_mode = MPP_ENC_SCENE_MODE_IPC;
 	p->cfg->tune.motion_static_switch_enable = 0;
 	p->cfg->tune.deblur_str = 3;
+	p->cfg->tune.atr_str = 2;
 
 	/*
 	 * default prep:

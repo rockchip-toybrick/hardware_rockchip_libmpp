@@ -246,7 +246,8 @@ RK_U32 mpp_enc_cfg_debug = 0;
     /* quality fine tuning config */                                                                                                                                \
     ENTRY(tune, scene_mode,     S32, MppEncSceneMode,   MPP_ENC_TUNE_CFG_CHANGE_SCENE_MODE,     tune, scene_mode)                                                   \
     ENTRY(tune, motion_static_switch_enable,     S32, RK_S32,   MPP_ENC_TUNE_CFG_CHANGE_MOTION_STATIC_SWITCH_ENABLE,     tune, motion_static_switch_enable)         \
-    ENTRY(tune, deblur_str,     S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_DEBLUR_STR,     tune, deblur_str)
+    ENTRY(tune, deblur_str,     S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_DEBLUR_STR,     tune, deblur_str)                                                   \
+    ENTRY(tune, atr_str,        S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_ATR_STR,        tune, atr_str)
 
 ENTRY_TABLE(EXPAND_AS_FUNC)
 ENTRY_TABLE(EXPAND_AS_API)

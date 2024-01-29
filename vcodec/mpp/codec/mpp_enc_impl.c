@@ -787,6 +787,14 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			ret = MPP_ERR_VALUE;
 		}
 
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_ATR_STR)
+			dst->atr_str = src->atr_str;
+
+		if (dst->atr_str < 0 || dst->atr_str > 3) {
+			mpp_err("invalid anti ring strength enable not in range [0 : 3]\n");
+			ret = MPP_ERR_VALUE;
+		}
+
 		dst->change |= change;
 
 		if (ret) {
@@ -1050,6 +1058,7 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	cfg->scene_mode = cfg_set->tune.scene_mode;
 	cfg->motion_static_switch_enable = cfg_set->tune.motion_static_switch_enable;
 	cfg->deblur_str = cfg_set->tune.deblur_str;
+	cfg->atr_str = cfg_set->tune.atr_str;
 
 	cfg->hier_qp_cfg.hier_qp_en = rc->hier_qp_en;
 	memcpy(cfg->hier_qp_cfg.hier_frame_num, rc->hier_frame_num,

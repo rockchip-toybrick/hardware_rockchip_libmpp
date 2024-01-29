@@ -142,14 +142,28 @@ static RK_S32 aq_qp_dealt_default[16] = {
 	4, 5, 7, 8,
 };
 
-static RK_U32 aq_thd_smart[16] = {
+static RK_U32 aq_I_thd_smart[16] = {
+	1, 2, 3, 3,
+	3, 3, 5, 5,
+	8, 8, 8, 13,
+	15, 20, 25, 25
+};
+
+static RK_S32 aq_I_qp_dealt_smart[16] = {
+	-8, -7, -6, -5,
+	-4, -3, -2, -1,
+	0, 1, 2, 3,
+	5, 7, 8, 9,
+};
+
+static RK_U32 aq_P_thd_smart[16] = {
 	0, 0, 0, 0,
 	3, 3, 5, 5,
 	8, 8, 8, 15,
 	15, 20, 25, 25
 };
 
-static RK_S32 aq_qp_dealt_smart[16] = {
+static RK_S32 aq_P_qp_dealt_smart[16] = {
 	-8, -7, -6, -5,
 	-4, -3, -2, -1,
 	0, 1, 2, 3,
@@ -191,6 +205,16 @@ static RK_U32 lamd_modb_qp_cvr[52] = {
 	0x0027AE18, 0x00373C28, 0x00459778, 0x0057AE18, 0x0078F3D0, 0x009863F8,
 	0x00C00000, 0x00F1E7A0, 0x0130C7F0, 0x01800000
 };
+
+static RK_S32 cu32_madi_thd0[4] = {3, 3, 5, 6};
+static RK_S32 cu32_madi_thd1[4] = {3, 35, 4, 5};
+static RK_S32 cu32_madi_thd2[4] = {20, 25, 5, 4};
+static RK_S32 cu32_madi_cnt_thd3[4] = {3, 0, 0, 0};
+static RK_S32 cu32_madi_thd4[4] = {30, 20, 10, 8};
+static RK_S32 cu32_madi_cost_multi[4] = {16, 24, 28, 32};
+static RK_S32 cu16_madi_thd0[4] = {2, 4, 5, 6};
+static RK_S32 cu16_madi_thd1[4] = {20, 6, 5, 5};
+static RK_S32 cu16_madi_cost_multi[4] = {16, 24, 28, 32};
 
 static void get_wrap_buf(H265eV540cHalContext *ctx, RK_S32 max_lt_cnt)
 {
@@ -615,6 +639,7 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	RK_S32 flg1 = 1;
 	RK_S32 flg2 = 0;
 	RK_S32 flg3 = 0;
+	RK_S32 atr_str = ctx->cfg->tune.atr_str;
 	RK_S32 smear_multi16[4] = {9, 12, 16, 16};
 	RK_S32 smear_multi8[4] = {8, 12, 16, 16};
 
@@ -923,16 +948,16 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 		p_pre_cst->cst_wgt2.wgt9 = 17;
 		p_pre_cst->cst_wgt2.mode_th = 5;
 	} else {
-		p_pre_cst->cst_wgt0.wgt0 = 17;
-		p_pre_cst->cst_wgt0.wgt1 = 17;
-		p_pre_cst->cst_wgt0.wgt2 = 17;
-		p_pre_cst->cst_wgt0.wgt3 = 17;
-		p_pre_cst->cst_wgt1.wgt4 = 13;
-		p_pre_cst->cst_wgt1.wgt5 = 14;
-		p_pre_cst->cst_wgt1.wgt6 = 15;
-		p_pre_cst->cst_wgt1.wgt7 = 17;
-		p_pre_cst->cst_wgt2.wgt8 = 17;
-		p_pre_cst->cst_wgt2.wgt9 = 17;
+		p_pre_cst->cst_wgt0.wgt0 = 16;
+		p_pre_cst->cst_wgt0.wgt1 = 16;
+		p_pre_cst->cst_wgt0.wgt2 = 16;
+		p_pre_cst->cst_wgt0.wgt3 = 16;
+		p_pre_cst->cst_wgt1.wgt4 = 16;
+		p_pre_cst->cst_wgt1.wgt5 = 16;
+		p_pre_cst->cst_wgt1.wgt6 = 16;
+		p_pre_cst->cst_wgt1.wgt7 = 16;
+		p_pre_cst->cst_wgt2.wgt8 = 16;
+		p_pre_cst->cst_wgt2.wgt9 = 16;
 		p_pre_cst->cst_wgt2.mode_th = 5;
 	}
 
@@ -956,16 +981,16 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 		p_pre_cst->cst_wgt2.wgt9 = 17;
 		p_pre_cst->cst_wgt2.mode_th = 5;
 	} else {
-		p_pre_cst->cst_wgt0.wgt0 = 17;
-		p_pre_cst->cst_wgt0.wgt1 = 17;
-		p_pre_cst->cst_wgt0.wgt2 = 17;
-		p_pre_cst->cst_wgt0.wgt3 = 17;
-		p_pre_cst->cst_wgt1.wgt4 = 13;
-		p_pre_cst->cst_wgt1.wgt5 = 14;
-		p_pre_cst->cst_wgt1.wgt6 = 15;
-		p_pre_cst->cst_wgt1.wgt7 = 17;
-		p_pre_cst->cst_wgt2.wgt8 = 17;
-		p_pre_cst->cst_wgt2.wgt9 = 17;
+		p_pre_cst->cst_wgt0.wgt0 = 16;
+		p_pre_cst->cst_wgt0.wgt1 = 16;
+		p_pre_cst->cst_wgt0.wgt2 = 16;
+		p_pre_cst->cst_wgt0.wgt3 = 16;
+		p_pre_cst->cst_wgt1.wgt4 = 16;
+		p_pre_cst->cst_wgt1.wgt5 = 16;
+		p_pre_cst->cst_wgt1.wgt6 = 16;
+		p_pre_cst->cst_wgt1.wgt7 = 16;
+		p_pre_cst->cst_wgt2.wgt8 = 16;
+		p_pre_cst->cst_wgt2.wgt9 = 16;
 		p_pre_cst->cst_wgt2.mode_th = 5;
 	}
 
@@ -974,15 +999,15 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	reg->preintra_sqi_cfg.pre_intra8_lambda_mv_bit = 4;
 	reg->preintra_sqi_cfg.pre_intra16_lambda_mv_bit = 4;
 	reg->preintra_sqi_cfg.pre_intra32_lambda_mv_bit = 5;
-	reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd0 = 3;
-	reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd1 = 35;
-	reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd2 = 25;
-	reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_cnt_thd3 = 0;
-	reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_thd4 = 20;
-	reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_cost_multi = 24;
-	reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_thd0 = 4;
-	reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_thd1 = 6;
-	reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_cost_multi = 24;
+	reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd0 = cu32_madi_thd0[atr_str];
+	reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd1 = cu32_madi_thd1[atr_str];
+	reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd2 = cu32_madi_thd2[atr_str];
+	reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_cnt_thd3 = cu32_madi_cnt_thd3[atr_str];
+	reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_thd4 = cu32_madi_thd4[atr_str];
+	reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_cost_multi = cu32_madi_cost_multi[atr_str];
+	reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_thd0 = cu16_madi_thd0[atr_str];
+	reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_thd1 = cu16_madi_thd1[atr_str];
+	reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_cost_multi = cu16_madi_cost_multi[atr_str];
 }
 
 static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
@@ -1031,7 +1056,7 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 		if (ctx->cfg->tune.motion_static_switch_enable)
 			reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = 85;
 		else
-			reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = 128;
+			reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = 143;
 	}
 	reg_wgt->reg1484_qnt_bias_comb.qnt_bias_p = 85;
 	if (hw->qbias_en) {
@@ -1194,10 +1219,10 @@ MPP_RET hal_h265e_v540c_init(void *hal, MppEncHalCfg *cfg)
 		hw->flt_str_p = 0;
 
 		if (ctx->smart_en) {
-			memcpy(hw->aq_step_i, aq_qp_dealt_smart, sizeof(hw->aq_step_i));
-			memcpy(hw->aq_step_p, aq_qp_dealt_smart, sizeof(hw->aq_step_p));
-			memcpy(hw->aq_thrd_i, aq_thd_smart, sizeof(hw->aq_thrd_i));
-			memcpy(hw->aq_thrd_p, aq_thd_smart, sizeof(hw->aq_thrd_p));
+			memcpy(hw->aq_step_i, aq_I_qp_dealt_smart, sizeof(hw->aq_step_i));
+			memcpy(hw->aq_step_p, aq_P_qp_dealt_smart, sizeof(hw->aq_step_p));
+			memcpy(hw->aq_thrd_i, aq_I_thd_smart, sizeof(hw->aq_thrd_i));
+			memcpy(hw->aq_thrd_p, aq_P_thd_smart, sizeof(hw->aq_thrd_p));
 		} else {
 			memcpy(hw->aq_step_i, aq_qp_dealt_default, sizeof(hw->aq_step_i));
 			memcpy(hw->aq_step_p, aq_qp_dealt_default, sizeof(hw->aq_step_p));
@@ -2194,7 +2219,7 @@ static MPP_RET hal_h265e_v540c_gen_regs(void *hal, HalEncTask *task)
 	reg_base->reg0232_rdo_cfg.lambda_qp_use_avg_cu16_flag = 1;
 	reg_base->reg0232_rdo_cfg.yuvskip_calc_en = 1;
 	reg_base->reg0232_rdo_cfg.atf_e = ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC ? 1 : 0;
-	reg_base->reg0232_rdo_cfg.atr_e = 1;
+	reg_base->reg0232_rdo_cfg.atr_e = ctx->cfg->tune.atr_str > 0;
 
 	if (syn->pp.num_long_term_ref_pics_sps) {
 		reg_base->reg0232_rdo_cfg.ltm_col = 0;
