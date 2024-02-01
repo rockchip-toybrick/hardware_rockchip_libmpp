@@ -1257,7 +1257,7 @@ static void setup_vepu540c_rdo_pred(HalH264eVepu540cCtx *ctx, H264eSps *sps,
 	regs->reg_base.rdo_cfg.ccwa_e = 1;
 	regs->reg_base.rdo_cfg.scl_lst_sel = pps->scaling_list_mode;
 	regs->reg_base.rdo_cfg.atf_e = ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC ? 1 : 0;
-	regs->reg_base.rdo_cfg.atr_e = 1;
+	regs->reg_base.rdo_cfg.atr_e = ctx->cfg->tune.atr_str > 0;
 	regs->reg_base.rdo_cfg.intra_mode_cost_e = 1;
 	regs->reg_base.iprd_csts.rdo_mark_mode = 0;
 
@@ -2072,6 +2072,7 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 	RK_U32 i;
 	HalVepu540cRegSet *regs = ctx->regs_set;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
+	RK_S32 atl_str = ctx->cfg->tune.atl_str;
 
 	hal_h264e_dbg_func("enter\n");
 
@@ -2082,7 +2083,7 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 			if (ctx->cfg->tune.motion_static_switch_enable)
 				regs->reg_s3.RDO_QUANT.quant_f_bias_I = 341;
 			else
-				regs->reg_s3.RDO_QUANT.quant_f_bias_I = 500;
+				regs->reg_s3.RDO_QUANT.quant_f_bias_I = 683;
 			memcpy(regs->reg_s3.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[7],
 			       H264E_LAMBDA_TAB_SIZE);
 		} else {
@@ -2133,15 +2134,15 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 	regs->reg_s3.iprd_tthdy8_0.iprd_tthdy8_1 = 3;
 	regs->reg_s3.iprd_tthdy8_1.iprd_tthdy8_2 = 6;
 	regs->reg_s3.iprd_tthdy8_1.iprd_tthdy8_3 = 8;
-	regs->reg_s3.iprd_tthd_ul.iprd_tthd_ul = 4;
-	regs->reg_s3.iprd_wgty8.iprd_wgty8_0 = 22;
-	regs->reg_s3.iprd_wgty8.iprd_wgty8_1 = 23;
-	regs->reg_s3.iprd_wgty8.iprd_wgty8_2 = 20;
-	regs->reg_s3.iprd_wgty8.iprd_wgty8_3 = 22;
-	regs->reg_s3.iprd_wgty4.iprd_wgty4_0 = 22;
-	regs->reg_s3.iprd_wgty4.iprd_wgty4_1 = 26;
-	regs->reg_s3.iprd_wgty4.iprd_wgty4_2 = 20;
-	regs->reg_s3.iprd_wgty4.iprd_wgty4_3 = 22;
+	regs->reg_s3.iprd_tthd_ul.iprd_tthd_ul = atl_str ? 4 : 255;
+	regs->reg_s3.iprd_wgty8.iprd_wgty8_0 = atl_str ? 22 : 16;
+	regs->reg_s3.iprd_wgty8.iprd_wgty8_1 = atl_str ? 23 : 16;
+	regs->reg_s3.iprd_wgty8.iprd_wgty8_2 = atl_str ? 20 : 16;
+	regs->reg_s3.iprd_wgty8.iprd_wgty8_3 = atl_str ? 22 : 16;
+	regs->reg_s3.iprd_wgty4.iprd_wgty4_0 = atl_str ? 22 : 16;
+	regs->reg_s3.iprd_wgty4.iprd_wgty4_1 = atl_str ? 26 : 16;
+	regs->reg_s3.iprd_wgty4.iprd_wgty4_2 = atl_str ? 20 : 16;
+	regs->reg_s3.iprd_wgty4.iprd_wgty4_3 = atl_str ? 22 : 16;
 	regs->reg_s3.iprd_wgty16.iprd_wgty16_0 = 22;
 	regs->reg_s3.iprd_wgty16.iprd_wgty16_1 = 26;
 	regs->reg_s3.iprd_wgty16.iprd_wgty16_2 = 20;

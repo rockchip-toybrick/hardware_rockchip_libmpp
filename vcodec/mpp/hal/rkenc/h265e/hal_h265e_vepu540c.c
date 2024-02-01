@@ -639,9 +639,13 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	RK_S32 flg1 = 1;
 	RK_S32 flg2 = 0;
 	RK_S32 flg3 = 0;
+	RK_S32 atl_str = ctx->cfg->tune.atl_str;
 	RK_S32 atr_str = ctx->cfg->tune.atr_str;
 	RK_S32 smear_multi16[4] = {9, 12, 16, 16};
 	RK_S32 smear_multi8[4] = {8, 12, 16, 16};
+
+	if (ctx->frame_type != INTRA_FRAME && atl_str == 3)
+		atl_str = 0;
 
 	if (smear_cnt[3] < ((5 * mb_cnt) >> 10))
 		flg1 = 0;
@@ -935,31 +939,17 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	p_pre_cst->cst_madi_thd0.madi_thd3 = 6;
 	p_pre_cst->cst_madi_thd1.madi_thd4 = 7;
 	p_pre_cst->cst_madi_thd1.madi_thd5 = 10;
-	if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC && 0 == ctx->smart_en) {
-		p_pre_cst->cst_wgt0.wgt0 = 20;
-		p_pre_cst->cst_wgt0.wgt1 = 18;
-		p_pre_cst->cst_wgt0.wgt2 = 19;
-		p_pre_cst->cst_wgt0.wgt3 = 18;
-		p_pre_cst->cst_wgt1.wgt4 = 6;
-		p_pre_cst->cst_wgt1.wgt5 = 9;
-		p_pre_cst->cst_wgt1.wgt6 = 14;
-		p_pre_cst->cst_wgt1.wgt7 = 18;
-		p_pre_cst->cst_wgt2.wgt8 = 17;
-		p_pre_cst->cst_wgt2.wgt9 = 17;
-		p_pre_cst->cst_wgt2.mode_th = 5;
-	} else {
-		p_pre_cst->cst_wgt0.wgt0 = 16;
-		p_pre_cst->cst_wgt0.wgt1 = 16;
-		p_pre_cst->cst_wgt0.wgt2 = 16;
-		p_pre_cst->cst_wgt0.wgt3 = 16;
-		p_pre_cst->cst_wgt1.wgt4 = 16;
-		p_pre_cst->cst_wgt1.wgt5 = 16;
-		p_pre_cst->cst_wgt1.wgt6 = 16;
-		p_pre_cst->cst_wgt1.wgt7 = 16;
-		p_pre_cst->cst_wgt2.wgt8 = 16;
-		p_pre_cst->cst_wgt2.wgt9 = 16;
-		p_pre_cst->cst_wgt2.mode_th = 5;
-	}
+	p_pre_cst->cst_wgt0.wgt0 = atl_str ? (atl_str < 2 ? 17 : 20) : 16;
+	p_pre_cst->cst_wgt0.wgt1 = atl_str ? (atl_str < 2 ? 17 : 18) : 16;
+	p_pre_cst->cst_wgt0.wgt2 = atl_str ? (atl_str < 2 ? 17 : 19) : 16;
+	p_pre_cst->cst_wgt0.wgt3 = atl_str ? (atl_str < 2 ? 17 : 18) : 16;
+	p_pre_cst->cst_wgt1.wgt4 = atl_str ? (atl_str < 2 ? 13 : 6) : 16;
+	p_pre_cst->cst_wgt1.wgt5 = atl_str ? (atl_str < 2 ? 14 : 9) : 16;
+	p_pre_cst->cst_wgt1.wgt6 = atl_str ? (atl_str < 2 ? 15 : 14) : 16;
+	p_pre_cst->cst_wgt1.wgt7 = atl_str ? (atl_str < 2 ? 17 : 18) : 16;
+	p_pre_cst->cst_wgt2.wgt8 = atl_str ? (atl_str < 2 ? 17 : 17) : 16;
+	p_pre_cst->cst_wgt2.wgt9 = atl_str ? (atl_str < 2 ? 17 : 17) : 16;
+	p_pre_cst->cst_wgt2.mode_th = 5;
 
 	p_pre_cst = &reg->preintra16_cst;
 	p_pre_cst->cst_madi_thd0.madi_thd0 = 5;
@@ -968,31 +958,17 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	p_pre_cst->cst_madi_thd0.madi_thd3 = 6;
 	p_pre_cst->cst_madi_thd1.madi_thd4 = 5;
 	p_pre_cst->cst_madi_thd1.madi_thd5 = 7;
-	if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC && 0 == ctx->smart_en) {
-		p_pre_cst->cst_wgt0.wgt0 = 20;
-		p_pre_cst->cst_wgt0.wgt1 = 18;
-		p_pre_cst->cst_wgt0.wgt2 = 19;
-		p_pre_cst->cst_wgt0.wgt3 = 18;
-		p_pre_cst->cst_wgt1.wgt4 = 6;
-		p_pre_cst->cst_wgt1.wgt5 = 9;
-		p_pre_cst->cst_wgt1.wgt6 = 14;
-		p_pre_cst->cst_wgt1.wgt7 = 18;
-		p_pre_cst->cst_wgt2.wgt8 = 17;
-		p_pre_cst->cst_wgt2.wgt9 = 17;
-		p_pre_cst->cst_wgt2.mode_th = 5;
-	} else {
-		p_pre_cst->cst_wgt0.wgt0 = 16;
-		p_pre_cst->cst_wgt0.wgt1 = 16;
-		p_pre_cst->cst_wgt0.wgt2 = 16;
-		p_pre_cst->cst_wgt0.wgt3 = 16;
-		p_pre_cst->cst_wgt1.wgt4 = 16;
-		p_pre_cst->cst_wgt1.wgt5 = 16;
-		p_pre_cst->cst_wgt1.wgt6 = 16;
-		p_pre_cst->cst_wgt1.wgt7 = 16;
-		p_pre_cst->cst_wgt2.wgt8 = 16;
-		p_pre_cst->cst_wgt2.wgt9 = 16;
-		p_pre_cst->cst_wgt2.mode_th = 5;
-	}
+	p_pre_cst->cst_wgt0.wgt0 = atl_str ? (atl_str < 2 ? 17 : 20) : 16;
+	p_pre_cst->cst_wgt0.wgt1 = atl_str ? (atl_str < 2 ? 17 : 18) : 16;
+	p_pre_cst->cst_wgt0.wgt2 = atl_str ? (atl_str < 2 ? 17 : 19) : 16;
+	p_pre_cst->cst_wgt0.wgt3 = atl_str ? (atl_str < 2 ? 17 : 18) : 16;
+	p_pre_cst->cst_wgt1.wgt4 = atl_str ? (atl_str < 2 ? 13 : 6) : 16;
+	p_pre_cst->cst_wgt1.wgt5 = atl_str ? (atl_str < 2 ? 14 : 9) : 16;
+	p_pre_cst->cst_wgt1.wgt6 = atl_str ? (atl_str < 2 ? 15 : 14) : 16;
+	p_pre_cst->cst_wgt1.wgt7 = atl_str ? (atl_str < 2 ? 17 : 18) : 16;
+	p_pre_cst->cst_wgt2.wgt8 = atl_str ? (atl_str < 2 ? 17 : 17) : 16;
+	p_pre_cst->cst_wgt2.wgt9 = atl_str ? (atl_str < 2 ? 17 : 17) : 16;
+	p_pre_cst->cst_wgt2.mode_th = 5;
 
 	reg->preintra_sqi_cfg.pre_intra_qp_thd = 28;
 	reg->preintra_sqi_cfg.pre_intra4_lambda_mv_bit = 3;

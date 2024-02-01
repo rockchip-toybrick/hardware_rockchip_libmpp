@@ -1323,6 +1323,7 @@ typedef enum MppEncFineTuneCfgChange_e {
 	MPP_ENC_TUNE_CFG_CHANGE_MOTION_STATIC_SWITCH_ENABLE = (1 << 1),
 	MPP_ENC_TUNE_CFG_CHANGE_DEBLUR_STR                  = (1 << 2),
 	MPP_ENC_TUNE_CFG_CHANGE_ATR_STR                     = (1 << 3),
+	MPP_ENC_TUNE_CFG_CHANGE_ATL_STR                     = (1 << 4),
 } MppEncFineTuneCfgChange;
 
 typedef struct MppEncFineTuneCfg_t {
@@ -1332,6 +1333,7 @@ typedef struct MppEncFineTuneCfg_t {
 	RK_S32              motion_static_switch_enable;
 	RK_S32              deblur_str;
 	RK_S32              atr_str;
+	RK_S32              atl_str;
 } MppEncFineTuneCfg;
 
 #endif /*__RK_VENC_CMD_H__*/
