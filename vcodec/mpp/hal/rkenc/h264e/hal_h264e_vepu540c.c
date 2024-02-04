@@ -158,27 +158,6 @@ static RK_S32 h264_I_aq_step_default[16] = {
 	4, 5, 7, 8,
 };
 
-static RK_S32 h264_aq_tthd_cvr[16] = {
-	0, 0, 0, 0,
-	3, 3, 5, 5,
-	8, 8, 8, 15,
-	15, 20, 25, 35,
-};
-
-static RK_S32 h264_P_aq_step_cvr[16] = {
-	-8, -7, -6, -5,
-	-4, -3, -2, -1,
-	0, 1, 2, 3,
-	4, 5, 6, 8,
-};
-
-static RK_S32 h264_I_aq_step_cvr[16] = {
-	-8, -7, -6, -5,
-	-4, -3, -2, -1,
-	0, 1, 2, 3,
-	4, 6, 7, 8,
-};
-
 static RK_S32 h264_aq_tthd_smart[16] = {
 	0, 0, 0, 0,
 	3, 3, 5, 5,
@@ -282,17 +261,10 @@ static MPP_RET hal_h264e_vepu540c_init(void *hal, MppEncHalCfg *cfg)
 			memcpy(hw->aq_step_i, h264_I_aq_step_smart, sizeof(hw->aq_step_i));
 			memcpy(hw->aq_step_p, h264_P_aq_step_smart, sizeof(hw->aq_step_p));
 		} else  {
-			if (p->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
-				memcpy(hw->aq_thrd_i, h264_aq_tthd_default, sizeof(hw->aq_thrd_i));
-				memcpy(hw->aq_thrd_p, h264_aq_tthd_default, sizeof(hw->aq_thrd_p));
-				memcpy(hw->aq_step_i, h264_I_aq_step_default, sizeof(hw->aq_step_i));
-				memcpy(hw->aq_step_p, h264_P_aq_step_default, sizeof(hw->aq_step_p));
-			} else {
-				memcpy(hw->aq_thrd_i, h264_aq_tthd_cvr, sizeof(hw->aq_thrd_i));
-				memcpy(hw->aq_thrd_p, h264_aq_tthd_cvr, sizeof(hw->aq_thrd_p));
-				memcpy(hw->aq_step_i, h264_I_aq_step_cvr, sizeof(hw->aq_step_i));
-				memcpy(hw->aq_step_p, h264_P_aq_step_cvr, sizeof(hw->aq_step_p));
-			}
+			memcpy(hw->aq_thrd_i, h264_aq_tthd_default, sizeof(hw->aq_thrd_i));
+			memcpy(hw->aq_thrd_p, h264_aq_tthd_default, sizeof(hw->aq_thrd_p));
+			memcpy(hw->aq_step_i, h264_I_aq_step_default, sizeof(hw->aq_step_i));
+			memcpy(hw->aq_step_p, h264_P_aq_step_default, sizeof(hw->aq_step_p));
 		}
 	}
 
@@ -2031,21 +2003,21 @@ static void setup_vepu540c_me(HalVepu540cRegSet *regs, H264eSps *sps,
 #define H264E_LAMBDA_TAB_SIZE       (52 * sizeof(RK_U32))
 
 static RK_U32 h264e_lambda_default[60] = {
-	0x00000003, 0x00000005, 0x00000006, 0x00000007,
-	0x00000009, 0x0000000b, 0x0000000e, 0x00000012,
-	0x00000016, 0x0000001c, 0x00000024, 0x0000002d,
-	0x00000039, 0x00000048, 0x0000005b, 0x00000073,
-	0x00000091, 0x000000b6, 0x000000e6, 0x00000122,
-	0x0000016d, 0x000001cc, 0x00000244, 0x000002db,
-	0x00000399, 0x00000489, 0x000005b6, 0x00000733,
-	0x00000912, 0x00000b6d, 0x00000e66, 0x00001224,
-	0x000016db, 0x00001ccc, 0x00002449, 0x00002db7,
-	0x00003999, 0x00004892, 0x00005b6f, 0x00007333,
-	0x00009124, 0x0000b6de, 0x0000e666, 0x00012249,
-	0x00016dbc, 0x0001cccc, 0x00024492, 0x0002db79,
-	0x00039999, 0x00048924, 0x0005b6f2, 0x00073333,
-	0x00091249, 0x000b6de5, 0x000e6666, 0x00122492,
-	0x0016dbcb, 0x001ccccc, 0x00244924, 0x002db796,
+	0x00000005, 0x00000006, 0x00000007, 0x00000009,
+	0x0000000b, 0x0000000e, 0x00000012, 0x00000016,
+	0x0000001c, 0x00000024, 0x0000002d, 0x00000039,
+	0x00000048, 0x0000005b, 0x00000073, 0x00000091,
+	0x000000b6, 0x000000e6, 0x00000122, 0x0000016d,
+	0x000001cc, 0x00000244, 0x000002db, 0x00000399,
+	0x00000489, 0x000005b6, 0x00000733, 0x00000912,
+	0x00000b6d, 0x00000e66, 0x00001224, 0x000016db,
+	0x00001ccc, 0x00002449, 0x00002db7, 0x00003999,
+	0x00004892, 0x00005b6f, 0x00007333, 0x00009124,
+	0x0000b6de, 0x0000e666, 0x00012249, 0x00016dbc,
+	0x0001cccc, 0x00024492, 0x0002db79, 0x00039999,
+	0x00048924, 0x0005b6f2, 0x00073333, 0x00091249,
+	0x000b6de5, 0x000e6666, 0x00122492, 0x0016dbcb,
+	0x001ccccc, 0x00244924, 0x002db796, 0x00399998,
 };
 
 static RK_U32 h264e_lambda_cvr[60] = {
@@ -2073,27 +2045,19 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 	HalVepu540cRegSet *regs = ctx->regs_set;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
 	RK_S32 atl_str = ctx->cfg->tune.atl_str;
+	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx;
 
 	hal_h264e_dbg_func("enter\n");
 
 	regs->reg_s3.RDO_QUANT.quant_f_bias_I = 683;
 	regs->reg_s3.RDO_QUANT.quant_f_bias_P = 341;
-	if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
-		if (ctx->smart_en) {
-			if (ctx->cfg->tune.motion_static_switch_enable)
-				regs->reg_s3.RDO_QUANT.quant_f_bias_I = 341;
-			else
-				regs->reg_s3.RDO_QUANT.quant_f_bias_I = 683;
-			memcpy(regs->reg_s3.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[7],
-			       H264E_LAMBDA_TAB_SIZE);
-		} else {
-			memcpy(regs->reg_s3.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[6],
-			       H264E_LAMBDA_TAB_SIZE);
-		}
-	} else {
-		memcpy(regs->reg_s3.rdo_wgta_qp_grpa_0_51, &h264e_lambda_cvr[6],
+
+	if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC)
+		memcpy(regs->reg_s3.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[lambda_idx],
 		       H264E_LAMBDA_TAB_SIZE);
-	}
+	else
+		memcpy(regs->reg_s3.rdo_wgta_qp_grpa_0_51, &h264e_lambda_cvr[lambda_idx],
+		       H264E_LAMBDA_TAB_SIZE);
 
 	if (hw->qbias_en) {
 		regs->reg_s3.RDO_QUANT.quant_f_bias_I = ctx->cfg->hw.qbias_i;

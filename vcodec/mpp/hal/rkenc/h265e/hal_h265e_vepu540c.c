@@ -127,6 +127,7 @@ typedef struct H265eV540cHalContext_t {
 } H265eV540cHalContext;
 
 #define TILE_BUF_SIZE  MPP_ALIGN(128 * 1024, 256)
+#define H265E_LAMBDA_TAB_SIZE  (52 * sizeof(RK_U32))
 
 static RK_U32 aq_thd_default[16] = {
 	0, 0, 0, 0,
@@ -170,40 +171,58 @@ static RK_S32 aq_P_qp_dealt_smart[16] = {
 	4, 6, 7, 9,
 };
 
-static RK_U32 lamd_moda_qp[52] = {
-	0x00000049, 0x0000005c, 0x00000074, 0x00000092, 0x000000b8, 0x000000e8,
-	0x00000124, 0x00000170, 0x000001cf, 0x00000248, 0x000002df, 0x0000039f,
-	0x0000048f, 0x000005bf, 0x0000073d, 0x0000091f, 0x00000b7e, 0x00000e7a,
-	0x0000123d, 0x000016fb, 0x00001cf4, 0x0000247b, 0x00002df6, 0x000039e9,
-	0x000048f6, 0x00005bed, 0x000073d1, 0x000091ec, 0x0000b7d9, 0x0000e7a2,
-	0x000123d7, 0x00016fb2, 0x0001cf44, 0x000247ae, 0x0002df64, 0x00039e89,
-	0x00048f5c, 0x0005bec8, 0x00073d12, 0x00091eb8, 0x000b7d90, 0x000e7a23,
-	0x00123d71, 0x0016fb20, 0x001cf446, 0x00247ae1, 0x002df640, 0x0039e88c,
-	0x0048f5c3, 0x005bec81, 0x0073d119, 0x0091eb85
+static RK_U32 lamd_moda_qp[60] = {
+	0x0000001d, 0x00000025, 0x0000002e, 0x0000003a,
+	0x00000049, 0x0000005c, 0x00000074, 0x00000092,
+	0x000000b8, 0x000000e8, 0x00000124, 0x00000170,
+	0x000001cf, 0x00000248, 0x000002df, 0x0000039f,
+	0x0000048f, 0x000005bf, 0x0000073d, 0x0000091f,
+	0x00000b7e, 0x00000e7a, 0x0000123d, 0x000016fb,
+	0x00001cf4, 0x0000247b, 0x00002df6, 0x000039e9,
+	0x000048f6, 0x00005bed, 0x000073d1, 0x000091ec,
+	0x0000b7d9, 0x0000e7a2, 0x000123d7, 0x00016fb2,
+	0x0001cf44, 0x000247ae, 0x0002df64, 0x00039e89,
+	0x00048f5c, 0x0005bec8, 0x00073d12, 0x00091eb8,
+	0x000b7d90, 0x000e7a23, 0x00123d71, 0x0016fb20,
+	0x001cf446, 0x00247ae1, 0x002df640, 0x0039e88c,
+	0x0048f5c3, 0x005bec81, 0x0073d119, 0x0091eb85,
+	0x00b7d902, 0x00e7a232, 0x0123d70a, 0x016fb204,
 };
 
-static RK_U32 lamd_modb_qp[52] = {
-	0x00000070, 0x00000089, 0x000000b0, 0x000000e0, 0x00000112, 0x00000160,
-	0x000001c0, 0x00000224, 0x000002c0, 0x00000380, 0x00000448, 0x00000580,
-	0x00000700, 0x00000890, 0x00000b00, 0x00000e00, 0x00001120, 0x00001600,
-	0x00001c00, 0x00002240, 0x00002c00, 0x00003800, 0x00004480, 0x00005800,
-	0x00007000, 0x00008900, 0x0000b000, 0x0000e000, 0x00011200, 0x00016000,
-	0x0001c000, 0x00022400, 0x0002c000, 0x00038000, 0x00044800, 0x00058000,
-	0x00070000, 0x00089000, 0x000b0000, 0x000e0000, 0x00112000, 0x00160000,
-	0x001c0000, 0x00224000, 0x002c0000, 0x00380000, 0x00448000, 0x00580000,
-	0x00700000, 0x00890000, 0x00b00000, 0x00e00000
+static RK_U32 lamd_modb_qp[60] = {
+	0x0000002c, 0x00000038, 0x00000044, 0x00000058,
+	0x00000070, 0x00000089, 0x000000b0, 0x000000e0,
+	0x00000112, 0x00000160, 0x000001c0, 0x00000224,
+	0x000002c0, 0x00000380, 0x00000448, 0x00000580,
+	0x00000700, 0x00000890, 0x00000b00, 0x00000e00,
+	0x00001120, 0x00001600, 0x00001c00, 0x00002240,
+	0x00002c00, 0x00003800, 0x00004480, 0x00005800,
+	0x00007000, 0x00008900, 0x0000b000, 0x0000e000,
+	0x00011200, 0x00016000, 0x0001c000, 0x00022400,
+	0x0002c000, 0x00038000, 0x00044800, 0x00058000,
+	0x00070000, 0x00089000, 0x000b0000, 0x000e0000,
+	0x00112000, 0x00160000, 0x001c0000, 0x00224000,
+	0x002c0000, 0x00380000, 0x00448000, 0x00580000,
+	0x00700000, 0x00890000, 0x00b00000, 0x00e00000,
+	0x01120000, 0x01600000, 0x01c00000, 0x02240000,
 };
 
-static RK_U32 lamd_modb_qp_cvr[52] = {
-	0x00000070, 0x00000088, 0x000000B0, 0x000000D8, 0x00000110, 0x00000158,
-	0x000001B0, 0x00000228, 0x000002B0, 0x00000368, 0x00000448, 0x00000568,
-	0x000006D0, 0x00000890, 0x00000AC8, 0x00000D98,	0x00001120, 0x00001598,
-	0x00001B30, 0x00002248, 0x00002B30, 0x00003668, 0x00004488, 0x00005658,
-	0x00006CD0, 0x00009E08, 0x0000C720, 0x0000FAE0, 0x00013C18, 0x00018E40,
-	0x0001F5C0, 0x00027830, 0x00031C80, 0x000470A0, 0x00059810, 0x00070C50,
-	0x0008E148, 0x000B3028, 0x000E1898, 0x0013D708, 0x0018FF30, 0x001F7E78,
-	0x0027AE18, 0x00373C28, 0x00459778, 0x0057AE18, 0x0078F3D0, 0x009863F8,
-	0x00C00000, 0x00F1E7A0, 0x0130C7F0, 0x01800000
+static RK_U32 lamd_modb_qp_cvr[60] = {
+	0x0000002c, 0x00000038, 0x00000044, 0x00000058,
+	0x00000070, 0x00000088, 0x000000b0, 0x000000d8,
+	0x00000110, 0x00000158, 0x000001b0, 0x00000228,
+	0x000002b0, 0x00000368, 0x00000448, 0x00000568,
+	0x000006d0, 0x00000890, 0x00000ac8, 0x00000d98,
+	0x00001120, 0x00001598, 0x00001b30, 0x00002248,
+	0x00002b30, 0x00003668, 0x00004488, 0x00005658,
+	0x00006cd0, 0x00009e08, 0x0000c720, 0x0000fae0,
+	0x00013c18, 0x00018e40, 0x0001f5c0, 0x00027830,
+	0x00031c80, 0x000470a0, 0x00059810, 0x00070c50,
+	0x0008e148, 0x000b3028, 0x000e1898, 0x0013d708,
+	0x0018ff30, 0x001f7e78, 0x0027ae18, 0x00373c28,
+	0x00459778, 0x0057ae18, 0x0078f3D0, 0x009863f8,
+	0x00C00000, 0x00f1e7a0, 0x0130c7f0, 0x01800000,
+	0x01e3cf40, 0x02618fe0, 0x03000000, 0x03c79e80,
 };
 
 static RK_S32 cu32_madi_thd0[4] = {3, 3, 5, 6};
@@ -996,6 +1015,7 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 	hevc_vepu540c_wgt *reg_wgt = &regs->reg_wgt;
 	vepu540c_rdo_cfg *reg_rdo = &regs->reg_rdo;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
+	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx;
 	vepu540c_h265_rdo_cfg(ctx, reg_rdo, task);
 	setup_vepu540c_hevc_scl_cfg(&regs->reg_scl, task);
 
@@ -1009,11 +1029,11 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 		}
 		reg_wgt->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
 		if (ctx->smart_en)
-			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0], lamd_modb_qp,
-			       sizeof(lamd_modb_qp));
+			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0],
+			       &lamd_modb_qp[lambda_idx], H265E_LAMBDA_TAB_SIZE);
 		else
-			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0], lamd_moda_qp,
-			       sizeof(lamd_moda_qp));
+			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0],
+			       &lamd_moda_qp[lambda_idx], H265E_LAMBDA_TAB_SIZE);
 	} else {
 		RK_U8 *thd = (RK_U8 *) & rc_regs->aq_tthd0;
 		RK_S8 *step = (RK_S8 *) & rc_regs->aq_stp0;
@@ -1023,16 +1043,19 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 		}
 		reg_wgt->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
 		if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC)
-			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0], lamd_modb_qp, sizeof(lamd_modb_qp));
+			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0],
+			       &lamd_modb_qp[lambda_idx], H265E_LAMBDA_TAB_SIZE);
 		else
-			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0], lamd_modb_qp_cvr, sizeof(lamd_modb_qp_cvr));
+			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0],
+			       &lamd_modb_qp_cvr[lambda_idx], H265E_LAMBDA_TAB_SIZE);
 	}
+
 	reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = 171;
 	if (ctx->smart_en) {
 		if (ctx->cfg->tune.motion_static_switch_enable)
 			reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = 85;
 		else
-			reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = 143;
+			reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = 144;
 	}
 	reg_wgt->reg1484_qnt_bias_comb.qnt_bias_p = 85;
 	if (hw->qbias_en) {

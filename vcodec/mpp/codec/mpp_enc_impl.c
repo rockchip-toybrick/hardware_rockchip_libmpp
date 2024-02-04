@@ -783,7 +783,7 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			dst->deblur_str = src->deblur_str;
 
 		if (dst->deblur_str < 0 || dst->deblur_str > 7) {
-			mpp_err("invalid deblur strength enable not in range [0 : 7]\n");
+			mpp_err("invalid deblur strength not in range [0 : 7]\n");
 			ret = MPP_ERR_VALUE;
 		}
 
@@ -791,7 +791,7 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			dst->atr_str = src->atr_str;
 
 		if (dst->atr_str < 0 || dst->atr_str > 3) {
-			mpp_err("invalid anti ring strength enable not in range [0 : 3]\n");
+			mpp_err("invalid anti ring strength not in range [0 : 3]\n");
 			ret = MPP_ERR_VALUE;
 		}
 
@@ -799,7 +799,15 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			dst->atl_str = src->atl_str;
 
 		if (dst->atl_str < 0 || dst->atl_str > 3) {
-			mpp_err("invalid anti line strength enable not in range [0 : 3]\n");
+			mpp_err("invalid anti line strength not in range [0 : 3]\n");
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_IDX)
+			dst->lambda_idx = src->lambda_idx;
+
+		if (dst->lambda_idx < 0 || dst->lambda_idx > 8) {
+			mpp_err("invalid lambda idx not in range [0 : 8]\n");
 			ret = MPP_ERR_VALUE;
 		}
 
@@ -1068,6 +1076,7 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	cfg->deblur_str = cfg_set->tune.deblur_str;
 	cfg->atr_str = cfg_set->tune.atr_str;
 	cfg->atl_str = cfg_set->tune.atl_str;
+	cfg->lambda_idx = cfg_set->tune.lambda_idx;
 
 	cfg->hier_qp_cfg.hier_qp_en = rc->hier_qp_en;
 	memcpy(cfg->hier_qp_cfg.hier_frame_num, rc->hier_frame_num,

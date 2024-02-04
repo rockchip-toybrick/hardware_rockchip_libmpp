@@ -185,6 +185,7 @@ typedef struct RcCfg_s {
 	RK_S32          deblur_str;
 	RK_S32          atr_str;
 	RK_S32          atl_str;
+	RK_S32          lambda_idx;
 } RcCfg;
 
 /*

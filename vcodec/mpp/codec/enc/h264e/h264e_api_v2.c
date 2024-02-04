@@ -96,6 +96,7 @@ static void init_h264e_cfg_set(MppEncCfgSet *cfg, MppClientType type)
 	cfg->tune.deblur_str = 3;
 	cfg->tune.atr_str = 2;
 	cfg->tune.atl_str = 2;
+	cfg->tune.lambda_idx = 6;
 
 	switch (type) {
 	case VPU_CLIENT_VEPU1 :
@@ -153,7 +154,7 @@ static void init_h264e_cfg_set(MppEncCfgSet *cfg, MppClientType type)
 	rc_cfg->fps_out_denorm = 1;
 	rc_cfg->gop = 60;
 	rc_cfg->max_reenc_times = 1;
-	rc_cfg->max_i_prop = 30;
+	rc_cfg->max_i_prop = 60;
 	rc_cfg->min_i_prop = 10;
 	rc_cfg->init_ip_ratio = 160;
 	rc_cfg->qp_init = 26;
