@@ -2155,6 +2155,7 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 	MppEncImpl *enc = (MppEncImpl *)ctx;
 	MppEncCfgSet *cfg = &enc->cfg;
 	MppEncHwCfg *hw = &cfg->hw;
+	MppEncFineTuneCfg *tune = &cfg->tune;
 	EncTask *task = (EncTask *)enc->enc_task;
 	struct seq_file *seq = (struct seq_file *)seq_file;
 	RK_S32 source_frate, target_frame_rate;
@@ -2238,6 +2239,14 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 			   hw->aq_step_p[4], hw->aq_step_p[5], hw->aq_step_p[6], hw->aq_step_p[7],
 			   hw->aq_step_p[8], hw->aq_step_p[9], hw->aq_step_p[10], hw->aq_step_p[11],
 			   hw->aq_step_p[12], hw->aq_step_p[13], hw->aq_step_p[14], hw->aq_step_p[15]);
+
+		seq_puts(seq,
+			 "\n--------fine tuning param------------------------------------------------------------------------\n");
+		seq_printf(seq, "%8s|%12s|%12s|%12s|%10s|%10s|%12s|\n", "ID",
+			   "scene_mode", "md_swth_en", "deblur_str", "atr_str", "atl_str", "lambda_idx");
+		seq_printf(seq, "%8u|%12d|%12d|%12d|%10d|%10d|%12d\n", chl_id,
+			   tune->scene_mode, tune->motion_static_switch_enable, tune->deblur_str, tune->atr_str,
+			   tune->atl_str, tune->lambda_idx);
 	}
 
 	if (cfg->roi.number > 0) {
