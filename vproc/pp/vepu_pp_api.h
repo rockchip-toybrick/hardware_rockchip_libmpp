@@ -41,7 +41,9 @@ struct pp_chn_attr {
 	int md_en;
 	int od_en;
 	int down_scale_en;
-	int reserved[8];
+	int max_width;
+	int max_height;
+	int reserved[6];
 };
 
 struct pp_com_cfg {
@@ -105,6 +107,7 @@ struct pp_weightp_out {
 enum pp_cmd {
 	PP_CMD_BASE = 0,
 	PP_CMD_SET_COMMON_CFG = 0x10, /* struct pp_com_cfg */
+	PP_CMD_SET_CHANNEL_INFO = 0x11, /* struct pp_chn_attr */
 	PP_CMD_SET_MD_CFG = 0x20, /* struct pp_md_cfg */
 	PP_CMD_SET_OD_CFG = 0x30, /* struct pp_od_cfg */
 	PP_CMD_SET_SMEAR_CFG = 0x40, /* struct pp_smear_cfg */

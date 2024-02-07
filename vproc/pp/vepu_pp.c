@@ -85,9 +85,9 @@ static void pp_free_buffer(struct pp_chn_info_t *info, struct pp_buffer_t *pp_bu
 
 static int pp_allocate_buffer(struct pp_chn_info_t *info)
 {
-	int ds_en = info->down_scale_en;
-	int w = ds_en ? PP_ALIGN(info->width, 32) : PP_ALIGN(info->width, 32) * 4;
-	int h = ds_en ? PP_ALIGN(info->height, 32) : PP_ALIGN(info->height, 32) * 4;
+	int ds_en = 0;
+	int w = ds_en ? PP_ALIGN(info->max_width, 32) : PP_ALIGN(info->max_width, 32) * 4;
+	int h = ds_en ? PP_ALIGN(info->max_height, 32) : PP_ALIGN(info->max_height, 32) * 4;
 	int pic_wd8_m1 = (w >> 3) - 1;
 	int pic_hd8_m1 = (h >> 3) - 1;
 	int buf_len = 0, wi, hi;
@@ -110,7 +110,7 @@ static int pp_allocate_buffer(struct pp_chn_info_t *info)
 		ret = VEPU_PP_NOK;
 	}
 
-	if (info->md_en) {
+	{
 		if (ds_en) {
 			wi = (pic_wd8_m1 + 4) >> 2;
 			hi = (pic_hd8_m1 + 4) >> 2;
@@ -127,7 +127,7 @@ static int pp_allocate_buffer(struct pp_chn_info_t *info)
 		}
 	}
 
-	if (info->smear_en) {
+	{
 		if (ds_en) {
 			wi = ((pic_wd8_m1 + 4) >> 2) * 2;
 			hi = ((pic_hd8_m1 + 4) >> 2) * 2;
@@ -152,11 +152,8 @@ static int pp_allocate_buffer(struct pp_chn_info_t *info)
 static void pp_release_buffer(struct pp_chn_info_t *info)
 {
 	pp_free_buffer(info, info->buf_rfpw);
-
-	if (info->md_en)
-		pp_free_buffer(info, info->buf_rfmwr);
-	if (info->smear_en)
-		pp_free_buffer(info, info->buf_rfswr);
+	pp_free_buffer(info, info->buf_rfmwr);
+	pp_free_buffer(info, info->buf_rfswr);
 }
 
 int vepu_pp_create_chn(int chn, struct pp_chn_attr *attr)
@@ -181,6 +178,15 @@ int vepu_pp_create_chn(int chn, struct pp_chn_attr *attr)
 	info->od_en = attr->od_en;
 	info->down_scale_en = attr->down_scale_en;
 	info->api = &pp_srv_api;
+
+	if (attr->max_width > 0 && attr->max_width <= 4096 &&
+	    attr->max_height > 0 && attr->max_height <= 4096) {
+		info->max_width = attr->max_width;
+		info->max_height = attr->max_height;
+	} else {
+		info->max_width = attr->width;
+		info->max_height = attr->height;
+	}
 
 	info->dev_srv = vmalloc(info->api->ctx_size);
 	if (info->dev_srv == NULL) {
@@ -267,11 +273,29 @@ static void pp_set_common_addr(struct pp_chn_info_t *info, struct pp_com_cfg *cf
 	}
 }
 
+static void pp_set_channel_info(struct pp_chn_info_t *info, struct pp_chn_attr *attr)
+{
+	info->width = attr->width;
+	info->height = attr->height;
+	info->smear_en = attr->smear_en;
+	info->weightp_en = attr->weightp_en;
+	info->md_en = attr->md_en;
+	info->od_en = attr->od_en;
+	info->down_scale_en = attr->down_scale_en;
+	info->frm_accum_gop = 0;
+	info->frm_accum_interval = 0;
+}
+
 static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void *param)
 {
 	struct pp_param_t *p = &info->param;
 
 	switch (cmd) {
+	case PP_CMD_SET_CHANNEL_INFO: {
+		struct pp_chn_attr *cfg = (struct pp_chn_attr *)param;
+		pp_set_channel_info(info, cfg);
+		break;
+	}
 	case PP_CMD_SET_COMMON_CFG: {
 		struct pp_com_cfg *cfg = (struct pp_com_cfg *)param;
 		int frm_cnt = cfg->frm_cnt;
@@ -408,7 +432,7 @@ int vepu_pp_control(int chn, enum pp_cmd cmd, void *param)
 
 	if (cmd == PP_CMD_SET_COMMON_CFG || cmd == PP_CMD_SET_MD_CFG ||
 	    cmd == PP_CMD_SET_OD_CFG || cmd == PP_CMD_SET_SMEAR_CFG ||
-	    cmd == PP_CMD_SET_WEIGHTP_CFG)
+	    cmd == PP_CMD_SET_WEIGHTP_CFG || cmd == PP_CMD_SET_CHANNEL_INFO)
 		vepu_pp_set_param(info, cmd, param);
 
 	if (cmd == PP_CMD_RUN_SYNC) {

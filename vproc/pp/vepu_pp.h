@@ -215,6 +215,8 @@ struct pp_chn_info_t {
 	u32 chn; /* channel ID */
 	u32 width;
 	u32 height;
+	u32 max_width;
+	u32 max_height;
 	int smear_en;
 	int weightp_en;
 	int md_en;
