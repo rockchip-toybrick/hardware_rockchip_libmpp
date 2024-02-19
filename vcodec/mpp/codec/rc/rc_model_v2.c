@@ -1886,5 +1886,5 @@ void rc_model_v2_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 		   "RealBt(kb)", "IPRatio", "StartQp", "MinQp", "MaxQp");
 	seq_printf(seq, "%7d|%14d|%8u|%8d|%12u|%12u|%10d|%10u|%8u|%8u\n",
 		   chl_id, p->ins_bps / 1000, 0, p->stat_watl, target_bps / 1000,
-		   p->last_inst_bps / 1000, usr_cfg->init_ip_ratio, p->qp, p->min_qp, p->max_qp);
+		   p->last_inst_bps / 1000, usr_cfg->init_ip_ratio, usr_cfg->init_quality, p->min_qp, p->max_qp);
 }
