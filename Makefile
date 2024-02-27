@@ -8,6 +8,23 @@ KERNEL_VERSION=5.10
 CPU_TYPE=$(ARCH)
 OSTYPE=linux
 
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/inc
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/base/inc
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/codec/enc/h264e
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/codec/inc
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/common
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/common
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/common/h264
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/common/h265
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/common/jpeg
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/inc
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/rkenc/common
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/rkenc/h264e
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/rkenc/h265e
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/hal/rkenc/jpege
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/inc
+EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/osal/inc
+
 ifeq ($(RK_ENABLE_FASTBOOT), y)
 EXTRA_CFLAGS += -fno-verbose-asm
 TOP := $(src)
