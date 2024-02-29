@@ -604,7 +604,6 @@ void mpp_free_task(struct kref *ref)
 	atomic_dec(&mpp->task_count);
 }
 
-extern void rkvenc_dump_dbg(struct mpp_dev *mpp);
 static void mpp_task_timeout_work(struct work_struct *work_s)
 {
 	struct mpp_dev *mpp;
@@ -635,7 +634,8 @@ static void mpp_task_timeout_work(struct work_struct *work_s)
 
 	mpp = mpp_get_task_used_device(task, session);
 
-	rkvenc_dump_dbg(mpp);
+	if (mpp && mpp->var->dev_ops->dump_dev)
+		mpp->var->dev_ops->dump_dev(mpp);
 	/* hardware maybe dead, reset it */
 	mpp_reset_up_read(mpp->reset_group);
 	mpp_dev_reset(mpp);

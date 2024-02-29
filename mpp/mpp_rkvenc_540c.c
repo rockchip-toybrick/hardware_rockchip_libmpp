@@ -701,14 +701,14 @@ static void rkvenc_dump_simple_dbg(struct mpp_dev *mpp)
 	pr_err("vepu_cycle  -   0x%08x\n", mpp_read(mpp, 0x5200));
 }
 
-void rkvenc_dump_dbg(struct mpp_dev *mpp)
+int rkvenc_dump_dbg(struct mpp_dev *mpp)
 {
 	u32 i;
 
 	rkvenc_dump_simple_dbg(mpp);
 
 	if (!unlikely(mpp_dev_debug & DEBUG_DUMP_ERR_REG))
-		return;
+		return 0;
 	pr_info("=== %s ===\n", __func__);
 	for (i = 0; i < RKVENC_CLASS_BUTT; i++) {
 		u32 j, s, e;
@@ -726,7 +726,8 @@ void rkvenc_dump_dbg(struct mpp_dev *mpp)
 		for (j = s; j <= e; j += 4)
 			pr_info("reg[0x%0x] = 0x%08x\n", j, mpp_read(mpp, j));
 	}
-	pr_info("=== %s ===\n", __func__);
+
+	return 0;
 }
 
 #if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
@@ -2311,6 +2312,7 @@ static struct mpp_dev_ops rkvenc_dev_ops_v2 = {
 	.init_session = rkvenc_init_session,
 	.free_session = rkvenc_free_session,
 	.dump_session = rkvenc_dump_session,
+	.dump_dev = rkvenc_dump_dbg,
 };
 
 static const struct mpp_dev_var rkvenc_rv1106_data = {
