@@ -507,8 +507,13 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 	init_waitqueue_head(&entry->stop_wait);
 
 	if (mpibuf_fn->buf_queue_create && !entry->yuv_queue) {
-		entry->yuv_queue =
-			mpibuf_fn->buf_queue_create(CHAN_MAX_YUV_POOL_SIZE);
+		unsigned int queue_size = CHAN_MAX_YUV_POOL_SIZE;
+
+		if (mpibuf_fn->buf_queue_size)
+			queue_size = mpibuf_fn->buf_queue_size(entry->chan_id);
+		if (!queue_size)
+			queue_size = CHAN_MAX_YUV_POOL_SIZE;
+		entry->yuv_queue = mpibuf_fn->buf_queue_create(queue_size);
 	}
 
 	entry->state = CHAN_STATE_SUSPEND_PENDING;
