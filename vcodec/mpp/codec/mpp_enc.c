@@ -412,17 +412,21 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 
 	enc_dbg_func("%p in\n", enc);
 
-	ret = mpp_dev_ioctl(enc->dev, MPP_DEV_CMD_RUN_TASK, NULL);
+	if (enc->enc_status != ENC_STATUS_START_IN &&
+	    enc->enc_status != ENC_STATUS_START_DONE)
+		return MPP_NOK;
 
 	/*
 	 * The frame configuration is gennerated in advance,
 	 * so the pts/dts info may not match to per frame.
 	 * So, re-update the pts/dts here.
 	 */
-	if (ret == MPP_OK && enc->packet) {
+	if (enc->packet) {
 		mpp_packet_set_pts(enc->packet, pts);
 		mpp_packet_set_dts(enc->packet, dts);
 	}
+
+	ret = mpp_dev_ioctl(enc->dev, MPP_DEV_CMD_RUN_TASK, NULL);
 
 	enc_dbg_func("%p out\n", enc);
 
