@@ -74,6 +74,12 @@ mpp_vcodec-objs += rk_vcodec.o
 mpp_vcodec-objs += vepu_pp.o
 endif
 
+ifneq ($(SYSDRV_KERNEL_OBJS_OUTPUT_DIR),)
+KMPP_BUILD_KERNEL_OBJ_DIR=$(SYSDRV_KERNEL_OBJS_OUTPUT_DIR)
+else
+KMPP_BUILD_KERNEL_OBJ_DIR=$(KERNEL_DIR)
+endif
+
 DIRS := $(shell find . -maxdepth 5 -type d)
 
 FILES = $(foreach dir,$(DIRS),$(wildcard $(dir)/*.c))
@@ -90,7 +96,7 @@ linux_build: linux_clean
 	@echo -e "\e[0;32;1m--Compiling '$(VMPI)'... Configs as follow:\e[0;36;1m"
 	@echo ---- CROSS=$(CROSS_COMPILE)
 	@echo ---- CPU_TYPE=$(CPU_TYPE)
-	@$(MAKE) CROSS_COMPILE=${CROSS_COMPILE} ARCH=$(CPU_TYPE) -C $(KERNEL_ROOT) M=$(PWD) modules
+	@$(MAKE) CROSS_COMPILE=${CROSS_COMPILE} ARCH=$(CPU_TYPE) -C $(KERNEL_ROOT) M=$(PWD) modules O=$(KMPP_BUILD_KERNEL_OBJ_DIR)
 	@mkdir -p $(PREB_KO)
 	@cp mpp_vcodec.ko $(PREB_KO)
 ifneq ($(BUILD_ONE_KO), y)
