@@ -126,7 +126,7 @@ MPP_RET mpp_dev_ioctl(MppDev ctx, RK_S32 cmd, void *param)
 	break;
 	case MPP_DEV_CMD_RUN_TASK: {
 		if (api->run_task)
-			ret = api->run_task(impl_ctx);
+			ret = api->run_task(impl_ctx, param);
 	}
 	break;
 	default: {

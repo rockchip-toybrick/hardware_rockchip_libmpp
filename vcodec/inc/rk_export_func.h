@@ -72,6 +72,8 @@ struct vcodec_set_dev_fn {
 
 enum notify_cmd {
 	NOTIFY_ENC_TASK_READY,
+	NOTIFY_ENC_GET_TASK_PIPE_ID,
+	NOTIFY_ENC_GET_TASK_FRAME_ID,
 };
 
 struct vcodec_mpidev_fn {
@@ -96,7 +98,7 @@ struct vcodec_mppdev_svr_fn {
 	void (*chnl_release_iova_addr)(struct mpp_session *session,  struct dma_buf *buf);
 
 	struct device *(*mpp_chnl_get_dev)(struct mpp_session *session);
-	int (*chnl_run_task)(struct mpp_session *session);
+	int (*chnl_run_task)(struct mpp_session *session, void *param);
 	int (*chnl_check_running)(struct mpp_session *session);
 };
 

@@ -853,30 +853,38 @@ static int rkvenc_callback(void* ctx, enum dvbm_cb_event event, void* arg)
 	return 0;
 }
 
-static void update_online_info(struct mpp_dev *mpp, u32 chan_id)
+static void update_online_info(struct mpp_dev *mpp, u32 pipe_id)
 {
 	struct dvbm_addr_cfg dvbm_adr;
+	u32 val;
 
-	dvbm_adr.chan_id = chan_id;
+	dvbm_adr.chan_id = pipe_id;
 	rk_dvbm_ctrl(NULL, DVBM_VEPU_GET_ADR, &dvbm_adr);
 	if (!dvbm_adr.ybuf_bot || !dvbm_adr.cbuf_bot)
 		dev_err(mpp->dev, "the dvbm address do not ready!\n");
+	/*
+	 * use frame_id bit field to store isp pipe id to identify
+	 * which isp channel is bound to the current wrap
+	 */
+	val = mpp_read_relaxed(mpp, 0x308) & (~GENMASK(7, 0));
+	mpp_write_relaxed(mpp, 0x308, val | pipe_id);
 
-	mpp_write(mpp, 0x270, dvbm_adr.ybuf_top);
-	mpp_write(mpp, 0x274, dvbm_adr.cbuf_top);
-	mpp_write(mpp, 0x278, dvbm_adr.ybuf_bot);
-	mpp_write(mpp, 0x27c, dvbm_adr.cbuf_bot);
-	mpp_write(mpp, 0x280, dvbm_adr.ybuf_sadr);
-	mpp_write(mpp, 0x284, dvbm_adr.cbuf_sadr);
-	mpp_write(mpp, 0x288, dvbm_adr.cbuf_sadr);
-	if (mpp_read(mpp, RKVENC_JPEG_BASE_CFG) & JRKVENC_PEGE_ENABLE) {
-		mpp_write(mpp, 0x410, dvbm_adr.ybuf_bot);
-		mpp_write(mpp, 0x414, dvbm_adr.cbuf_bot);
-		mpp_write(mpp, 0x418, dvbm_adr.ybuf_top);
-		mpp_write(mpp, 0x41c, dvbm_adr.cbuf_top);
-		mpp_write(mpp, 0x420, dvbm_adr.ybuf_sadr);
-		mpp_write(mpp, 0x424, dvbm_adr.cbuf_sadr);
-		mpp_write(mpp, 0x428, dvbm_adr.cbuf_sadr);
+	/* update wrap addr */
+	mpp_write_relaxed(mpp, 0x270, dvbm_adr.ybuf_top);
+	mpp_write_relaxed(mpp, 0x274, dvbm_adr.cbuf_top);
+	mpp_write_relaxed(mpp, 0x278, dvbm_adr.ybuf_bot);
+	mpp_write_relaxed(mpp, 0x27c, dvbm_adr.cbuf_bot);
+	mpp_write_relaxed(mpp, 0x280, dvbm_adr.ybuf_sadr);
+	mpp_write_relaxed(mpp, 0x284, dvbm_adr.cbuf_sadr);
+	mpp_write_relaxed(mpp, 0x288, dvbm_adr.cbuf_sadr);
+	if (mpp_read_relaxed(mpp, RKVENC_JPEG_BASE_CFG) & JRKVENC_PEGE_ENABLE) {
+		mpp_write_relaxed(mpp, 0x410, dvbm_adr.ybuf_bot);
+		mpp_write_relaxed(mpp, 0x414, dvbm_adr.cbuf_bot);
+		mpp_write_relaxed(mpp, 0x418, dvbm_adr.ybuf_top);
+		mpp_write_relaxed(mpp, 0x41c, dvbm_adr.cbuf_top);
+		mpp_write_relaxed(mpp, 0x420, dvbm_adr.ybuf_sadr);
+		mpp_write_relaxed(mpp, 0x424, dvbm_adr.cbuf_sadr);
+		mpp_write_relaxed(mpp, 0x428, dvbm_adr.cbuf_sadr);
 	}
 }
 #endif
@@ -1198,8 +1206,9 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 			if (dvbm_en) {
 				enc->dvbm_overflow = 0;
 				rk_dvbm_link(enc->port);
-				update_online_info(mpp, mpp_task->session->chn_id);
+				update_online_info(mpp, mpp_task->pipe_id);
 				priv->dvbm_link = 1;
+				wmb();
 				mpp_write_relaxed(mpp, hw->dvbm_cfg, dvbm_en);
 				mpp->always_on = 1;
 			}

@@ -84,7 +84,7 @@ typedef struct MppDevApi_t {
 	RK_U32(*get_address) (void *ctx, struct dma_buf * buf, RK_U32 offset);
 	void (*chnl_register) (void *ctx, void *func, RK_S32 chan_id);
 	struct device *(*chnl_get_dev)(void *ctx);
-	RK_S32 (*run_task)(void *ctx);
+	RK_S32 (*run_task)(void *ctx, void *param);
 	RK_S32 (*chnl_check_running)(void *ctx);
 	RK_S32 (*control)(void *ctx, RK_U32 cmd, void *param);
 } MppDevApi;

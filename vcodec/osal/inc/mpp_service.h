@@ -100,6 +100,13 @@ typedef struct MppServiceCmdCap_t {
 	RK_U32 ctrl_cmd;
 } MppServiceCmdCap;
 
+typedef struct MppTaskInfo_t {
+	/* indentify the id of isp pipe */
+	RK_U32 pipe_id;
+	/* indentify the frame id */
+	RK_U32 frame_id;
+} MppTaskInfo;
+
 #ifdef  __cplusplus
 extern "C" {
 #endif

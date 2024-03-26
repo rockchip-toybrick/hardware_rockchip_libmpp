@@ -475,12 +475,12 @@ struct device * mpp_service_get_dev(void *ctx)
 	return NULL;
 }
 
-RK_S32 mpp_service_run_task(void *ctx)
+RK_S32 mpp_service_run_task(void *ctx, void *param)
 {
 	MppDevMppService *p = (MppDevMppService *)ctx;
 
 	if (p->mppdev_ops->chnl_run_task)
-		return p->mppdev_ops->chnl_run_task(p->chnl);
+		return p->mppdev_ops->chnl_run_task(p->chnl, param);
 
 	return 0;
 }

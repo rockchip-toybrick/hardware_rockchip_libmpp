@@ -481,6 +481,10 @@ struct mpp_task {
 	u32 task_no;
 	u32 clbk_en;
 	u32 disable_jpeg;
+	/* indentify the id of isp pipe */
+	u32 pipe_id;
+	/* indentify the frame id */
+	u32 frame_id;
 };
 
 struct mpp_taskqueue {
@@ -559,6 +563,13 @@ struct mpp_service {
 	struct mutex session_lock;
 	struct list_head session_list;
 	u32 session_count;
+};
+
+struct mpp_task_info {
+	/* indentify the id of isp pipe */
+	u32 pipe_id;
+	/* indentify the frame id */
+	u32 frame_id;
 };
 
 /*

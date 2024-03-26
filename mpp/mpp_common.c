@@ -928,7 +928,7 @@ int mpp_chnl_is_running(struct mpp_session *session)
 	return running;
 }
 
-int mpp_chnl_run_task(struct mpp_session *session)
+int mpp_chnl_run_task(struct mpp_session *session, void *param)
 {
 	struct mpp_dev *mpp = session->mpp;
 	struct mpp_taskqueue *queue = mpp->queue;
@@ -972,6 +972,13 @@ again:
 		mpp_debug_func(DEBUG_TASK_INFO, "chan_id %d device is busy now\n",
 			       session->chn_id);
 		goto done;
+	}
+
+	if (param) {
+		struct mpp_task_info *info = (struct mpp_task_info *)param;
+
+		task->pipe_id = info->pipe_id;
+		task->frame_id = info->frame_id;
 	}
 
 	/* run task */
@@ -2618,7 +2625,7 @@ struct vcodec_mppdev_svr_fn {
 					   struct dma_buf *buf, unsigned int reg_idx);
 	void (*chnl_release_iova_addr)(struct mpp_session *session,  struct dma_buf *buf);
 	struct device *(*mpp_chnl_get_dev)(struct mpp_session *session);
-	int (*chnl_run_task)(struct mpp_session *session);
+	int (*chnl_run_task)(struct mpp_session *session, void *param);
 	int (*chnl_check_running)(struct mpp_session *session);
 };
 

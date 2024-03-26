@@ -21,6 +21,7 @@
 #include "mpp_enc_impl.h"
 #include "mpp_enc.h"
 #include "rk_export_func.h"
+#include "mpp_service.h"
 
 RK_U32 mpp_enc_debug = 0;
 module_param(mpp_enc_debug, uint, 0644);
@@ -404,6 +405,7 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
+	MppTaskInfo info;
 
 	if (NULL == enc) {
 		mpp_err_f("found NULL input enc\n");
@@ -426,7 +428,17 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 		mpp_packet_set_dts(enc->packet, dts);
 	}
 
-	ret = mpp_dev_ioctl(enc->dev, MPP_DEV_CMD_RUN_TASK, NULL);
+	{
+		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
+		RK_U32 chan_id = enc->chan_id;
+
+		if (mpidev_fn && mpidev_fn->notify) {
+			mpidev_fn->notify(chan_id, NOTIFY_ENC_GET_TASK_PIPE_ID, &info.pipe_id);
+			mpidev_fn->notify(chan_id, NOTIFY_ENC_GET_TASK_FRAME_ID, &info.frame_id);
+		}
+	}
+
+	ret = mpp_dev_ioctl(enc->dev, MPP_DEV_CMD_RUN_TASK, &info);
 
 	enc_dbg_func("%p out\n", enc);
 
