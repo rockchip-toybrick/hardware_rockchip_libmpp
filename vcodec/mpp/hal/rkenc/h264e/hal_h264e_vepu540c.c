@@ -2668,6 +2668,11 @@ static MPP_RET hal_h264e_vepu540c_status_check(void *hal)
 		return MPP_NOK;
 	}
 
+	if (regs_set->reg_ctl.int_sta.wrap_sid_mis_sta) {
+		hal_h264e_dbg_warning("source id mismatch\n");
+		return MPP_ERR_INT_SOURCE_MIS;
+	}
+
 	return MPP_OK;
 }
 

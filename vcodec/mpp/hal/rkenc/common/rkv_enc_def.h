@@ -20,6 +20,7 @@
 #define RKV_ENC_INT_BUS_READ_ERROR      0x00000080
 #define RKV_ENC_INT_TIMEOUT_ERROR       0x00000100
 #define RKV_ENC_INT_JPEG_OVERFLOW       0x00002000
+#define RKV_ENC_INT_SOURCE_ID_MIS       BIT(16)
 
 
 #define RKVENC_CODING_TYPE_AUTO          0x0000	/* Let enc choose the right type */

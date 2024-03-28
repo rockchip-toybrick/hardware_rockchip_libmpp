@@ -253,6 +253,7 @@ struct rkvenc_debug_info {
 	/* err info */
 	u32 wrap_overflow_cnt;
 	u32 bsbuf_overflow_cnt;
+	u32 wrap_source_mis_cnt;
 	/* record bs buf top/bot/write/read addr */
 	u32 bsbuf_info[4];
 	u32 enc_err_cnt;
@@ -1419,6 +1420,16 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 			enc->dvbm_overflow = 1;
 			mpp_dbg_warning("current frame has overflow\n");
 		}
+		/*
+		* Workaround:
+		* The line cnt is updated in the mcu.
+		* When line cnt is set to max value 0x3ffe,
+		* the cur frame source id is mismatch.
+		*/
+		if (enc->line_cnt == 0x3ffe) {
+			mpp->irq_status |= BIT(16);
+			priv->info.wrap_source_mis_cnt++;
+		}
 		if (enc->dvbm_overflow) {
 			mpp->irq_status |= BIT(6);
 			enc->dvbm_overflow = 0;
@@ -2084,9 +2095,9 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 		if (show)
 			seq_printf(seq, "%8s|", enc_info_item_name[i]);
 	}
-	seq_printf(seq, "%15s|%10s|%12s|%10s|%13s|%13s",
+	seq_printf(seq, "%15s|%10s|%12s|%10s|%15s|%13s|%13s",
 		   "hw_running", "online", "wrap_ovfl", "bs_ovfl",
-		   "enc_err_cnt", "enc_err_st");
+		   "wrap_src_mis", "enc_err_cnt", "enc_err_st");
 	seq_puts(seq, "\n");
 	/* item data*/
 	seq_printf(seq, "%8d|", session->chn_id);
@@ -2107,9 +2118,9 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 		} else
 			seq_printf(seq, "%8s|", (const char *)"null");
 	}
-	seq_printf(seq, "%15d|%10d|%12d|%10d|%13d|%13x",
+	seq_printf(seq, "%15d|%10d|%12d|%10d|%15d|%13d|%13x",
 		   priv->info.hw_running, priv->dvbm_en ? 1 : 0, priv->info.wrap_overflow_cnt,
-		   priv->info.bsbuf_overflow_cnt,
+		   priv->info.bsbuf_overflow_cnt, priv->info.wrap_source_mis_cnt,
 		   priv->info.enc_err_cnt, priv->info.enc_err_status);
 	seq_puts(seq, "\n");
 

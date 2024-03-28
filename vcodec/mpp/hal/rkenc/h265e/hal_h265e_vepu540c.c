@@ -2579,6 +2579,11 @@ static MPP_RET vepu540c_h265_set_feedback(H265eV540cHalContext *ctx,
 		return MPP_NOK;
 	}
 
+	if (hw_status & RKV_ENC_INT_SOURCE_ID_MIS) {
+		hal_h265e_dbg_warning("source id mismatch\n");
+		return MPP_ERR_INT_SOURCE_MIS;
+	}
+
 	fb->st_madi = madi_th_cnt0 * regs_set->reg_rc_roi.madi_st_thd.madi_th0 +
 		      madi_th_cnt1 * (regs_set->reg_rc_roi.madi_st_thd.madi_th0 +
 				      regs_set->reg_rc_roi.madi_st_thd.madi_th1) / 2 +

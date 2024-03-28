@@ -74,6 +74,7 @@ enum notify_cmd {
 	NOTIFY_ENC_TASK_READY,
 	NOTIFY_ENC_GET_TASK_PIPE_ID,
 	NOTIFY_ENC_GET_TASK_FRAME_ID,
+	NOTIFY_ENC_SOURCE_ID_MISMATCH,
 };
 
 struct vcodec_mpidev_fn {

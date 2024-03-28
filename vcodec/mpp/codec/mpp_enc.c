@@ -427,6 +427,10 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 		mpp_packet_set_pts(enc->packet, pts);
 		mpp_packet_set_dts(enc->packet, dts);
 	}
+	if (enc->frame) {
+		mpp_frame_set_pts(enc->frame, pts);
+		mpp_frame_set_dts(enc->frame, dts);
+	}
 
 	{
 		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();

@@ -2125,14 +2125,17 @@ TASK_DONE:
 	{
 		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
 		MppEncCfgSet *cfg = &enc->cfg;
+		RK_U32 is_intra = (cfg->codec.coding == MPP_VIDEO_CodingMJPEG || frm->is_intra);
+		RK_U64 dts = mpp_frame_get_dts(hal_task->frame);
+		RK_U64 pts = mpp_frame_get_pts(hal_task->frame);
 
-		if (mpidev_fn && mpidev_fn->set_intra_info) {
-			RK_U64 dts = mpp_frame_get_dts(hal_task->frame);
-			RK_U64 pts = mpp_frame_get_pts(hal_task->frame);
-			RK_U32 is_intra = (cfg->codec.coding == MPP_VIDEO_CodingMJPEG || frm->is_intra);
-
-			mpidev_fn->set_intra_info(enc->chan_id, dts, pts, is_intra);
+		if (ret == MPP_ERR_INT_SOURCE_MIS) {
+			if (mpidev_fn && mpidev_fn->notify)
+				mpidev_fn->notify(enc->chan_id, NOTIFY_ENC_SOURCE_ID_MISMATCH, &dts);
 		}
+
+		if (mpidev_fn && mpidev_fn->set_intra_info)
+			mpidev_fn->set_intra_info(enc->chan_id, dts, pts, is_intra);
 	}
 
 	if (enc->frame)
