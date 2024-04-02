@@ -393,8 +393,17 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 	ret = mpp_enc_impl_hw_start(ctx, jpeg_ctx);
 	enc->enc_status = ENC_STATUS_START_DONE;
 
-	if (MPP_OK == ret)
+	if (MPP_OK == ret) {
+		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
+
+		if (mpidev_fn && mpidev_fn->notify) {
+			RK_U64 dts = mpp_frame_get_dts(enc->frame);
+
+			if (enc->online)
+				mpidev_fn->notify(enc->chan_id, NOTIFY_ENC_TASK_READY, &dts);
+		}
 		atomic_set(&enc->hw_run, 1);
+	}
 	up(&enc->enc_sem);
 	enc_dbg_func("%p out\n", enc);
 
@@ -414,8 +423,7 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 
 	enc_dbg_func("%p in\n", enc);
 
-	if (enc->enc_status != ENC_STATUS_START_IN &&
-	    enc->enc_status != ENC_STATUS_START_DONE)
+	if (enc->enc_status != ENC_STATUS_START_DONE)
 		return MPP_NOK;
 
 	enc->enc_status = ENC_STATUS_RUN_TASK_IN;
