@@ -229,6 +229,8 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 					mpidev_fn->notify_drop_frm(comb_chan->chan_id);
 				mpp_frame_deinit(&comb_frame);
 			}
+			if (frame)
+				mpp_frame_deinit(&frame);
 			vcodec_thread_trigger(venc->thd);
 		}
 		cfg_end = mpp_time();

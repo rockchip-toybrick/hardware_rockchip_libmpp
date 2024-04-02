@@ -1710,10 +1710,7 @@ TASK_DONE:
 
 static void mpp_enc_terminate_task(MppEncImpl *enc, EncTask *task)
 {
-	if (enc->frame) {
-		mpp_frame_deinit(&enc->frame);
-		enc->frame = NULL;
-	}
+	enc->frame = NULL;
 
 	if (enc->packet) {
 		mpp_packet_set_length(enc->packet, 0);
