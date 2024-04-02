@@ -418,6 +418,7 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 	    enc->enc_status != ENC_STATUS_START_DONE)
 		return MPP_NOK;
 
+	enc->enc_status = ENC_STATUS_RUN_TASK_IN;
 	/*
 	 * The frame configuration is gennerated in advance,
 	 * so the pts/dts info may not match to per frame.
@@ -443,6 +444,8 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 	}
 
 	ret = mpp_dev_ioctl(enc->dev, MPP_DEV_CMD_RUN_TASK, &info);
+
+	enc->enc_status = ret ? ENC_STATUS_START_DONE : ENC_STATUS_RUN_TASK_DONE;
 
 	enc_dbg_func("%p out\n", enc);
 
