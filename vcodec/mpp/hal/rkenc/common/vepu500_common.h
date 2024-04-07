@@ -153,21 +153,7 @@ typedef struct Vepu500OsdRegion_t {
 		RK_U32 osd_ch_ds_mode    : 1;
 		RK_U32 reserved1          : 6;
 	} cfg5;
-
-	struct {
-		RK_U32 osd_v_b_lut0    : 8;
-		RK_U32 osd_u_g_lut0    : 8;
-		RK_U32 osd_y_r_lut0    : 8;
-		RK_U32 osd_v_b_lut1    : 8;
-	} cfg6;
-
-	struct {
-		RK_U32 osd_u_g_lut1      : 8;
-		RK_U32 osd_y_r_lut1      : 8;
-		RK_U32 osd_alpha_lut0    : 8;
-		RK_U32 osd_alpha_lut1    : 8;
-	} cfg7;
-
+	RK_U8 lut[8];
 	/* only for h.264/h.h265, jpeg no use */
 	struct {
 		RK_U32 osd_qp_adj_sel    : 1;
@@ -2302,6 +2288,7 @@ extern "C" {
 
 MPP_RET vepu500_set_roi(Vepu500RoiCfg *roi_reg_base, MppEncROICfg * roi, RK_S32 w, RK_S32 h);
 MPP_RET vepu500_set_jpeg_reg(Vepu500JpegCfg *cfg);
+MPP_RET vepu500_set_osd(Vepu500OsdCfg * cfg);
 
 #ifdef __cplusplus
 }

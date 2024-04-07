@@ -184,6 +184,16 @@ static VepuFmtCfg vepu5xx_yuv_cfg[MPP_FMT_YUV_BUTT] = {
 		.weight = zeros,
 		.offset = zeros,
 	},
+
+	{	/* MPP_FMT_AYUV1BPP */
+		.format = VEPU500_FMT_AYUV1BPP,
+		.alpha_swap = 0,
+		.rbuv_swap = 0,
+		.src_range = 0,
+		.src_endian = 0,
+		.weight = zeros,
+		.offset = zeros,
+	},
 };
 
 static VepuFmtCfg vepu5xx_rgb_cfg[MPP_FMT_RGB_BUTT - MPP_FRAME_FMT_RGB] = {

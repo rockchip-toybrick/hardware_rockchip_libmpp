@@ -80,6 +80,79 @@ DONE:
 	return ret;
 }
 
+MPP_RET vepu500_set_osd(Vepu500OsdCfg * cfg)
+{
+	Vepu500Osd *regs = (Vepu500Osd *) (cfg->reg_base);
+	MppEncOSDData3 *osd = cfg->osd_data3;
+	MppEncOSDRegion3 *region = osd->region;
+	MppEncOSDRegion3 *tmp = region;
+	RK_U32 num;
+	RK_U32 i = 0;
+
+	if (!osd || osd->num_region == 0)
+		return MPP_OK;
+
+	if (osd->num_region > 8) {
+		mpp_err_f("do NOT support more than 8 regions invalid num %d\n",
+			  osd->num_region);
+		mpp_assert(osd->num_region <= 8);
+		return MPP_NOK;
+	}
+	num = osd->num_region;
+	for (i = 0; i < num; i++, tmp++) {
+		Vepu500OsdRegion *reg = (Vepu500OsdRegion *) & regs->osd_regions[i];
+		VepuFmtCfg fmt_cfg;
+		MppFrameFormat fmt = tmp->fmt;
+
+		vepu5xx_set_fmt(&fmt_cfg, fmt);
+		reg->cfg0.osd_en = tmp->enable;
+		reg->cfg0.osd_range_trns_en = tmp->range_trns_en;
+		reg->cfg0.osd_range_trns_sel = tmp->range_trns_sel;
+		reg->cfg0.osd_fmt = fmt_cfg.format;
+		reg->cfg0.osd_rbuv_swap = tmp->rbuv_swap;
+		reg->cfg1.osd_lt_xcrd = tmp->lt_x;
+		reg->cfg1.osd_lt_ycrd = tmp->lt_y;
+		reg->cfg2.osd_rb_xcrd = tmp->rb_x;
+		reg->cfg2.osd_rb_ycrd = tmp->rb_y;
+		reg->cfg1.osd_endn = tmp->osd_endn;
+		reg->cfg5.osd_stride = tmp->stride;
+		reg->cfg5.osd_ch_ds_mode = tmp->ch_ds_mode;
+
+		reg->cfg0.osd_alpha_swap = tmp->alpha_cfg.alpha_swap;
+		reg->cfg0.osd_fg_alpha = tmp->alpha_cfg.fg_alpha;
+		reg->cfg0.osd_fg_alpha_sel = tmp->alpha_cfg.fg_alpha_sel;
+
+		reg->cfg0.osd_qp_adj_en = tmp->qp_cfg.qp_adj_en;
+		reg->cfg8.osd_qp_adj_sel = tmp->qp_cfg.qp_adj_sel;
+		reg->cfg8.osd_qp = tmp->qp_cfg.qp;
+		reg->cfg8.osd_qp_max = tmp->qp_cfg.qp_max;
+		reg->cfg8.osd_qp_min = tmp->qp_cfg.qp_min;
+		reg->cfg8.osd_qp_prj = tmp->qp_cfg.qp_prj;
+
+		if (tmp->osd_buf.buf)
+			reg->osd_st_addr = mpp_dev_get_mpi_ioaddress(cfg->dev, tmp->osd_buf.buf, 0);
+		memcpy(reg->lut, tmp->lut, sizeof(tmp->lut));
+	}
+
+	regs->osd_whi_cfg0.osd_csc_yr = 77;
+	regs->osd_whi_cfg0.osd_csc_yg = 150;
+	regs->osd_whi_cfg0.osd_csc_yb = 29;
+
+	regs->osd_whi_cfg1.osd_csc_ur = -43;
+	regs->osd_whi_cfg1.osd_csc_ug = -85;
+	regs->osd_whi_cfg1.osd_csc_ub = 128;
+
+	regs->osd_whi_cfg2.osd_csc_vr = 128;
+	regs->osd_whi_cfg2.osd_csc_vg = -107;
+	regs->osd_whi_cfg2.osd_csc_vb = -21;
+
+	regs->osd_whi_cfg3.osd_csc_ofst_y = 0;
+	regs->osd_whi_cfg3.osd_csc_ofst_u = 128;
+	regs->osd_whi_cfg3.osd_csc_ofst_v = 128;
+
+	return MPP_OK;
+}
+
 static MPP_RET vepu500_jpeg_set_uv_offset(Vepu500JpegFrame *regs, JpegeSyntax * syn,
 					  VepuFmt input_fmt, HalEncTask * task)
 {

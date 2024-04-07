@@ -215,7 +215,8 @@ typedef enum {
 	MPP_FMT_YUV411SP        = (MPP_FRAME_FMT_YUV + 14), /* YYYY... UV...            */
 	MPP_FMT_YUV444SP        = (MPP_FRAME_FMT_YUV + 15), /* YYYY... UVUVUVUV...      */
 	MPP_FMT_YUV444P         = (MPP_FRAME_FMT_YUV + 16), /* YYYY... UVUVUVUV...      */
-	MPP_FMT_AYUV2BPP        = (MPP_FRAME_FMT_YUV + 17), /* YYYY... UVUVUVUV...      */
+	MPP_FMT_AYUV2BPP        = (MPP_FRAME_FMT_YUV + 17),
+	MPP_FMT_AYUV1BPP        = (MPP_FRAME_FMT_YUV + 18),
 	MPP_FMT_YUV_BUTT,
 
 	MPP_FMT_RGB565          = (MPP_FRAME_FMT_RGB + 0),  /* 16-bit RGB               */

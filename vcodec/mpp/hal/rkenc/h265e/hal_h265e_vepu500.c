@@ -75,6 +75,8 @@ typedef struct H265eV500HalContext_t {
 	/* @frame_cnt starts from ZERO */
 	RK_U32                  frame_cnt;
 	void                    *roi_data;
+	/* osd */
+	Vepu500OsdCfg           osd_cfg;
 	MppEncCfgSet            *cfg;
 
 	/* two-pass deflicker */
@@ -727,6 +729,7 @@ MPP_RET hal_h265e_v500_init(void *hal, MppEncHalCfg *cfg)
 {
 	MPP_RET ret = MPP_OK;
 	H265eV500HalContext *ctx = (H265eV500HalContext *)hal;
+	H265eV500RegSet *regs = NULL;
 
 	hal_h265e_enter();
 
@@ -754,6 +757,10 @@ MPP_RET hal_h265e_v500_init(void *hal, MppEncHalCfg *cfg)
 		ret = MPP_NOK;
 		goto __failed;
 	}
+
+	regs = (H265eV500RegSet *)ctx->regs;
+	ctx->osd_cfg.reg_base = &regs->reg_osd;
+	ctx->osd_cfg.dev = cfg->dev;
 
 	/* setup default hardware config */
 	{
@@ -1661,6 +1668,9 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_ref_regs(syn, reg_frm);
 	vepu500_h265_set_ext_line_buf(ctx, ctx->regs);
 
+	if (ctx->osd_cfg.osd_data3)
+		vepu500_set_osd(&ctx->osd_cfg);
+
 	if (ctx->roi_data)
 		vepu500_set_roi(&regs->reg_rc_roi.roi_cfg, ctx->roi_data,
 				ctx->cfg->prep.width, ctx->cfg->prep.height);
@@ -1912,6 +1922,7 @@ MPP_RET hal_h265e_v500_get_task(void *hal, HalEncTask *task)
 	hal_h265e_enter();
 
 	ctx->roi_data = mpp_frame_get_roi(task->frame);
+	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
 
 	ctx->frame_type = frm_status->is_intra ? INTRA_FRAME : INTER_P_FRAME;
 

@@ -104,6 +104,9 @@ typedef struct HalH264eVepu500Ctx_t {
 	/* roi */
 	void                    *roi_data;
 
+	/* osd */
+	Vepu500OsdCfg           osd_cfg;
+
 	/* two-pass deflicker */
 	MppBuffer               buf_pass1;
 
@@ -259,6 +262,9 @@ static MPP_RET hal_h264e_vepu500_init(void *hal, MppEncHalCfg *cfg)
 		mpp_err_f("init register buffer failed\n");
 		goto DONE;
 	}
+
+	p->osd_cfg.reg_base = &p->regs_set->reg_osd;
+	p->osd_cfg.dev = p->dev;
 
 	{
 		/* setup default hardware config */
@@ -549,10 +555,8 @@ static MPP_RET hal_h264e_vepu500_get_task(void *hal, HalEncTask *task)
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 
-	// ctx->osd_cfg.reg_frm = &ctx->regs_set->reg_osd_cfg.osd_comb_cfg;
-
 	ctx->roi_data = mpp_frame_get_roi(task->frame);
-	// ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
+	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
 
 	if (!frm_status->reencode) {
 		if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))
@@ -1932,9 +1936,11 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 
 	setup_vepu500_split(regs, cfg);
 	setup_vepu500_me(regs, sps, slice);
-
 	setup_vepu500_l2(regs, slice, &cfg->hw);
 	setup_vepu500_ext_line_buf(regs, ctx);
+
+	if (ctx->osd_cfg.osd_data3)
+		vepu500_set_osd(&ctx->osd_cfg);
 
 	if (ctx->roi_data)
 		vepu500_set_roi(&regs->reg_rc_roi.roi_cfg, ctx->roi_data,
