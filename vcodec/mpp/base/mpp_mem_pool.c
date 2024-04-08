@@ -22,6 +22,7 @@ typedef struct MppMemPoolNode_t {
 	struct list_head    list;
 	void                *ptr;
 	size_t              size;
+	RK_U32		    id;
 } MppMemPoolNode;
 
 typedef struct MppMemPoolImpl_t {
@@ -34,6 +35,7 @@ typedef struct MppMemPoolImpl_t {
 	RK_S32              used_count;
 	RK_S32              unused_count;
 	RK_U32		    max_cnt;
+	RK_U32	    	    node_id;
 } MppMemPoolImpl;
 
 #define mem_pool_dbg_flow(fmt, ...) mpp_dbg(0, fmt, ## __VA_ARGS__)
@@ -53,6 +55,7 @@ MppMemPool mpp_mem_get_pool_f(const char *caller, const char *name, size_t size,
 	pool->unused_count = 0;
 	pool->name = name;
 	pool->max_cnt = max_cnt;
+	pool->node_id = 0;
 
 	INIT_LIST_HEAD(&pool->used);
 	INIT_LIST_HEAD(&pool->unused);
@@ -69,13 +72,14 @@ void mpp_mem_put_pool_f(const char *caller, MppMemPool pool)
 	unsigned long flags;
 
 	if (impl != impl->check) {
-		mpp_err_f("invalid mem impl %p check %p\n", impl, impl->check);
+		mpp_err_f("invalid mem %s pool %p check %p\n", impl->name, impl, impl->check);
 		return;
 	}
 
 	spin_lock_irqsave(&impl->lock, flags);
 
-	mem_pool_dbg_flow("pool %d get used:unused [%d:%d] from %s\n", impl->size,
+	mem_pool_dbg_flow("put %s pool %d used:unused [%d:%d] from %s\n",
+			  impl->name, impl->size,
 			  impl->used_count, impl->unused_count, caller);
 	if (!list_empty(&impl->unused)) {
 		list_for_each_entry_safe(node, m, &impl->unused, list) {
@@ -85,8 +89,8 @@ void mpp_mem_put_pool_f(const char *caller, MppMemPool pool)
 	}
 
 	if (!list_empty(&impl->used)) {
-		mpp_err_f("found %d used buffer size %d\n",
-			  impl->used_count, impl->size);
+		mpp_err_f("%s pool found %d used buffer size %d\n",
+			  impl->name, impl->used_count, impl->size);
 
 		list_for_each_entry_safe(node, m, &impl->used, list) {
 			MPP_FREE(node);
@@ -95,8 +99,8 @@ void mpp_mem_put_pool_f(const char *caller, MppMemPool pool)
 	}
 
 	if (impl->used_count || impl->unused_count)
-		mpp_err_f("pool size %d found leaked buffer used:unused [%d:%d]\n",
-			  impl->size, impl->used_count, impl->unused_count);
+		mpp_err_f("%s pool size %d found leaked buffer used:unused [%d:%d]\n",
+			  impl->name, impl->size, impl->used_count, impl->unused_count);
 
 	spin_unlock_irqrestore(&impl->lock, flags);
 
@@ -126,7 +130,7 @@ void *mpp_mem_pool_get_f(const char *caller, MppMemPool pool)
 	}
 
 	if ((impl->unused_count + impl->used_count) >= impl->max_cnt) {
-		mpp_log("pool %d reach max cnt %d\n", impl->size, impl->max_cnt);
+		mpp_log("%s pool %d reach max cnt %d\n", impl->name, impl->size, impl->max_cnt);
 		goto DONE;
 	}
 	spin_unlock_irqrestore(&impl->lock, flags);
@@ -141,13 +145,15 @@ void *mpp_mem_pool_get_f(const char *caller, MppMemPool pool)
 	node->check = node;
 	node->ptr = (void *)(node + 1);
 	node->size = impl->size;
+	node->id = impl->node_id++;
 	INIT_LIST_HEAD(&node->list);
 	list_add_tail(&node->list, &impl->used);
 	impl->used_count++;
 	ptr = node->ptr;
 
 DONE:
-	mem_pool_dbg_flow("pool %d get used:unused [%d:%d] from %s\n", impl->size,
+	mem_pool_dbg_flow("%s pool size %d node_id %d get used:unused [%d:%d] from %s\n",
+			  impl->name, impl->size, node->id,
 			  impl->used_count, impl->unused_count, caller);
 	spin_unlock_irqrestore(&impl->lock, flags);
 	if (node)
@@ -163,13 +169,13 @@ void mpp_mem_pool_put_f(const char *caller, MppMemPool pool, void *p)
 	unsigned long flags;
 
 	if (impl != impl->check) {
-		mpp_err_f("invalid mem pool %p check %p\n", impl, impl->check);
+		mpp_err_f("invalid mem %s pool %p check %p\n", impl->name, impl, impl->check);
 		return;
 	}
 
 	if (node != node->check) {
-		mpp_err_f("invalid mem pool ptr %p node %p check %p\n",
-			  p, node, node->check);
+		mpp_err_f("invalid mem %s pool ptr %p node %p check %p\n",
+			  impl->name, p, node, node->check);
 		return;
 	}
 
@@ -181,7 +187,8 @@ void mpp_mem_pool_put_f(const char *caller, MppMemPool pool, void *p)
 	impl->unused_count++;
 	node->check = NULL;
 
-	mem_pool_dbg_flow("pool %d put used:unused [%d:%d] from %s\n", impl->size,
+	mem_pool_dbg_flow("%s pool size %d node_id %d put used:unused [%d:%d] from %s\n",
+			  impl->name, impl->size, node->id,
 			  impl->used_count, impl->unused_count, caller);
 
 	spin_unlock_irqrestore(&impl->lock, flags);
