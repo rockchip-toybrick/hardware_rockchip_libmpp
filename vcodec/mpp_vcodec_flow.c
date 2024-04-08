@@ -152,6 +152,12 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			if (comb_chan->state != CHAN_STATE_RUN)
 				comb_chan = NULL;
 
+			if (atomic_read(&comb_chan->runing) > 0) {
+				mpp_err_f("chan %d combo chan %d state is wating irq\n",
+					  chan_id, frm_info.jpeg_chan_id);
+				comb_chan = NULL;
+			}
+
 			if (comb_chan && comb_chan->handle) {
 
 				chan_entry->combo_gap_time = (RK_S32)(mpp_time() - chan_entry->last_jeg_combo_start);

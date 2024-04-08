@@ -376,6 +376,7 @@ MPP_RET mpp_enc_cfg_reg(MppEnc ctx, MppFrame frame)
 MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
+	MppEncImpl *jpeg_enc = (MppEncImpl *)jpeg_ctx;
 	MPP_RET ret = MPP_OK;
 
 	if (NULL == enc) {
@@ -390,8 +391,12 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 		return MPP_NOK;
 	}
 	enc->enc_status = ENC_STATUS_START_IN;
+	if (jpeg_enc)
+		jpeg_enc->enc_status = ENC_STATUS_START_IN;
 	ret = mpp_enc_impl_hw_start(ctx, jpeg_ctx);
 	enc->enc_status = ENC_STATUS_START_DONE;
+	if (jpeg_enc)
+		jpeg_enc->enc_status = ENC_STATUS_START_DONE;
 
 	if (MPP_OK == ret) {
 		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
@@ -506,6 +511,7 @@ MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
 			    MppPacket * jpeg_packet)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
+	MppEncImpl *jpeg_enc = (MppEncImpl *)jpeg_ctx;
 	MPP_RET ret = MPP_OK;
 
 	if (NULL == enc) {
@@ -515,8 +521,12 @@ MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
 
 	enc_dbg_func("%p in\n", enc);
 	enc->enc_status = ENC_STATUS_INT_IN;
+	if (jpeg_enc)
+		jpeg_enc->enc_status = ENC_STATUS_INT_IN;
 	ret = mpp_enc_impl_int(ctx, jpeg_ctx, packet, jpeg_packet);
 	enc->enc_status = ENC_STATUS_INT_DONE;
+	if (jpeg_enc)
+		jpeg_enc->enc_status = ENC_STATUS_INT_DONE;
 	atomic_set(&enc->hw_run, 0);
 	enc_dbg_func("%p out\n", enc);
 
