@@ -1846,6 +1846,7 @@ static struct mpp_session *mpp_chnl_open(int client_type)
 		return NULL;
 	session->srv = g_srv;
 	session->k_space = 1;
+	session->pp_session = false;
 	session->process_task = mpp_process_task_default;
 	session->wait_result = mpp_wait_result_default;
 	session->deinit = mpp_session_deinit_default;
@@ -1854,6 +1855,12 @@ static struct mpp_session *mpp_chnl_open(int client_type)
 		list_add_tail(&session->service_link, &g_srv->session_list);
 		mutex_unlock(&g_srv->session_lock);
 	}
+#ifdef RKVEPU500_PP_ENABLE
+	if (client_type == MPP_DEVICE_RKVENC_PP) {
+		session->pp_session = true;
+		client_type = MPP_DEVICE_RKVENC;
+	}
+#endif
 	client_type = array_index_nospec(client_type, MPP_DEVICE_BUTT);
 	mpp = g_srv->sub_devices[client_type];
 	if (!mpp)

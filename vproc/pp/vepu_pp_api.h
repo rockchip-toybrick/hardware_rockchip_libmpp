@@ -77,7 +77,8 @@ struct pp_od_cfg {
 	int is_background;
 	int thres_complex;
 	int thres_area_complex;
-	int reserved[8];
+	struct mpi_buf *odw_buf;
+	int reserved[7];
 };
 
 struct pp_smear_cfg {

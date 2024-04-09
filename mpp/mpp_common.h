@@ -279,6 +279,7 @@ struct mpp_session {
 	u32 chn_id;
 	u32 k_space;
 	u32 online;
+	bool pp_session;
 	/*
 	 * session handler from mpp_dev_ops
 	 * process_task - handle messages of sending task
