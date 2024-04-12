@@ -957,10 +957,7 @@ static int rkvenc_link_fill_table(struct rkvenc_link_dev *link,
 	struct rkvenc_reg_msg *msg;
 	u32 *tb_reg = (u32 *)table->vaddr;
 	struct rkvenc_hw_info *hw = task->hw_info;
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-	struct rkvenc2_session_priv *priv =
-		(struct rkvenc2_session_priv *)task->mpp_task.session;
-#endif
+
 	//mpp_err("table->iova=%pad \n", &table->iova);
 	/* set class data addr valid */
 	hdr = (struct rkvenc_link_header *)table->vaddr;
@@ -1006,19 +1003,6 @@ static int rkvenc_link_fill_table(struct rkvenc_link_dev *link,
 	msg = &hw->reg_msg[RKVENC_CLASS_ST];
 	di = link->class_off[RKVENC_CLASS_ST] / sizeof(u32);
 	memset(&tb_reg[di], 0, msg->link_len);
-
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-	{
-		u32 dvbm_cfg = task->reg[RKVENC_CLASS_CTL].data[24];
-		struct rkvenc_dev *enc = link->enc;
-
-		di = link->class_off[RKVENC_CLASS_PIC] / sizeof(u32);
-		if (dvbm_cfg) {
-			priv->dvbm_en = dvbm_cfg;
-			rk_dvbm_link(enc->port);
-		}
-	}
-#endif
 	dma_sync_single_for_device(link->enc->mpp.dev, table->iova,
 				   table->size, DMA_FROM_DEVICE);
 	dma_sync_single_for_cpu(link->enc->mpp.dev, table->iova,
@@ -1206,7 +1190,6 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 		if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
 			if (dvbm_en) {
 				enc->dvbm_overflow = 0;
-				rk_dvbm_link(enc->port);
 				update_online_info(mpp, mpp_task->pipe_id);
 				priv->dvbm_link = 1;
 				wmb();
@@ -1539,9 +1522,6 @@ static int rkvenc_link_isr(struct mpp_dev *mpp,
 	}
 	//mpp_err("list_empty=%d\n", list_empty(&mpp->queue->running_list));
 	if (list_empty(&mpp->queue->running_list) && priv->dvbm_en) {
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-		rk_dvbm_unlink(enc->port);
-#endif
 		if (mpp->irq_status & hw->err_mask)
 			rkvenc_reset(mpp);
 	}
@@ -1700,7 +1680,6 @@ static int rkvenc_finish(struct mpp_dev *mpp,
 		u32 i, j;
 		u32 *reg;
 		struct mpp_request *req;
-		struct mpp_session *session = mpp_task->session;
 
 		if (mpp->irq_status & 0x100 || mpp->dump_regs)
 			rkvenc_dump_dbg(mpp);
@@ -1721,13 +1700,6 @@ static int rkvenc_finish(struct mpp_dev *mpp,
 		reg = rkvenc_get_class_reg(task, task->hw_info->int_sta_base);
 		if (reg)
 			*reg = task->irq_status;
-
-		if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
-			struct rkvenc2_session_priv *priv = session->priv;
-
-			if (priv->dvbm_en)
-				rk_dvbm_unlink(enc->port);
-		}
 	} break;
 	default:
 		break;
@@ -1896,12 +1868,7 @@ static int rkvenc_free_session(struct mpp_session *session)
 		if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
 			struct rkvenc2_session_priv *priv =
 				(struct rkvenc2_session_priv *)session->priv;
-			struct rkvenc_dev *enc = to_rkvenc_dev(session->mpp);
 
-			if (priv->dvbm_link) {
-				rk_dvbm_unlink(enc->port);
-				priv->dvbm_link = 0;
-			}
 			if (priv->dvbm_en)
 				session->mpp->always_on = 0;
 		}
