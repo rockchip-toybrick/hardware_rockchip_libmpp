@@ -215,6 +215,8 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 					wake_up(&comb_chan->stop_wait);
 					if (mpidev_fn && mpidev_fn->notify_drop_frm && comb_chan)
 						mpidev_fn->notify_drop_frm(comb_chan->chan_id);
+					if (comb_frame)
+						mpp_frame_deinit(&comb_frame);
 					ret = mpp_enc_hw_start( (MppEnc)chan_entry->handle, NULL);
 				}
 			} else
@@ -228,15 +230,16 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			venc = mpp_vcodec_get_enc_module_entry();
 			atomic_dec(&chan_entry->runing);
 			wake_up(&chan_entry->stop_wait);
-			if (mpidev_fn && mpidev_fn->notify_drop_frm && chan_entry)
-				mpidev_fn->notify_drop_frm(chan_entry->chan_id);
+			if (frame) {
+				if (mpidev_fn && mpidev_fn->notify_drop_frm && chan_entry)
+					mpidev_fn->notify_drop_frm(chan_entry->chan_id);
+				mpp_frame_deinit(&frame);
+			}
 			if (comb_frame) {
 				if (mpidev_fn && mpidev_fn->notify_drop_frm && comb_chan)
 					mpidev_fn->notify_drop_frm(comb_chan->chan_id);
 				mpp_frame_deinit(&comb_frame);
 			}
-			if (frame)
-				mpp_frame_deinit(&frame);
 			vcodec_thread_trigger(venc->thd);
 		}
 		cfg_end = mpp_time();
