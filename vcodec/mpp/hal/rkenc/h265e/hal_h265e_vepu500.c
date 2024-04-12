@@ -297,6 +297,8 @@ static MPP_RET vepu500_h265_setup_hal_bufs(H265eV500HalContext *ctx)
 	vepu5xx_set_fmt(fmt, ctx->cfg->prep.format);
 	input_fmt = (VepuFmt)fmt->format;
 	switch (input_fmt) {
+	case VEPU540_FMT_YUV400:
+		break;
 	case VEPU541_FMT_YUV420P:
 	case VEPU541_FMT_YUV420SP: {
 		frame_size = frame_size * 3 / 2;
@@ -308,6 +310,8 @@ static MPP_RET vepu500_h265_setup_hal_bufs(H265eV500HalContext *ctx)
 	case VEPU541_FMT_BGR565: {
 		frame_size *= 2;
 	} break;
+	case VEPU540C_FMT_YUV444SP:
+	case VEPU540C_FMT_YUV444P:
 	case VEPU541_FMT_BGR888: {
 		frame_size *= 3;
 	} break;
@@ -974,7 +978,7 @@ static MPP_RET vepu500_h265_set_pp_regs(H265eV500RegSet *regs, VepuFmtCfg *fmt,
 	reg_frm->reg0198_src_fmt.alpha_swap = fmt->alpha_swap;
 	reg_frm->reg0198_src_fmt.rbuv_swap = fmt->rbuv_swap;
 
-	reg_frm->reg0198_src_fmt.out_fmt = 1;
+	reg_frm->reg0198_src_fmt.out_fmt = (prep_cfg->format == MPP_FMT_YUV400) ? 0 : 1;
 
 	reg_frm->reg0203_src_proc.src_mirr = prep_cfg->mirroring > 0;
 	reg_frm->reg0203_src_proc.src_rot = prep_cfg->rotation;
@@ -992,9 +996,19 @@ static MPP_RET vepu500_h265_set_pp_regs(H265eV500RegSet *regs, VepuFmtCfg *fmt,
 			stridey = prep_cfg->width * 2;
 	}
 
-	stridec = (reg_frm->reg0198_src_fmt.src_cfmt == VEPU541_FMT_YUV422SP ||
-		   reg_frm->reg0198_src_fmt.src_cfmt == VEPU541_FMT_YUV420SP) ?
-		  stridey : stridey / 2;
+	switch (fmt->format) {
+	case VEPU540C_FMT_YUV444SP : {
+		stridec = stridey * 2;
+	} break;
+	case VEPU541_FMT_YUV422SP :
+	case VEPU541_FMT_YUV420SP :
+	case VEPU540C_FMT_YUV444P : {
+		stridec = stridey;
+	} break;
+	default : {
+		stridec = stridey / 2;
+	} break;
+	}
 
 	if (reg_frm->reg0198_src_fmt.src_cfmt < VEPU541_FMT_ARGB1555) {
 		reg_frm->reg0199_src_udfy.csc_wgt_r2y = 77;

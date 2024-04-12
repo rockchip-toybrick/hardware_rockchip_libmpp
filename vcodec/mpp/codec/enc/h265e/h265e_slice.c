@@ -192,6 +192,7 @@ void h265e_slice_init(void *ctx, EncFrmStatus curr)
 	h265_pps * pps = &p->pps;
 	MppEncCfgSet * cfg = p->cfg;
 	MppEncH265Cfg * codec = &cfg->codec.h265;
+	MppEncPrepCfg *prep_cfg = &cfg->prep;
 	h265_slice * slice = p->dpb->curr->slice;
 	p->slice = p->dpb->curr->slice;
 	h265e_dbg_func("enter\n");
@@ -232,8 +233,8 @@ void h265e_slice_init(void *ctx, EncFrmStatus curr)
 		slice->pps_tc_offset_div2 = pps->pps_tc_offset_div2;
 	}
 	slice->sao_enable_flag = !codec->sao_cfg.slice_sao_luma_disable;
-	slice->sao_enable_flag_chroma =
-		!codec->sao_cfg.slice_sao_chroma_disable;
+	slice->sao_enable_flag_chroma = (prep_cfg->format == MPP_FMT_YUV400) ? 0 :
+					!codec->sao_cfg.slice_sao_chroma_disable;
 	slice->max_num_merge_cand = codec->merge_cfg.max_mrg_cnd;
 	slice->cabac_init_flag = codec->entropy_cfg.cabac_init_flag;
 	slice->pic_output_flag = 1;

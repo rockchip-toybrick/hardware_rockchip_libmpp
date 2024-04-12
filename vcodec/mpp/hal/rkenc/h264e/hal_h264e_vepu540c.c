@@ -831,7 +831,7 @@ static MPP_RET setup_vepu540c_prep(HalVepu540cRegSet *regs,
 	regs->reg_base.src_fmt.alpha_swap = cfg.alpha_swap;
 	regs->reg_base.src_fmt.rbuv_swap = cfg.rbuv_swap;
 	//    regs->reg_base.src_fmt.src_range  = cfg.src_range;
-	regs->reg_base.src_fmt.out_fmt = 1;
+	regs->reg_base.src_fmt.out_fmt = (fmt == MPP_FMT_YUV400 ? 0 : 1);;
 
 	if (MPP_FRAME_FMT_IS_FBC(fmt))
 		y_stride = MPP_ALIGN(prep->width, 16);

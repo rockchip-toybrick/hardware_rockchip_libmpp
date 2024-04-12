@@ -186,11 +186,25 @@ MPP_RET h265e_set_vps(H265eCtx * ctx, h265_vps * vps)
 	else
 		profileTierLevel->general_level_idc = codec->level;
 	profileTierLevel->tier_flag = codec->tier ? 1 : 0;
+
+	if (prep->format == MPP_FMT_YUV400) {
+		/* general_profile_idc == 4 */
+		codec->profile = MPP_PROFILE_HEVC_FORMAT_RANGE_EXTENDIONS;
+		profileTierLevel->general_max_12bit_constraint_flag = 1;
+		profileTierLevel->general_max_10bit_constraint_flag = 1;
+		profileTierLevel->general_max_8bit_constraint_flag = 1;
+		profileTierLevel->general_max_422chroma_constraint_flag = 1;
+		profileTierLevel->general_max_420chroma_constraint_flag = 1;
+		profileTierLevel->general_max_monochroma_constraint_flag = 1;
+		profileTierLevel->general_lower_bit_rate_constraint_flag = 1;
+	} else {
+		/* general_profile_idc == 2 */
+		profileTierLevel->profile_compatibility_flag[2] = 1;
+	}
+
 	profileTierLevel->profile_idc = codec->profile;
 
 	profileTierLevel->profile_compatibility_flag[codec->profile] = 1;
-	profileTierLevel->profile_compatibility_flag[2] = 1;
-
 	profileTierLevel->general_progressive_source_flag = 1;
 	profileTierLevel->general_non_packed_constraint_flag = 0;
 	profileTierLevel->general_frame_only_constraint_flag = 0;
@@ -205,6 +219,7 @@ MPP_RET h265e_set_sps(H265eCtx * ctx, h265_sps * sps, h265_vps * vps)
 	MppEncRcCfg *rc = &ctx->cfg->rc;
 	MppEncRefCfg ref_cfg = ctx->cfg->ref_cfg;
 	MppEncH265VuiCfg *vui = &codec->vui;
+	MppFrameFormat fmt = prep->format;
 	RK_S32 i_timebase_num = 1;
 	RK_S32 i_timebase_den = rc->fps_out_num / rc->fps_out_denorm;
 	RK_U8 convertToBit[MAX_CU_SIZE + 1];
@@ -269,7 +284,7 @@ MPP_RET h265e_set_sps(H265eCtx * ctx, h265_sps * sps, h265_vps * vps)
 
 	sps->sps_seq_parameter_set_id = 0;
 	sps->vps_video_parameter_set_id = 0;
-	sps->chroma_format_idc = 0x1;	//RKVE_CSP2_I420;
+	sps->chroma_format_idc = (fmt == MPP_FMT_YUV400) ? H265_CHROMA_400 : H265_CHROMA_420;
 	sps->vps_max_sub_layers_minus1 = 0;
 	sps->pic_width_in_luma_samples = prep->width + pad[0];
 	sps->pic_height_in_luma_samples = prep->height + pad[1];

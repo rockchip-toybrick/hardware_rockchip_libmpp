@@ -253,9 +253,24 @@ void code_profile_tier(H265eStream * s, profile_tier_level * ptl)
 	h265e_stream_write1_with_log(s, ptl->general_non_packed_constraint_flag, NULL);
 	h265e_stream_write1_with_log(s, ptl->general_frame_only_constraint_flag, NULL);
 
-	h265e_stream_write_with_log(s, 0, 16, NULL);
-	h265e_stream_write_with_log(s, 0, 16, NULL);
-	h265e_stream_write_with_log(s, 0, 12, NULL);
+	if (ptl->profile_idc == MPP_PROFILE_HEVC_FORMAT_RANGE_EXTENDIONS) {
+		h265e_stream_write1_with_log(s, ptl->general_max_12bit_constraint_flag, NULL);
+		h265e_stream_write1_with_log(s, ptl->general_max_10bit_constraint_flag, NULL);
+		h265e_stream_write1_with_log(s, ptl->general_max_8bit_constraint_flag,  NULL);
+		h265e_stream_write1_with_log(s, ptl->general_max_422chroma_constraint_flag, NULL);
+		h265e_stream_write1_with_log(s, ptl->general_max_420chroma_constraint_flag, NULL);
+		h265e_stream_write1_with_log(s, ptl->general_max_monochroma_constraint_flag, NULL);
+		h265e_stream_write1_with_log(s, ptl->general_intra_constraint_flag, NULL);
+		h265e_stream_write1_with_log(s, ptl->general_one_picture_only_constraint_flag, NULL);
+		h265e_stream_write1_with_log(s, ptl->general_lower_bit_rate_constraint_flag, NULL);
+		h265e_stream_write_with_log(s, 0, 16, NULL);
+		h265e_stream_write_with_log(s, 0, 16, NULL);
+		h265e_stream_write_with_log(s, 0, 3, NULL);
+	} else {
+		h265e_stream_write_with_log(s, 0, 16, NULL);
+		h265e_stream_write_with_log(s, 0, 16, NULL);
+		h265e_stream_write_with_log(s, 0, 12, NULL);
+	}
 }
 
 static void code_profile_tier_level(H265eStream * s,

@@ -454,6 +454,8 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 
 	input_fmt = (VepuFmt) fmt->format;
 	switch (input_fmt) {
+	case VEPU540_FMT_YUV400:
+		break;
 	case VEPU541_FMT_YUV420P:
 	case VEPU541_FMT_YUV420SP: {
 		frame_size = frame_size * 3 / 2;
@@ -1505,7 +1507,7 @@ static MPP_RET vepu540c_h265_set_pp_regs(H265eV540cRegSet *regs,
 	reg_base->reg0198_src_fmt.src_cfmt = fmt->format;
 	reg_base->reg0198_src_fmt.alpha_swap = fmt->alpha_swap;
 	reg_base->reg0198_src_fmt.rbuv_swap = fmt->rbuv_swap;
-	reg_base->reg0198_src_fmt.out_fmt = 1;
+	reg_base->reg0198_src_fmt.out_fmt = (prep_cfg->format == MPP_FMT_YUV400) ? 0 : 1;
 
 	reg_base->reg0203_src_proc.src_mirr = prep_cfg->mirroring > 0;
 	reg_base->reg0203_src_proc.src_rot = prep_cfg->rotation;

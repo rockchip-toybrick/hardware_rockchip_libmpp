@@ -15,6 +15,7 @@
 #include "mpp_mem.h"
 #include "mpp_maths.h"
 #include "vepu541_common.h"
+
 RK_S32 vepu541_get_roi_buf_size(RK_S32 w, RK_S32 h)
 {
 	RK_S32 stride_h = MPP_ALIGN(w, 64) / 16;

@@ -83,6 +83,15 @@ typedef struct ProfileTierLevel_e {
 	RK_U8 general_interlaced_source_flag;
 	RK_U8 general_non_packed_constraint_flag;
 	RK_U8 general_frame_only_constraint_flag;
+	RK_U8 general_max_12bit_constraint_flag;
+	RK_U8 general_max_10bit_constraint_flag;
+	RK_U8 general_max_8bit_constraint_flag;
+	RK_U8 general_max_422chroma_constraint_flag;
+	RK_U8 general_max_420chroma_constraint_flag;
+	RK_U8 general_max_monochroma_constraint_flag;
+	RK_U8 general_intra_constraint_flag;
+	RK_U8 general_one_picture_only_constraint_flag;
+	RK_U8 general_lower_bit_rate_constraint_flag;
 
 	RK_S32 profile_idc;
 	RK_S32 profile_space;

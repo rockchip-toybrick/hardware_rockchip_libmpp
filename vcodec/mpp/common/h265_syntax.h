@@ -99,6 +99,7 @@
 #define MPP_PROFILE_HEVC_MAIN                        1
 #define MPP_PROFILE_HEVC_MAIN_10                     2
 #define MPP_PROFILE_HEVC_MAIN_STILL_PICTURE          3
+#define MPP_PROFILE_HEVC_FORMAT_RANGE_EXTENDIONS     4
 
 /**
  * Value of the luma sample at position (x, y) in the 2D array tab.
@@ -178,5 +179,12 @@ typedef enum {
 	H265_LEVEL6_2 = 186,
 	H265_LEVEL8_5 = 255,
 } H265Level;
+
+typedef enum H265ChromaFmt_e {
+	H265_CHROMA_400                 = 0,    //!< Monochrome
+	H265_CHROMA_420                 = 1,    //!< 4:2:0
+	H265_CHROMA_422                 = 2,    //!< 4:2:2
+	H265_CHROMA_444                 = 3     //!< 4:4:4
+} H265ChromaFmt;
 
 #endif
