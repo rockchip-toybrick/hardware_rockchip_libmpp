@@ -43,6 +43,9 @@ MPP_RET ring_buf_init(ring_buf_pool *ctx, MppBuffer buf, RK_U32 max_strm_cnt)
 	ring_buf_dbg("ctx->len = %d, max_strm_cnt = %d, ctx->min_buf_size = %d", ctx->len,
 		     max_strm_cnt, ctx->min_buf_size);
 
+	if (!ctx->buf_base)
+		return MPP_NOK;
+
 	return MPP_OK;
 }
 
