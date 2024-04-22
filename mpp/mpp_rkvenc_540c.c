@@ -1947,13 +1947,6 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 					     timeout_work);
 	u32 clbk_en = task->clbk_en;
 
-	if (test_and_set_bit(TASK_STATE_HANDLE, &task->state)) {
-		mpp_err("task has been handled\n");
-		return;
-	}
-
-	mpp_err("task %d state %#lx processing time out!\n",
-		task->task_index, task->state);
 
 	if (!task->session) {
 		mpp_err("task %p, task->session is null.\n", task);
@@ -1969,6 +1962,15 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	mpp = session->mpp;
 
 	disable_irq(mpp->irq);
+
+	if (test_and_set_bit(TASK_STATE_HANDLE, &task->state)) {
+		mpp_err("task has been handled\n");
+		return;
+	}
+
+	mpp_err("task %d state %#lx processing time out!\n",
+		task->task_index, task->state);
+
 	rkvenc_dump_dbg(mpp);
 
 	set_bit(TASK_STATE_TIMEOUT, &task->state);
