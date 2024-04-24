@@ -161,18 +161,6 @@ static void fill_slice_parameters(const H265eCtx * h, H265eSlicParams * sp)
 	MppEncH265Cfg *codec = &h->cfg->codec.h265;
 	h265_slice *slice = h->slice;
 	memset(sp, 0, sizeof(H265eSlicParams));
-	if (codec->slice_cfg.split_enable) {
-		sp->sli_splt_cpst = 1;
-		sp->sli_splt = 1;
-		sp->sli_splt_mode = codec->slice_cfg.split_mode;
-		if (codec->slice_cfg.split_mode)
-			sp->sli_splt_cnum_m1 = codec->slice_cfg.slice_size - 1;
-
-		else
-			sp->sli_splt_byte = codec->slice_cfg.slice_size;
-		sp->sli_max_num_m1 = 50;
-		sp->sli_flsh = 1;
-	}
 
 	sp->cbc_init_flg = slice->cabac_init_flag;
 	sp->mvd_l1_zero_flg = slice->lmvd_l1_zero;
