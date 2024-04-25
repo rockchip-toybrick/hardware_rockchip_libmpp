@@ -935,6 +935,7 @@ int mpp_chnl_run_task(struct mpp_session *session, void *param)
 	struct mpp_task *task = NULL;
 	int ret = 0;
 	unsigned long flags;
+	struct mpp_task_info *info = (struct mpp_task_info *)param;
 
 	spin_lock_irqsave(&queue->dev_lock, flags);
 	mpp_debug_func(DEBUG_TASK_INFO, "chan_id %d ++\n", session->chn_id);
@@ -948,6 +949,24 @@ again:
 
 	if (atomic_read(&mpp->suspend_en))
 		goto done;
+
+	/* when resolution switch case,
+	 * need drop task if resolution mismatch.
+	 */
+	if (info) {
+		if ((ALIGN(info->width, 8) != task->width) ||
+		    (ALIGN(info->height, 8) != task->height)) {
+			mpp_dbg_warning("chan %d task %d resolution not match [%d %d] != [%d %d]\n",
+					session->chn_id, task->task_index,
+					info->width, info->height, task->width, task->height);
+			atomic_inc(&task->abort_request);
+			set_bit(TASK_STATE_DONE, &task->state);
+			mpp_taskqueue_pop_pending(queue, task);
+			if (session->callback)
+				session->callback(session->chn_id);
+		}
+	}
+
 	/* if task timeout and aborted, remove it */
 	if (atomic_read(&task->abort_request) > 0) {
 		mpp_taskqueue_pop_pending(queue, task);
@@ -974,9 +993,7 @@ again:
 		goto done;
 	}
 
-	if (param) {
-		struct mpp_task_info *info = (struct mpp_task_info *)param;
-
+	if (info) {
 		task->pipe_id = info->pipe_id;
 		task->frame_id = info->frame_id;
 	}

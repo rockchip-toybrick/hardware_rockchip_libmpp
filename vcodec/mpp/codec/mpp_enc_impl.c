@@ -832,6 +832,7 @@ MPP_RET mpp_enc_proc_cfg(MppEncImpl *enc, MpiCmd cmd, void *param)
 		MppEncCfgImpl *impl = (MppEncCfgImpl *)param;
 		MppEncCfgSet *src = &impl->cfg;
 		RK_U32 change = src->base.change;
+
 		mpp_log("MPP_ENC_SET_CFG in \n");
 
 		/* get base cfg here */

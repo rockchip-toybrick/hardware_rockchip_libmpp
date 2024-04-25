@@ -470,8 +470,23 @@ int mpp_vcodec_chan_control(int chan_id, MppCtxType type, int cmd, void *arg)
 	case MPP_CTX_ENC: {
 		if (cmd == MPP_ENC_SET_CHANGE_STREAM_TYPE)
 			mpp_vcodec_chan_change_coding_type(chan_id, arg);
-		else
+		else {
+			MppEncCfgImpl *cfg = (MppEncCfgImpl *)arg;
+			bool prep_change = cfg ? cfg->cfg.prep.change : false;
+
 			mpp_enc_control(chan_entry->handle, cmd, arg);
+			/*
+			* In the case of wrapping, when switching resolutions,
+			* need to ensure that the wrapping frame being encoded finish.
+			*/
+			if (chan_entry->cfg.online && prep_change) {
+				if (mpp_enc_check_hw_running(chan_entry->handle)) {
+					wait_event_timeout(chan_entry->stop_wait,
+							   !atomic_read(&chan_entry->runing),
+							   msecs_to_jiffies(200));
+				}
+			}
+		}
 	} break;
 	default: {
 		mpp_err("control type %d error\n", type);

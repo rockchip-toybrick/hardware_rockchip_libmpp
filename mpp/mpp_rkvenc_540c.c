@@ -936,6 +936,13 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 			mpp_task->clbk_en = 0;
 	}
 
+	{
+		u32 *wh_reg = rkvenc_get_class_reg(task, 0x310);
+
+		mpp_task->width = (((*wh_reg) & 0x7ff) + 1) << 3;
+		mpp_task->height = (((*wh_reg) >> 16) + 1) << 3;
+	}
+
 	task->clk_mode = CLK_MODE_NORMAL;
 
 	mpp_debug_leave();
@@ -1176,10 +1183,15 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 		/* init current task */
 		mpp->cur_task = mpp_task;
+		{
+			u32 enc_rsl = mpp_read(mpp, 0x310);
+			u32 width = ((enc_rsl & 0x7ff) + 1) << 3;
+			u32 height = ((enc_rsl >> 16) + 1) << 3;
 
-		mpp_debug(DEBUG_RUN, "%s session %d task %d fmt %d jpeg_en %08x dvbm_en %d\n",
-			  __func__, mpp_task->session->index, mpp_task->task_index, task->fmt,
-			  mpp_read(mpp, 0x47c) >> 31, dvbm_en);
+			mpp_debug(DEBUG_RUN, "%s session %d task %d fmt %d jpeg_en %08x dvbm_en %d w/h [%d %d]\n",
+				  __func__, mpp_task->session->index, mpp_task->task_index, task->fmt,
+				  mpp_read(mpp, 0x47c) >> 31, dvbm_en, width, height);
+		}
 
 		/* check enc status before start */
 		st_ppl = mpp_read(mpp, 0x5004);
@@ -1744,7 +1756,8 @@ static int rkvenc_result(struct mpp_dev *mpp,
 	switch (enc->link_mode) {
 	case RKVENC_MODE_ONEFRAME:
 	case RKVENC_MODE_LINK_ONEFRAME: {
-		if (test_bit(TASK_STATE_TIMEOUT, &mpp_task->state))
+		if (test_bit(TASK_STATE_TIMEOUT, &mpp_task->state) ||
+		    test_bit(TASK_STATE_ABORT, &mpp_task->state))
 			return -1;
 	} break;
 	case RKVENC_MODE_LINK_ADD: {

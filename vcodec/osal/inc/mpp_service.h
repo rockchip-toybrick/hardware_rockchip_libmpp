@@ -105,6 +105,9 @@ typedef struct MppTaskInfo_t {
 	RK_U32 pipe_id;
 	/* indentify the frame id */
 	RK_U32 frame_id;
+
+	RK_U32 width;
+	RK_U32 height;
 } MppTaskInfo;
 
 #ifdef  __cplusplus

@@ -485,6 +485,8 @@ struct mpp_task {
 	u32 pipe_id;
 	/* indentify the frame id */
 	u32 frame_id;
+	u32 width;
+	u32 height;
 };
 
 struct mpp_taskqueue {
@@ -570,6 +572,8 @@ struct mpp_task_info {
 	u32 pipe_id;
 	/* indentify the frame id */
 	u32 frame_id;
+	u32 width;
+	u32 height;
 };
 
 /*
