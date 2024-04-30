@@ -2060,7 +2060,8 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 	HalVepu540cRegSet *regs = ctx->regs_set;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
 	RK_S32 atl_str = ctx->cfg->tune.atl_str;
-	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx;
+	RK_S32 lambda_idx = slice->slice_type == H264_I_SLICE ? ctx->cfg->tune.lambda_i_idx :
+			    ctx->cfg->tune.lambda_idx;
 
 	hal_h264e_dbg_func("enter\n");
 

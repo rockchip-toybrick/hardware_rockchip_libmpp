@@ -1326,6 +1326,7 @@ typedef enum MppEncFineTuneCfgChange_e {
 	MPP_ENC_TUNE_CFG_CHANGE_ATR_STR                     = (1 << 3),
 	MPP_ENC_TUNE_CFG_CHANGE_ATL_STR                     = (1 << 4),
 	MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_IDX                  = (1 << 5),
+	MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_I_IDX                = (1 << 6),
 } MppEncFineTuneCfgChange;
 
 typedef struct MppEncFineTuneCfg_t {
@@ -1337,6 +1338,7 @@ typedef struct MppEncFineTuneCfg_t {
 	RK_S32              atr_str;
 	RK_S32              atl_str;
 	RK_S32              lambda_idx;
+	RK_S32              lambda_i_idx;
 } MppEncFineTuneCfg;
 
 #endif /*__RK_VENC_CMD_H__*/

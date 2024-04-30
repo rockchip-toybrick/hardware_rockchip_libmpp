@@ -997,7 +997,8 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 	hevc_vepu540c_wgt *reg_wgt = &regs->reg_wgt;
 	vepu540c_rdo_cfg *reg_rdo = &regs->reg_rdo;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
-	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx;
+	RK_S32 lambda_idx = ctx->frame_type == INTRA_FRAME ? ctx->cfg->tune.lambda_i_idx :
+			    ctx->cfg->tune.lambda_idx;
 	vepu540c_h265_rdo_cfg(ctx, reg_rdo, task);
 	setup_vepu540c_hevc_scl_cfg(&regs->reg_scl, task);
 

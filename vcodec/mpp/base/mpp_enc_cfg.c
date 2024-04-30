@@ -249,7 +249,8 @@ RK_U32 mpp_enc_cfg_debug = 0;
     ENTRY(tune, deblur_str,     S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_DEBLUR_STR,     tune, deblur_str)                                                   \
     ENTRY(tune, atr_str,        S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_ATR_STR,        tune, atr_str)                                                      \
     ENTRY(tune, atl_str,        S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_ATL_STR,        tune, atl_str)                                                      \
-    ENTRY(tune, lambda_idx,     S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_IDX,     tune, lambda_idx)
+    ENTRY(tune, lambda_idx,     S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_IDX,     tune, lambda_idx)                                                   \
+    ENTRY(tune, lambda_i_idx,   S32, RK_S32,            MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_I_IDX,   tune, lambda_i_idx)
 
 ENTRY_TABLE(EXPAND_AS_FUNC)
 ENTRY_TABLE(EXPAND_AS_API)
