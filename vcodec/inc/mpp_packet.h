@@ -33,7 +33,7 @@ MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, size_t m
 MPP_RET mpp_packet_init(MppPacket *packet, void *data, size_t size);
 MPP_RET mpp_packet_init_with_buffer(MppPacket *packet, MppBuffer buffer);
 MPP_RET mpp_packet_deinit(MppPacket *packet);
-MPP_RET mpp_packet_ring_buf_put_used(MppPacket * packet, RK_S32 chan_id, MppDev dev_ctx);
+MPP_RET mpp_packet_ring_buf_put_used(MppPacket packet, RK_S32 chan_id, MppDev dev_ctx);
 /*
  * data   : ( R/W ) start address of the whole packet memory
  * size   : ( R/W ) total size of the whole packet memory

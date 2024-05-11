@@ -215,7 +215,7 @@ MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, size_t m
 	return MPP_OK;
 }
 
-MPP_RET mpp_packet_ring_buf_put_used(MppPacket * packet, RK_S32 chan_id, MppDev dev_ctx)
+MPP_RET mpp_packet_ring_buf_put_used(MppPacket packet, RK_S32 chan_id, MppDev dev_ctx)
 {
 	MppPacketImpl *p = (MppPacketImpl *)packet;
 
