@@ -1799,8 +1799,8 @@ static MPP_RET mpp_enc_check_frm_valid(MppEncImpl *enc)
 		MPP_SWAP(RK_U32, width, height);
 	if (hor_stride != prep->hor_stride || ver_stride != prep->ver_stride ||
 	    width < prep->width || height < prep->height) {
-		mpp_log("frame info no equal set drop: frame [%d, %d, %d, %d], prep [%d, %d, %d, %d]",
-			width, height, hor_stride, ver_stride, prep->width, prep->height,
+		mpp_log("chan %d frame info no equal set drop: frame [%d, %d, %d, %d], prep [%d, %d, %d, %d]",
+			enc->chan_id, width, height, hor_stride, ver_stride, prep->width, prep->height,
 			prep->hor_stride, prep->ver_stride);
 		return MPP_NOK;
 	}
