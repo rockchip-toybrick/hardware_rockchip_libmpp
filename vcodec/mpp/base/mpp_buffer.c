@@ -184,6 +184,10 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 		mpp_err_f("mpibuf_ops get fail");
 		return MPP_NOK;
 	}
+	if (size <= 0) {
+		mpp_err_f("size is 0 caller %s\n", caller);
+		return MPP_NOK;
+	}
 	buf_impl = mpp_mem_pool_get(g_mppbuf_pool);
 	if (NULL == buf_impl) {
 		mpp_err("buf impl malloc fail : group %p buffer %p size %u from %s\n",
@@ -194,7 +198,7 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 	if (mpibuf_fn->buf_alloc)
 		mpi_buf = mpibuf_fn->buf_alloc(size);
 
-	if (NULL == mpi_buf || 0 == size) {
+	if (NULL == mpi_buf) {
 		mpp_err("mpp_buffer_get invalid input: group %p buffer %p size %u from %s\n",
 			group, buffer, (RK_U32)size, caller);
 		mpp_mem_pool_put(g_mppbuf_pool, buf_impl);
