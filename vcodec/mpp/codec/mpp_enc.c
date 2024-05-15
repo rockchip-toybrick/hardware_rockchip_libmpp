@@ -86,7 +86,8 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 
 	ctrl_cfg.type = enc_hal_cfg.type;
 	ctrl_cfg.task_count = -1;
-
+	if (coding == MPP_VIDEO_CodingHEVC)
+		p->cfg.codec.h265.tmvp_enable = cfg->tmvp_enable;
 	ret = enc_impl_init(&impl, &ctrl_cfg);
 	if (ret) {
 		mpp_err_f("could not init impl\n");

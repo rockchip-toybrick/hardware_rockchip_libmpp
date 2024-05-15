@@ -68,16 +68,17 @@ int mpp_vcodec_chan_create(struct vcodec_attr *attr)
 	case MPP_CTX_ENC: {
 		MppEnc enc = NULL;
 		MppEncInitCfg cfg = {
-			coding,
-			online,
-			buf_size,
-			attr->max_strm_cnt,
-			attr->shared_buf_en,
-			attr->smart_en,
-			&chan_entry->shared_buf,
-			attr->smart_en ? 1 : attr->qpmap_en,
-			chan_id,
-			attr->only_smartp,
+			.coding         = coding,
+			.online         = online,
+			.buf_size       = buf_size,
+			.max_strm_cnt   = attr->max_strm_cnt,
+			.ref_buf_shared = attr->shared_buf_en,
+			.smart_en       = attr->smart_en,
+			.shared_buf     = &chan_entry->shared_buf,
+			.qpmap_en       = attr->smart_en ? 1 : attr->qpmap_en,
+			.chan_id        = chan_id,
+			.only_smartp    = attr->only_smartp,
+			.tmvp_enable    = attr->tmvp_enable
 		};
 
 		ret = mpp_enc_init(&enc, &cfg);

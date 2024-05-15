@@ -377,7 +377,7 @@ MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_att
 		RK_U32 smera_size = 0;
 		RK_U32 smera_r_size = 0;
 		RK_U32 smera_size_t = 0;
-		RK_U32 cmv_size = 0 ;//MPP_ALIGN(mb_wd64 * mb_h64 * 4, 256) * 16;
+		RK_U32 cmv_size = 0 ;
 		RK_S32 max_lt_cnt = attr->max_lt_cnt;
 		struct hal_shared_buf *ctx = &entry->shared_buf;
 		RK_S32 pixel_buf_size_265 = MPP_ALIGN(((mb_wd64 * mb_h64) << 6), SZ_8K) +
@@ -387,6 +387,8 @@ MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_att
 		mpp_log("attr->max_width = %d, attr->max_height = %d", attr->max_width, attr->max_height);
 		pixel_buf_size = MPP_MAX(pixel_buf_size, pixel_buf_size_265);
 
+		if (attr->tmvp_enable)
+			cmv_size = MPP_ALIGN(mb_wd64 * mb_h64 * 4, 256) * 16;
 		if (1) {
 			smera_size_t = MPP_ALIGN(aligned_w, 1024) / 1024 * MPP_ALIGN(aligned_h, 16) / 16 * 16;
 			smera_r_size = MPP_ALIGN(aligned_h, 1024) / 1024 * MPP_ALIGN(aligned_w, 16) / 16 * 16;

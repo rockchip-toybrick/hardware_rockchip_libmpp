@@ -125,7 +125,7 @@ struct vcodec_attr {
 	RK_U32      max_lt_cnt;
 	RK_U32      qpmap_en;
 	RK_U32      chan_dup;
-	RK_U32      res;
+	RK_U32      tmvp_enable;
 	RK_U32      only_smartp;
 };
 
