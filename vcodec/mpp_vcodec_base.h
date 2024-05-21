@@ -75,6 +75,7 @@ struct mpp_chan {
 	RK_U32 max_height;
 	RK_U32 ring_buf_size;
 	struct hal_shared_buf shared_buf;
+	RK_U32 shared_buf_release;
 	RK_U32 max_lt_cnt;
 };
 

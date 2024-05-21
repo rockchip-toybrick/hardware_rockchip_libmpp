@@ -330,29 +330,29 @@ static MPP_RET get_wrap_buf(struct hal_shared_buf *ctx, struct vcodec_attr *attr
 static void mpp_chan_clear_buf_resource(struct mpp_chan *entry)
 {
 	struct hal_shared_buf *ctx = &entry->shared_buf;
+	void *buf = NULL;
 
-	if (ctx->dpb_bufs) {
-		hal_bufs_deinit(ctx->dpb_bufs);
-		ctx->dpb_bufs = NULL;
-	}
-	if (ctx->recn_ref_buf) {
-		mpp_buffer_put(ctx->recn_ref_buf);
-		ctx->recn_ref_buf = NULL;
-	}
+	buf = cmpxchg(&ctx->dpb_bufs, ctx->dpb_bufs, NULL);
+	if (buf)
+		hal_bufs_deinit(buf);
 
-	if (ctx->stream_buf) {
-		mpp_buffer_put(ctx->stream_buf);
-		ctx->stream_buf = NULL;
-	}
+	buf = cmpxchg(&ctx->recn_ref_buf, ctx->recn_ref_buf, NULL);
+	if (buf)
+		mpp_buffer_put(buf);
 
-	if (ctx->ext_line_buf) {
-		mpp_buffer_put(ctx->ext_line_buf);
-		ctx->ext_line_buf = NULL;
-	}
+	buf = cmpxchg(&ctx->stream_buf, ctx->stream_buf, NULL);
+	if (buf)
+		mpp_buffer_put(buf);
+
+	buf = cmpxchg(&ctx->ext_line_buf, ctx->ext_line_buf, NULL);
+	if (buf)
+		mpp_buffer_put(buf);
+
 	entry->max_width = 0;
 	entry->max_height = 0;
 	entry->max_lt_cnt = 0;
 	entry->ring_buf_size = 0;
+	entry->shared_buf_release = 0;
 
 	return;
 }
@@ -546,11 +546,8 @@ int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 
 	atomic_set(&entry->runing, 0);
 
-#ifdef CHAN_RELEASE_BUF
-	{
+	if (IS_ENABLED(CHAN_RELEASE_BUF) || entry->shared_buf_release)
 		mpp_chan_clear_buf_resource(entry);
-	}
-#endif
 
 	return 0;
 }
@@ -741,9 +738,22 @@ int mpp_vcodec_clear_buf_resource(void)
 	struct venc_module *venc = &g_vcodec_entry.venc;
 	int i = 0;
 
+	if (IS_ENABLED(CHAN_RELEASE_BUF))
+		return 0;
+
 	for (i = 0; i < MAX_ENC_NUM; i++) {
+		unsigned long lock_flag;
 		struct mpp_chan *entry = &venc->mpp_enc_chan_entry[i];
-		mpp_chan_clear_buf_resource(entry);
+		RK_U32 can_clear = 1;
+
+		spin_lock_irqsave(&entry->chan_lock, lock_flag);
+		/* if entry still alive, do not clear resource here */
+		if (entry->state != CHAN_STATE_NULL)
+			can_clear = 0;
+		entry->shared_buf_release = !can_clear;
+		spin_unlock_irqrestore(&entry->chan_lock, lock_flag);
+		if (can_clear)
+			mpp_chan_clear_buf_resource(entry);
 	}
 
 	return 0;
