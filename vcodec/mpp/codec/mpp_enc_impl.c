@@ -819,6 +819,14 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			ret = MPP_ERR_VALUE;
 		}
 
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_ATF_STR)
+			dst->atf_str = src->atf_str;
+
+		if (dst->atf_str < 0 || dst->atf_str > 3) {
+			mpp_err("invalid anti flick strength not in range [0 : 3]\n");
+			ret = MPP_ERR_VALUE;
+		}
+
 		dst->change |= change;
 
 		if (ret) {
@@ -1087,6 +1095,7 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	cfg->atl_str = cfg_set->tune.atl_str;
 	cfg->lambda_idx = cfg_set->tune.lambda_idx;
 	cfg->lambda_i_idx = cfg_set->tune.lambda_i_idx;
+	cfg->atf_str = cfg_set->tune.atf_str;
 
 	cfg->hier_qp_cfg.hier_qp_en = rc->hier_qp_en;
 	memcpy(cfg->hier_qp_cfg.hier_frame_num, rc->hier_frame_num,
@@ -2250,11 +2259,12 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 
 		seq_puts(seq,
 			 "\n--------fine tuning param------------------------------------------------------------------------\n");
-		seq_printf(seq, "%8s|%12s|%12s|%12s|%10s|%10s|%12s|%12s\n", "ID",
-			   "scene_mode", "md_swth_en", "deblur_str", "atr_str", "atl_str", "lambda_idx", "lambda_i_idx");
-		seq_printf(seq, "%8u|%12d|%12d|%12d|%10d|%10d|%12d|%12d\n", chl_id,
+		seq_printf(seq, "%8s|%12s|%12s|%12s|%10s|%10s|%12s|%12s|%12s\n", "ID",
+			   "scene_mode", "md_swth_en", "deblur_str", "atr_str", "atl_str", "lambda_idx", "lambda_i_idx",
+			   "atf_str");
+		seq_printf(seq, "%8u|%12d|%12d|%12d|%10d|%10d|%12d|%12d|%12d\n", chl_id,
 			   tune->scene_mode, tune->motion_static_switch_enable, tune->deblur_str, tune->atr_str,
-			   tune->atl_str, tune->lambda_idx, tune->lambda_i_idx);
+			   tune->atl_str, tune->lambda_idx, tune->lambda_i_idx, tune->atf_str);
 	}
 
 	if (cfg->roi.number > 0) {

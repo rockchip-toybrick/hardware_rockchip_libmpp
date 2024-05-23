@@ -1227,13 +1227,24 @@ static void setup_vepu540c_rdo_pred(HalH264eVepu540cCtx *ctx, H264eSps *sps,
 	base->rdo_cfg.chrm_spcl = 1;
 	base->rdo_cfg.ccwa_e = 1;
 	base->rdo_cfg.scl_lst_sel = pps->scaling_list_mode;
-	base->rdo_cfg.atf_e = sm == MPP_ENC_SCENE_MODE_IPC || sm == MPP_ENC_SCENE_MODE_IPC_PTZ;
+	base->rdo_cfg.atf_e = ctx->cfg->tune.atf_str > 0;
 	base->rdo_cfg.atr_e = ctx->cfg->tune.atr_str > 0;
 	base->rdo_cfg.intra_mode_cost_e = 1;
 	base->iprd_csts.rdo_mark_mode = 0;
 
 	hal_h264e_dbg_func("leave\n");
 }
+
+static RK_U8 pskip_atf_th0[4] = {0, 0, 0, 1};
+static RK_U8 pskip_atf_th1[4] = {7, 7, 7, 10};
+static RK_U8 pskip_atf_wgt0[4] = {16, 16, 16, 20};
+static RK_U8 pskip_atf_wgt1[4] = {16, 16, 14, 16};
+static RK_U8 intra_atf_th0[4] = {8, 16, 20, 20};
+static RK_U8 intra_atf_th1[4] = {16, 32, 40, 40};
+static RK_U8 intra_atf_th2[4] = {32, 56, 72, 72};
+static RK_U8 intra_atf_wgt0[4] = {16, 24, 27, 27};
+static RK_U8 intra_atf_wgt1[4] = {16, 22, 25, 25};
+static RK_U8 intra_atf_wgt2[4] = {16, 19, 20, 20};
 
 static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 {
@@ -1245,6 +1256,7 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	vepu540c_h264_fbk *last_fb = &ctx->last_frame_fb;
 	RK_U32 mb_cnt = last_fb->st_mb_num;
 	RK_U32 *smear_cnt = last_fb->st_smear_cnt;
+	RK_U32 atf_str = ctx->cfg->tune.atf_str;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
 	RK_S32 flg0 = smear_cnt[4] < (mb_cnt >> 6);
 	RK_S32 flg1 = 1;
@@ -1404,21 +1416,15 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th5 = flg2 ? 0 : 10;
 
 	p_rdo_skip = &reg->rdo_b16_skip;
-	p_rdo_skip->atf_thd0.madp_thd0 = 1;
-	p_rdo_skip->atf_thd0.madp_thd1 = 10;
+	p_rdo_skip->atf_thd0.madp_thd0 = pskip_atf_th0[atf_str];
+	p_rdo_skip->atf_thd0.madp_thd1 = pskip_atf_th1[atf_str];
 	p_rdo_skip->atf_thd1.madp_thd2 = 15;
 	p_rdo_skip->atf_thd1.madp_thd3 = 25;
-	p_rdo_skip->atf_wgt0.wgt0 = 20;
-	p_rdo_skip->atf_wgt0.wgt1 = 16;
+	p_rdo_skip->atf_wgt0.wgt0 = pskip_atf_wgt0[atf_str];
+	p_rdo_skip->atf_wgt0.wgt1 = pskip_atf_wgt1[atf_str];
 	p_rdo_skip->atf_wgt0.wgt2 = 16;
 	p_rdo_skip->atf_wgt0.wgt3 = 16;
 	p_rdo_skip->atf_wgt1.wgt4 = 16;
-	if (ctx->smart_en) {
-		p_rdo_skip->atf_thd0.madp_thd0 = 0;
-		p_rdo_skip->atf_thd0.madp_thd1 = 7;
-		p_rdo_skip->atf_wgt0.wgt0 = 16;
-		p_rdo_skip->atf_wgt0.wgt1 = 14;
-	}
 
 	p_rdo_noskip = &reg->rdo_b16_inter;
 	p_rdo_noskip->ratf_thd0.madp_thd0 = 20;
@@ -1430,12 +1436,12 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	p_rdo_noskip->atf_wgt.wgt3 = 16;
 
 	p_rdo_noskip = &reg->rdo_b16_intra;
-	p_rdo_noskip->ratf_thd0.madp_thd0 = 20;
-	p_rdo_noskip->ratf_thd0.madp_thd1 = 40;
-	p_rdo_noskip->ratf_thd1.madp_thd2 = 72;
-	p_rdo_noskip->atf_wgt.wgt0 = 27;
-	p_rdo_noskip->atf_wgt.wgt1 = 25;
-	p_rdo_noskip->atf_wgt.wgt2 = 20;
+	p_rdo_noskip->ratf_thd0.madp_thd0 = intra_atf_th0[atf_str];
+	p_rdo_noskip->ratf_thd0.madp_thd1 = intra_atf_th1[atf_str];
+	p_rdo_noskip->ratf_thd1.madp_thd2 = intra_atf_th2[atf_str];
+	p_rdo_noskip->atf_wgt.wgt0 = intra_atf_wgt0[atf_str];
+	p_rdo_noskip->atf_wgt.wgt1 = intra_atf_wgt1[atf_str];
+	p_rdo_noskip->atf_wgt.wgt2 = intra_atf_wgt2[atf_str];
 	p_rdo_noskip->atf_wgt.wgt3 = 16;
 
 	reg->rdo_b16_intra_atf_cnt_thd_comb.thd0 = 1;
@@ -1446,36 +1452,6 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	reg->rdo_atf_resi_thd_comb.big_th1 = 16;
 	reg->rdo_atf_resi_thd_comb.small_th0 = 8;
 	reg->rdo_atf_resi_thd_comb.small_th1 = 8;
-	if (ctx->cfg->tune.scene_mode != MPP_ENC_SCENE_MODE_IPC) {
-		p_rdo_skip = &reg->rdo_b16_skip;
-		p_rdo_skip->atf_wgt0.wgt0 = 16;
-		p_rdo_noskip->atf_wgt.wgt0 = 16;
-		p_rdo_noskip->atf_wgt.wgt1 = 16;
-		p_rdo_noskip->atf_wgt.wgt2 = 16;
-		p_rdo_noskip->atf_wgt.wgt3 = 16;
-
-		p_rdo_noskip = &reg->rdo_b16_intra;
-		p_rdo_noskip->atf_wgt.wgt0 = 16;
-		p_rdo_noskip->atf_wgt.wgt1 = 16;
-		p_rdo_noskip->atf_wgt.wgt2 = 16;
-		p_rdo_noskip->atf_wgt.wgt3 = 16;
-	} else if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC_PTZ) {
-		p_rdo_skip = &reg->rdo_b16_skip;
-		p_rdo_skip->atf_wgt0.wgt0 = 16;
-		p_rdo_noskip->atf_wgt.wgt0 = 16;
-		p_rdo_noskip->atf_wgt.wgt1 = 16;
-		p_rdo_noskip->atf_wgt.wgt2 = 16;
-		p_rdo_noskip->atf_wgt.wgt3 = 16;
-
-		p_rdo_noskip = &reg->rdo_b16_intra;
-		p_rdo_noskip->ratf_thd0.madp_thd0 = 20;
-		p_rdo_noskip->ratf_thd0.madp_thd1 = 40;
-		p_rdo_noskip->ratf_thd1.madp_thd2 = 72;
-		p_rdo_noskip->atf_wgt.wgt0 = 28;
-		p_rdo_noskip->atf_wgt.wgt1 = 27;
-		p_rdo_noskip->atf_wgt.wgt2 = 25;
-		p_rdo_noskip->atf_wgt.wgt3 = 16;
-	}
 	hal_h264e_dbg_func("leave\n");
 }
 
