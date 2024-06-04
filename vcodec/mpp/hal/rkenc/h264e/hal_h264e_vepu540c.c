@@ -87,7 +87,7 @@ typedef struct HalH264eVepu540cCtx_t {
 	RK_S32 pixel_buf_fbc_bdy_offset;
 	RK_S32 pixel_buf_size;
 	RK_S32 thumb_buf_size;
-	RK_S32 smera_size;
+	RK_S32 smear_size;
 	RK_S32 max_buf_cnt;
 	/* recn and ref buffer offset */
 	RK_U32                  recn_ref_wrap;
@@ -531,8 +531,8 @@ static void setup_hal_bufs(HalH264eVepu540cCtx *ctx)
 	RK_S32 thumb_buf_size = MPP_ALIGN(aligned_w / 64 * aligned_h / 64 * 256, SZ_8K);
 	RK_S32 old_max_cnt = ctx->max_buf_cnt;
 	RK_S32 new_max_cnt = 2;
-	RK_U32 smera_size = 0;
-	RK_U32 smera_r_size = 0;
+	RK_U32 smear_size = 0;
+	RK_U32 smear_r_size = 0;
 	MppEncRefCfg ref_cfg = cfg->ref_cfg;
 	RK_S32 max_lt_cnt;
 
@@ -568,18 +568,18 @@ static void setup_hal_bufs(HalH264eVepu540cCtx *ctx)
 	}
 
 	if (1) {
-		smera_size = MPP_ALIGN(aligned_w, 1024) / 1024 * MPP_ALIGN(aligned_h, 16) / 16 * 16;
-		smera_r_size = MPP_ALIGN(aligned_h, 1024) / 1024 * MPP_ALIGN(aligned_w, 16) / 16 * 16;
+		smear_size = MPP_ALIGN(aligned_w, 1024) / 1024 * MPP_ALIGN(aligned_h, 16) / 16 * 16;
+		smear_r_size = MPP_ALIGN(aligned_h, 1024) / 1024 * MPP_ALIGN(aligned_w, 16) / 16 * 16;
 	} else {
-		smera_size = MPP_ALIGN(aligned_w, 256) / 256 * MPP_ALIGN(aligned_h, 32) / 32;
-		smera_r_size = MPP_ALIGN(aligned_h, 256) / 256 * MPP_ALIGN(aligned_w, 32) / 32;;
+		smear_size = MPP_ALIGN(aligned_w, 256) / 256 * MPP_ALIGN(aligned_h, 32) / 32;
+		smear_r_size = MPP_ALIGN(aligned_h, 256) / 256 * MPP_ALIGN(aligned_w, 32) / 32;;
 	}
-	smera_size = MPP_MAX(smera_size, smera_r_size);
+	smear_size = MPP_MAX(smear_size, smear_r_size);
 	if ((ctx->pixel_buf_fbc_hdr_size != pixel_buf_fbc_hdr_size) ||
 	    (ctx->pixel_buf_fbc_bdy_size != pixel_buf_fbc_bdy_size) ||
 	    (ctx->pixel_buf_size != pixel_buf_size) ||
 	    (ctx->thumb_buf_size != thumb_buf_size) ||
-	    (ctx->smera_size != smera_size) ||
+	    (ctx->smear_size != smear_size) ||
 	    (new_max_cnt > old_max_cnt)) {
 
 		hal_h264e_dbg_detail("frame size %d -> %d max count %d -> %d\n",
@@ -595,13 +595,13 @@ static void setup_hal_bufs(HalH264eVepu540cCtx *ctx)
 			hal_bufs_init(&ctx->hw_recn);
 
 		if (ctx->recn_ref_wrap) {
-			size_t sizes[4] = {thumb_buf_size, 0, smera_size, 0};
+			size_t sizes[4] = {thumb_buf_size, 0, smear_size, 0};
 
 			if (!ctx->shared_buf->dpb_bufs)
 				hal_bufs_setup(ctx->hw_recn, new_max_cnt, MPP_ARRAY_ELEMS(sizes), sizes);
 			get_wrap_buf(ctx, max_lt_cnt);
 		} else {
-			size_t sizes[4] = {thumb_buf_size, 0, smera_size, pixel_buf_size};
+			size_t sizes[4] = {thumb_buf_size, 0, smear_size, pixel_buf_size};
 
 			if (!ctx->shared_buf->dpb_bufs)
 				hal_bufs_setup(ctx->hw_recn, new_max_cnt, MPP_ARRAY_ELEMS(sizes), sizes);
@@ -614,7 +614,7 @@ static void setup_hal_bufs(HalH264eVepu540cCtx *ctx)
 
 		ctx->pixel_buf_size = pixel_buf_size;
 		ctx->thumb_buf_size = thumb_buf_size;
-		ctx->smera_size = smera_size;
+		ctx->smear_size = smear_size;
 		ctx->max_buf_cnt = new_max_cnt;
 	}
 }

@@ -374,9 +374,9 @@ MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_att
 
 		RK_S32 thumb_buf_size = MPP_ALIGN(aligned_w / 64 * aligned_h / 64 * 256, SZ_8K);
 		RK_S32 max_buf_cnt = 2 + attr->max_lt_cnt;
-		RK_U32 smera_size = 0;
-		RK_U32 smera_r_size = 0;
-		RK_U32 smera_size_t = 0;
+		RK_U32 smear_size = 0;
+		RK_U32 smear_r_size = 0;
+		RK_U32 smear_size_t = 0;
 		RK_U32 cmv_size = 0 ;
 		RK_S32 max_lt_cnt = attr->max_lt_cnt;
 		struct hal_shared_buf *ctx = &entry->shared_buf;
@@ -390,24 +390,24 @@ MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_att
 		if (attr->tmvp_enable)
 			cmv_size = MPP_ALIGN(mb_wd64 * mb_h64 * 4, 256) * 16;
 		if (1) {
-			smera_size_t = MPP_ALIGN(aligned_w, 1024) / 1024 * MPP_ALIGN(aligned_h, 16) / 16 * 16;
-			smera_r_size = MPP_ALIGN(aligned_h, 1024) / 1024 * MPP_ALIGN(aligned_w, 16) / 16 * 16;
+			smear_size_t = MPP_ALIGN(aligned_w, 1024) / 1024 * MPP_ALIGN(aligned_h, 16) / 16 * 16;
+			smear_r_size = MPP_ALIGN(aligned_h, 1024) / 1024 * MPP_ALIGN(aligned_w, 16) / 16 * 16;
 		} else {
-			smera_size_t = MPP_ALIGN(aligned_w, 256) / 256 * MPP_ALIGN(aligned_h, 32) / 32;
-			smera_r_size = MPP_ALIGN(aligned_h, 256) / 256 * MPP_ALIGN(aligned_w, 32) / 32;;
+			smear_size_t = MPP_ALIGN(aligned_w, 256) / 256 * MPP_ALIGN(aligned_h, 32) / 32;
+			smear_r_size = MPP_ALIGN(aligned_h, 256) / 256 * MPP_ALIGN(aligned_w, 32) / 32;;
 		}
-		smera_size = MPP_MAX(smera_size_t, smera_r_size);
+		smear_size = MPP_MAX(smear_size_t, smear_r_size);
 		if (1) {
-			smera_size_t = MPP_ALIGN(aligned_w, 512) / 512 * MPP_ALIGN(aligned_h, 32) / 32 * 16;
-			smera_r_size = MPP_ALIGN(aligned_h, 512) / 512 * MPP_ALIGN(aligned_w, 32) / 32 * 16;
+			smear_size_t = MPP_ALIGN(aligned_w, 512) / 512 * MPP_ALIGN(aligned_h, 32) / 32 * 16;
+			smear_r_size = MPP_ALIGN(aligned_h, 512) / 512 * MPP_ALIGN(aligned_w, 32) / 32 * 16;
 
 		} else {
-			smera_size_t = MPP_ALIGN(aligned_w, 256) / 256 * MPP_ALIGN(aligned_h, 32) / 32;
-			smera_r_size = MPP_ALIGN(aligned_h, 256) / 256 * MPP_ALIGN(aligned_w, 32) / 32;
+			smear_size_t = MPP_ALIGN(aligned_w, 256) / 256 * MPP_ALIGN(aligned_h, 32) / 32;
+			smear_r_size = MPP_ALIGN(aligned_h, 256) / 256 * MPP_ALIGN(aligned_w, 32) / 32;
 		}
 
-		smera_size_t = MPP_MAX(smera_size_t, smera_r_size);
-		smera_size = MPP_MAX(smera_size, smera_size_t);
+		smear_size_t = MPP_MAX(smear_size_t, smear_r_size);
+		smear_size = MPP_MAX(smear_size, smear_size_t);
 
 		if (ctx->dpb_bufs) {
 			hal_bufs_deinit(ctx->dpb_bufs);
@@ -417,12 +417,12 @@ MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_att
 		hal_bufs_init(&ctx->dpb_bufs);
 
 		if (attr->shared_buf_en) {
-			size_t sizes[4] = {thumb_buf_size, cmv_size, smera_size, 0};
+			size_t sizes[4] = {thumb_buf_size, cmv_size, smear_size, 0};
 			hal_bufs_setup(ctx->dpb_bufs, max_buf_cnt, MPP_ARRAY_ELEMS(sizes), sizes);
 			if (get_wrap_buf(ctx, attr, max_lt_cnt))
 				goto fail;
 		} else {
-			size_t sizes[4] = {thumb_buf_size, cmv_size, smera_size, pixel_buf_size};
+			size_t sizes[4] = {thumb_buf_size, cmv_size, smear_size, pixel_buf_size};
 			hal_bufs_setup(ctx->dpb_bufs, max_buf_cnt, MPP_ARRAY_ELEMS(sizes), sizes);
 		}
 

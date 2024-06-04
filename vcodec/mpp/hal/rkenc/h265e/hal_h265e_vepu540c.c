@@ -100,7 +100,7 @@ typedef struct H265eV540cHalContext_t {
 
 	RK_U32 enc_mode;
 	RK_U32 frame_size;
-	RK_U32 smera_size;
+	RK_U32 smear_size;
 	RK_S32 max_buf_cnt;
 	RK_S32 hdr_status;
 	void *input_fmt;
@@ -449,8 +449,8 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 	RK_S32 old_max_cnt = ctx->max_buf_cnt;
 	RK_S32 new_max_cnt = 2;
 	RK_S32 max_lt_cnt;
-	RK_S32 smera_size = 0;
-	RK_S32 smera_r_size = 0;
+	RK_S32 smear_size = 0;
+	RK_S32 smear_r_size = 0;
 	RK_S32 aligned_w = MPP_ALIGN(prep->max_width, 64);
 	hal_h265e_enter();
 
@@ -500,15 +500,15 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 	}
 
 	if (1) {
-		smera_size = MPP_ALIGN(prep->max_width, 512) / 512 * MPP_ALIGN(prep->max_height, 32) / 32 * 16;
-		smera_r_size = MPP_ALIGN(prep->max_height, 512) / 512 * MPP_ALIGN(prep->max_width, 32) / 32 * 16;
+		smear_size = MPP_ALIGN(prep->max_width, 512) / 512 * MPP_ALIGN(prep->max_height, 32) / 32 * 16;
+		smear_r_size = MPP_ALIGN(prep->max_height, 512) / 512 * MPP_ALIGN(prep->max_width, 32) / 32 * 16;
 
 	} else {
-		smera_size = MPP_ALIGN(prep->max_width, 256) / 256 * MPP_ALIGN(prep->max_height, 32) / 32;
-		smera_r_size = MPP_ALIGN(prep->max_height, 256) / 256 * MPP_ALIGN(prep->max_width, 32) / 32;
+		smear_size = MPP_ALIGN(prep->max_width, 256) / 256 * MPP_ALIGN(prep->max_height, 32) / 32;
+		smear_r_size = MPP_ALIGN(prep->max_height, 256) / 256 * MPP_ALIGN(prep->max_width, 32) / 32;
 	}
 
-	smera_size = MPP_MAX(smera_size, smera_r_size);
+	smear_size = MPP_MAX(smear_size, smear_r_size);
 
 	if (aligned_w > 3 * SZ_1K) {
 		/* 480 bytes for each ctu above 3072 */
@@ -538,7 +538,7 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 
 	if ((frame_size > ctx->frame_size) ||
 	    (new_max_cnt > old_max_cnt) ||
-	    (smera_size > ctx->smera_size)) {
+	    (smear_size > ctx->smear_size)) {
 
 		if (!ctx->shared_buf->dpb_bufs) {
 			if (ctx->dpb_bufs)
@@ -554,7 +554,7 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 			if (ctx->cfg->codec.h265.tmvp_enable)
 				size[CMV_TYPE] = MPP_ALIGN(mb_wd64 * mb_h64 * 4, 256) * 16;
 
-			size[SMEAR_TYPE] = smera_size;
+			size[SMEAR_TYPE] = smear_size;
 			hal_h265e_dbg_detail("frame size %d -> %d max count %d -> %d\n",
 					     ctx->frame_size, frame_size, old_max_cnt,
 					     new_max_cnt);
@@ -572,7 +572,7 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 			if (ctx->cfg->codec.h265.tmvp_enable)
 				size[CMV_TYPE] = MPP_ALIGN(mb_wd64 * mb_h64 * 4, 256) * 16;
 
-			size[SMEAR_TYPE] = smera_size;
+			size[SMEAR_TYPE] = smear_size;
 			size[RECREF_TYPE] = ctx->fbc_header_len + ((mb_wd64 * mb_h64) << 12) * 3 / 2;//fbc_h + fbc_b
 
 			hal_h265e_dbg_detail("frame size %d -> %d max count %d -> %d\n",
@@ -588,7 +588,7 @@ static MPP_RET vepu540c_h265_setup_hal_bufs(H265eV540cHalContext *ctx)
 
 		ctx->frame_size = frame_size;
 		ctx->max_buf_cnt = new_max_cnt;
-		ctx->smera_size = smera_size;
+		ctx->smear_size = smear_size;
 	}
 	hal_h265e_leave();
 	return ret;
