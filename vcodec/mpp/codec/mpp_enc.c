@@ -78,6 +78,7 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 	ctrl_cfg.refs = p->refs;
 	ctrl_cfg.task_count = 2;
 
+	sema_init(&p->enc_sem, 1);
 	ret = mpp_enc_hal_init(&enc_hal, &enc_hal_cfg);
 	if (ret) {
 		mpp_err_f("could not init enc hal\n");
@@ -132,7 +133,6 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 	if ((ret = mpp_enc_refs_set_rc_igop(p->refs, p->cfg.rc.gop)))
 		goto ERR_RET;
 
-	sema_init(&p->enc_sem, 1);
 	p->stop_flag = 1;
 	atomic_set(&p->hw_run, 0);
 	p->rb_userdata.free_cnt = MAX_USRDATA_CNT;

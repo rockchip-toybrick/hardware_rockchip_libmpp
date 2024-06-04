@@ -247,6 +247,8 @@ struct mpp_dev {
 
 	struct rw_semaphore work_sem;
 	atomic_t suspend_en;
+	/* debug for isp */
+	void __iomem *isp_base;
 };
 
 struct mpp_session {
@@ -706,6 +708,7 @@ extern const struct file_operations rockchip_mpp_fops;
 
 extern struct platform_driver rockchip_rkvenc2_driver;
 extern struct platform_driver rockchip_rkvenc540c_driver;
+extern struct platform_driver rockchip_rkvenc500_driver;
 extern struct platform_driver rockchip_vepu_pp_driver;
 
 extern struct mpp_service *g_srv;

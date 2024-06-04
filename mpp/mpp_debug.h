@@ -39,7 +39,7 @@
 #define DEBUG_GET_REG				0x00002000
 #define DEBUG_PPS_FILL				0x00004000
 #define DEBUG_IRQ_CHECK				0x00008000
-#define DEBUG_DVBM_INFO				0x00010000
+#define DEBUG_DVBM_DUMP				0x00010000
 
 #define DEBUG_RESET				0x00020000
 #define DEBUG_SET_REG_L2			0x00040000
@@ -58,6 +58,7 @@
 
 /* reuse debug flag */
 #define DEBUG_WARNING				0x00040000
+#define DEBUG_DVBM_INFO				0x00000008
 
 extern unsigned int mpp_dev_debug;
 
@@ -130,7 +131,7 @@ extern unsigned int mpp_dev_debug;
 #define mpp_dbg_dvbm(fmt, args...)				\
 	do {							\
 		if (unlikely(mpp_dev_debug & DEBUG_DVBM_INFO)) {	\
-			pr_info(fmt, ##args);			\
+			pr_info("%s: " fmt, __func__, ##args);			\
 		}						\
 	} while (0)
 

@@ -75,13 +75,10 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 
 	h265->profile = MPP_PROFILE_HEVC_MAIN;
 	h265->level = 120;
-#ifdef RKVEC540C_HEVC
+
 	h265->ctu_size = 32;
 	h265->max_cu_size = 32;
-#else
-	h265->ctu_size = 64;
-	h265->max_cu_size = 64;
-#endif
+
 	h265->amp_enable = 0;
 	h265->sao_enable = 1;
 

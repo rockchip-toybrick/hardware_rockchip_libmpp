@@ -1849,6 +1849,7 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)
 	status->pkt_buf_rdy = 1;
 
 	hal_task->output = enc->pkt_buf;
+	hal_task->chan_id = enc->chan_id;
 	mpp_assert(enc->packet);
 
 	mpp_enc_impl_get_roi_osd(enc, enc->frame);

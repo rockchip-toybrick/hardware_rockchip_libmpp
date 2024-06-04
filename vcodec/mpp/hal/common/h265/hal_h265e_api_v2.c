@@ -29,6 +29,10 @@
 #include "hal_h265e_vepu540c.h"
 #endif
 
+#ifdef RKVEPU500_HEVC
+#include "hal_h265e_vepu500.h"
+#endif
+
 #include "hal_h265e_debug.h"
 
 RK_U32 hal_h265e_debug;
@@ -53,6 +57,10 @@ static MPP_RET hal_h265ev2_init(void *hal, MppEncHalCfg * cfg)
 
 #ifdef RKVEC540C_HEVC
 	api = &hal_h265e_vepu540c;
+#endif
+
+#ifdef RKVEPU500_HEVC
+	api = &hal_h265e_vepu500;
 #endif
 
 	mpp_assert(api);

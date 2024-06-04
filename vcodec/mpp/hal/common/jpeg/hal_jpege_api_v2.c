@@ -18,8 +18,14 @@
 #include "vepu5xx_common.h"
 #include "hal_jpege_debug.h"
 #include "hal_jpege_api_v2.h"
-#include "hal_jpege_vepu540c.h"
 
+#ifdef RKVEPU540C_JPEG
+#include "hal_jpege_vepu540c.h"
+#endif
+
+#ifdef RKVEPU500_H264
+#include "hal_jpege_vepu500.h"
+#endif
 typedef struct HaljpegeCtx_t {
 	const MppEncHalApi *api;
 	void *hw_ctx;
@@ -33,8 +39,13 @@ static MPP_RET hal_jpege_init(void *hal, MppEncHalCfg * cfg)
 	const MppEncHalApi *api = NULL;
 	void *hw_ctx = NULL;
 
+#ifdef RKVEPU540C_JPEG
 	api = &hal_jpege_vepu540c;
-	// mpp_env_get_u32("hal_jpege_debug", &hal_jpege_debug, 0);
+#endif
+
+#ifdef RKVEPU500_JPEG
+	api = &hal_jpege_vepu500;
+#endif
 
 	mpp_assert(api);
 

@@ -563,7 +563,7 @@ typedef struct {
 	RK_U32 bufferedBits;	/* Amount of bits in byte buffer, [0-7] */
 } JpegeBitsImpl;
 
-void jpege_bits_init(JpegeBits * ctx)
+void jpege_bits_init(JpegeBits *ctx)
 {
 	JpegeBitsImpl *impl = mpp_malloc(JpegeBitsImpl, 1);
 	*ctx = impl;
@@ -575,7 +575,7 @@ void jpege_bits_deinit(JpegeBits ctx)
 		mpp_free(ctx);
 }
 
-void jpege_bits_setup(JpegeBits ctx, RK_U8 * buf, RK_S32 size)
+void jpege_bits_setup(JpegeBits ctx, RK_U8 *buf, RK_S32 size)
 {
 	JpegeBitsImpl *impl = (JpegeBitsImpl *) ctx;
 

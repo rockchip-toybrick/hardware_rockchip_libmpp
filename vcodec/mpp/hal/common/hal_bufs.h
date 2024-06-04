@@ -24,6 +24,7 @@ typedef enum {
 	CMV_TYPE         = 1,
 	SMEAR_TYPE       = 2,
 	RECREF_TYPE      = 3,
+	HAL_BUF_TYPE_BUTT,
 } HalBufType;
 
 #ifdef __cplusplus

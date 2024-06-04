@@ -29,9 +29,10 @@
 #define MPP_CLASS_NAME		"mpp_class"
 #define MPP_SERVICE_NAME	"mpp_service"
 
-#define HAS_RKVENC580	IS_ENABLED(RKVEPU580_ENABLE)
-#define HAS_RKVENC540C	IS_ENABLED(RKVEPU540C_ENABLE)
+#define HAS_RKVENC580		IS_ENABLED(RKVEPU580_ENABLE)
+#define HAS_RKVENC540C		IS_ENABLED(RKVEPU540C_ENABLE)
 #define HAS_RKVENC540C_PP	IS_ENABLED(RKVEPU540C_PP_ENABLE)
+#define HAS_RKVENC500		IS_ENABLED(RKVEPU500_ENABLE)
 
 unsigned int mpp_dev_debug = 0x0;
 module_param(mpp_dev_debug, uint, 0644);
@@ -321,6 +322,10 @@ static int mpp_service_probe(struct platform_device *pdev)
 #ifdef RKVEPU540C_PP_ENABLE
 	mpp_add_driver(srv, MPP_DRIVER_RKVENC, &rockchip_vepu_pp_driver);
 #endif
+#ifdef RKVEPU500_ENABLE
+	mpp_add_driver(srv, MPP_DRIVER_RKVENC, &rockchip_rkvenc500_driver);
+#endif
+
 
 	dev_info(dev, "probe success\n");
 	g_srv = srv;

@@ -227,7 +227,9 @@ MPP_RET h265e_set_sps(H265eCtx * ctx, h265_sps * sps, h265_vps * vps)
 	minCUDepth = (codec->max_cu_size >> (maxCUDepth - 1));
 
 	tuQTMaxLog2Size = convertToBit[codec->max_cu_size] + 2 - 1;
-
+#ifdef RKVEPU500_ENABLE
+	tuQTMaxLog2Size += 1;
+#endif
 	addCUDepth = 0;
 	while ((RK_U32) (codec->max_cu_size >> maxCUDepth) >
 	       (1u << (tuQTMinLog2Size + addCUDepth)))
@@ -423,7 +425,11 @@ MPP_RET h265e_set_pps(H265eCtx * ctx, h265_pps * pps, h265_sps * sps)
 	pps->pps_cr_qp_offset = codec->trans_cfg.cb_qp_offset;
 
 	pps->entropy_coding_sync_enabled_flag = 0;
+#ifdef RKVEPU540C_SUPPORT
 	pps->weighted_pred_flag = 1;
+#else
+	pps->weighted_pred_flag = 0;
+#endif
 	pps->weighted_bipred_flag = 0;
 	pps->output_flag_present_flag = 0;
 	pps->sign_data_hiding_flag = 0;

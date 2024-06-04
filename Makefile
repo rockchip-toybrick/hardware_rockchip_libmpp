@@ -32,7 +32,14 @@ else
 TOP := $(PWD)
 endif
 
+ifeq ($(RK_KMPP_SOC_CHIP), rv1106)
 VEPU_CORE := RKVEPU540C
+endif
+
+ifeq ($(RK_KMPP_SOC_CHIP), rv1103b)
+VEPU_CORE := RKVEPU500
+endif
+
 BUILD_ONE_KO=y
 
 ifeq ($(CPU_TYPE), arm64)
@@ -108,7 +115,7 @@ endif
 ifneq ($(BUILD_ONE_KO), y)
 	@cp rk_vcodec.ko  $(REL_KO)
 	@cp vepu_pp.ko  $(REL_KO)
-endif	
+endif
 	@find $(REL_KO) -name "*.ko" | xargs ${CROSS_COMPILE}strip --strip-debug --remove-section=.comment --remove-section=.note --preserve-dates
 
 linux_clean:

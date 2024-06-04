@@ -1633,15 +1633,18 @@ int mpp_time_record(struct mpp_task *task)
 
 int mpp_time_diff(struct mpp_task *task)
 {
-	struct timespec64 end;
-	struct mpp_session *session = task->session;
-	struct mpp_dev *mpp = mpp_get_task_used_device(task, session);
+	if (mpp_debug_unlikely(DEBUG_TIMING)) {
+		struct timespec64 end;
+		struct mpp_session *session = task->session;
+		struct mpp_dev *mpp = mpp_get_task_used_device(task, session);
 
-	ktime_get_real_ts64(&end);
-	mpp_debug(DEBUG_TIMING, "%s: session %d:%d task %d time: %lld us\n",
-		  dev_name(mpp->dev), session->device_type, session->index, task->task_index,
-		  (end.tv_sec  - task->start.tv_sec)  * 1000000 +
-		  (end.tv_nsec - task->start.tv_nsec) / 1000);
+		ktime_get_real_ts64(&end);
+
+		mpp_debug(DEBUG_TIMING, "%s: session %d:%d task %d time: %lld us\n",
+			  dev_name(mpp->dev), session->device_type, session->index, task->task_index,
+			  (end.tv_sec  - task->start.tv_sec)  * 1000000 +
+			  (end.tv_nsec - task->start.tv_nsec) / 1000);
+	}
 
 	return 0;
 }

@@ -10,6 +10,7 @@ EXTRA_CFLAGS += -I$(KERNEL_ROOT)/drivers/devfreq
 rk_vcodec-objs := mpp/mpp_service.o mpp/mpp_common.o mpp/mpp_iommu.o
 rk_vcodec-$(RKVEPU580_ENABLE) += mpp/mpp_rkvenc2.o
 rk_vcodec-$(RKVEPU540C_ENABLE) += mpp/mpp_rkvenc_540c.o
+rk_vcodec-$(RKVEPU500_ENABLE) += mpp/mpp_rkvenc_500.o
 rk_vcodec-$(RKVEPU540C_PP_ENABLE) += mpp/mpp_rkvenc_pp.o
 
 ifneq ($(BUILD_ONE_KO), y)
