@@ -11,7 +11,6 @@
 #include "mpp_mem.h"
 #include "mpp_frame_impl.h"
 #include "mpp_packet_impl.h"
-#include "mpp_rc.h"
 #include "mpp_maths.h"
 
 #include "h264e_sps.h"
