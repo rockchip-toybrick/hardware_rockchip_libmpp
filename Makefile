@@ -32,11 +32,11 @@ else
 TOP := $(PWD)
 endif
 
-ifeq ($(RK_KMPP_SOC_CHIP), rv1106)
+ifeq ($(CONFIG_CPU_RV1106), y)
 VEPU_CORE := RKVEPU540C
 endif
 
-ifeq ($(RK_KMPP_SOC_CHIP), rv1103b)
+ifeq ($(CONFIG_CPU_RV1103B), y)
 VEPU_CORE := RKVEPU500
 endif
 
