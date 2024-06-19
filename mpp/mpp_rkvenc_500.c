@@ -50,6 +50,8 @@
 #define RKVENC_ENC_DONE_STATUS		(BIT(0))
 #define REC_FBC_DIS_CLASS_OFFSET	(36)
 
+#define RKVENC_RSL		(0x310)
+
 #define RKVENC_JPEG_BASE_CFG	(0x47c)
 #define JRKVENC_PEGE_ENABLE	(BIT(31))
 
@@ -529,6 +531,8 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 	struct mpp_task *mpp_task;
 	struct mpp_dev *mpp = session->mpp;
 	u32 i = 0;
+	u32 *wh_reg;
+
 	mpp_debug_enter();
 
 
@@ -566,6 +570,10 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 		if (val & 0x80000000)
 			mpp_task->clbk_en = 0;
 	}
+
+	wh_reg = rkvenc_get_class_reg(task, RKVENC_RSL);
+	mpp_task->width = (((*wh_reg) & 0x7ff) + 1) << 3;
+	mpp_task->height = (((*wh_reg) >> 16) + 1) << 3;
 
 	task->clk_mode = CLK_MODE_NORMAL;
 
