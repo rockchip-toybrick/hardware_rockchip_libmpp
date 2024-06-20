@@ -26,8 +26,6 @@
 --keep-one-line-blocks
 --keep-one-line-statements
 
---remove-braces
-
 # other setting
 #--quiet
 --suffix=none
