@@ -627,6 +627,8 @@ MPP_RET reenc_calc_super_frm_ratio(void *ctx, EncRcTaskInfo * cfg)
 	rc_dbg_func("enter %p\n", p);
 	p->next_ratio = 160 * (4 * (cfg->bit_real - p->cur_super_thd) / cfg->bit_target);
 	p->next_ratio = mpp_clip(p->next_ratio, 128, 640);
+	rc_dbg_rc("cur_super_thd %d target bit %d real_bit %d reenc next ratio %d\n",
+		  p->cur_super_thd, cfg->bit_target, cfg->bit_real, p->next_ratio);
 	rc_dbg_func("leave %p\n", p);
 
 	return MPP_OK;
@@ -1191,6 +1193,7 @@ MPP_RET check_super_frame(RcModelV2Ctx * ctx, EncRcTaskInfo * cfg)
 				usr_cfg->drop_mode = MPP_ENC_RC_DROP_FRM_NORMAL;
 				usr_cfg->drop_gap = 0;
 			}
+			rc_dbg_rc("bit real %d >= bit thd %d\n", cfg->bit_real, bits_thr);
 			ret = MPP_NOK;
 		}
 	}
@@ -1215,11 +1218,17 @@ MPP_RET check_re_enc(RcModelV2Ctx * ctx, EncRcTaskInfo * cfg)
 	rc_dbg_rc("reenc check target_bps %d last_ins_bps %d ins_bps %d\n",
 		  usr_cfg->bps_target, last_ins_bps, ins_bps);
 
-	if (ctx->reenc_cnt >= usr_cfg->max_reencode_times)
+	if (ctx->reenc_cnt >= usr_cfg->max_reencode_times) {
+		rc_dbg_rc("reencode %d times\n", ctx->reenc_cnt);
+		ctx->reenc_cnt = 0;
 		return MPP_OK;
+	}
 
-	if (usr_cfg->shared_buf_en)
+	if (ctx->drop_cnt >= usr_cfg->max_reencode_times) {
+		rc_dbg_rc("drop_cnt %d times\n", ctx->drop_cnt);
+		ctx->drop_cnt = 0;
 		return MPP_OK;
+	}
 
 	if (check_super_frame(ctx, cfg))
 		return MPP_NOK;
@@ -1574,7 +1583,7 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 					  p->start_qp, p->start_qp - usr_cfg->vi_quality_delta);
 				p->start_qp -= usr_cfg->vi_quality_delta;
 			}
-			p->start_qp =	mpp_clip(p->start_qp, qpmin, max_p_frame_qp);
+			p->start_qp = mpp_clip(p->start_qp, qpmin, max_p_frame_qp);
 		}
 	}
 
@@ -1587,9 +1596,10 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 			rc_dbg_qp("hier_qp: layer %d delta %d", p->qp_layer_id, hier_qp_delta);
 		}
 	}
-
+	p->start_qp += p->qp_add;
 	p->start_qp = mpp_clip(p->start_qp, qpmin, info->quality_max);
 	info->quality_target = p->start_qp;
+	p->on_drop = 0;
 
 	rc_dbg_rc("bitrate [%d : %d : %d] -> [%d : %d : %d]\n",
 		  bit_min, bit_target, bit_max, info->bit_min, info->bit_target, info->bit_max);
@@ -1635,9 +1645,8 @@ MPP_RET rc_model_v2_check_reenc(void *ctx, EncRcTask * task)
 
 	if (check_re_enc(p, cfg)) {
 		MppEncRcDropFrmMode drop_mode = usr_cfg->drop_mode;
-
-		if (frm->is_intra)
-			drop_mode = MPP_ENC_RC_DROP_FRM_DISABLED;
+		RK_S32 bits_thr = p->frame_type == INTRA_FRAME ? usr_cfg->super_cfg.super_i_thd :
+				  usr_cfg->super_cfg.super_p_thd;
 
 		if (usr_cfg->drop_gap && p->drop_cnt >= usr_cfg->drop_gap)
 			drop_mode = MPP_ENC_RC_DROP_FRM_DISABLED;
@@ -1646,6 +1655,13 @@ MPP_RET rc_model_v2_check_reenc(void *ctx, EncRcTask * task)
 
 		switch (drop_mode) {
 		case MPP_ENC_RC_DROP_FRM_NORMAL: {
+			if (cfg->bit_real > bits_thr * 2)
+				p->qp_add += 3;
+			else if (cfg->bit_real > bits_thr * 3 / 2)
+				p->qp_add += 2;
+			else if (cfg->bit_real > bits_thr)
+				p->qp_add += 1;
+
 			frm->drop = 1;
 			frm->reencode = 1;
 			p->on_drop = 1;
@@ -1665,10 +1681,14 @@ MPP_RET rc_model_v2_check_reenc(void *ctx, EncRcTask * task)
 		break;
 		case MPP_ENC_RC_DROP_FRM_DISABLED:
 		default: {
-			if (p->re_calc_ratio)
-				p->re_calc_ratio(p, cfg);
+			if (cfg->bit_real > bits_thr * 2)
+				p->qp_add += 3;
+			else if (cfg->bit_real > bits_thr * 3 / 2)
+				p->qp_add += 2;
+			else if (cfg->bit_real > bits_thr)
+				p->qp_add += 1;
 
-			if (p->next_ratio != 0 && cfg->quality_target < cfg->quality_max) {
+			if (cfg->quality_target + p->qp_add <= cfg->quality_max) {
 				p->reenc_cnt++;
 				frm->reencode = 1;
 			}
@@ -1676,6 +1696,10 @@ MPP_RET rc_model_v2_check_reenc(void *ctx, EncRcTask * task)
 		}
 		break;
 		}
+	} else {
+		p->drop_cnt = 0;
+		p->on_drop = 0;
+		p->qp_add = 0;
 	}
 
 	return MPP_OK;

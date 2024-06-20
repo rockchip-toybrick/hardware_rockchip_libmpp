@@ -2006,6 +2006,7 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
 	EncTaskStatus *status = &task->status;
 	EncTask *jpeg_task = NULL;
 	MPP_RET ret = MPP_OK;
+	RK_U8 force_idr = 1;
 
 	if (jpeg_ctx) {
 		MppEncImpl *jpeg_enc = (MppEncImpl *)jpeg_ctx;
@@ -2021,35 +2022,47 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
 	if (ret)
 		goto TASK_DONE;
 
-	if (frm->reencode && frm->reencode_times < enc->cfg.rc.max_reenc_times) {
-		hal_task->length -= hal_task->hw_length;
-		hal_task->hw_length = 0;
-		status->rc_reenc = 1;
-
-		if (enc->online || enc->ref_buf_shared) {
-			enc_dbg_detail("shared status can't reenc drop request idr\n");
-			ret = MPP_NOK;
-			goto TASK_DONE;
+	while (frm->reencode && frm->reencode_times < enc->cfg.rc.max_reenc_times) {
+		if (enc->online) {
+			mpp_err_f("chan %d wrap enc not support reenc\n", enc->chan_id);
+			break;
 		}
 
+		if (enc->ref_buf_shared && !frm->is_idr)
+			break;
+
+		hal_task->length = 0;
+		hal_task->hw_length = 0;
+		status->rc_reenc = 1;
 		enc_dbg_detail("task %d reenc %d times %d\n", frm->seq_idx,
 			       frm->reencode, frm->reencode_times);
 
 		if (frm->drop) {
-			mpp_enc_reenc_drop(enc, task);
+			if (!enc->ref_buf_shared && !frm->is_idr) {
+				mpp_enc_reenc_drop(enc, task);
+				force_idr = 0;
+			}
 			status->rc_reenc = 0;
+			ret = MPP_NOK;
+			goto TASK_DONE;
 		}
 
 		if (frm->force_pskip && !frm->is_idr && !frm->is_lt_ref) {
 			mpp_enc_reenc_force_pskip(enc, task);
 			status->rc_reenc = 0;
 		}
+
 		if (status->rc_reenc) {
+			if (enc->ref_buf_shared && !frm->is_idr) {
+				status->rc_reenc = 0;
+				break;
+			}
 			if (jpeg_ctx)
 				mpp_enc_comb_end_jpeg(jpeg_ctx, jpeg_packet);
 			return MPP_OK;
 		}
 	}
+
 	enc_dbg_detail("task %d rc enc->frame end\n", frm->seq_idx);
 	ENC_RUN_FUNC2(rc_frm_end, enc->rc_ctx, rc_task, enc, ret);
 	enc->qp_out = rc_task->qp_out;
@@ -2067,8 +2080,10 @@ TASK_DONE:
 
 	if (ret) {
 		enc->frame_force_drop++;
-		enc->frm_cfg.force_flag |= ENC_FORCE_IDR;
-		enc->hdr_status.val = 0;
+		if (force_idr) {
+			enc->frm_cfg.force_flag |= ENC_FORCE_IDR;
+			enc->hdr_status.val = 0;
+		}
 		mpp_packet_set_length(enc->packet, 0);
 		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
 		mpp_packet_deinit(&enc->packet);

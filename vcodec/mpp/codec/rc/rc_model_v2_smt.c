@@ -76,6 +76,7 @@ typedef struct RcModelV2SmtCtx_t {
 	RK_S32          on_drop;
 	RK_S32          on_pskip;
 	RK_S32          ptz_keep_cnt;
+	RK_S32          qp_add;
 } RcModelV2SmtCtx;
 
 MPP_RET bits_model_smt_deinit(RcModelV2SmtCtx * ctx)
@@ -927,10 +928,20 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 	info->bit_target = p->bits_target_hr;
 	p->frm_num++;
 	p->reenc_cnt = 0;
+
+	if (p->usr_cfg.super_cfg.super_mode) {
+		RK_U32 super_thd = p->frame_type == INTRA_FRAME ?
+				   p->usr_cfg.super_cfg.super_i_thd :
+				   p->usr_cfg.super_cfg.super_p_thd;
+
+		if (p->usr_cfg.super_cfg.rc_priority == MPP_ENC_RC_BY_FRM_SIZE_FIRST) {
+			if (info->bit_target > super_thd)
+				info->bit_target = super_thd;
+		}
+	}
 	rc_dbg_func("leave %p\n", ctx);
 	return MPP_OK;
 }
-
 
 MPP_RET check_super_frame_smt(RcModelV2SmtCtx *ctx, EncRcTaskInfo *cfg)
 {
@@ -951,6 +962,7 @@ MPP_RET check_super_frame_smt(RcModelV2SmtCtx *ctx, EncRcTaskInfo *cfg)
 				usr_cfg->drop_mode = MPP_ENC_RC_DROP_FRM_NORMAL;
 				usr_cfg->drop_gap  = 0;
 			}
+			rc_dbg_rc("bit real %d >= bit thd %d\n", cfg->bit_real, bits_thr);
 			ret = MPP_NOK;
 		}
 	}
@@ -977,7 +989,7 @@ MPP_RET check_re_enc_smt(RcModelV2SmtCtx *ctx, EncRcTaskInfo *cfg)
 	if (ctx->reenc_cnt >= usr_cfg->max_reencode_times)
 		return MPP_OK;
 
-	if (usr_cfg->shared_buf_en)
+	if (ctx->drop_cnt >= usr_cfg->max_reencode_times)
 		return MPP_OK;
 
 	if (check_super_frame_smt(ctx, cfg))
@@ -1033,9 +1045,8 @@ MPP_RET rc_model_v2_smt_check_reenc(void *ctx, EncRcTask *task)
 
 	if (check_re_enc_smt(p, cfg)) {
 		MppEncRcDropFrmMode drop_mode = usr_cfg->drop_mode;
-
-		if (frm->is_intra)
-			drop_mode = MPP_ENC_RC_DROP_FRM_DISABLED;
+		RK_S32 bits_thr = p->frame_type == INTRA_FRAME ? usr_cfg->super_cfg.super_i_thd :
+				  usr_cfg->super_cfg.super_p_thd;
 
 		if (usr_cfg->drop_gap && p->drop_cnt >= usr_cfg->drop_gap)
 			drop_mode = MPP_ENC_RC_DROP_FRM_DISABLED;
@@ -1044,6 +1055,13 @@ MPP_RET rc_model_v2_smt_check_reenc(void *ctx, EncRcTask *task)
 
 		switch (drop_mode) {
 		case MPP_ENC_RC_DROP_FRM_NORMAL : {
+			if (cfg->bit_real > bits_thr * 2)
+				p->qp_add += 3;
+			else if (cfg->bit_real > bits_thr * 3 / 2)
+				p->qp_add += 2;
+			else if (cfg->bit_real > bits_thr)
+				p->qp_add += 1;
+
 			frm->drop = 1;
 			frm->reencode = 1;
 			p->on_drop = 1;
@@ -1059,18 +1077,14 @@ MPP_RET rc_model_v2_smt_check_reenc(void *ctx, EncRcTask *task)
 		} break;
 		case MPP_ENC_RC_DROP_FRM_DISABLED :
 		default : {
-			RK_S32 bits_thr = usr_cfg->super_cfg.super_p_thd;
-			if (p->frame_type == INTRA_FRAME)
-				bits_thr = usr_cfg->super_cfg.super_i_thd;
-
 			if (cfg->bit_real > bits_thr * 2)
-				cfg->quality_target += 3;
+				p->qp_add = 3;
 			else if (cfg->bit_real > bits_thr * 3 / 2)
-				cfg->quality_target += 2;
+				p->qp_add = 2;
 			else if (cfg->bit_real > bits_thr)
-				cfg->quality_target ++;
+				p->qp_add = 1;
 
-			if (cfg->quality_target < cfg->quality_max) {
+			if (cfg->quality_target + p->qp_add <= cfg->quality_max) {
 				p->reenc_cnt++;
 				frm->reencode = 1;
 			}
@@ -1078,6 +1092,10 @@ MPP_RET rc_model_v2_smt_check_reenc(void *ctx, EncRcTask *task)
 			rc_dbg_drop("drop disable\n");
 		} break;
 		}
+	} else {
+		p->qp_add = 0;
+		p->drop_cnt = 0;
+		p->on_drop = 0;
 	}
 
 	return MPP_OK;
@@ -1123,6 +1141,15 @@ MPP_RET rc_model_v2_smt_end(void *ctx, EncRcTask * task)
 
 MPP_RET rc_model_v2_smt_hal_start(void *ctx, EncRcTask * task)
 {
+	EncRcTaskInfo *cfg = (EncRcTaskInfo *)&task->info;
+	RcModelV2SmtCtx *p = (RcModelV2SmtCtx *)ctx;
+
+	p->on_drop = 0;
+	cfg->quality_target += p->qp_add;
+	cfg->quality_target = mpp_clip(cfg->quality_target, cfg->quality_min, cfg->quality_max);
+	p->qp_out = cfg->quality_target;
+	rc_dbg_rc("qp [%d %d %d] add %d\n", cfg->quality_min, cfg->quality_target, cfg->quality_max,
+		  p->qp_add);
 	rc_dbg_func("smt_hal_start enter ctx %p task %p\n", ctx, task);
 	return MPP_OK;
 }
