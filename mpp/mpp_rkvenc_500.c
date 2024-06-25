@@ -291,9 +291,6 @@ struct rkvenc_dev {
 	struct dvbm_port *dvbm_port;
 	unsigned long dvbm_setup;
 #endif
-
-	u32 video_wr_addr;
-	u32 jpeg_wr_addr;
 };
 
 static struct rkvenc_hw_info rkvenc_500_hw_info = {
@@ -723,6 +720,29 @@ static void rkvenc_dvbm_status_dump(struct mpp_dev *mpp)
 		pr_err("reg[%#x] 0x%08x\n", off, mpp_read(mpp, off));
 }
 
+static void rkvenc_reg_dump(struct mpp_dev *mpp)
+{
+	struct rkvenc_hw_info *hw = &rkvenc_500_hw_info;
+	u32 i, off;
+	u32 s, e;
+
+	if (!unlikely(mpp_dev_debug & DEBUG_DUMP_ERR_REG))
+		return;
+
+	for (i = 0; i < RKVENC_CLASS_BUTT; i++) {
+		s = hw->reg_msg[i].base_s;
+		e = hw->reg_msg[i].base_e;
+		for (off = s; off <= e; off += 4) {
+			u32 val = mpp_read(mpp, off);
+
+			if (val)
+				mpp_err("reg[%#x] 0x%08x\n", off, val);
+
+			udelay(100);
+		}
+	}
+}
+
 static void rkvenc_dvbm_show_info(struct mpp_dev *mpp)
 {
 	u32 isp_info_addr[4] = {0x5170, 0x5178, 0x5180, 0x5188};
@@ -769,10 +789,7 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 				enc_start_val = regs[j];
 				continue;
 			}
-			if (off == RKVENC_VIDEO_BSBS)
-				enc->video_wr_addr = regs[j];
-			if (off == RKVENC_JPEG_BSBS)
-				enc->jpeg_wr_addr = regs[j];
+
 			if (mpp_task->disable_jpeg && off == 0x47c)
 				regs[j] &= (~BIT(31));
 
@@ -910,54 +927,52 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 {
-	u32 r_adr, top_adr, bot_adr;
+	u32 w_adr, r_adr, top_adr, bot_adr;
 	int ret = 0;
-	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	struct mpp_task *task = mpp->cur_task;
 	struct rkvenc2_session_priv *priv = task->session->priv;
 
 	if (!(mpp->irq_status & RKVENC_ENC_DONE_STATUS)) {
 		if (mpp->irq_status & RKVENC_JPEG_OVERFLOW) {
 			r_adr = mpp_read(mpp, RKVENC_JPEG_BSBR);
+			w_adr = mpp_read(mpp, RKVENC_JPEG_BSBS);
 			top_adr = mpp_read(mpp, RKVENC_JPEG_BSBT);
 			bot_adr = mpp_read(mpp, RKVENC_JPEG_BSBB);
 
 			priv->info.bsbuf_info[0] = top_adr;
 			priv->info.bsbuf_info[1] = bot_adr;
-			priv->info.bsbuf_info[2] = enc->jpeg_wr_addr;
+			priv->info.bsbuf_info[2] = w_adr;
 			priv->info.bsbuf_info[3] = r_adr;
+
+			mpp_write(mpp, RKVENC_JPEG_BSBS, w_adr);
+			mpp_write(mpp, RKVENC_JPEG_BSBR, r_adr | 0xc);
+
 			mpp_dbg_warning("task %d jpeg bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
-					task->task_index, top_adr, bot_adr, enc->jpeg_wr_addr, r_adr);
-			if (enc->jpeg_wr_addr == r_adr)
-				enc->jpeg_wr_addr += 1;
-			if (enc->jpeg_wr_addr >= top_adr)
-				enc->jpeg_wr_addr = mpp_read(mpp, RKVENC_JPEG_BSBB);
-			mpp_write(mpp, RKVENC_JPEG_BSBS, enc->jpeg_wr_addr);
-			mpp_write(mpp, RKVENC_JPEG_BSBR, r_adr + 0xc);
+					task->task_index, top_adr, bot_adr, w_adr, r_adr);
 			mpp->overflow_status = mpp->irq_status;
 			ret = 1;
 		}
 		if (mpp->irq_status & RKVENC_VIDEO_OVERFLOW) {
 			r_adr = mpp_read(mpp, RKVENC_VIDEO_BSBR);
+			w_adr = mpp_read(mpp, RKVENC_VIDEO_BSBS);
 			top_adr = mpp_read(mpp, RKVENC_VIDEO_BSBT);
 			bot_adr = mpp_read(mpp, RKVENC_VIDEO_BSBB);
+
 			priv->info.bsbuf_info[0] = top_adr;
 			priv->info.bsbuf_info[1] = bot_adr;
-			priv->info.bsbuf_info[2] = enc->video_wr_addr;
+			priv->info.bsbuf_info[2] = w_adr;
 			priv->info.bsbuf_info[3] = r_adr;
 
+			mpp_write(mpp, RKVENC_VIDEO_BSBS, w_adr);
+			mpp_write(mpp, RKVENC_VIDEO_BSBR, r_adr | 0xc);
+
 			mpp_dbg_warning("task %d video bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
-					task->task_index, top_adr, bot_adr, enc->video_wr_addr, r_adr);
-			if (enc->video_wr_addr == r_adr)
-				enc->video_wr_addr += 1;
-			if (enc->video_wr_addr >= top_adr)
-				enc->video_wr_addr = mpp_read(mpp, RKVENC_VIDEO_BSBB);
-			mpp_write(mpp, RKVENC_VIDEO_BSBS, enc->video_wr_addr);
-			mpp_write(mpp, RKVENC_VIDEO_BSBR, r_adr + 0xc);
+					task->task_index, top_adr, bot_adr, w_adr, r_adr);
 			mpp->overflow_status = mpp->irq_status;
 			ret = 1;
 		}
 	}
+
 	return ret;
 }
 
@@ -984,8 +999,10 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 	mpp_write(mpp, hw->int_sta_base, 0);
 
 	/* check irq status */
-	if (rkvenc_check_bs_overflow(mpp))
+	if (rkvenc_check_bs_overflow(mpp)) {
+		mpp_write(mpp, hw->int_clr_base, mpp->irq_status);
 		return IRQ_HANDLED;
+	}
 
 	mpp_dbg_dvbm("irq_status 0x%08x\n", mpp->irq_status);
 	dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
@@ -1317,25 +1334,7 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	mpp = session->mpp;
 
 	disable_irq(mpp->irq);
-
-	{
-		struct rkvenc_hw_info *hw = &rkvenc_500_hw_info;
-		u32 i, off;
-		u32 s, e;
-
-		for (i = 0; i < RKVENC_CLASS_BUTT; i++) {
-			s = hw->reg_msg[i].base_s;
-			e = hw->reg_msg[i].base_e;
-			for (off = s; off <= e; off += 4) {
-				u32 val = mpp_read(mpp, off);
-
-				if (val)
-					mpp_err("reg[%#x] 0x%08x\n", off, mpp_read(mpp, off));
-				udelay(1000);
-			}
-		}
-	}
-
+	rkvenc_reg_dump(mpp);
 	set_bit(TASK_STATE_TIMEOUT, &task->state);
 
 	mpp_time_diff(task);
@@ -1435,6 +1434,15 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 		   priv->info.bsbuf_overflow_cnt,
 		   priv->info.enc_err_cnt, priv->info.enc_err_status);
 	seq_puts(seq, "\n");
+	if (priv->info.bsbuf_overflow_cnt) {
+		seq_puts(seq, "\n--------bitstream buffer addr");
+		seq_puts(seq, "------------------------------------------------------\n");
+		seq_printf(seq, "%10s|%10s|%10s|%10s|\n",
+			   "top", "bot", "wr", "rd");
+		seq_printf(seq, "%10x|%10x|%10x|%10x|\n",
+			   priv->info.bsbuf_info[0], priv->info.bsbuf_info[1],
+			   priv->info.bsbuf_info[2], priv->info.bsbuf_info[3]);
+	}
 	up_read(&priv->rw_sem);
 
 	return 0;
@@ -1572,6 +1580,7 @@ static int rkvenc_reset(struct mpp_dev *mpp)
 
 	mpp_write(mpp, hw->enc_clr_base, 0x6);
 	udelay(5);
+	mpp_write(mpp, hw->enc_clr_base, 0);
 	mpp_write(mpp, hw->int_clr_base, 0xffffffff);
 	mpp_write(mpp, hw->int_sta_base, 0);
 
