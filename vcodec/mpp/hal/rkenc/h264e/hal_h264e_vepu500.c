@@ -411,14 +411,13 @@ static void setup_hal_bufs(HalH264eVepu500Ctx *ctx)
 
 	/* ext line buffer */
 	if (aligned_w > 2880) {
-		RK_S32 ctu_w = (aligned_w + 63) / 64;
+		RK_S32 ctu_w = aligned_w / 64;
 		RK_S32 ext_line_buf_size = ((ctu_w - 35) * 53 + 15) / 16 * 16 * 16;
 
-		if (ctx->shared_buf->ext_line_buf)
+		if (ctx->shared_buf->ext_line_buf) {
 			ctx->ext_line_buf = ctx->shared_buf->ext_line_buf;
-
-		else {
-			if (ext_line_buf_size != ctx->ext_line_buf_size) {
+		} else {
+			if (ctx->ext_line_buf && (ext_line_buf_size > ctx->ext_line_buf_size)) {
 				mpp_buffer_put(ctx->ext_line_buf);
 				ctx->ext_line_buf = NULL;
 			}

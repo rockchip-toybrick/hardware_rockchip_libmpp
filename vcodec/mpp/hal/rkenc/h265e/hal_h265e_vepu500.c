@@ -335,7 +335,7 @@ static MPP_RET vepu500_h265_setup_hal_bufs(H265eV500HalContext *ctx)
 		RK_S32 ext_line_buf_size = ((ctu_w - 80) * 27 + 15) / 16 * 16 * 16;
 
 		if (!ctx->shared_buf->ext_line_buf ) {
-			if (ext_line_buf_size > ctx->ext_line_buf_size) {
+			if (ctx->ext_line_buf && (ext_line_buf_size > ctx->ext_line_buf_size)) {
 				mpp_buffer_put(ctx->ext_line_buf);
 				ctx->ext_line_buf = NULL;
 			}
