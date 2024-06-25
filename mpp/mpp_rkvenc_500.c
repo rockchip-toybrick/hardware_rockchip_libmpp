@@ -1697,7 +1697,7 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 	case DVBM_ISP_REQ_CONNECT: {
 		u32 isp_id = *(u32*)arg;
 
-		mpp_err("isp %d connect\n", isp_id);
+		mpp_debug(DEBUG_ISP_INFO, "isp %d connect\n", isp_id);
 		mpp_write(mpp, 0x60, BIT(4) | BIT(0));
 		set_bit(isp_id, &enc->dvbm_setup);
 		// rkvenc_dvbm_status_dump(mpp);
@@ -1706,7 +1706,7 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		u32 isp_id = *(u32*)arg;
 
 		clear_bit(isp_id, &enc->dvbm_setup);
-		mpp_err("isp %d disconnect 0x%lx\n", isp_id, enc->dvbm_setup);
+		mpp_debug(DEBUG_ISP_INFO, "isp %d disconnect 0x%lx\n", isp_id, enc->dvbm_setup);
 		if (!enc->dvbm_setup)
 			mpp_write(mpp, 0x60, 0);
 	} break;
@@ -1719,17 +1719,17 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		u32 id = *(u32*)arg;
 #if ISP_DEBUG
 		if (mpp->isp_base)
-			mpp_err("isp frame %d start addr[%#x %#x]\n", id,
-				readl(mpp->isp_base), readl(mpp->isp_base + 4));
+			mpp_debug(DEBUG_ISP_INFO, "isp frame %d start addr[%#x %#x]\n", id,
+				  readl(mpp->isp_base), readl(mpp->isp_base + 4));
 		else
 #endif
-			mpp_err("isp frame %d start\n", id);
+			mpp_debug(DEBUG_ISP_INFO, "isp frame %d start\n", id);
 		rkvenc_dvbm_status_dump(mpp);
 	} break;
 	case DVBM_VEPU_NOTIFY_FRM_END: {
 		u32 id = *(u32*)arg;
 
-		mpp_err("isp frame %d end\n", id);
+		mpp_debug(DEBUG_ISP_INFO, "isp frame %d end\n", id);
 		rkvenc_dvbm_status_dump(mpp);
 	} break;
 	default : {
