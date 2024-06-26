@@ -948,17 +948,17 @@ static MPP_RET vepu500_h265_set_rc_regs(H265eV500HalContext *ctx, H265eV500RegSe
 		reg_rc->roi_qthd0.qpmax_area0 = h265->qpmax_map[0] > 0 ? h265->qpmax_map[0] : rc_cfg->quality_max;
 		reg_rc->roi_qthd0.qpmin_area1 = h265->qpmin_map[1] > 0 ? h265->qpmin_map[1] : rc_cfg->quality_min;
 		reg_rc->roi_qthd0.qpmax_area1 = h265->qpmax_map[1] > 0 ? h265->qpmax_map[1] : rc_cfg->quality_max;
-		reg_rc->roi_qthd0.qpmin_area2 = h265->qpmin_map[2] > 0 ? h265->qpmin_map[2] : rc_cfg->quality_min;;
+		reg_rc->roi_qthd0.qpmin_area2 = h265->qpmin_map[2] > 0 ? h265->qpmin_map[2] : rc_cfg->quality_min;
 		reg_rc->roi_qthd1.qpmax_area2 = h265->qpmax_map[2] > 0 ? h265->qpmax_map[2] : rc_cfg->quality_max;
-		reg_rc->roi_qthd1.qpmin_area3 = h265->qpmin_map[3] > 0 ? h265->qpmin_map[3] : rc_cfg->quality_min;;
+		reg_rc->roi_qthd1.qpmin_area3 = h265->qpmin_map[3] > 0 ? h265->qpmin_map[3] : rc_cfg->quality_min;
 		reg_rc->roi_qthd1.qpmax_area3 = h265->qpmax_map[3] > 0 ? h265->qpmax_map[3] : rc_cfg->quality_max;
-		reg_rc->roi_qthd1.qpmin_area4 = h265->qpmin_map[4] > 0 ? h265->qpmin_map[4] : rc_cfg->quality_min;;
+		reg_rc->roi_qthd1.qpmin_area4 = h265->qpmin_map[4] > 0 ? h265->qpmin_map[4] : rc_cfg->quality_min;
 		reg_rc->roi_qthd1.qpmax_area4 = h265->qpmax_map[4] > 0 ? h265->qpmax_map[4] : rc_cfg->quality_max;
-		reg_rc->roi_qthd2.qpmin_area5 = h265->qpmin_map[5] > 0 ? h265->qpmin_map[5] : rc_cfg->quality_min;;
+		reg_rc->roi_qthd2.qpmin_area5 = h265->qpmin_map[5] > 0 ? h265->qpmin_map[5] : rc_cfg->quality_min;
 		reg_rc->roi_qthd2.qpmax_area5 = h265->qpmax_map[5] > 0 ? h265->qpmax_map[5] : rc_cfg->quality_max;
-		reg_rc->roi_qthd2.qpmin_area6 = h265->qpmin_map[6] > 0 ? h265->qpmin_map[6] : rc_cfg->quality_min;;
+		reg_rc->roi_qthd2.qpmin_area6 = h265->qpmin_map[6] > 0 ? h265->qpmin_map[6] : rc_cfg->quality_min;
 		reg_rc->roi_qthd2.qpmax_area6 = h265->qpmax_map[6] > 0 ? h265->qpmax_map[6] : rc_cfg->quality_max;
-		reg_rc->roi_qthd2.qpmin_area7 = h265->qpmin_map[7] > 0 ? h265->qpmin_map[7] : rc_cfg->quality_min;;
+		reg_rc->roi_qthd2.qpmin_area7 = h265->qpmin_map[7] > 0 ? h265->qpmin_map[7] : rc_cfg->quality_min;
 		reg_rc->roi_qthd3.qpmax_area7 = h265->qpmax_map[7] > 0 ? h265->qpmax_map[7] : rc_cfg->quality_max;
 		reg_rc->roi_qthd3.qpmap_mode  = h265->qpmap_mode;
 	}
@@ -1286,7 +1286,6 @@ static void setup_recn_refr_wrap(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 	regs->reg0181_adr_rfpb_h = ref_iova + rfp_h_bot;
 	regs->reg0182_adr_rfpt_b = ref_iova + rfp_b_top;
 	regs->reg0183_adr_rfpb_b = ref_iova + rfp_b_bot;
-	regs->reg0192_enc_pic.cur_frm_ref = !cur_is_non_ref;
 
 	if (recn_ref_wrap) {
 		RK_U32 cur_hdr_off;
@@ -1338,10 +1337,8 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 	if (ctx->recn_ref_wrap)
 		setup_recn_refr_wrap(ctx, regs, task);
 	else {
-		if (!syn->sp.non_reference_flag) {
-			regs->reg0163_rfpw_h_addr = mpp_dev_get_iova_address(ctx->dev, recon_buf->buf[RECREF_TYPE], 163);
-			regs->reg0164_rfpw_b_addr = regs->reg0163_rfpw_h_addr + ctx->fbc_header_len;
-		}
+		regs->reg0163_rfpw_h_addr = mpp_dev_get_iova_address(ctx->dev, recon_buf->buf[RECREF_TYPE], 163);
+		regs->reg0164_rfpw_b_addr = regs->reg0163_rfpw_h_addr + ctx->fbc_header_len;
 		regs->reg0165_rfpr_h_addr = mpp_dev_get_iova_address(ctx->dev, ref_buf->buf[RECREF_TYPE], 165);
 		regs->reg0166_rfpr_b_addr = regs->reg0165_rfpr_h_addr + ctx->fbc_header_len;
 		regs->reg0180_adr_rfpt_h = 0xffffffff;
@@ -1560,6 +1557,14 @@ static MPP_RET vepu500_h265_set_prep(void *hal, HalEncTask *task)
 	reg_frm->reg0192_enc_pic.enc_stnd      = 1;
 	/* current frame will be refered */
 	reg_frm->reg0192_enc_pic.cur_frm_ref   = !syn->sp.non_reference_flag;
+	/*
+	 * Fix HW Bug:
+	 * Must config the cur_frm_ref to 1 when it is INTRA_FRAME,
+	 * Ensure that the cime module is working.
+	 */
+	if (ctx->frame_type == INTRA_FRAME)
+		reg_frm->reg0192_enc_pic.cur_frm_ref = 1;
+
 	reg_frm->reg0192_enc_pic.bs_scp        = 1;
 	reg_frm->reg0192_enc_pic.log2_ctu_num_hevc  = mpp_ceil_log2(pic_wd32 * pic_h32);
 
