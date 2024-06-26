@@ -367,8 +367,8 @@ MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_att
 		RK_S32 mb_wd64 = aligned_w / 64;
 		RK_S32 mb_h64 = aligned_h / 64;
 
-		RK_S32 pixel_buf_fbc_hdr_size = MPP_ALIGN(aligned_w * aligned_h / 64, SZ_8K);
-		RK_S32 pixel_buf_fbc_bdy_size = aligned_w * aligned_h * 3 / 2;
+		RK_S32 pixel_buf_fbc_hdr_size = MPP_ALIGN(aligned_w * (aligned_h + 32) / 64, SZ_8K);
+		RK_S32 pixel_buf_fbc_bdy_size = aligned_w * (aligned_h + 32) * 3 / 2;
 		RK_S32 pixel_buf_size = pixel_buf_fbc_hdr_size + pixel_buf_fbc_bdy_size;
 
 		RK_S32 thumb_buf_size = MPP_ALIGN(aligned_w / 64 * aligned_h / 64 * 256, SZ_8K);
@@ -380,7 +380,7 @@ MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_att
 		RK_S32 max_lt_cnt = attr->max_lt_cnt;
 		struct hal_shared_buf *ctx = &entry->shared_buf;
 		RK_S32 pixel_buf_size_265 = MPP_ALIGN(((mb_wd64 * mb_h64) << 6), SZ_8K) +
-					    ((mb_wd64 * mb_h64) << 12) * 3 / 2;
+					    (aligned_w * aligned_h) * 3 / 2;
 		RK_U32 i = 0;
 
 		mpp_log("attr->max_width = %d, attr->max_height = %d", attr->max_width, attr->max_height);

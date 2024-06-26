@@ -387,8 +387,8 @@ static MPP_RET vepu500_h265_setup_hal_bufs(H265eV500HalContext *ctx)
 			get_wrap_buf(ctx, max_lt_cnt);
 			size[RECREF_TYPE] = 0;
 		} else {
-			ctx->fbc_header_len = MPP_ALIGN(((ctu_w * ctu_h) << 4), SZ_4K);
-			size[RECREF_TYPE] = ctx->fbc_header_len + ((ctu_w * ctu_h) << 10) * 3 / 2;
+			ctx->fbc_header_len = MPP_ALIGN(((ctu_w * (ctu_h + 1)) << 4), SZ_4K);
+			size[RECREF_TYPE] = ctx->fbc_header_len + ((ctu_w * (ctu_h + 1)) << 10) * 3 / 2;
 		}
 
 		size[THUMB_TYPE] = (ctu_w * ctu_h) << 6;
