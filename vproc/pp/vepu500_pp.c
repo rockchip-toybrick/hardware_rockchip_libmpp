@@ -88,7 +88,7 @@ static void pp_release_buffer(struct pp_chn_info_t *info)
 	pp_free_buffer(info, info->buf_rfpw);
 	pp_free_buffer(info, info->buf_rfpr);
 	pp_free_buffer(info, info->buf_rfmwr);
-	pp_free_buffer(info, info->buf_rfmwr);
+	pp_free_buffer(info, info->buf_rfmrd);
 }
 
 static int pp_allocate_buffer(struct pp_chn_info_t *info)
