@@ -144,7 +144,7 @@ MPP_RET mpp_service_cmd_poll(void *ctx)
 	dev_req.cmd = MPP_CMD_POLL_HW_FINISH;
 	dev_req.flag |= MPP_FLAGS_LAST_MSG;
 	if (p->mppdev_ops->chnl_add_req)
-		p->mppdev_ops->chnl_add_req(p->chnl, &dev_req);
+		ret = p->mppdev_ops->chnl_add_req(p->chnl, &dev_req);
 
 	return ret;
 }
