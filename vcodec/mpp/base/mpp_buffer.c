@@ -113,8 +113,8 @@ struct mpi_buf *mpi_buf_alloc_with_tag(size_t size, const char *tag,
 		mpp_err_f("mpibuf_ops get fail");
 		return NULL;
 	}
-	if (mpibuf_fn->buf_alloc)
-		buf = mpibuf_fn->buf_alloc(size);
+	if (mpibuf_fn->buf_alloc_with_name)
+		buf = mpibuf_fn->buf_alloc_with_name(size, caller);
 
 	return buf;
 }
@@ -195,8 +195,8 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 		return MPP_ERR_UNKNOW;
 	}
 
-	if (mpibuf_fn->buf_alloc)
-		mpi_buf = mpibuf_fn->buf_alloc(size);
+	if (mpibuf_fn->buf_alloc_with_name)
+		mpi_buf = mpibuf_fn->buf_alloc_with_name(size, caller);
 
 	if (NULL == mpi_buf) {
 		mpp_err("mpp_buffer_get invalid input: group %p buffer %p size %u from %s\n",
@@ -235,8 +235,8 @@ MPP_RET mpp_ring_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 		return MPP_ERR_UNKNOW;
 	}
 
-	if (mpibuf_fn->buf_alloc)
-		mpi_buf = mpibuf_fn->buf_alloc(size);
+	if (mpibuf_fn->buf_alloc_with_name)
+		mpi_buf = mpibuf_fn->buf_alloc_with_name(size, caller);
 
 	if (NULL == mpi_buf || 0 == size) {
 		mpp_err("mpp_buffer_get invalid input: group %p buffer %p size %u from %s\n",

@@ -49,8 +49,8 @@ static struct pp_buffer_t * pp_malloc_buffer(struct pp_chn_info_t *info, u32 siz
 		return ERR_PTR(-ENOMEM);
 	}
 
-	if (func->buf_alloc) {
-		pp_buf->buf = func->buf_alloc(size);
+	if (func->buf_alloc_with_name) {
+		pp_buf->buf = func->buf_alloc_with_name(size, __func__);
 		if (pp_buf->buf) {
 			if (func->buf_get_dmabuf) {
 				pp_buf->buf_dma = func->buf_get_dmabuf(pp_buf->buf);

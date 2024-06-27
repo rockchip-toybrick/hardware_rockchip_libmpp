@@ -140,6 +140,7 @@ struct vcodec_mpibuf_fn {
 	int (*buf_pool_destroy)(struct mpi_buf_pool *pool);
 	struct mpi_buf *(*buf_pool_request_buf)(struct mpi_buf_pool *pool);
 	int (*buf_pool_get_free_num)(struct mpi_buf_pool *pool);
+	struct mpi_buf *(*buf_alloc_with_name)(size_t size, const char *name);
 };
 
 extern int vepu_pp_create_chn(int chn, struct pp_chn_attr *attr);
