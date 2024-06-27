@@ -577,9 +577,9 @@ static void setup_vepu500_normal(HalVepu500RegSet *regs)
 	regs->reg_ctl.enc_strt.lkt_num           = 0;
 	regs->reg_ctl.enc_strt.vepu_cmd          = 1;
 
-	regs->reg_ctl.opt_strg.cke                = 1;
-	regs->reg_ctl.opt_strg.resetn_hw_en       = 1;
-	// regs->reg_ctl.opt_strg.enc_done_tmvp_en   = 1;
+	regs->reg_ctl.opt_strg.cke               = 1;
+	regs->reg_ctl.opt_strg.resetn_hw_en      = 1;
+	regs->reg_ctl.opt_strg.rfpr_err_e        = 1;
 
 	/* reg002 ENC_CLR */
 	regs->reg_ctl.enc_clr.safe_clr           = 0;

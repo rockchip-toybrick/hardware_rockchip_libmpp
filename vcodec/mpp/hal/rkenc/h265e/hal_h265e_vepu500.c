@@ -1141,7 +1141,7 @@ static void vepu500_h265_set_me_regs(H265eV500HalContext *ctx, H265eSyntax_new *
 	regs->reg0221_me_cfg.rme_srch_h      = 3;
 	regs->reg0221_me_cfg.rme_srch_v      = 3;
 
-	regs->reg0221_me_cfg.srgn_max_num      = 72;
+	regs->reg0221_me_cfg.srgn_max_num      = 54;
 	regs->reg0221_me_cfg.cime_dist_thre    = 1024;
 	regs->reg0221_me_cfg.rme_dis           = 0;
 	regs->reg0221_me_cfg.fme_dis           = 0;
@@ -1482,6 +1482,7 @@ static MPP_RET vepu500_h265_set_normal(H265eV500HalContext *ctx)
 	reg_ctl->enc_wdg.vs_load_thd        = 0x1fffff;
 
 	reg_ctl->opt_strg.cke                = 1;
+	reg_ctl->opt_strg.rfpr_err_e         = 1;
 	reg_ctl->opt_strg.resetn_hw_en       = 1;
 
 	return MPP_OK;
