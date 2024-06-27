@@ -35,6 +35,16 @@ const static RefType ref_type_map[2][2] = {
 	/* cur_lt = 1 */{LT_REF_TO_ST, LT_REF_TO_LT},
 };
 
+const static RK_U32 lambda_tbl_pre_inter[52] = {
+	0x00000243, 0x00000289, 0x000002DA, 0x00000333, 0x00000397, 0x00000408, 0x00000487, 0x00000514,
+	0x000005B5, 0x00000667, 0x000007C9, 0x000008BD, 0x00000B52, 0x00000CB5, 0x00000E44, 0x00001002,
+	0x000011F9, 0x0000142D, 0x00001523, 0x000017BA, 0x00001AA2, 0x0000199F, 0x00001CC2, 0x00002049,
+	0x0000243C, 0x000032D8, 0x00002DA8, 0x0000333F, 0x00003985, 0x00004092, 0x00004879, 0x000065B0,
+	0x000062EC, 0x000088AA, 0x00007CA2, 0x0000AC30, 0x00009D08, 0x0000B043, 0x0000C5D9, 0x0000EF29,
+	0x00010C74, 0x00012D54, 0x000121E9, 0x00014569, 0x00018BB4, 0x0001BC2A, 0x0001F28E, 0x00020490,
+	0x000243D3, 0x00028AD4, 0x0002DA89, 0x000333FF,
+};
+
 typedef struct vepu500_h265_fbk_t {
 	RK_U32 hw_status;       /* 0:corret, 1:error */
 	RK_U32 frame_type;
@@ -601,6 +611,7 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx;
 
 	vepu500_h265_rdo_cfg(reg_sqi);
+	memcpy(&reg_param->pprd_lamb_satd_0_51[0], lambda_tbl_pre_inter, sizeof(lambda_tbl_pre_inter));
 
 	{
 		RK_U8* thd = (RK_U8*)&rc_regs->aq_tthd0;
