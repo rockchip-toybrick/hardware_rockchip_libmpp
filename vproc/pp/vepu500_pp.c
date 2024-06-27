@@ -291,19 +291,19 @@ static void pp_set_common_cfg(struct pp_chn_info_t *info, struct pp_com_cfg *cfg
 	p->vpp_base_cfg.vepu_pp_en = 1;
 
 	/* cime cfg */
-	p->me_rnge.cime_srch_dwnh = 4;
-	p->me_rnge.cime_srch_uph  = 4;
-	p->me_rnge.cime_srch_rgtw = 4;
-	p->me_rnge.cime_srch_lftw = 4;
+	p->me_rnge.cime_srch_dwnh = 15;
+	p->me_rnge.cime_srch_uph  = 15;
+	p->me_rnge.cime_srch_rgtw = 12;
+	p->me_rnge.cime_srch_lftw = 12;
 	p->me_rnge.dlt_frm_num    = 1;
 
-	p->me_cfg.srgn_max_num   = 72;
+	p->me_cfg.srgn_max_num   = 54;
 	p->me_cfg.cime_dist_thre = 1024;
 	p->me_cfg.rme_srch_h     = 0;
 	p->me_cfg.rme_srch_v     = 0;
 
 	p->me_cach.cime_zero_thre = 64;
-	p->me_cach.fme_prefsu_en  = 1;
+	p->me_cach.fme_prefsu_en  = 0;
 	p->me_cach.colmv_load     = 0;
 	p->me_cach.colmv_stor     = 0;
 
