@@ -53,6 +53,7 @@
 #define REC_FBC_DIS_CLASS_OFFSET	(36)
 
 #define RKVENC_RSL		(0x310)
+#define RKVENC_JPEG_RSL		(0x440)
 
 #define RKVENC_JPEG_BASE_CFG	(0x47c)
 #define JRKVENC_PEGE_ENABLE	(BIT(31))
@@ -476,7 +477,7 @@ static u32 *rkvenc_get_class_reg(struct rkvenc_task *task, u32 addr)
 		base_s = hw->reg_msg[i].base_s;
 		base_e = hw->reg_msg[i].base_e;
 		if (addr >= base_s && addr < base_e) {
-			reg = (u8 *)task->reg[i].data + (addr - base_s);
+			reg = (u8 *)task->reg[i].data + (addr - task->reg[i].offset);
 			break;
 		}
 	}
@@ -651,6 +652,7 @@ static void *rkvenc_init_task(struct mpp_session *session,
 	struct mpp_task *mpp_task;
 	struct mpp_dev *mpp = session->mpp;
 	u32 *wh_reg;
+	u32 resolution_addr = RKVENC_RSL;
 
 	mpp_debug_enter();
 
@@ -682,9 +684,11 @@ static void *rkvenc_init_task(struct mpp_session *session,
 			mpp_task->clbk_en = 0;
 	}
 
-	wh_reg = rkvenc_get_class_reg(task, RKVENC_RSL);
+	if (task->fmt == 2)
+		resolution_addr = RKVENC_JPEG_RSL;
+	wh_reg = rkvenc_get_class_reg(task, resolution_addr);
 	mpp_task->width = (((*wh_reg) & 0x7ff) + 1) << 3;
-	mpp_task->height = (((*wh_reg) >> 16) + 1) << 3;
+	mpp_task->height = ((((*wh_reg) >> 16) & 0x7ff) + 1) << 3;
 
 	task->clk_mode = CLK_MODE_NORMAL;
 

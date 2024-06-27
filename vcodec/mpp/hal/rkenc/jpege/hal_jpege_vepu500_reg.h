@@ -34,7 +34,23 @@ typedef struct JpegVepu500Frame_t {
 		RK_U32 rec_fbc_dis             : 1;
 	} video_enc_pic;
 
-	RK_U32 reserved[63];
+	RK_U32 reserved_reg304;
+
+	/* 0x00000308 reg194 */
+	struct {
+		RK_U32 frame_id        : 8;
+		RK_U32 frm_id_match    : 1;
+		RK_U32 reserved        : 3;
+		RK_U32 source_id       : 1;
+		RK_U32 src_id_match    : 1;
+		RK_U32 reserved1       : 2;
+		RK_U32 ch_id           : 2;
+		RK_U32 vrsp_rtn_en     : 1;
+		RK_U32 vinf_req_en     : 1;
+		RK_U32 reserved2       : 12;
+	} enc_id;
+
+	RK_U32 reserved[61];
 
 	/* 0x400 - 0x50c */
 	Vepu500JpegFrame jpeg_frame;

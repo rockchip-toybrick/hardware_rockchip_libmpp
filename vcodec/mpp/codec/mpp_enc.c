@@ -411,7 +411,7 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
 	MppTaskInfo info;
-	RK_U32 align = enc->coding == MPP_VIDEO_CodingAVC ? 16 : 8;
+	RK_U32 align = enc->coding == MPP_VIDEO_CodingHEVC ? 8 : 16;
 
 	if (NULL == enc) {
 		mpp_err_f("found NULL input enc\n");
