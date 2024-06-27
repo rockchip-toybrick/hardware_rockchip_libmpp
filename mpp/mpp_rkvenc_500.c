@@ -39,6 +39,7 @@
 #include "mpp_iommu.h"
 #include "mpp_common.h"
 #define RKVENC_DRIVER_NAME			"mpp_rkvenc_500"
+#define RKVENC_WORK_TIMEOUT_DELAY 	(200)
 
 #define ROCKCHIP_DVBM_ENABLE	IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
 #define ISP_DEBUG 0
@@ -841,7 +842,7 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	wmb();
 	preempt_disable();
 	INIT_DELAYED_WORK(&mpp_task->timeout_work, rkvenc_task_timeout);
-	schedule_delayed_work(&mpp_task->timeout_work, msecs_to_jiffies(2000));
+	schedule_delayed_work(&mpp_task->timeout_work, msecs_to_jiffies(RKVENC_WORK_TIMEOUT_DELAY));
 	set_bit(TASK_STATE_RUNNING, &mpp_task->state);
 	if (dvbm_cfg)
 		mpp_debug(DEBUG_RUN, "chan %d task %d pipe %d frame %d start\n",
@@ -912,7 +913,7 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	wmb();
 	preempt_disable();
 	INIT_DELAYED_WORK(&mpp_task->timeout_work, rkvenc_task_timeout);
-	schedule_delayed_work(&mpp_task->timeout_work, msecs_to_jiffies(2000));
+	schedule_delayed_work(&mpp_task->timeout_work, msecs_to_jiffies(RKVENC_WORK_TIMEOUT_DELAY));
 	set_bit(TASK_STATE_RUNNING, &mpp_task->state);
 	mpp_debug(DEBUG_RUN, "chan %d pp_task %d start\n",
 		  mpp_task->session->chn_id, mpp_task->task_index);
