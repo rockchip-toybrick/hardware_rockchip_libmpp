@@ -46,6 +46,7 @@
 
 /* irq status definition */
 #define RKVENC_JPEG_OVERFLOW		(BIT(13))
+#define RKVENC_SOURCE_ERR		(BIT(7))
 #define RKVENC_VIDEO_OVERFLOW		(BIT(4))
 #define RKVENC_SCLR_DONE_STA		(BIT(2))
 #define RKVENC_ENC_DONE_STATUS		(BIT(0))
@@ -1008,7 +1009,8 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 	mpp_dbg_dvbm("irq_status 0x%08x\n", mpp->irq_status);
 	dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
 	if (dvbm_cfg) {
-		mpp_dbg_dvbm("st enc 0x%08x\n", mpp_read(mpp, RKVENC_STATUS));
+		if (mpp->irq_status & RKVENC_SOURCE_ERR)
+			mpp_err("st enc 0x%08x\n", mpp_read(mpp, RKVENC_STATUS));
 
 		if (mpp->irq_status & 0x7fff) {
 			dvbm_cfg &= ~DVBM_VEPU_CONNETC;
