@@ -87,8 +87,6 @@ static void pp_release_buffer(struct pp_chn_info_t *info)
 {
 	pp_free_buffer(info, info->buf_rfpw);
 	pp_free_buffer(info, info->buf_rfpr);
-	pp_free_buffer(info, info->buf_rfmwr);
-	pp_free_buffer(info, info->buf_rfmrd);
 }
 
 static int pp_allocate_buffer(struct pp_chn_info_t *info)
@@ -103,24 +101,6 @@ static int pp_allocate_buffer(struct pp_chn_info_t *info)
 	info->buf_rfpw = pp_malloc_buffer(info, buf_len);
 	info->buf_rfpr = pp_malloc_buffer(info, buf_len);
 	if (IS_ERR_OR_NULL(info->buf_rfpw) || IS_ERR_OR_NULL(info->buf_rfpr)) {
-		pp_err("alloc buffer failed\n");
-		ret = VEPU_PP_NOK;
-		goto __return;
-	}
-
-	/* alloc buffer for md wr */
-	buf_len = (64) * (h >> 5);
-	info->buf_rfmwr = pp_malloc_buffer(info, buf_len);
-	if (IS_ERR_OR_NULL(info->buf_rfmwr)) {
-		pp_err("alloc buffer failed\n");
-		ret = VEPU_PP_NOK;
-		goto __return;
-	}
-
-	/* alloc buffer for md rd */
-	buf_len = (64) * (h >> 5);
-	info->buf_rfmrd = pp_malloc_buffer(info, buf_len);
-	if (IS_ERR_OR_NULL(info->buf_rfmrd)) {
 		pp_err("alloc buffer failed\n");
 		ret = VEPU_PP_NOK;
 		goto __return;
@@ -283,7 +263,12 @@ static void pp_set_common_cfg(struct pp_chn_info_t *info, struct pp_com_cfg *cfg
 	p->pic_ofst.pic_ofst_y = 0;
 
 	p->vpp_base_cfg.cur_frm_en_md = info->md_en && md_od_switch && (frm_cnt > 0);
-	p->vpp_base_cfg.ref_frm_en_md = p->vpp_base_cfg.cur_frm_en_md && (frm_cnt > interval);
+	/*
+	 * Fix bug:
+	 * Disable the ref_frm_en_md to prevent the hw stuck.
+	 * This will cause the flying catkin detection to fail.
+	 */
+	p->vpp_base_cfg.ref_frm_en_md = 0;
 
 	p->vpp_base_cfg.en_od = info->od_en && md_od_switch;
 	p->vpp_base_cfg.background_en_od = (frm_cnt > 0);
@@ -342,8 +327,8 @@ static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void 
 		struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
 
 		p->vpp_base_cfg.switch_sad_md = cfg->switch_sad;
-		p->vpp_base_cfg.night_mode_en_md = cfg->night_mode;
-		p->vpp_base_cfg.flycatkin_flt_en_md = cfg->filter_switch;
+		p->vpp_base_cfg.night_mode_en_md = 0;
+		p->vpp_base_cfg.flycatkin_flt_en_md = 0;
 
 		p->thd_md_vpp.thres_sad_md = cfg->thres_sad;
 		p->thd_md_vpp.thres_move_md = cfg->thres_move;
@@ -351,13 +336,6 @@ static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void 
 		p->thd_md_vpp.thres_dust_blk_md = cfg->thres_dust_blk;
 		p->thd_md_vpp.thres_dust_chng_md = cfg->thres_dust_chng;
 		p->vpp_base_cfg.sto_stride_md = 4;//PP_ALIGN(info->width, 32);
-		if (info->frm_accum_gop % 2) {
-			p->adr_ref_mdw = info->buf_rfmwr->iova;
-			p->adr_ref_mdr = info->buf_rfmrd->iova;
-		} else {
-			p->adr_ref_mdr = info->buf_rfmwr->iova;
-			p->adr_ref_mdw = info->buf_rfmrd->iova;
-		}
 
 		if (func->buf_get_paddr)
 			p->adr_md_vpp = func->buf_get_paddr(cfg->mdw_buf);

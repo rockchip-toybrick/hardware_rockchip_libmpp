@@ -273,9 +273,6 @@ struct pp_chn_info_t {
 
 	struct pp_buffer_t *buf_rfpw;
 	struct pp_buffer_t *buf_rfpr;
-	/* MD rw*/
-	struct pp_buffer_t *buf_rfmrd;
-	struct pp_buffer_t *buf_rfmwr;
 
 	struct pp_param_t param;
 	struct pp_output_t output;
