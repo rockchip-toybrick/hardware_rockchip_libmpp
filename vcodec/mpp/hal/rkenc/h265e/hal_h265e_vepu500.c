@@ -605,11 +605,13 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 {
 	RK_U32 i;
 	MppEncHwCfg *hw = &ctx->cfg->hw;
+	HevcVepu500Frame *reg_frm = &regs->reg_frm;
 	HevcVepu500RcRoi *rc_regs =  &regs->reg_rc_roi;
 	HevcVepu500Param *reg_param = &regs->reg_param;
 	HevcVepu500Sqi  *reg_sqi = &regs->reg_sqi;
 	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx;
 
+	reg_frm->reg0248_sao_cfg.sao_lambda_multi = ctx->cfg->codec.h265.sao_cfg.sao_bit_ratio;
 	vepu500_h265_rdo_cfg(reg_sqi);
 	memcpy(&reg_param->pprd_lamb_satd_0_51[0], lambda_tbl_pre_inter, sizeof(lambda_tbl_pre_inter));
 
