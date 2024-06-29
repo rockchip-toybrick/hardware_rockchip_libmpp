@@ -156,7 +156,26 @@ static RK_S32 aq_qp_delta_smt_P[16] = {
 	1,  2,  3,  4,  6,  7,  9,  9
 };
 
-static RK_U32 lamd_modb_qp_default[60] = {
+static RK_U32 rdo_lambda_table_I[60] = {
+	0x00000012, 0x00000017,
+	0x0000001d, 0x00000024, 0x0000002e, 0x0000003a,
+	0x00000049, 0x0000005c, 0x00000074, 0x00000092,
+	0x000000b8, 0x000000e8, 0x00000124, 0x00000170,
+	0x000001cf, 0x00000248, 0x000002df, 0x0000039f,
+	0x0000048f, 0x000005bf, 0x0000073d, 0x0000091f,
+	0x00000b7e, 0x00000e7a, 0x0000123d, 0x000016fb,
+	0x00001cf4, 0x0000247b, 0x00002df6, 0x000039e9,
+	0x000048f6, 0x00005bed, 0x000073d1, 0x000091ec,
+	0x0000b7d9, 0x0000e7a2, 0x000123d7, 0x00016fb2,
+	0x0001cf44, 0x000247ae, 0x0002df64, 0x00039e89,
+	0x00048f5c, 0x0005bec8, 0x00073d12, 0x00091eb8,
+	0x000b7d90, 0x000e7a23, 0x00123d71, 0x0016fb20,
+	0x001cf446, 0x00247ae1, 0x002df640, 0x0039e88c,
+	0x0048f5c3, 0x005bec81, 0x0073d119, 0x0091eb85,
+	0x00b7d902, 0x00e7a232
+};
+
+static RK_U32 rdo_lambda_table_P[60] = {
 	0x0000002c, 0x00000038, 0x00000044, 0x00000058,
 	0x00000070, 0x00000089, 0x000000b0, 0x000000e0,
 	0x00000112, 0x00000160, 0x000001c0, 0x00000224,
@@ -172,24 +191,6 @@ static RK_U32 lamd_modb_qp_default[60] = {
 	0x002c0000, 0x00380000, 0x00448000, 0x00580000,
 	0x00700000, 0x00890000, 0x00b00000, 0x00e00000,
 	0x01120000, 0x01600000, 0x01c00000, 0x02240000,
-};
-
-static RK_U32 lamd_modb_qp_cvr[60] = {
-	0x0000002c, 0x00000038, 0x00000044, 0x00000058,
-	0x00000070, 0x00000088, 0x000000b0, 0x000000d8,
-	0x00000110, 0x00000158, 0x000001b0, 0x00000228,
-	0x000002b0, 0x00000368, 0x00000448, 0x00000568,
-	0x000006d0, 0x00000890, 0x00000ac8, 0x00000d98,
-	0x00001120, 0x00001598, 0x00001b30, 0x00002248,
-	0x00002b30, 0x00003668, 0x00004488, 0x00005658,
-	0x00006cd0, 0x00009e08, 0x0000c720, 0x0000fae0,
-	0x00013c18, 0x00018e40, 0x0001f5c0, 0x00027830,
-	0x00031c80, 0x000470a0, 0x00059810, 0x00070c50,
-	0x0008e148, 0x000b3028, 0x000e1898, 0x0013d708,
-	0x0018ff30, 0x001f7e78, 0x0027ae18, 0x00373c28,
-	0x00459778, 0x0057ae18, 0x0078f3D0, 0x009863f8,
-	0x00C00000, 0x00f1e7a0, 0x0130c7f0, 0x01800000,
-	0x01e3cf40, 0x02618fe0, 0x03000000, 0x03c79e80,
 };
 
 static void get_wrap_buf(H265eV500HalContext *ctx, RK_S32 max_lt_cnt)
@@ -599,7 +600,7 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 	HevcVepu500RcRoi *rc_regs =  &regs->reg_rc_roi;
 	HevcVepu500Param *reg_param = &regs->reg_param;
 	HevcVepu500Sqi  *reg_sqi = &regs->reg_sqi;
-	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx;
+	RK_S32 lambda_idx = ctx->cfg->tune.lambda_i_idx;
 
 	reg_frm->reg0248_sao_cfg.sao_lambda_multi = ctx->cfg->codec.h265.sao_cfg.sao_bit_ratio;
 	vepu500_h265_rdo_cfg(reg_sqi);
@@ -608,21 +609,22 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 	{
 		RK_U8* thd = (RK_U8*)&rc_regs->aq_tthd0;
 		RK_S32 *aq_step, *aq_thd;
-		RK_U32 *lamd_modb_qp;
+		RK_U32 *lambda_tbl;
 
 		if (ctx->frame_type == INTRA_FRAME) {
 			aq_thd = &hw->aq_thrd_i[0];
 			aq_step = &hw->aq_step_i[0];
-			lamd_modb_qp = &lamd_modb_qp_default[lambda_idx];
+			lambda_tbl = &rdo_lambda_table_I[lambda_idx];
 			reg_param->iprd_lamb_satd_ofst.lambda_satd_offset = 3;
 		} else {
+			lambda_idx = ctx->cfg->tune.lambda_idx;
 			aq_thd = &hw->aq_thrd_p[0];
 			aq_step = &hw->aq_step_p[0];
-			lamd_modb_qp = &lamd_modb_qp_cvr[lambda_idx];
+			lambda_tbl = &rdo_lambda_table_P[lambda_idx];
 			reg_param->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
 		}
 
-		memcpy(&reg_param->rdo_wgta_qp_grpa_0_51[0], lamd_modb_qp, H265E_LAMBDA_TAB_SIZE);
+		memcpy(&reg_param->rdo_wgta_qp_grpa_0_51[0], lambda_tbl, H265E_LAMBDA_TAB_SIZE);
 
 		rc_regs->aq_stp0.aq_stp_s0 = aq_step[0] & 0x1f;
 		rc_regs->aq_stp0.aq_stp_0t1 = aq_step[1] & 0x1f;
