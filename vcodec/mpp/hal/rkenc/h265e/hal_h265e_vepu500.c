@@ -127,45 +127,33 @@ typedef struct H265eV500HalContext_t {
 #define H265E_LAMBDA_TAB_SIZE  (52 * sizeof(RK_U32))
 
 static RK_U32 aq_thd_default[16] = {
-	0, 0, 0, 0,
-	3, 3, 5, 5,
-	8, 8, 8, 15,
-	15, 20, 25, 25
+	0,  0,  0,  0,  3,  3,  5,  5,
+	8,  8,  15, 15, 20, 25, 25, 25
 };
 
-static RK_S32 aq_qp_dealt_default[16] = {
-	-8, -7, -6, -5,
-	-4, -3, -2, -1,
-	0, 1, 2, 3,
-	4, 5, 7, 8,
+static RK_S32 aq_qp_delta_default[16] = {
+	-8, -7, -6, -5, -4, -3, -2, -1,
+	1,  2,  3,  4,  5,  6,  7,  8
 };
 
-static RK_U32 aq_I_thd_smart[16] = {
-	1, 2, 3, 3,
-	3, 3, 5, 5,
-	8, 8, 8, 13,
-	15, 20, 25, 25
+static RK_U32 aq_thd_smt_I[16] = {
+	1,  2,  3,   3,  3,  3,  5,  5,
+	8,  8,  13,  15, 20, 25, 25, 25
 };
 
-static RK_S32 aq_I_qp_dealt_smart[16] = {
-	-8, -7, -6, -5,
-	-4, -3, -2, -1,
-	0, 1, 2, 3,
-	5, 7, 8, 9,
+static RK_S32 aq_qp_delta_smt_I[16] = {
+	-8, -7, -6, -5, -4, -3, -2, -1,
+	1,  2,  3,  5,  7,  8,  9,  9
 };
 
-static RK_U32 aq_P_thd_smart[16] = {
-	0, 0, 0, 0,
-	3, 3, 5, 5,
-	8, 8, 8, 15,
-	15, 20, 25, 25
+static RK_U32 aq_thd_smt_P[16] = {
+	0,  0,  0,   0,  3,  3,  5,  5,
+	8,  8,  15, 15, 20, 25, 25, 25
 };
 
-static RK_S32 aq_P_qp_dealt_smart[16] = {
-	-8, -7, -6, -5,
-	-4, -3, -2, -1,
-	0, 1, 2, 3,
-	4, 6, 7, 9,
+static RK_S32 aq_qp_delta_smt_P[16] = {
+	-8, -7, -6, -5, -4, -3, -2, -1,
+	1,  2,  3,  4,  6,  7,  9,  9
 };
 
 static RK_U32 lamd_modb_qp_default[60] = {
@@ -636,14 +624,15 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 
 		memcpy(&reg_param->rdo_wgta_qp_grpa_0_51[0], lamd_modb_qp, H265E_LAMBDA_TAB_SIZE);
 
-		rc_regs->aq_stp0.aq_stp_0t1 = aq_step[0] & 0x1f;
-		rc_regs->aq_stp0.aq_stp_1t2 = aq_step[1] & 0x1f;
-		rc_regs->aq_stp0.aq_stp_2t3 = aq_step[2] & 0x1f;
-		rc_regs->aq_stp0.aq_stp_3t4 = aq_step[3] & 0x1f;
-		rc_regs->aq_stp0.aq_stp_4t5 = aq_step[4] & 0x1f;
-		rc_regs->aq_stp1.aq_stp_5t6 = aq_step[5] & 0x1f;
-		rc_regs->aq_stp1.aq_stp_6t7 = aq_step[6] & 0x1f;
-		rc_regs->aq_stp1.aq_stp_7t8 = aq_step[7] & 0x1f;
+		rc_regs->aq_stp0.aq_stp_s0 = aq_step[0] & 0x1f;
+		rc_regs->aq_stp0.aq_stp_0t1 = aq_step[1] & 0x1f;
+		rc_regs->aq_stp0.aq_stp_1t2 = aq_step[2] & 0x1f;
+		rc_regs->aq_stp0.aq_stp_2t3 = aq_step[3] & 0x1f;
+		rc_regs->aq_stp0.aq_stp_3t4 = aq_step[4] & 0x1f;
+		rc_regs->aq_stp0.aq_stp_4t5 = aq_step[5] & 0x1f;
+		rc_regs->aq_stp1.aq_stp_5t6 = aq_step[6] & 0x1f;
+		rc_regs->aq_stp1.aq_stp_6t7 = aq_step[7] & 0x1f;
+		rc_regs->aq_stp1.aq_stp_7t8 = 0;
 		rc_regs->aq_stp1.aq_stp_8t9 = aq_step[8] & 0x1f;
 		rc_regs->aq_stp1.aq_stp_9t10 = aq_step[9] & 0x1f;
 		rc_regs->aq_stp1.aq_stp_10t11 = aq_step[10] & 0x1f;
@@ -655,6 +644,12 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 
 		for (i = 0; i < 16; i++)
 			thd[i] = aq_thd[i];
+
+		rc_regs->aq_clip.aq16_rnge = 5;
+		rc_regs->aq_clip.aq32_rnge = 5;
+		rc_regs->aq_clip.aq8_rnge = 10;
+		rc_regs->aq_clip.aq16_dif0 = 12;
+		rc_regs->aq_clip.aq16_dif1 = 12;
 	}
 
 	/* 0x1064 */
@@ -806,13 +801,13 @@ MPP_RET hal_h265e_v500_init(void *hal, MppEncHalCfg *cfg)
 		hw->flt_str_p = 0;
 
 		if (ctx->smart_en) {
-			memcpy(hw->aq_step_i, aq_I_qp_dealt_smart, sizeof(hw->aq_step_i));
-			memcpy(hw->aq_step_p, aq_P_qp_dealt_smart, sizeof(hw->aq_step_p));
-			memcpy(hw->aq_thrd_i, aq_I_thd_smart, sizeof(hw->aq_thrd_i));
-			memcpy(hw->aq_thrd_p, aq_P_thd_smart, sizeof(hw->aq_thrd_p));
+			memcpy(hw->aq_step_i, aq_qp_delta_smt_I, sizeof(hw->aq_step_i));
+			memcpy(hw->aq_step_p, aq_qp_delta_smt_P, sizeof(hw->aq_step_p));
+			memcpy(hw->aq_thrd_i, aq_thd_smt_I, sizeof(hw->aq_thrd_i));
+			memcpy(hw->aq_thrd_p, aq_thd_smt_P, sizeof(hw->aq_thrd_p));
 		} else {
-			memcpy(hw->aq_step_i, aq_qp_dealt_default, sizeof(hw->aq_step_i));
-			memcpy(hw->aq_step_p, aq_qp_dealt_default, sizeof(hw->aq_step_p));
+			memcpy(hw->aq_step_i, aq_qp_delta_default, sizeof(hw->aq_step_i));
+			memcpy(hw->aq_step_p, aq_qp_delta_default, sizeof(hw->aq_step_p));
 			memcpy(hw->aq_thrd_i, aq_thd_default, sizeof(hw->aq_thrd_i));
 			memcpy(hw->aq_thrd_p, aq_thd_default, sizeof(hw->aq_thrd_p));
 		}
