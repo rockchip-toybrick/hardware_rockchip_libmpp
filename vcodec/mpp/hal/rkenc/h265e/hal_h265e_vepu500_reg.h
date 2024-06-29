@@ -768,139 +768,139 @@ typedef struct HevcVepu500RcRoi_t {
 
 	/* 0x00001110 reg1092 */
 	struct {
-		RK_U32 cudecis_base_thre_rough_mad32_intra           : 4;
-		RK_U32 cudecis_delta0_thre_rough_mad32_intra         : 4;
-		RK_U32 cudecis_delta1_thre_rough_mad32_intra         : 6;
-		RK_U32 cudecis_delta2_thre_rough_mad32_intra         : 6;
-		RK_U32 cudecis_delta3_thre_rough_mad32_intra         : 7;
-		RK_U32 cudecis_delta4_thre_rough_mad32_intra_low5    : 5;
-	} cudecis_cfg_thd_list0;
+		RK_U32 base_thre_rough_mad32_intra           : 4;
+		RK_U32 delta0_thre_rough_mad32_intra         : 4;
+		RK_U32 delta1_thre_rough_mad32_intra         : 6;
+		RK_U32 delta2_thre_rough_mad32_intra         : 6;
+		RK_U32 delta3_thre_rough_mad32_intra         : 7;
+		RK_U32 delta4_thre_rough_mad32_intra_low5    : 5;
+	} cudecis_thd0;
 
 	/* 0x00001114 reg1093 */
 	struct {
-		RK_U32 cudecis_delta4_thre_rough_mad32_intra_high2    : 2;
-		RK_U32 cudecis_delta5_thre_rough_mad32_intra          : 7;
-		RK_U32 cudecis_delta6_thre_rough_mad32_intra          : 7;
-		RK_U32 cudecis_base_thre_fine_mad32_intra             : 4;
-		RK_U32 cudecis_delta0_thre_fine_mad32_intra           : 4;
-		RK_U32 cudecis_delta1_thre_fine_mad32_intra           : 5;
-		RK_U32 cudecis_delta2_thre_fine_mad32_intra_low3      : 3;
-	} cudecis_cfg_thd_list1;
+		RK_U32 delta4_thre_rough_mad32_intra_high2    : 2;
+		RK_U32 delta5_thre_rough_mad32_intra          : 7;
+		RK_U32 delta6_thre_rough_mad32_intra          : 7;
+		RK_U32 base_thre_fine_mad32_intra             : 4;
+		RK_U32 delta0_thre_fine_mad32_intra           : 4;
+		RK_U32 delta1_thre_fine_mad32_intra           : 5;
+		RK_U32 delta2_thre_fine_mad32_intra_low3      : 3;
+	} cudecis_thd1;
 
 	/* 0x00001118 reg1094 */
 	struct {
-		RK_U32 cudecis_delta2_thre_fine_mad32_intra_high2    : 2;
-		RK_U32 cudecis_delta3_thre_fine_mad32_intra          : 5;
-		RK_U32 cudecis_delta4_thre_fine_mad32_intra          : 5;
-		RK_U32 cudecis_delta5_thre_fine_mad32_intra          : 6;
-		RK_U32 cudecis_delta6_thre_fine_mad32_intra          : 6;
-		RK_U32 cudecis_base_thre_str_edge_mad32_intra        : 3;
-		RK_U32 cudecis_delta0_thre_str_edge_mad32_intra      : 2;
-		RK_U32 cudecis_delta1_thre_str_edge_mad32_intra      : 3;
-	} cudecis_cfg_thd_list2;
+		RK_U32 delta2_thre_fine_mad32_intra_high2    : 2;
+		RK_U32 delta3_thre_fine_mad32_intra          : 5;
+		RK_U32 delta4_thre_fine_mad32_intra          : 5;
+		RK_U32 delta5_thre_fine_mad32_intra          : 6;
+		RK_U32 delta6_thre_fine_mad32_intra          : 6;
+		RK_U32 base_thre_str_edge_mad32_intra        : 3;
+		RK_U32 delta0_thre_str_edge_mad32_intra      : 2;
+		RK_U32 delta1_thre_str_edge_mad32_intra      : 3;
+	} cudecis_thd2;
 
 	/* 0x0000111c reg1095 */
 	struct {
-		RK_U32 cudecis_delta2_thre_str_edge_mad32_intra      : 3;
-		RK_U32 cudecis_delta3_thre_str_edge_mad32_intra      : 4;
-		RK_U32 cudecis_base_thre_str_edge_bgrad32_intra      : 5;
-		RK_U32 cudecis_delta0_thre_str_edge_bgrad32_intra    : 2;
-		RK_U32 cudecis_delta1_thre_str_edge_bgrad32_intra    : 3;
-		RK_U32 cudecis_delta2_thre_str_edge_bgrad32_intra    : 4;
-		RK_U32 cudecis_delta3_thre_str_edge_bgrad32_intra    : 5;
-		RK_U32 cudecis_base_thre_mad16_intra                 : 3;
-		RK_U32 cudecis_delta0_thre_mad16_intra               : 3;
-	} cudecis_cfg_thd_list3;
+		RK_U32 delta2_thre_str_edge_mad32_intra      : 3;
+		RK_U32 delta3_thre_str_edge_mad32_intra      : 4;
+		RK_U32 base_thre_str_edge_bgrad32_intra      : 5;
+		RK_U32 delta0_thre_str_edge_bgrad32_intra    : 2;
+		RK_U32 delta1_thre_str_edge_bgrad32_intra    : 3;
+		RK_U32 delta2_thre_str_edge_bgrad32_intra    : 4;
+		RK_U32 delta3_thre_str_edge_bgrad32_intra    : 5;
+		RK_U32 base_thre_mad16_intra                 : 3;
+		RK_U32 delta0_thre_mad16_intra               : 3;
+	} cudecis_thd3;
 
 	/* 0x00001120 reg1096 */
 	struct {
-		RK_U32 cudecis_delta1_thre_mad16_intra          : 3;
-		RK_U32 cudecis_delta2_thre_mad16_intra          : 4;
-		RK_U32 cudecis_delta3_thre_mad16_intra          : 5;
-		RK_U32 cudecis_delta4_thre_mad16_intra          : 5;
-		RK_U32 cudecis_delta5_thre_mad16_intra          : 6;
-		RK_U32 cudecis_delta6_thre_mad16_intra          : 6;
-		RK_U32 cudecis_delta0_thre_mad16_ratio_intra    : 3;
-	} cudecis_cfg_thd_list4;
+		RK_U32 delta1_thre_mad16_intra          : 3;
+		RK_U32 delta2_thre_mad16_intra          : 4;
+		RK_U32 delta3_thre_mad16_intra          : 5;
+		RK_U32 delta4_thre_mad16_intra          : 5;
+		RK_U32 delta5_thre_mad16_intra          : 6;
+		RK_U32 delta6_thre_mad16_intra          : 6;
+		RK_U32 delta0_thre_mad16_ratio_intra    : 3;
+	} cudecis_thd4;
 
 	/* 0x00001124 reg1097 */
 	struct {
-		RK_U32 cudecis_delta1_thre_mad16_ratio_intra           : 3;
-		RK_U32 cudecis_delta2_thre_mad16_ratio_intra           : 3;
-		RK_U32 cudecis_delta3_thre_mad16_ratio_intra           : 3;
-		RK_U32 cudecis_delta4_thre_mad16_ratio_intra           : 3;
-		RK_U32 cudecis_delta5_thre_mad16_ratio_intra           : 3;
-		RK_U32 cudecis_delta6_thre_mad16_ratio_intra           : 3;
-		RK_U32 cudecis_delta7_thre_mad16_ratio_intra           : 3;
-		RK_U32 cudecis_delta0_thre_rough_bgrad32_intra         : 3;
-		RK_U32 cudecis_delta1_thre_rough_bgrad32_intra         : 4;
-		RK_U32 cudecis_delta2_thre_rough_bgrad32_intra_low4    : 4;
-	} cudecis_cfg_thd_list5;
+		RK_U32 delta1_thre_mad16_ratio_intra           : 3;
+		RK_U32 delta2_thre_mad16_ratio_intra           : 3;
+		RK_U32 delta3_thre_mad16_ratio_intra           : 3;
+		RK_U32 delta4_thre_mad16_ratio_intra           : 3;
+		RK_U32 delta5_thre_mad16_ratio_intra           : 3;
+		RK_U32 delta6_thre_mad16_ratio_intra           : 3;
+		RK_U32 delta7_thre_mad16_ratio_intra           : 3;
+		RK_U32 delta0_thre_rough_bgrad32_intra         : 3;
+		RK_U32 delta1_thre_rough_bgrad32_intra         : 4;
+		RK_U32 delta2_thre_rough_bgrad32_intra_low4    : 4;
+	} cudecis_thd5;
 
 	/* 0x00001128 reg1098 */
 	struct {
-		RK_U32 cudecis_delta2_thre_rough_bgrad32_intra_high2    : 2;
-		RK_U32 cudecis_delta3_thre_rough_bgrad32_intra          : 10;
-		RK_U32 cudecis_delta4_thre_rough_bgrad32_intra          : 10;
-		RK_U32 cudecis_delta5_thre_rough_bgrad32_intra_low10    : 10;
-	} cudecis_cfg_thd_list6;
+		RK_U32 delta2_thre_rough_bgrad32_intra_high2    : 2;
+		RK_U32 delta3_thre_rough_bgrad32_intra          : 10;
+		RK_U32 delta4_thre_rough_bgrad32_intra          : 10;
+		RK_U32 delta5_thre_rough_bgrad32_intra_low10    : 10;
+	} cudecis_thd6;
 
 	/* 0x0000112c reg1099 */
 	struct {
-		RK_U32 cudecis_delta5_thre_rough_bgrad32_intra_high1    : 1;
-		RK_U32 cudecis_delta6_thre_rough_bgrad32_intra          : 12;
-		RK_U32 cudecis_delta7_thre_rough_bgrad32_intra          : 13;
-		RK_U32 cudecis_delta0_thre_bgrad16_ratio_intra          : 4;
-		RK_U32 cudecis_delta1_thre_bgrad16_ratio_intra_low2     : 2;
-	} cudecis_cfg_thd_list7;
+		RK_U32 delta5_thre_rough_bgrad32_intra_high1    : 1;
+		RK_U32 delta6_thre_rough_bgrad32_intra          : 12;
+		RK_U32 delta7_thre_rough_bgrad32_intra          : 13;
+		RK_U32 delta0_thre_bgrad16_ratio_intra          : 4;
+		RK_U32 delta1_thre_bgrad16_ratio_intra_low2     : 2;
+	} cudecis_thd7;
 
 	/* 0x00001130 reg1100 */
 	struct {
-		RK_U32 cudecis_delta1_thre_bgrad16_ratio_intra_high2    : 2;
-		RK_U32 cudecis_delta2_thre_bgrad16_ratio_intra          : 4;
-		RK_U32 cudecis_delta3_thre_bgrad16_ratio_intra          : 4;
-		RK_U32 cudecis_delta4_thre_bgrad16_ratio_intra          : 4;
-		RK_U32 cudecis_delta5_thre_bgrad16_ratio_intra          : 4;
-		RK_U32 cudecis_delta6_thre_bgrad16_ratio_intra          : 4;
-		RK_U32 cudecis_delta7_thre_bgrad16_ratio_intra          : 4;
-		RK_U32 cudecis_delta0_thre_fme_ratio_inter              : 3;
-		RK_U32 cudecis_delta1_thre_fme_ratio_inter              : 3;
-	} cudecis_cfg_thd_list8;
+		RK_U32 delta1_thre_bgrad16_ratio_intra_high2    : 2;
+		RK_U32 delta2_thre_bgrad16_ratio_intra          : 4;
+		RK_U32 delta3_thre_bgrad16_ratio_intra          : 4;
+		RK_U32 delta4_thre_bgrad16_ratio_intra          : 4;
+		RK_U32 delta5_thre_bgrad16_ratio_intra          : 4;
+		RK_U32 delta6_thre_bgrad16_ratio_intra          : 4;
+		RK_U32 delta7_thre_bgrad16_ratio_intra          : 4;
+		RK_U32 delta0_thre_fme_ratio_inter              : 3;
+		RK_U32 delta1_thre_fme_ratio_inter              : 3;
+	} cudecis_thd8;
 
 	/* 0x00001134 reg1101 */
 	struct {
-		RK_U32 cudecis_delta2_thre_fme_ratio_inter    : 3;
-		RK_U32 cudecis_delta3_thre_fme_ratio_inter    : 3;
-		RK_U32 cudecis_delta4_thre_fme_ratio_inter    : 3;
-		RK_U32 cudecis_delta5_thre_fme_ratio_inter    : 3;
-		RK_U32 cudecis_delta6_thre_fme_ratio_inter    : 3;
-		RK_U32 cudecis_delta7_thre_fme_ratio_inter    : 3;
-		RK_U32 cudecis_base_thre_fme32_inter          : 3;
-		RK_U32 cudecis_delta0_thre_fme32_inter        : 3;
-		RK_U32 cudecis_delta1_thre_fme32_inter        : 4;
-		RK_U32 cudecis_delta2_thre_fme32_inter        : 4;
-	} cudecis_cfg_thd_list9;
+		RK_U32 delta2_thre_fme_ratio_inter    : 3;
+		RK_U32 delta3_thre_fme_ratio_inter    : 3;
+		RK_U32 delta4_thre_fme_ratio_inter    : 3;
+		RK_U32 delta5_thre_fme_ratio_inter    : 3;
+		RK_U32 delta6_thre_fme_ratio_inter    : 3;
+		RK_U32 delta7_thre_fme_ratio_inter    : 3;
+		RK_U32 base_thre_fme32_inter          : 3;
+		RK_U32 delta0_thre_fme32_inter        : 3;
+		RK_U32 delta1_thre_fme32_inter        : 4;
+		RK_U32 delta2_thre_fme32_inter        : 4;
+	} cudecis_thd9;
 
 	/* 0x00001138 reg1102 */
 	struct {
-		RK_U32 cudecis_delta3_thre_fme32_inter    : 5;
-		RK_U32 cudecis_delta4_thre_fme32_inter    : 6;
-		RK_U32 cudecis_delta5_thre_fme32_inter    : 7;
-		RK_U32 cudecis_delta6_thre_fme32_inter    : 8;
-		RK_U32 cudecis_thre_cme32_inter           : 6;
-	} cudecis_cfg_thd_list10;
+		RK_U32 delta3_thre_fme32_inter    : 5;
+		RK_U32 delta4_thre_fme32_inter    : 6;
+		RK_U32 delta5_thre_fme32_inter    : 7;
+		RK_U32 delta6_thre_fme32_inter    : 8;
+		RK_U32 thre_cme32_inter           : 6;
+	} cudecis_thd10;
 
 	/* 0x0000113c reg1103 */
 	struct {
-		RK_U32 cudecis_delta0_thre_mad_fme_ratio_inter    : 4;
-		RK_U32 cudecis_delta1_thre_mad_fme_ratio_inter    : 4;
-		RK_U32 cudecis_delta2_thre_mad_fme_ratio_inter    : 4;
-		RK_U32 cudecis_delta3_thre_mad_fme_ratio_inter    : 4;
-		RK_U32 cudecis_delta4_thre_mad_fme_ratio_inter    : 4;
-		RK_U32 cudecis_delta5_thre_mad_fme_ratio_inter    : 4;
-		RK_U32 cudecis_delta6_thre_mad_fme_ratio_inter    : 4;
-		RK_U32 cudecis_delta7_thre_mad_fme_ratio_inter    : 4;
-	} cudecis_cfg_thd_list11;
+		RK_U32 delta0_thre_mad_fme_ratio_inter    : 4;
+		RK_U32 delta1_thre_mad_fme_ratio_inter    : 4;
+		RK_U32 delta2_thre_mad_fme_ratio_inter    : 4;
+		RK_U32 delta3_thre_mad_fme_ratio_inter    : 4;
+		RK_U32 delta4_thre_mad_fme_ratio_inter    : 4;
+		RK_U32 delta5_thre_mad_fme_ratio_inter    : 4;
+		RK_U32 delta6_thre_mad_fme_ratio_inter    : 4;
+		RK_U32 delta7_thre_mad_fme_ratio_inter    : 4;
+	} cudecis_thd11;
 } HevcVepu500RcRoi;
 
 /* class: iprd/iprd_wgt/rdo_wgta/prei_dif*/

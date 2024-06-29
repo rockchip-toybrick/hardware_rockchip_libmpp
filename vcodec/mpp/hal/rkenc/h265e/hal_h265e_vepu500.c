@@ -1008,6 +1008,114 @@ static MPP_RET vepu500_h265_set_rc_regs(H265eV500HalContext *ctx, H265eV500RegSe
 	return MPP_OK;
 }
 
+static MPP_RET vepu500_h265_set_rdo_regs(H265eV500HalContext *ctx, H265eV500RegSet *regs)
+{
+	HevcVepu500RcRoi *reg_rc = &regs->reg_rc_roi;
+	(void)ctx;
+
+	reg_rc->cudecis_thd0.base_thre_rough_mad32_intra           = 9;
+	reg_rc->cudecis_thd0.delta0_thre_rough_mad32_intra         = 10;
+	reg_rc->cudecis_thd0.delta1_thre_rough_mad32_intra         = 55;
+	reg_rc->cudecis_thd0.delta2_thre_rough_mad32_intra         = 55;
+	reg_rc->cudecis_thd0.delta3_thre_rough_mad32_intra         = 66;
+	reg_rc->cudecis_thd0.delta4_thre_rough_mad32_intra_low5    = 2;
+
+	reg_rc->cudecis_thd1.delta4_thre_rough_mad32_intra_high2   = 2;
+	reg_rc->cudecis_thd1.delta5_thre_rough_mad32_intra         = 74;
+	reg_rc->cudecis_thd1.delta6_thre_rough_mad32_intra         = 106;
+	reg_rc->cudecis_thd1.base_thre_fine_mad32_intra            = 8;
+	reg_rc->cudecis_thd1.delta0_thre_fine_mad32_intra          = 0;
+	reg_rc->cudecis_thd1.delta1_thre_fine_mad32_intra          = 13;
+	reg_rc->cudecis_thd1.delta2_thre_fine_mad32_intra_low3     = 6;
+
+	reg_rc->cudecis_thd2.delta2_thre_fine_mad32_intra_high2    = 1;
+	reg_rc->cudecis_thd2.delta3_thre_fine_mad32_intra          = 17;
+	reg_rc->cudecis_thd2.delta4_thre_fine_mad32_intra          = 23;
+	reg_rc->cudecis_thd2.delta5_thre_fine_mad32_intra          = 50;
+	reg_rc->cudecis_thd2.delta6_thre_fine_mad32_intra          = 54;
+	reg_rc->cudecis_thd2.base_thre_str_edge_mad32_intra        = 6;
+	reg_rc->cudecis_thd2.delta0_thre_str_edge_mad32_intra      = 0;
+	reg_rc->cudecis_thd2.delta1_thre_str_edge_mad32_intra      = 0;
+
+	reg_rc->cudecis_thd3.delta2_thre_str_edge_mad32_intra      = 3;
+	reg_rc->cudecis_thd3.delta3_thre_str_edge_mad32_intra      = 8;
+	reg_rc->cudecis_thd3.base_thre_str_edge_bgrad32_intra      = 25;
+	reg_rc->cudecis_thd3.delta0_thre_str_edge_bgrad32_intra    = 0;
+	reg_rc->cudecis_thd3.delta1_thre_str_edge_bgrad32_intra    = 0;
+	reg_rc->cudecis_thd3.delta2_thre_str_edge_bgrad32_intra    = 7;
+	reg_rc->cudecis_thd3.delta3_thre_str_edge_bgrad32_intra    = 19;
+	reg_rc->cudecis_thd3.base_thre_mad16_intra                 = 6;
+	reg_rc->cudecis_thd3.delta0_thre_mad16_intra               = 0;
+
+	reg_rc->cudecis_thd4.delta1_thre_mad16_intra          = 3;
+	reg_rc->cudecis_thd4.delta2_thre_mad16_intra          = 3;
+	reg_rc->cudecis_thd4.delta3_thre_mad16_intra          = 24;
+	reg_rc->cudecis_thd4.delta4_thre_mad16_intra          = 28;
+	reg_rc->cudecis_thd4.delta5_thre_mad16_intra          = 40;
+	reg_rc->cudecis_thd4.delta6_thre_mad16_intra          = 52;
+	reg_rc->cudecis_thd4.delta0_thre_mad16_ratio_intra    = 7;
+
+	reg_rc->cudecis_thd5.delta1_thre_mad16_ratio_intra           =  7;
+	reg_rc->cudecis_thd5.delta2_thre_mad16_ratio_intra           =  2;
+	reg_rc->cudecis_thd5.delta3_thre_mad16_ratio_intra           =  2;
+	reg_rc->cudecis_thd5.delta4_thre_mad16_ratio_intra           =  0;
+	reg_rc->cudecis_thd5.delta5_thre_mad16_ratio_intra           =  0;
+	reg_rc->cudecis_thd5.delta6_thre_mad16_ratio_intra           =  0;
+	reg_rc->cudecis_thd5.delta7_thre_mad16_ratio_intra           =  4;
+	reg_rc->cudecis_thd5.delta0_thre_rough_bgrad32_intra         =  1;
+	reg_rc->cudecis_thd5.delta1_thre_rough_bgrad32_intra         =  5;
+	reg_rc->cudecis_thd5.delta2_thre_rough_bgrad32_intra_low4    =  8;
+
+	reg_rc->cudecis_thd6.delta2_thre_rough_bgrad32_intra_high2    = 2;
+	reg_rc->cudecis_thd6.delta3_thre_rough_bgrad32_intra          = 540;
+	reg_rc->cudecis_thd6.delta4_thre_rough_bgrad32_intra          = 692;
+	reg_rc->cudecis_thd6.delta5_thre_rough_bgrad32_intra_low10    = 866;
+
+	reg_rc->cudecis_thd7.delta5_thre_rough_bgrad32_intra_high1   = 1;
+	reg_rc->cudecis_thd7.delta6_thre_rough_bgrad32_intra         = 3286;
+	reg_rc->cudecis_thd7.delta7_thre_rough_bgrad32_intra         = 6620;
+	reg_rc->cudecis_thd7.delta0_thre_bgrad16_ratio_intra         = 8;
+	reg_rc->cudecis_thd7.delta1_thre_bgrad16_ratio_intra_low2    = 3;
+
+	reg_rc->cudecis_thd8.delta1_thre_bgrad16_ratio_intra_high2    = 2;
+	reg_rc->cudecis_thd8.delta2_thre_bgrad16_ratio_intra          = 15;
+	reg_rc->cudecis_thd8.delta3_thre_bgrad16_ratio_intra          = 15;
+	reg_rc->cudecis_thd8.delta4_thre_bgrad16_ratio_intra          = 13;
+	reg_rc->cudecis_thd8.delta5_thre_bgrad16_ratio_intra          = 13;
+	reg_rc->cudecis_thd8.delta6_thre_bgrad16_ratio_intra          = 7;
+	reg_rc->cudecis_thd8.delta7_thre_bgrad16_ratio_intra          = 15;
+	reg_rc->cudecis_thd8.delta0_thre_fme_ratio_inter              = 4;
+	reg_rc->cudecis_thd8.delta1_thre_fme_ratio_inter              = 4;
+
+	reg_rc->cudecis_thd9.delta2_thre_fme_ratio_inter    = 3;
+	reg_rc->cudecis_thd9.delta3_thre_fme_ratio_inter    = 2;
+	reg_rc->cudecis_thd9.delta4_thre_fme_ratio_inter    = 0;
+	reg_rc->cudecis_thd9.delta5_thre_fme_ratio_inter    = 0;
+	reg_rc->cudecis_thd9.delta6_thre_fme_ratio_inter    = 0;
+	reg_rc->cudecis_thd9.delta7_thre_fme_ratio_inter    = 0;
+	reg_rc->cudecis_thd9.base_thre_fme32_inter          = 4;
+	reg_rc->cudecis_thd9.delta0_thre_fme32_inter        = 2;
+	reg_rc->cudecis_thd9.delta1_thre_fme32_inter        = 7;
+	reg_rc->cudecis_thd9.delta2_thre_fme32_inter        = 12;
+
+	reg_rc->cudecis_thd10.delta3_thre_fme32_inter    = 23;
+	reg_rc->cudecis_thd10.delta4_thre_fme32_inter    = 41;
+	reg_rc->cudecis_thd10.delta5_thre_fme32_inter    = 71;
+	reg_rc->cudecis_thd10.delta6_thre_fme32_inter    = 123;
+	reg_rc->cudecis_thd10.thre_cme32_inter           = 48;
+
+	reg_rc->cudecis_thd11.delta0_thre_mad_fme_ratio_inter    = 0;
+	reg_rc->cudecis_thd11.delta1_thre_mad_fme_ratio_inter    = 7;
+	reg_rc->cudecis_thd11.delta2_thre_mad_fme_ratio_inter    = 7;
+	reg_rc->cudecis_thd11.delta3_thre_mad_fme_ratio_inter    = 6;
+	reg_rc->cudecis_thd11.delta4_thre_mad_fme_ratio_inter    = 5;
+	reg_rc->cudecis_thd11.delta5_thre_mad_fme_ratio_inter    = 4;
+	reg_rc->cudecis_thd11.delta6_thre_mad_fme_ratio_inter    = 4;
+	reg_rc->cudecis_thd11.delta7_thre_mad_fme_ratio_inter    = 4;
+
+	return MPP_OK;
+}
+
 static MPP_RET vepu500_h265_set_pp_regs(H265eV500RegSet *regs, VepuFmtCfg *fmt,
 					MppEncPrepCfg *prep_cfg)
 {
@@ -1754,6 +1862,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_hw_address(ctx, reg_frm, task);
 	vepu500_h265_set_pp_regs(regs, fmt, &ctx->cfg->prep);
 	vepu500_h265_set_rc_regs(ctx, regs, task);
+	vepu500_h265_set_rdo_regs(ctx, regs);
 	vepu500_h265_set_slice_regs(syn, reg_frm);
 	vepu500_h265_set_ref_regs(syn, reg_frm);
 	vepu500_h265_set_ext_line_buf(ctx, ctx->regs);
