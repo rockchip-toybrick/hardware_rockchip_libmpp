@@ -355,15 +355,14 @@ typedef struct HevcVepu500Frame_t {
 		RK_U32 ltm_idx0l0                     : 1;
 		RK_U32 chrm_spcl                      : 1;
 		RK_U32 cu_inter_e                     : 12;
-		RK_U32 reserved                       : 4;
-		RK_U32 cu_intra_e                     : 4;
+		RK_U32 reserved                       : 8;
 		RK_U32 ccwa_e                         : 1;
 		RK_U32 scl_lst_sel                    : 2;
 		RK_U32 lambda_qp_use_avg_cu16_flag    : 1;
-		RK_U32 yuvskip_calc_en                : 1;
+		RK_U32 reserved1                      : 1;
 		RK_U32 atf_e                          : 1;
 		RK_U32 atr_e                          : 1;
-		RK_U32 reserved1                      : 2;
+		RK_U32 reserved2                      : 2;
 	}  reg0232_rdo_cfg;
 
 	/* 0x000003a4 reg233 */
@@ -418,9 +417,7 @@ typedef struct HevcVepu500Frame_t {
 	struct {
 		RK_U32 cbc_init_flg           : 1;
 		RK_U32 mvd_l1_zero_flg        : 1;
-		RK_U32 mrg_up_flg             : 1;
-		RK_U32 mrg_lft_flg            : 1;
-		RK_U32 reserved               : 1;
+		RK_U32 reserved               : 3;
 		RK_U32 ref_pic_lst_mdf_l0     : 1;
 		RK_U32 num_refidx_l1_act      : 2;
 		RK_U32 num_refidx_l0_act      : 2;
