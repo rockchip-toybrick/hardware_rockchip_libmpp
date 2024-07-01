@@ -1714,7 +1714,7 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		u32 isp_id = *(u32*)arg;
 
 		mpp_debug(DEBUG_ISP_INFO, "isp %d connect\n", isp_id);
-		mpp_write(mpp, 0x60, BIT(4) | BIT(0));
+		mpp_write(mpp, 0x60, BIT(4) | BIT(0) | VEPU_CONNETC_CUR);
 		set_bit(isp_id, &enc->dvbm_setup);
 		// rkvenc_dvbm_status_dump(mpp);
 	} break;
