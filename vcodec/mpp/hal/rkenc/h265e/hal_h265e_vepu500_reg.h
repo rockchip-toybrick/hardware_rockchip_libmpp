@@ -1730,6 +1730,7 @@ typedef struct H265eV500RegSet_t {
 	HevcVepu500Param        reg_param;
 	HevcVepu500Sqi          reg_sqi;
 	Vepu500SclCfg           reg_scl;
+	Vepu500JpegTable        reg_jpg_tbl;
 	Vepu500Osd              reg_osd;
 	Vepu500Status           reg_st;
 	Vepu500Dbg              reg_dbg;

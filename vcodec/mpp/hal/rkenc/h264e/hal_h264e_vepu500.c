@@ -2000,6 +2000,7 @@ static MPP_RET hal_h264e_vepu500_start(void *hal, HalEncTask *task)
 		HAL_H264E_CFG_WR_REG(regs->reg_param,   sizeof(regs->reg_param),    VEPU500_PARAM_OFFSET);
 		HAL_H264E_CFG_WR_REG(regs->reg_sqi,     sizeof(regs->reg_sqi),      VEPU500_SQI_OFFSET);
 		HAL_H264E_CFG_WR_REG(regs->reg_scl,     sizeof(regs->reg_scl),      VEPU500_SCL_OFFSET);
+		HAL_H264E_CFG_WR_REG(regs->reg_jpg_tbl, sizeof(regs->reg_jpg_tbl),  VEPU500_JPEGTAB_OFFSET);
 		HAL_H264E_CFG_WR_REG(regs->reg_osd,     sizeof(regs->reg_osd),      VEPU500_OSD_OFFSET);
 
 		/* config read regs */
@@ -2247,6 +2248,60 @@ static MPP_RET hal_h264e_vepu500_ret_task(void * hal, HalEncTask * task)
 	return MPP_OK;
 }
 
+static MPP_RET hal_h264e_vepu500_comb_start(void *hal, HalEncTask *task, HalEncTask *jpeg_task)
+{
+	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *) hal;
+	HalVepu500RegSet *regs = (HalVepu500RegSet *) ctx->regs_set;
+	Vepu500JpegCfg jpeg_cfg;
+	VepuFmtCfg cfg;
+	MppEncPrepCfg *prep = &ctx->cfg->prep;
+	MppFrameFormat fmt = prep->format;
+
+	hal_h264e_dbg_func("enter %p\n", hal);
+	regs->reg_ctl.dtrns_map.jpeg_bus_edin = 7;
+	vepu5xx_set_fmt(&cfg, fmt);
+	jpeg_cfg.dev = ctx->dev;
+	jpeg_cfg.jpeg_reg_base = &ctx->regs_set->reg_frm.jpeg_frame;
+	jpeg_cfg.reg_tab = &ctx->regs_set->reg_jpg_tbl;
+	jpeg_cfg.enc_task = jpeg_task;
+	jpeg_cfg.input_fmt = &cfg;
+	jpeg_cfg.online = ctx->online;
+	vepu500_set_jpeg_reg(&jpeg_cfg);
+	//osd part todo
+	if (jpeg_task->jpeg_tlb_reg)
+		memcpy(&regs->reg_jpg_tbl, jpeg_task->jpeg_tlb_reg, sizeof(Vepu500JpegTable));
+	if (jpeg_task->jpeg_osd_reg)
+		memcpy(&regs->reg_osd, jpeg_task->jpeg_osd_reg, sizeof(Vepu500Osd));
+	hal_h264e_dbg_func("leave %p\n", hal);
+
+	return hal_h264e_vepu500_start(hal, task);
+}
+
+static MPP_RET hal_h264e_vepu500_comb_ret_task(void *hal, HalEncTask *task, HalEncTask *jpeg_task)
+{
+	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *) hal;
+	EncRcTaskInfo *rc_info = &jpeg_task->rc_task->info;
+	HalVepu500RegSet *regs = (HalVepu500RegSet *)ctx->regs_set;
+	MPP_RET ret = MPP_OK;
+
+	hal_h264e_dbg_func("enter %p\n", hal);
+	ret = hal_h264e_vepu500_ret_task(hal, task);
+	if (ret)
+		return ret;
+
+	if (regs->reg_ctl.int_sta.jbsf_oflw_sta)
+		jpeg_task->jpeg_overflow = 1;
+
+	jpeg_task->hw_length += regs->reg_st.jpeg_head_bits_l32;
+	// update total hardware length
+	jpeg_task->length += jpeg_task->hw_length;
+	// setup bit length for rate control
+	rc_info->bit_real = jpeg_task->hw_length * 8;
+
+	hal_h264e_dbg_func("leave %p\n", hal);
+	return ret;
+}
+
 const MppEncHalApi hal_h264e_vepu500 = {
 	.name       = "hal_h264e_vepu500",
 	.coding     = MPP_VIDEO_CodingAVC,
@@ -2262,4 +2317,6 @@ const MppEncHalApi hal_h264e_vepu500 = {
 	.part_start = NULL,
 	.part_wait  = NULL,
 	.ret_task   = hal_h264e_vepu500_ret_task,
+	.comb_start = hal_h264e_vepu500_comb_start,
+	.comb_ret_task = hal_h264e_vepu500_comb_ret_task,
 };

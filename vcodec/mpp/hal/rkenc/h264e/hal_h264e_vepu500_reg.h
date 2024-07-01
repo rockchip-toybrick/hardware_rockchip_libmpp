@@ -1368,6 +1368,7 @@ typedef struct HalVepu500Reg_t {
 	Vepu500Param        reg_param;
 	Vepu500SqiCfg       reg_sqi;
 	Vepu500SclCfg       reg_scl;
+	Vepu500JpegTable    reg_jpg_tbl;
 	Vepu500Osd          reg_osd;
 	Vepu500Status       reg_st;
 	Vepu500Dbg          reg_dbg;

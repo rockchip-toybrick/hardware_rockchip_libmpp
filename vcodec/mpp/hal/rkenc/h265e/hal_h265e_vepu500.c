@@ -1769,6 +1769,7 @@ MPP_RET hal_h265e_v500_start(void *hal, HalEncTask *enc_task)
 	HAL_H265E_CFG_WR_REG(hw_regs->reg_param, sizeof(hw_regs->reg_param), VEPU500_PARAM_OFFSET);
 	HAL_H265E_CFG_WR_REG(hw_regs->reg_sqi, sizeof(hw_regs->reg_sqi), VEPU500_SQI_OFFSET);
 	HAL_H265E_CFG_WR_REG(hw_regs->reg_scl, sizeof(hw_regs->reg_scl), VEPU500_SCL_OFFSET);
+	HAL_H265E_CFG_WR_REG(hw_regs->reg_jpg_tbl, sizeof(hw_regs->reg_jpg_tbl), VEPU500_JPEGTAB_OFFSET);
 	HAL_H265E_CFG_WR_REG(hw_regs->reg_osd, sizeof(hw_regs->reg_osd), VEPU500_OSD_OFFSET);
 
 	/* config read regs */
@@ -1997,6 +1998,63 @@ MPP_RET hal_h265e_v500_ret_task(void *hal, HalEncTask *task)
 	return MPP_OK;
 }
 
+static MPP_RET hal_h265e_v500_comb_start(void *hal, HalEncTask *enc_task,
+					 HalEncTask *jpeg_enc_task)
+{
+	H265eV500HalContext *ctx = (H265eV500HalContext *) hal;
+	H265eV500RegSet *hw_regs = ctx->regs;
+	Vepu500JpegCfg jpeg_cfg;
+
+	hal_h265e_enter();
+	hw_regs->reg_ctl.dtrns_map.jpeg_bus_edin = 7;
+	jpeg_cfg.dev = ctx->dev;
+	jpeg_cfg.jpeg_reg_base = &hw_regs->reg_frm.jpeg_frame;
+	jpeg_cfg.reg_tab = &hw_regs->reg_jpg_tbl;
+	jpeg_cfg.enc_task = jpeg_enc_task;
+	jpeg_cfg.input_fmt = ctx->input_fmt;
+	jpeg_cfg.online = ctx->online;
+	vepu500_set_jpeg_reg(&jpeg_cfg);
+
+	if (jpeg_enc_task->jpeg_tlb_reg)
+		memcpy(&hw_regs->reg_jpg_tbl, jpeg_enc_task->jpeg_tlb_reg, sizeof(Vepu500JpegTable));
+	if (jpeg_enc_task->jpeg_osd_reg)
+		memcpy(&hw_regs->reg_osd, jpeg_enc_task->jpeg_osd_reg, sizeof(Vepu500Osd));
+
+	hal_h265e_leave();
+
+	return hal_h265e_v500_start(hal, enc_task);
+}
+
+
+static MPP_RET hal_h265e_v500_ret_comb_task(void *hal, HalEncTask *task, HalEncTask *jpeg_enc_task)
+{
+	H265eV500HalContext *ctx = (H265eV500HalContext *) hal;
+	HalEncTask *enc_task = task;
+	H265eV500StatusElem *elem = (H265eV500StatusElem *) ctx->reg_out;
+	vepu500_h265_fbk *fb = &ctx->feedback;
+	EncRcTaskInfo *hal_rc_ret = (EncRcTaskInfo *) &jpeg_enc_task->rc_task->info;
+	MPP_RET ret = MPP_OK;
+
+	hal_h265e_enter();
+	ret = vepu500_h265_set_feedback(ctx, enc_task);
+	if (ret)
+		return ret;
+	enc_task->hw_length = fb->out_strm_size;
+	enc_task->length += fb->out_strm_size;
+
+	if (elem->hw_status & RKV_ENC_INT_JPEG_OVERFLOW)
+		jpeg_enc_task->jpeg_overflow = 1;
+
+	jpeg_enc_task->hw_length = elem->st.jpeg_head_bits_l32;
+	jpeg_enc_task->length += jpeg_enc_task->hw_length;
+	hal_rc_ret->bit_real += jpeg_enc_task->hw_length * 8;
+
+	hal_h265e_dbg_detail("output stream size %d\n", fb->out_strm_size);
+	hal_h265e_leave();
+
+	return ret;
+}
+
 const MppEncHalApi hal_h265e_vepu500 = {
 	.name       = "hal_h265e_v500",
 	.coding     = MPP_VIDEO_CodingHEVC,
@@ -2012,4 +2070,6 @@ const MppEncHalApi hal_h265e_vepu500 = {
 	.part_start = NULL,
 	.part_wait  = NULL,
 	.ret_task   = hal_h265e_v500_ret_task,
+	.comb_start = hal_h265e_v500_comb_start,
+	.comb_ret_task = hal_h265e_v500_ret_comb_task
 };

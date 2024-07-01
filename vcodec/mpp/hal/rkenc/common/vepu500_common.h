@@ -18,6 +18,7 @@
 #define VEPU500_PARAM_OFFSET        (1472 * sizeof(RK_U32)) /* 0x00001700 reg1472 -0x000019cc reg1651 */
 #define VEPU500_SQI_OFFSET          (2048 * sizeof(RK_U32)) /* 0x00002000 reg2048 - 0x0000216c reg2139 */
 #define VEPU500_SCL_OFFSET          (2176 * sizeof(RK_U32)) /* 0x00002200 reg2176 - 0x00002584 reg2401 */
+#define VEPU500_JPEGTAB_OFFSET      (2404 * sizeof(RK_U32)) /* 0x00002590 reg2404 - 0x0000270c reg2499 */
 #define VEPU500_OSD_OFFSET          (3072 * sizeof(RK_U32)) /* 0x00003000 reg3072 - 0x00003134 reg3149 */
 #define VEPU500_STATUS_OFFSET       (4096 * sizeof(RK_U32)) /* 0x00004000 reg4096 - 0x0000424c reg4243 */
 #define VEPU500_DBG_OFFSET          (5120 * sizeof(RK_U32)) /* 0x00005000 reg5120 - 0x00005230 reg5260 */
