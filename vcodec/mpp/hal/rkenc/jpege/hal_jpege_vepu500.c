@@ -337,7 +337,7 @@ static void vepu500_jpeg_set_dvbm(JpegV500RegSet *regs, RK_U32 width)
 	/* 1: cur frame 0: next frame */
 	regs->reg_ctl.dvbm_cfg.ptr_gbck = 0;
 	regs->reg_ctl.dvbm_cfg.src_oflw_drop = 1;
-	regs->reg_ctl.dvbm_cfg.vepu_expt_type = 2;
+	regs->reg_ctl.dvbm_cfg.vepu_expt_type = 0;
 	regs->reg_ctl.dvbm_cfg.vinf_dly_cycle = 0;
 	regs->reg_ctl.dvbm_cfg.ybuf_full_mgn = MPP_ALIGN(width * 8, SZ_4K) / SZ_4K;
 	regs->reg_ctl.dvbm_cfg.ybuf_oflw_mgn = 0;

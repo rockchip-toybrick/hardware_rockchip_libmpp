@@ -1878,7 +1878,7 @@ static MPP_RET vepu500_h264e_set_dvbm(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	/* 1: cur frame 0: next frame */
 	regs->reg_ctl.dvbm_cfg.ptr_gbck = 0;
 	regs->reg_ctl.dvbm_cfg.src_oflw_drop = 1;
-	regs->reg_ctl.dvbm_cfg.vepu_expt_type = 2;
+	regs->reg_ctl.dvbm_cfg.vepu_expt_type = 0;
 	regs->reg_ctl.dvbm_cfg.vinf_dly_cycle = 0;
 	regs->reg_ctl.dvbm_cfg.ybuf_full_mgn = MPP_ALIGN(width * 8, SZ_4K) / SZ_4K;
 	regs->reg_ctl.dvbm_cfg.ybuf_oflw_mgn = 0;
@@ -2055,7 +2055,7 @@ static MPP_RET hal_h264e_vepu500_status_check(HalVepu500RegSet *regs)
 	}
 
 	if (regs->reg_ctl.int_sta.vsrc_err_sta) {
-		mpp_err_f("wrap frame overflow");
+		mpp_err_f("wrap frame error");
 		ret = MPP_NOK;
 	}
 
