@@ -85,6 +85,7 @@ typedef struct HalH264eVepu500Ctx_t {
 	RK_S32                  pixel_buf_size;
 	RK_S32                  thumb_buf_size;
 	RK_S32                  max_buf_cnt;
+	RK_U32			recn_buf_clear;
 
 	/* external line buffer over 4K */
 	MppBufferGroup          ext_line_buf_grp;
@@ -479,6 +480,7 @@ static void setup_hal_bufs(HalH264eVepu500Ctx *ctx)
 		ctx->thumb_buf_size = thumb_buf_size;
 		ctx->smear_size = smear_size;
 		ctx->max_buf_cnt = new_max_cnt;
+		ctx->recn_buf_clear = 1;
 	}
 }
 
@@ -1611,6 +1613,35 @@ static void setup_vepu500_recn_refr(HalH264eVepu500Ctx *ctx, HalVepu500RegSet *r
 		regs->reg_frm.rfpb_h_addr = 0;
 		regs->reg_frm.rfpt_b_addr = 0xffffffff;
 		regs->reg_frm.rfpb_b_addr  = 0;
+	}
+
+	/*
+	 * Fix hw bug:
+	 * If there are some non-zero value in the recn buffer,
+	 * may cause fbd err because of invalid data used.
+	 * So clear recn buffer when resolution changed.
+	 */
+	if (ctx->recn_buf_clear) {
+		MppBuffer recn_buf = NULL;
+		void *ptr = NULL;
+		RK_U32 len;
+		struct dma_buf *dma = NULL;
+
+		if (recn_ref_wrap) {
+			recn_buf = ctx->recn_ref_buf;
+			len = ctx->wrap_infos.hdr.total_size + ctx->wrap_infos.hdr_lt.total_size;
+		} else {
+			recn_buf = curr->buf[RECREF_TYPE];
+			len = ctx->pixel_buf_fbc_hdr_size;
+		}
+
+		ptr = mpp_buffer_get_ptr(recn_buf);
+		dma = mpp_buffer_get_dma(recn_buf);
+		mpp_assert(ptr);
+		mpp_assert(dma);
+		memset(ptr, 0, len);
+		dma_buf_end_cpu_access_partial(dma, DMA_FROM_DEVICE, 0, len);
+		ctx->recn_buf_clear = 0;
 	}
 
 	hal_h264e_dbg_func("leave\n");

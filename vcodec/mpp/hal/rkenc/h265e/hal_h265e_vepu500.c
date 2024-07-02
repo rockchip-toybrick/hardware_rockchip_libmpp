@@ -112,6 +112,7 @@ typedef struct H265eV500HalContext_t {
 	MppBuffer               recn_ref_buf;
 	WrapBufInfo             wrap_infos;
 	struct hal_shared_buf   *shared_buf;
+	RK_U32			recn_buf_clear;
 
 	RK_S32                  qpmap_en;
 	RK_S32                  smart_en;
@@ -401,6 +402,7 @@ static MPP_RET vepu500_h265_setup_hal_bufs(H265eV500HalContext *ctx)
 		ctx->smear_size = smear_size;
 		ctx->frame_size = frame_size;
 		ctx->max_buf_cnt = new_max_cnt;
+		ctx->recn_buf_clear = 1;
 	}
 
 
@@ -1409,6 +1411,35 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 		struct device *dev = mpp_get_dev(ctx->dev);
 
 		dma_sync_single_for_device(dev, task->output->mpi_buf_id, len, DMA_TO_DEVICE);
+	}
+
+	/*
+	 * Fix hw bug:
+	 * If there are some non-zero value in the recn buffer,
+	 * may cause fbd err because of invalid data used.
+	 * So clear recn buffer when resolution changed.
+	 */
+	if (ctx->recn_buf_clear) {
+		MppBuffer recn_buf = NULL;
+		void *ptr = NULL;
+		RK_U32 len;
+		struct dma_buf *dma = NULL;
+
+		if (ctx->recn_ref_wrap) {
+			recn_buf = ctx->recn_ref_buf;
+			len = ctx->wrap_infos.hdr.total_size + ctx->wrap_infos.hdr_lt.total_size;
+		} else {
+			recn_buf = recon_buf->buf[RECREF_TYPE];
+			len = ctx->fbc_header_len;
+		}
+
+		ptr = mpp_buffer_get_ptr(recn_buf);
+		dma = mpp_buffer_get_dma(recn_buf);
+		mpp_assert(ptr);
+		mpp_assert(dma);
+		memset(ptr, 0, len);
+		dma_buf_end_cpu_access_partial(dma, DMA_FROM_DEVICE, 0, len);
+		ctx->recn_buf_clear = 0;
 	}
 }
 
