@@ -90,6 +90,8 @@
 #define to_rkvenc_dev(dev)		\
 		container_of(dev, struct rkvenc_dev, mpp)
 
+#define is_pp_task(task)	(task->pp_info != NULL)
+
 /* reg define for vepu_pp */
 enum {
 	INT_EN		= 0x20,
@@ -754,12 +756,15 @@ static void rkvenc_dvbm_show_info(struct mpp_dev *mpp)
 	u32 isp_info_addr[4] = {0x5170, 0x5178, 0x5180, 0x5188};
 	u32 isp_info;
 	u32 valid_idx;
+	u32 dvbm_ctl = mpp_read(mpp, 0x5190);
+	u32 isp1 = mpp_read(mpp, 0x516c);
 
-	valid_idx = mpp_read(mpp, 0x5190) & 0x3;
+	valid_idx = dvbm_ctl & 0x3;
 	isp_info = mpp_read(mpp, isp_info_addr[valid_idx]);
 
-	mpp_dbg_dvbm("idx %d fcnt %d lcnt %d\n", valid_idx,
-		     (isp_info >> 16) & 0xff, isp_info & 0x3fff);
+	mpp_dbg_dvbm("fcnt %d lcnt %d\n", (isp_info >> 16) & 0xff, isp_info & 0x3fff);
+	mpp_dbg_dvbm("isp0 fcnt %d isp1 0x%08x fcnt %d lcnt %d\n",
+		     mpp_read(mpp, 0x5168) & 0xff, isp1, (isp1 >> 16) & 0xff, isp1 & 0x3fff);
 }
 
 static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
@@ -834,7 +839,6 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 				continue;
 
 			mpp_write_relaxed(mpp, off, regs[j]);
-
 		}
 	}
 
@@ -1013,22 +1017,20 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 	mpp_dbg_dvbm("irq_status 0x%08x\n", mpp->irq_status);
 	dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
 	if (dvbm_cfg) {
+		u32 enc_st = mpp_read(mpp, RKVENC_STATUS);
+
 		if (mpp->irq_status & RKVENC_SOURCE_ERR)
-			mpp_err("st enc 0x%08x\n", mpp_read(mpp, RKVENC_STATUS));
+			mpp_err("chan %d task %d pipe %d frame id %d err 0x%08x\n",
+				session->chn_id, mpp_task->task_index, mpp_task->pipe_id,
+				mpp_task->frame_id, enc_st);
 
 		if (mpp->irq_status & 0x7fff) {
 			dvbm_cfg &= ~DVBM_VEPU_CONNETC;
 
 			mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
-			mpp_dbg_dvbm("disconnect dvbm\n");
 		}
-		if (1 || mpp->irq_status & BIT(15)) {
-			u32 enc_st = mpp_read(mpp, RKVENC_STATUS);
-
-			mpp_dbg_dvbm("clear st enc 0x%08x\n", enc_st);
-			mpp_write(mpp, RKVENC_STATUS, 0);
-			mpp_dbg_dvbm("after clear st enc 0x%08x\n", mpp_read(mpp, RKVENC_STATUS));
-		}
+		mpp_dbg_dvbm("st enc 0x%08x\n", enc_st);
+		mpp_write(mpp, RKVENC_STATUS, 0);
 		if (!(mpp->irq_status & 0x7fff))
 			return IRQ_HANDLED;
 	}
@@ -1068,6 +1070,10 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 	if (mpp->dev_ops->finish)
 		mpp->dev_ops->finish(mpp, mpp_task);
 	if (mpp->irq_status & enc->hw_info->err_mask) {
+		mpp_err("chan %d %s task %d irq_status 0x%08x enc st 0x%08x\n",
+			session->chn_id, is_pp_task(task) ? "pp" : "enc",
+			mpp_task->task_index, task->irq_status,
+			mpp_read(mpp, RKVENC_STATUS));
 		priv->info.enc_err_status = task->irq_status;
 		priv->info.enc_err_cnt++;
 		if (mpp->hw_ops->reset)
@@ -1150,6 +1156,9 @@ static int rkvenc_result(struct mpp_dev *mpp,
 	}
 
 	if (test_bit(TASK_STATE_TIMEOUT, &mpp_task->state))
+		return -1;
+
+	if (atomic_read(&mpp_task->abort_request))
 		return -1;
 
 	mpp_debug_leave();
@@ -1330,8 +1339,9 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	}
 	session = task->session;
 
-	mpp_err("chan %d task %d state %#lx processing time out!\n",
-		session->chn_id, task->task_index, task->state);
+	mpp_err("chan %d %s task %d state %#lx processing time out!\n",
+		session->chn_id, is_pp_task(to_rkvenc_task(task)) ? "pp" : "enc",
+		task->task_index, task->state);
 
 	if (!session->mpp) {
 		mpp_err("session %p, session->mpp is null.\n", session);

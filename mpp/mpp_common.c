@@ -792,12 +792,13 @@ again:
 	if (info) {
 		if ((ALIGN(info->width, 8) != task->width) ||
 		    (ALIGN(info->height, 8) != task->height)) {
-			mpp_dbg_warning("chan %d task %d resolution not match [%d %d] != [%d %d]\n",
+			mpp_dbg_warning("chan %d task %d pipe %d frame %d wxh [%d %d] != [%d %d]\n",
 					session->chn_id, task->task_index,
-					info->width, info->height, task->width, task->height);
+					info->pipe_id, info->frame_id,
+					info->width, info->height,
+					task->width, task->height);
 			atomic_inc(&task->abort_request);
 			set_bit(TASK_STATE_DONE, &task->state);
-			mpp_taskqueue_pop_pending(queue, task);
 			if (session->callback)
 				session->callback(session->chn_id);
 		}
