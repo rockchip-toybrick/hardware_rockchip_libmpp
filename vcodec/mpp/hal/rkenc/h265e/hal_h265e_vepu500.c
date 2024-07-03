@@ -951,6 +951,25 @@ static MPP_RET vepu500_h265_set_rc_regs(H265eV500HalContext *ctx, H265eV500RegSe
 		reg_frm->reg213_rc_qp.rc_min_qp   = rc_cfg->quality_min;
 		reg_frm->reg214_rc_tgt.ctu_ebit   = ctu_target_bits_mul_16;
 
+		{
+			/* fixed frame qp */
+			RK_S32 fqp_min, fqp_max;
+
+			if (ctx->frame_type == INTRA_FRAME) {
+				fqp_min = rc->fm_lvl_qp_min_i;
+				fqp_max = rc->fm_lvl_qp_max_i;
+			} else {
+				fqp_min = rc->fm_lvl_qp_min_p;
+				fqp_max = rc->fm_lvl_qp_max_p;
+			}
+
+			if ((fqp_min == fqp_max) && (fqp_min >= 0) && (fqp_max <= 51)) {
+				reg_frm->reg0192_enc_pic.pic_qp = fqp_min;
+				reg_frm->reg0240_synt_sli1.sli_qp = fqp_min;
+				reg_frm->reg213_rc_qp.rc_qp_range = 0;
+			}
+		}
+
 		reg_rc->rc_dthd_0_8[0] = 2 * negative_bits_thd;
 		reg_rc->rc_dthd_0_8[1] = negative_bits_thd;
 		reg_rc->rc_dthd_0_8[2] = positive_bits_thd;
