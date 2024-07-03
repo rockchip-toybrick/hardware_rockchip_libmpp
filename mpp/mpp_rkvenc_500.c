@@ -370,6 +370,7 @@ static struct rkvenc_hw_info rkvenc_500_hw_info = {
 
 static int rkvenc_reset(struct mpp_dev *mpp);
 static void rkvenc_task_timeout(struct work_struct *work_s);
+static void update_online_info(struct mpp_dev *mpp, u32 pipe_id);
 static bool req_over_class(struct mpp_request *req,
 			   struct rkvenc_task *task, int class)
 {
@@ -801,6 +802,10 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 				continue;
 			}
 
+			/* skip dvbm info cfg */
+			if (off >= 0x68 && off <= 0x9c)
+				continue;
+
 			if (mpp_task->disable_jpeg && off == 0x47c)
 				regs[j] &= (~BIT(31));
 
@@ -814,8 +819,6 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 			}
 
 			if (dvbm_cfg) {
-				if (off >= 0x270 && off <= 0x27c)
-					continue;
 				if (off == 0x308) {
 					u32 frame_id = mpp_task->frame_id;
 					u32 pipe_id = mpp_task->pipe_id;
@@ -834,9 +837,6 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 					regs[j] |= (BIT(13) | (pipe_id << 12));
 				}
 			}
-			/* skip dvbm info cfg */
-			if (off >= 0x68 && off <= 0x9c)
-				continue;
 
 			mpp_write_relaxed(mpp, off, regs[j]);
 		}
@@ -847,21 +847,26 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 	priv->info.hw_running = 1;
 	priv->dvbm_cfg = dvbm_cfg;
+
+	if (dvbm_cfg) {
+		update_online_info(mpp, mpp_task->pipe_id);
+		mpp_debug(DEBUG_RUN, "chan %d task %d pipe %d frame %d start\n",
+			  mpp_task->session->chn_id, mpp_task->task_index,
+			  mpp_task->pipe_id, mpp_task->frame_id);
+	} else {
+		mpp_debug(DEBUG_RUN, "chan %d task %d start\n",
+			  mpp_task->session->chn_id, mpp_task->task_index);
+	}
+
 	/* Flush the register before the start the device */
 	wmb();
 	preempt_disable();
 	INIT_DELAYED_WORK(&mpp_task->timeout_work, rkvenc_task_timeout);
 	schedule_delayed_work(&mpp_task->timeout_work, msecs_to_jiffies(RKVENC_WORK_TIMEOUT_DELAY));
 	set_bit(TASK_STATE_RUNNING, &mpp_task->state);
-	if (dvbm_cfg)
-		mpp_debug(DEBUG_RUN, "chan %d task %d pipe %d frame %d start\n",
-			  mpp_task->session->chn_id, mpp_task->task_index,
-			  mpp_task->pipe_id, mpp_task->frame_id);
-	else
-		mpp_debug(DEBUG_RUN, "chan %d task %d start\n",
-			  mpp_task->session->chn_id, mpp_task->task_index);
 	mpp_write(mpp, hw->enc_start_base, enc_start_val);
 	atomic_set(&enc->on_work, 1);
+
 	if (dvbm_cfg)
 		rkvenc_dvbm_status_dump(mpp);
 
@@ -1814,6 +1819,29 @@ static int rkvenc_dvbm_init(struct mpp_dev *mpp)
 
 	return 0;
 }
+
+static void update_online_info(struct mpp_dev *mpp, u32 pipe_id)
+{
+	struct dvbm_addr_cfg dvbm_adr;
+
+	dvbm_adr.chan_id = pipe_id;
+	rk_dvbm_ctrl(NULL, DVBM_VEPU_GET_ADR, &dvbm_adr);
+	if (!dvbm_adr.ybuf_bot || !dvbm_adr.cbuf_bot)
+		dev_err(mpp->dev, "the dvbm address do not ready!\n");
+
+	/* update wrap addr */
+	mpp_write_relaxed(mpp, 0x270, dvbm_adr.ybuf_top);
+	mpp_write_relaxed(mpp, 0x274, dvbm_adr.cbuf_top);
+	mpp_write_relaxed(mpp, 0x278, dvbm_adr.ybuf_bot);
+	mpp_write_relaxed(mpp, 0x27c, dvbm_adr.cbuf_bot);
+	if (mpp_read_relaxed(mpp, RKVENC_JPEG_BASE_CFG) & JRKVENC_PEGE_ENABLE) {
+		mpp_write_relaxed(mpp, 0x410, dvbm_adr.ybuf_bot);
+		mpp_write_relaxed(mpp, 0x414, dvbm_adr.cbuf_bot);
+		mpp_write_relaxed(mpp, 0x418, dvbm_adr.ybuf_top);
+		mpp_write_relaxed(mpp, 0x41c, dvbm_adr.cbuf_top);
+	}
+}
+
 #else
 
 static inline int rkvenc_dvbm_init(struct mpp_dev *mpp)
@@ -1824,6 +1852,10 @@ static inline int rkvenc_dvbm_init(struct mpp_dev *mpp)
 static inline int rkvenc_dvbm_deinit(struct mpp_dev *mpp)
 {
 	return 0;
+}
+
+static inline void update_online_info(struct mpp_dev *mpp, u32 pipe_id)
+{
 }
 
 #endif
