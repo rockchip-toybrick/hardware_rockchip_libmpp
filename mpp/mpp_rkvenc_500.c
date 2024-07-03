@@ -1733,12 +1733,16 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 
 		clear_bit(isp_id, &enc->dvbm_setup);
 		mpp_debug(DEBUG_ISP_INFO, "isp %d disconnect 0x%lx\n", isp_id, enc->dvbm_setup);
-		if (!enc->dvbm_setup)
+		if (!enc->dvbm_setup) {
 			mpp_write(mpp, 0x60, 0);
+			mpp->always_on = 0;
+		}
 	} break;
 	case DVBM_ISP_SET_DVBM_CFG: {
 		struct dvbm_isp_cfg_t *isp_cfg = (struct dvbm_isp_cfg_t *)arg;
 
+		mpp_power_on(mpp);
+		mpp->always_on = 1;
 		rkvenc_dvbm_setup(mpp, isp_cfg);
 	} break;
 	case DVBM_VEPU_NOTIFY_FRM_STR: {
