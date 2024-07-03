@@ -999,6 +999,15 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 
 	mpp_debug_enter();
 
+	if (!mpp_task) {
+		dev_err(mpp->dev, "found null task in irq\n");
+		return IRQ_HANDLED;
+	}
+
+	task = to_rkvenc_task(mpp_task);
+	session = mpp_task->session;
+	priv = mpp_task->session->priv;
+
 	/* get irq status */
 	mpp->irq_status = mpp_read(mpp, hw->int_sta_base);
 	if (!mpp->irq_status)
@@ -1034,15 +1043,6 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 		if (!(mpp->irq_status & 0x7fff))
 			return IRQ_HANDLED;
 	}
-
-	if (!mpp_task) {
-		dev_err(mpp->dev, "found null task in irq\n");
-		return IRQ_HANDLED;
-	}
-
-	task = to_rkvenc_task(mpp_task);
-	session = mpp_task->session;
-	priv = mpp_task->session->priv;
 
 	if (test_and_set_bit(TASK_STATE_HANDLE, &mpp_task->state)) {
 		mpp_err("task %d has been handled state %#lx\n",
