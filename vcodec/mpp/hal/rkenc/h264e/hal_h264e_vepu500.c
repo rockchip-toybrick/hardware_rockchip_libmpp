@@ -2030,8 +2030,7 @@ static MPP_RET hal_h264e_vepu500_start(void *hal, HalEncTask *task)
 		HAL_H264E_CFG_WR_REG(regs->reg_rc_roi,  sizeof(regs->reg_rc_roi),   VEPU500_RC_ROI_OFFSET);
 		HAL_H264E_CFG_WR_REG(regs->reg_param,   sizeof(regs->reg_param),    VEPU500_PARAM_OFFSET);
 		HAL_H264E_CFG_WR_REG(regs->reg_sqi,     sizeof(regs->reg_sqi),      VEPU500_SQI_OFFSET);
-		HAL_H264E_CFG_WR_REG(regs->reg_scl,     sizeof(regs->reg_scl),      VEPU500_SCL_OFFSET);
-		HAL_H264E_CFG_WR_REG(regs->reg_jpg_tbl, sizeof(regs->reg_jpg_tbl),  VEPU500_JPEGTAB_OFFSET);
+		HAL_H264E_CFG_WR_REG(regs->reg_scl_jpgtbl, sizeof(regs->reg_scl_jpgtbl), VEPU500_SCL_JPGTBL_OFFSET);
 		HAL_H264E_CFG_WR_REG(regs->reg_osd,     sizeof(regs->reg_osd),      VEPU500_OSD_OFFSET);
 
 		/* config read regs */
@@ -2289,14 +2288,14 @@ static MPP_RET hal_h264e_vepu500_comb_start(void *hal, HalEncTask *task, HalEncT
 	vepu5xx_set_fmt(&cfg, fmt);
 	jpeg_cfg.dev = ctx->dev;
 	jpeg_cfg.jpeg_reg_base = &ctx->regs_set->reg_frm.jpeg_frame;
-	jpeg_cfg.reg_tab = &ctx->regs_set->reg_jpg_tbl;
+	jpeg_cfg.reg_tab = &regs->reg_scl_jpgtbl.jpg_tbl;
 	jpeg_cfg.enc_task = jpeg_task;
 	jpeg_cfg.input_fmt = &cfg;
 	jpeg_cfg.online = ctx->online;
 	vepu500_set_jpeg_reg(&jpeg_cfg);
 	//osd part todo
 	if (jpeg_task->jpeg_tlb_reg)
-		memcpy(&regs->reg_jpg_tbl, jpeg_task->jpeg_tlb_reg, sizeof(Vepu500JpegTable));
+		memcpy(&regs->reg_scl_jpgtbl.jpg_tbl, jpeg_task->jpeg_tlb_reg, sizeof(Vepu500JpegTable));
 	if (jpeg_task->jpeg_osd_reg)
 		memcpy(&regs->reg_osd, jpeg_task->jpeg_osd_reg, sizeof(Vepu500Osd));
 	hal_h264e_dbg_func("leave %p\n", hal);

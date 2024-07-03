@@ -184,7 +184,7 @@ enum RKVENC_CLASS_TYPE {
 	RKVENC_CLASS_RC		= 2,	/* rate control */
 	RKVENC_CLASS_PAR	= 3,	/* parameter */
 	RKVENC_CLASS_SQI	= 4,	/* subjective Adjust */
-	RKVENC_CLASS_SCL	= 5,	/* scaling list */
+	RKVENC_CLASS_SCL_JPGTBL	= 5,	/* scaling list and jpeg table*/
 	RKVENC_CLASS_OSD	= 6,	/* osd */
 	RKVENC_CLASS_ST		= 7,	/* status */
 	RKVENC_CLASS_DEBUG	= 8,	/* debug */
@@ -327,7 +327,7 @@ static struct rkvenc_hw_info rkvenc_500_hw_info = {
 		.base_s = 0x2000,
 		.base_e = 0x216c,
 	},
-	.reg_msg[RKVENC_CLASS_SCL] = {
+	.reg_msg[RKVENC_CLASS_SCL_JPGTBL] = {
 		.base_s = 0x2200,
 		.base_e = 0x270c,
 	},
@@ -457,7 +457,7 @@ static int rkvenc_get_class_msg(struct rkvenc_task *task,
 	for (i = 0; i < hw->reg_class; i++) {
 		base_s = hw->reg_msg[i].base_s;
 		base_e = hw->reg_msg[i].base_e;
-		if (addr >= base_s && addr < base_e) {
+		if (addr >= base_s && addr <= base_e) {
 			found = true;
 			msg->offset = task->reg[i].offset;
 			msg->size = task->reg[i].size;
@@ -480,7 +480,11 @@ static u32 *rkvenc_get_class_reg(struct rkvenc_task *task, u32 addr)
 		base_s = hw->reg_msg[i].base_s;
 		base_e = hw->reg_msg[i].base_e;
 		if (addr >= base_s && addr < base_e) {
-			reg = (u8 *)task->reg[i].data + (addr - task->reg[i].offset);
+			if (addr >= task->reg[i].offset)
+				reg = (u8 *)task->reg[i].data + (addr - task->reg[i].offset);
+			else
+				mpp_err("get reg invalid, addr[0x%x] reg[%d].offset[0x%x]",
+					addr, i, task->reg[i].offset);
 			break;
 		}
 	}
@@ -497,7 +501,7 @@ static int rkvenc_set_class_reg(struct rkvenc_task *task, u32 addr, u32 *data)
 	for (i = 0; i < hw->reg_class; i++) {
 		base_s = hw->reg_msg[i].base_s;
 		base_e = hw->reg_msg[i].base_e;
-		if (addr >= base_s && addr < base_e) {
+		if (addr >= base_s && addr <= base_e) {
 			task->reg[i].data = data;
 			task->reg[i].offset = addr;
 			task->reg[i].size = base_e - addr + 4;
@@ -567,7 +571,6 @@ static int rkvenc_task_get_format(struct mpp_dev *mpp,
 				  struct rkvenc_task *task)
 {
 	u32 offset, val;
-
 	struct rkvenc_hw_info *hw = task->hw_info;
 	u32 class = hw->fmt_reg.class;
 	u32 *class_reg = task->reg[class].data;
@@ -578,6 +581,11 @@ static int rkvenc_task_get_format(struct mpp_dev *mpp,
 
 	if (!class_reg || !class_size) {
 		mpp_err("invalid class reg %px class size %d\n", class_reg, class_size);
+		return -EINVAL;
+	}
+
+	if (hw->fmt_reg.base < class_offset) {
+		mpp_err("invalid fmt_reg[0x%x] class_offset[0x%x]", hw->fmt_reg.base, class_offset);
 		return -EINVAL;
 	}
 

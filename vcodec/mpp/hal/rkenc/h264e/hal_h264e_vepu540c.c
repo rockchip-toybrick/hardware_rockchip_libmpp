@@ -1513,7 +1513,7 @@ static MPP_RET vepu540c_h264e_use_pass1_patch(HalVepu540cRegSet *regs, HalH264eV
 
 static void setup_vepu540c_scl_cfg(HalH264eVepu540cCtx *ctx)
 {
-	vepu540c_scl_cfg *regs = &ctx->regs_set->reg_scl;
+	vepu540c_scl_cfg *regs = &ctx->regs_set->reg_scl_jpgtbl.scl;
 
 	hal_h264e_dbg_func("enter\n");
 
@@ -2550,19 +2550,9 @@ static MPP_RET hal_h264e_vepu540c_start(void *hal, HalEncTask *task)
 			break;
 		}
 
-		wr_cfg.reg = &ctx->regs_set->reg_scl;
-		wr_cfg.size = sizeof(ctx->regs_set->reg_scl);
-		wr_cfg.offset = VEPU540C_SCLCFG_OFFSET;
-
-		ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_WR, &wr_cfg);
-		if (ret) {
-			mpp_err_f("set register write failed %d\n", ret);
-			break;
-		}
-
-		wr_cfg.reg = &ctx->regs_set->jpeg_table;
-		wr_cfg.size = sizeof(ctx->regs_set->jpeg_table);
-		wr_cfg.offset = VEPU540C_JPEGTAB_OFFSET;
+		wr_cfg.reg = &ctx->regs_set->reg_scl_jpgtbl;
+		wr_cfg.size = sizeof(ctx->regs_set->reg_scl_jpgtbl);
+		wr_cfg.offset = VEPU540C_SCL_JPGTBL_OFFSET;
 
 		ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_WR, &wr_cfg);
 		if (ret) {
@@ -2856,14 +2846,15 @@ static MPP_RET hal_h264e_vepu540c_comb_start(void *hal, HalEncTask *task, HalEnc
 	vepu5xx_set_fmt(&cfg, fmt);
 	jpeg_cfg.dev = ctx->dev;
 	jpeg_cfg.jpeg_reg_base = &ctx->regs_set->reg_base.jpegReg;
-	jpeg_cfg.reg_tab = &ctx->regs_set->jpeg_table;
+	jpeg_cfg.reg_tab = &regs->reg_scl_jpgtbl.jpg_tbl;
 	jpeg_cfg.enc_task = jpeg_task;
 	jpeg_cfg.input_fmt = &cfg;
 	jpeg_cfg.online = ctx->online;
 	vepu540c_set_jpeg_reg(&jpeg_cfg);
 	//osd part todo
 	if (jpeg_task->jpeg_tlb_reg)
-		memcpy(&regs->jpeg_table, jpeg_task->jpeg_tlb_reg, sizeof(vepu540c_jpeg_tab));
+		memcpy(&regs->reg_scl_jpgtbl.jpg_tbl,
+		       jpeg_task->jpeg_tlb_reg, sizeof(vepu540c_jpeg_tab));
 	if (jpeg_task->jpeg_osd_reg)
 		memcpy(&regs->reg_osd_cfg.osd_jpeg_cfg, jpeg_task->jpeg_osd_reg, sizeof(vepu540c_osd_reg));
 	hal_h264e_dbg_func("leave %p\n", hal);

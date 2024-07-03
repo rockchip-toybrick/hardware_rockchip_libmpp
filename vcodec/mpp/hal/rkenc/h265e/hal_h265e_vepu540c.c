@@ -987,7 +987,7 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 	RK_S32 lambda_idx = ctx->frame_type == INTRA_FRAME ? ctx->cfg->tune.lambda_i_idx :
 			    ctx->cfg->tune.lambda_idx;
 	vepu540c_h265_rdo_cfg(ctx, reg_rdo, task);
-	setup_vepu540c_hevc_scl_cfg(&regs->reg_scl, task);
+	setup_vepu540c_hevc_scl_cfg(&regs->reg_scl_jpgtbl.scl, task);
 
 	if (ctx->frame_type == INTRA_FRAME) {
 		RK_U8 *thd = (RK_U8 *) & rc_regs->aq_tthd0;
@@ -2439,9 +2439,9 @@ static MPP_RET hal_h265e_v540c_start(void *hal, HalEncTask *enc_task)
 		return ret;
 	}
 
-	cfg.reg = &hw_regs->reg_scl;
-	cfg.size = sizeof(vepu540c_jpeg_tab) + sizeof(vepu540c_scl_cfg);
-	cfg.offset = VEPU540C_SCLCFG_OFFSET;
+	cfg.reg = &hw_regs->reg_scl_jpgtbl;
+	cfg.size = sizeof(Vepu540cSclJpgTbl);
+	cfg.offset = VEPU540C_SCL_JPGTBL_OFFSET;
 
 	ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_WR, &cfg);
 	if (ret) {
@@ -2871,14 +2871,15 @@ static MPP_RET hal_h265e_v540c_comb_start(void *hal, HalEncTask *enc_task,
 	hw_regs->reg_ctl.reg0012_dtrns_map.jpeg_bus_edin = 7;
 	jpeg_cfg.dev = ctx->dev;
 	jpeg_cfg.jpeg_reg_base = &hw_regs->reg_base.jpegReg;
-	jpeg_cfg.reg_tab = &hw_regs->jpeg_table;
+	jpeg_cfg.reg_tab = &hw_regs->reg_scl_jpgtbl.jpg_tbl;
 	jpeg_cfg.enc_task = jpeg_enc_task;
 	jpeg_cfg.input_fmt = ctx->input_fmt;
 	jpeg_cfg.online = ctx->online;
 	vepu540c_set_jpeg_reg(&jpeg_cfg);
 
 	if (jpeg_enc_task->jpeg_tlb_reg)
-		memcpy(&hw_regs->jpeg_table, jpeg_enc_task->jpeg_tlb_reg, sizeof(vepu540c_jpeg_tab));
+		memcpy(&hw_regs->reg_scl_jpgtbl.jpg_tbl,
+		       jpeg_enc_task->jpeg_tlb_reg, sizeof(vepu540c_jpeg_tab));
 	if (jpeg_enc_task->jpeg_osd_reg)
 		memcpy(&hw_regs->reg_osd_cfg.osd_jpeg_cfg, jpeg_enc_task->jpeg_osd_reg, sizeof(vepu540c_osd_reg));
 

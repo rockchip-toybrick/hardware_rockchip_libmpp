@@ -17,8 +17,7 @@
 #define VEPU500_RC_ROI_OFFSET       (1024 * sizeof(RK_U32)) /* 0x00001000 reg1024 - 0x0000113c reg1103 */
 #define VEPU500_PARAM_OFFSET        (1472 * sizeof(RK_U32)) /* 0x00001700 reg1472 -0x000019cc reg1651 */
 #define VEPU500_SQI_OFFSET          (2048 * sizeof(RK_U32)) /* 0x00002000 reg2048 - 0x0000216c reg2139 */
-#define VEPU500_SCL_OFFSET          (2176 * sizeof(RK_U32)) /* 0x00002200 reg2176 - 0x00002584 reg2401 */
-#define VEPU500_JPEGTAB_OFFSET      (2404 * sizeof(RK_U32)) /* 0x00002590 reg2404 - 0x0000270c reg2499 */
+#define VEPU500_SCL_JPGTBL_OFFSET   (2176 * sizeof(RK_U32)) /* 0x00002200 reg2176 - 0x0000270c reg2499 */
 #define VEPU500_OSD_OFFSET          (3072 * sizeof(RK_U32)) /* 0x00003000 reg3072 - 0x00003134 reg3149 */
 #define VEPU500_STATUS_OFFSET       (4096 * sizeof(RK_U32)) /* 0x00004000 reg4096 - 0x0000424c reg4243 */
 #define VEPU500_DBG_OFFSET          (5120 * sizeof(RK_U32)) /* 0x00005000 reg5120 - 0x00005230 reg5260 */
@@ -2282,6 +2281,15 @@ typedef struct Vepu500JpegCfg_t {
 	RK_U32 online;
 	RK_U32 rst_marker;
 } Vepu500JpegCfg;
+
+typedef struct Vepu500SclJpgTbl_t {
+	/* 0x2200 reg2176 - 0x2584 reg2401*/
+	Vepu500SclCfg       scl;
+	/* 0x2588 - 0x258f */
+	RK_U32              reserve[2];
+	/* 0x2590 reg2404 - 0x270c reg2499 */
+	Vepu500JpegTable    jpg_tbl;
+} Vepu500SclJpgTbl;
 
 #ifdef __cplusplus
 extern "C" {

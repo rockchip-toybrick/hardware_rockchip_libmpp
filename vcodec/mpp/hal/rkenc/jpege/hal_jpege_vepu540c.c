@@ -509,9 +509,9 @@ MPP_RET hal_jpege_v540c_start(void *hal, HalEncTask * enc_task)
 		return ret;
 	}
 
-	cfg.reg = &hw_regs->reg_scl;
-	cfg.size = sizeof(vepu540c_jpeg_tab) + sizeof(vepu540c_scl_cfg);
-	cfg.offset = VEPU540C_SCLCFG_OFFSET;
+	cfg.reg = &hw_regs->jpeg_table;
+	cfg.size = sizeof(vepu540c_jpeg_tab);
+	cfg.offset = VEPU540C_JPEGTAB_OFFSET;
 
 	ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_WR, &cfg);
 	if (ret) {

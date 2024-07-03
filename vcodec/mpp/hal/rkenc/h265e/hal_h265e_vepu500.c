@@ -1965,8 +1965,8 @@ MPP_RET hal_h265e_v500_start(void *hal, HalEncTask *enc_task)
 	HAL_H265E_CFG_WR_REG(hw_regs->reg_rc_roi, sizeof(hw_regs->reg_rc_roi), VEPU500_RC_ROI_OFFSET);
 	HAL_H265E_CFG_WR_REG(hw_regs->reg_param, sizeof(hw_regs->reg_param), VEPU500_PARAM_OFFSET);
 	HAL_H265E_CFG_WR_REG(hw_regs->reg_sqi, sizeof(hw_regs->reg_sqi), VEPU500_SQI_OFFSET);
-	HAL_H265E_CFG_WR_REG(hw_regs->reg_scl, sizeof(hw_regs->reg_scl), VEPU500_SCL_OFFSET);
-	HAL_H265E_CFG_WR_REG(hw_regs->reg_jpg_tbl, sizeof(hw_regs->reg_jpg_tbl), VEPU500_JPEGTAB_OFFSET);
+	HAL_H265E_CFG_WR_REG(hw_regs->reg_scl_jpgtbl, sizeof(hw_regs->reg_scl_jpgtbl),
+			     VEPU500_SCL_JPGTBL_OFFSET);
 	HAL_H265E_CFG_WR_REG(hw_regs->reg_osd, sizeof(hw_regs->reg_osd), VEPU500_OSD_OFFSET);
 
 	/* config read regs */
@@ -2203,14 +2203,15 @@ static MPP_RET hal_h265e_v500_comb_start(void *hal, HalEncTask *enc_task,
 	hw_regs->reg_ctl.dtrns_map.jpeg_bus_edin = 7;
 	jpeg_cfg.dev = ctx->dev;
 	jpeg_cfg.jpeg_reg_base = &hw_regs->reg_frm.jpeg_frame;
-	jpeg_cfg.reg_tab = &hw_regs->reg_jpg_tbl;
+	jpeg_cfg.reg_tab = &hw_regs->reg_scl_jpgtbl.jpg_tbl;
 	jpeg_cfg.enc_task = jpeg_enc_task;
 	jpeg_cfg.input_fmt = ctx->input_fmt;
 	jpeg_cfg.online = ctx->online;
 	vepu500_set_jpeg_reg(&jpeg_cfg);
 
 	if (jpeg_enc_task->jpeg_tlb_reg)
-		memcpy(&hw_regs->reg_jpg_tbl, jpeg_enc_task->jpeg_tlb_reg, sizeof(Vepu500JpegTable));
+		memcpy(&hw_regs->reg_scl_jpgtbl.jpg_tbl,
+		       jpeg_enc_task->jpeg_tlb_reg, sizeof(Vepu500JpegTable));
 	if (jpeg_enc_task->jpeg_osd_reg)
 		memcpy(&hw_regs->reg_osd, jpeg_enc_task->jpeg_osd_reg, sizeof(Vepu500Osd));
 

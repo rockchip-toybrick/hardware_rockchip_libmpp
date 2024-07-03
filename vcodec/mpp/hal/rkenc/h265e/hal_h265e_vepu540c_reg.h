@@ -1132,8 +1132,7 @@ typedef struct H265eV540cRegSet_t {
 	hevc_vepu540c_rc_roi reg_rc_roi;
 	hevc_vepu540c_wgt reg_wgt;
 	vepu540c_rdo_cfg reg_rdo;
-	vepu540c_scl_cfg reg_scl;
-	vepu540c_jpeg_tab jpeg_table;
+	Vepu540cSclJpgTbl reg_scl_jpgtbl;
 	vepu540c_osd_regs reg_osd_cfg;
 	vepu540c_dbg reg_dbg;
 } H265eV540cRegSet;

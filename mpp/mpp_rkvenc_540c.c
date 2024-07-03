@@ -98,7 +98,7 @@ enum RKVENC_CLASS_TYPE {
 	RKVENC_CLASS_RC		= 2,	/* rate control */
 	RKVENC_CLASS_PAR	= 3,	/* parameter */
 	RKVENC_CLASS_SQI	= 4,	/* subjective Adjust */
-	RKVENC_CLASS_SCL	= 5,	/* scaling list */
+	RKVENC_CLASS_SCL_JPGTBL	= 5,	/* scaling list and jpeg table */
 	RKVENC_CLASS_OSD	= 6,	/* osd */
 	RKVENC_CLASS_ST		= 7,	/* status */
 	RKVENC_CLASS_DEBUG	= 8,	/* debug */
@@ -168,6 +168,7 @@ struct rkvenc_task {
 		u32 valid;
 		u32 *data;
 		u32 size;
+		u32 offset;
 	} reg[RKVENC_CLASS_BUTT];
 
 	enum MPP_CLOCK_MODE clk_mode;
@@ -332,7 +333,7 @@ static struct rkvenc_hw_info rkvenc_rv1106_hw_info = {
 		.base_e = 0x20fc,
 		.link_len = 256,
 	},
-	.reg_msg[RKVENC_CLASS_SCL] = {
+	.reg_msg[RKVENC_CLASS_SCL_JPGTBL] = {
 		.base_s = 0x21e0,
 		.base_e = 0x2dfc,
 		.link_len = 3104,
@@ -474,9 +475,9 @@ static int rkvenc_get_class_msg(struct rkvenc_task *task,
 	for (i = 0; i < hw->reg_class; i++) {
 		base_s = hw->reg_msg[i].base_s;
 		base_e = hw->reg_msg[i].base_e;
-		if (addr >= base_s && addr < base_e) {
+		if (addr >= base_s && addr <= base_e) {
 			found = true;
-			msg->offset = base_s;
+			msg->offset = task->reg[i].offset;
 			msg->size = task->reg[i].size;
 			msg->data = task->reg[i].data;
 			break;
@@ -497,7 +498,11 @@ static u32 *rkvenc_get_class_reg(struct rkvenc_task *task, u32 addr)
 		base_s = hw->reg_msg[i].base_s;
 		base_e = hw->reg_msg[i].base_e;
 		if (addr >= base_s && addr < base_e) {
-			reg = (u8 *)task->reg[i].data + (addr - base_s);
+			if (addr >= task->reg[i].offset)
+				reg = (u8 *)task->reg[i].data + (addr - task->reg[i].offset);
+			else
+				mpp_err("get reg invalid, addr[0x%x] reg[%d].offset[0x%x]",
+					addr, i, task->reg[i].offset);
 			break;
 		}
 	}
@@ -514,9 +519,10 @@ static int rkvenc_set_class_reg(struct rkvenc_task *task, u32 addr, u32 *data)
 	for (i = 0; i < hw->reg_class; i++) {
 		base_s = hw->reg_msg[i].base_s;
 		base_e = hw->reg_msg[i].base_e;
-		if (addr >= base_s && addr < base_e) {
-			if ((addr - base_s) == 0)
-				task->reg[i].data = data;
+		if (addr >= base_s && addr <= base_e) {
+			task->reg[i].data = data;
+			task->reg[i].offset = addr;
+			task->reg[i].size = base_e - addr + 4;
 			break;
 		}
 	}
@@ -590,14 +596,19 @@ static int rkvenc_task_get_format(struct mpp_dev *mpp,
 	u32 class = hw->fmt_reg.class;
 	u32 *class_reg = task->reg[class].data;
 	u32 class_size = task->reg[class].size;
-	u32 class_base = hw->reg_msg[class].base_s;
+	u32 class_offset = task->reg[class].offset;
 	u32 bitpos = hw->fmt_reg.bitpos;
 	u32 bitlen = hw->fmt_reg.bitlen;
 
 	if (!class_reg || !class_size)
 		return -EINVAL;
 
-	offset = hw->fmt_reg.base - class_base;
+	if (hw->fmt_reg.base < class_offset) {
+		mpp_err("invalid fmt_reg[0x%x] class_offset[0x%x]", hw->fmt_reg.base, class_offset);
+		return -EINVAL;
+	}
+
+	offset = hw->fmt_reg.base - class_offset;
 	val = class_reg[offset / sizeof(u32)];
 	task->fmt = (val >> bitpos) & ((1 << bitlen) - 1);
 
@@ -646,7 +657,7 @@ int rkvenc_dump_dbg(struct mpp_dev *mpp)
 		if ((i == RKVENC_CLASS_RC) ||
 		    (i == RKVENC_CLASS_PAR) ||
 		    (i == RKVENC_CLASS_SQI) ||
-		    (i == RKVENC_CLASS_SCL) ||
+		    (i == RKVENC_CLASS_SCL_JPGTBL) ||
 		    (i == RKVENC_CLASS_OSD))
 			continue;
 #endif
@@ -900,7 +911,7 @@ static int rkvenc_link_fill_table(struct rkvenc_link_dev *link,
 	hdr->rc_cfg.valid = task->reg[RKVENC_CLASS_RC].valid;
 	hdr->param_cfg.valid = task->reg[RKVENC_CLASS_PAR].valid;
 	hdr->sqi_cfg.valid = task->reg[RKVENC_CLASS_SQI].valid;
-	hdr->scal_cfg.valid = task->reg[RKVENC_CLASS_SCL].valid;
+	hdr->scal_cfg.valid = task->reg[RKVENC_CLASS_SCL_JPGTBL].valid;
 	hdr->osd_cfg.valid = task->reg[RKVENC_CLASS_OSD].valid;
 	hdr->status_cfg.valid = task->reg[RKVENC_CLASS_ST].valid;
 	hdr->next_node.valid = 1;
@@ -2028,7 +2039,7 @@ static int rkvenc_link_alloc_table(struct rkvenc_dev *enc,
 		hdr->rc_cfg.lkt_addr = table->iova + link->class_off[RKVENC_CLASS_RC];
 		hdr->param_cfg.lkt_addr = table->iova + link->class_off[RKVENC_CLASS_PAR];
 		hdr->sqi_cfg.lkt_addr = table->iova + link->class_off[RKVENC_CLASS_SQI];
-		hdr->scal_cfg.lkt_addr = table->iova + link->class_off[RKVENC_CLASS_SCL];
+		hdr->scal_cfg.lkt_addr = table->iova + link->class_off[RKVENC_CLASS_SCL_JPGTBL];
 		hdr->osd_cfg.lkt_addr = table->iova + link->class_off[RKVENC_CLASS_OSD];
 		hdr->status_cfg.lkt_addr = table->iova + link->class_off[RKVENC_CLASS_ST];
 

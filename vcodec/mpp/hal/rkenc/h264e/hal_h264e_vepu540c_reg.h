@@ -1135,8 +1135,7 @@ typedef struct HalVepu540cReg_t {
 	Vepu540cRcRoiCfg reg_rc_roi;
 	Vepu540cSection3 reg_s3;
 	vepu540c_rdo_cfg reg_rdo;
-	vepu540c_scl_cfg reg_scl;
-	vepu540c_jpeg_tab jpeg_table;
+	Vepu540cSclJpgTbl reg_scl_jpgtbl;
 	vepu540c_osd_regs reg_osd_cfg;
 	vepu540c_status reg_st;
 } HalVepu540cRegSet;

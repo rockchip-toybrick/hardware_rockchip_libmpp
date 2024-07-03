@@ -19,9 +19,8 @@
 #define VEPU540C_RCROI_OFFSET		(1024 * sizeof(RK_U32))
 #define VEPU540C_WEG_OFFSET		(1472 * sizeof(RK_U32))
 #define VEPU540C_RDOCFG_OFFSET		(2048 * sizeof(RK_U32))
-#define VEPU540C_SCLCFG_OFFSET		(2168 * sizeof(RK_U32))
+#define VEPU540C_SCL_JPGTBL_OFFSET	(2168 * sizeof(RK_U32))
 #define VEPU540C_JPEGTAB_OFFSET		(2848 * sizeof(RK_U32))
-
 #define VEPU540C_OSD_OFFSET		(3072 * sizeof(RK_U32))
 #define VEPU540C_STATUS_OFFSET		(4096 * sizeof(RK_U32))
 #define VEPU540C_DEBUG_OFFSET		(5120 * sizeof(RK_U32))
@@ -1926,6 +1925,13 @@ typedef struct Vepu540cJpegCfg_t {
 	RK_U32 online;
 	RK_U32 rst_marker;
 } Vepu540cJpegCfg;
+
+typedef struct Vepu540cSclJpgTbl_t {
+	/* 0x21e0 reg2168 - 0x2c7c reg2847*/
+	vepu540c_scl_cfg      scl;
+	/* 0x2c80 reg2848 - 0x2dfc reg2943*/
+	vepu540c_jpeg_tab     jpg_tbl;
+} Vepu540cSclJpgTbl;
 
 #ifdef __cplusplus
 extern "C" {
