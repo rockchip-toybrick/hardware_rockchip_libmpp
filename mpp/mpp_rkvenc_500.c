@@ -888,7 +888,7 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 	mpp_write(mpp, enc->hw_info->enc_clr_base, 0x6);
 	udelay(5);
-	mpp_write(mpp, enc->hw_info->enc_clr_base, 0);
+	mpp_write(mpp, enc->hw_info->enc_clr_base, 0x4);
 
 	mpp_write_relaxed(mpp, INT_EN, param->int_en);
 	mpp_write_relaxed(mpp, INT_MSK, param->int_msk);
@@ -1602,7 +1602,7 @@ static int rkvenc_reset(struct mpp_dev *mpp)
 
 	mpp_write(mpp, hw->enc_clr_base, 0x6);
 	udelay(5);
-	mpp_write(mpp, hw->enc_clr_base, 0);
+	mpp_write(mpp, hw->enc_clr_base, 0x4);
 	mpp_write(mpp, hw->int_clr_base, 0xffffffff);
 	mpp_write(mpp, hw->int_sta_base, 0);
 
