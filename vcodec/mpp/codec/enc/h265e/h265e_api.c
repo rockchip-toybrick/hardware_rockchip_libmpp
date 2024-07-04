@@ -78,10 +78,7 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 
 	h265->ctu_size = 32;
 	h265->max_cu_size = 32;
-
 	h265->amp_enable = 0;
-	h265->sao_enable = 1;
-
 	h265->num_ref = 1;
 
 	h265->slice_cfg.split_enable = 0;

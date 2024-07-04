@@ -1116,6 +1116,22 @@ static MPP_RET vepu500_h265_set_rdo_regs(H265eV500HalContext *ctx, H265eV500RegS
 	return MPP_OK;
 }
 
+static void vepu500_h265_set_sao_regs(H265eV500HalContext *ctx)
+{
+	H265eV500RegSet *regs = ctx->regs;
+	HevcVepu500Sqi *sqi = &regs->reg_sqi;
+
+	/* Weight values are set to 4 to disable SAO subjective optimization.
+	 * They are not under the control of anti_blur_en.
+	 */
+	sqi->subj_anti_blur_wgt3.merge_cost_dist_eo_wgt0 = 4;
+	sqi->subj_anti_blur_wgt3.merge_cost_dist_bo_wgt0 = 4;
+	sqi->subj_anti_blur_wgt4.merge_cost_dist_eo_wgt1 = 4;
+	sqi->subj_anti_blur_wgt4.merge_cost_dist_bo_wgt1 = 4;
+	sqi->subj_anti_blur_wgt4.merge_cost_bit_eo_wgt0 = 4;
+	sqi->subj_anti_blur_wgt4.merge_cost_bit_bo_wgt0 = 4;
+}
+
 static MPP_RET vepu500_h265_set_pp_regs(H265eV500RegSet *regs, VepuFmtCfg *fmt,
 					MppEncPrepCfg *prep_cfg)
 {
@@ -1863,6 +1879,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_pp_regs(regs, fmt, &ctx->cfg->prep);
 	vepu500_h265_set_rc_regs(ctx, regs, task);
 	vepu500_h265_set_rdo_regs(ctx, regs);
+	vepu500_h265_set_sao_regs(ctx);
 	vepu500_h265_set_slice_regs(syn, reg_frm);
 	vepu500_h265_set_ref_regs(syn, reg_frm);
 	vepu500_h265_set_ext_line_buf(ctx, ctx->regs);
