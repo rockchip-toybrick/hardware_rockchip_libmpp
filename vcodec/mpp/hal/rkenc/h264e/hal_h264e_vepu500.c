@@ -2100,10 +2100,6 @@ static MPP_RET hal_h264e_vepu500_wait(void *hal, HalEncTask *task)
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 	ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_CMD_POLL, NULL);
-	if (ret) {
-		mpp_err_f("poll cmd failed %d\n", ret);
-		ret = MPP_ERR_VPUHW;
-	}
 	hal_h264e_dbg_func("leave %p\n", hal);
 
 	return ret;

@@ -2035,14 +2035,13 @@ static MPP_RET vepu500_h265_set_feedback(H265eV500HalContext *ctx, HalEncTask *e
 	return MPP_OK;
 }
 
-
 //#define DUMP_DATA
 MPP_RET hal_h265e_v500_wait(void *hal, HalEncTask *task)
 {
 	MPP_RET ret = MPP_OK;
 	H265eV500HalContext *ctx = (H265eV500HalContext *)hal;
 	HalEncTask *enc_task = task;
-	H265eV500StatusElem *elem = (H265eV500StatusElem *)ctx->reg_out;
+
 	hal_h265e_enter();
 
 	if (enc_task->flags.err) {
@@ -2107,8 +2106,6 @@ MPP_RET hal_h265e_v500_wait(void *hal, HalEncTask *task)
 	}
 	frm_num++;
 #endif
-	if (ret)
-		mpp_err_f("poll cmd failed %d status %d \n", ret, elem->hw_status);
 
 	hal_h265e_leave();
 	return ret;

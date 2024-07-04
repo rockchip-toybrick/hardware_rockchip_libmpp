@@ -583,7 +583,6 @@ MPP_RET hal_jpege_v500_wait(void *hal, HalEncTask * task)
 	MPP_RET ret = MPP_OK;
 	JpegeV500HalContext *ctx = (JpegeV500HalContext *) hal;
 	HalEncTask *enc_task = task;
-	JpegV500Status *elem = (JpegV500Status *)ctx->reg_out;
 
 	hal_jpege_enter();
 
@@ -594,15 +593,6 @@ MPP_RET hal_jpege_v500_wait(void *hal, HalEncTask * task)
 	}
 
 	ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_CMD_POLL, NULL);
-	if (ret) {
-		mpp_err_f("poll cmd failed %d\n", ret);
-		ret = MPP_ERR_VPUHW;
-	} else {
-		ret = hal_jpege_vepu500_status_check(hal);
-		if (ret)
-			return ret;
-		task->hw_length += elem->st.jpeg_head_bits_l32;
-	}
 
 	hal_jpege_leave();
 
@@ -641,12 +631,18 @@ MPP_RET hal_jpege_v500_get_task(void *hal, HalEncTask * task)
 
 MPP_RET hal_jpege_v500_ret_task(void *hal, HalEncTask * task)
 {
-
 	EncRcTaskInfo *rc_info = &task->rc_task->info;
 	JpegeV500HalContext *ctx = (JpegeV500HalContext *) hal;
-	(void)hal;
+	JpegV500Status *elem = (JpegV500Status *)ctx->reg_out;
+	MPP_RET ret = MPP_OK;
 
 	hal_jpege_enter();
+
+	ret = hal_jpege_vepu500_status_check(hal);
+	if (ret)
+		return ret;
+	task->hw_length += elem->st.jpeg_head_bits_l32;
+
 	ctx->hal_rc.last_quality = task->rc_task->info.quality_target;
 	task->length += task->hw_length;
 
@@ -662,7 +658,7 @@ MPP_RET hal_jpege_v500_ret_task(void *hal, HalEncTask * task)
 	ctx->session_run = 0;
 	hal_jpege_leave();
 
-	return MPP_OK;
+	return ret;
 }
 
 const MppEncHalApi hal_jpege_vepu500 = {
