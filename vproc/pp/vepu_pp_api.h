@@ -78,7 +78,9 @@ struct pp_od_cfg {
 	int thres_complex;
 	int thres_area_complex;
 	struct mpi_buf *odw_buf;
-	int reserved[7];
+	int thres_complex_cnt;
+	int thres_sad;
+	int reserved[5];
 };
 
 struct pp_smear_cfg {

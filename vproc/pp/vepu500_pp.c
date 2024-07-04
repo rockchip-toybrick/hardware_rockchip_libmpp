@@ -335,8 +335,7 @@ static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void 
 		p->thd_md_vpp.thres_dust_move_md = cfg->thres_dust_move;
 		p->thd_md_vpp.thres_dust_blk_md = cfg->thres_dust_blk;
 		p->thd_md_vpp.thres_dust_chng_md = cfg->thres_dust_chng;
-		p->vpp_base_cfg.sto_stride_md = 4;//PP_ALIGN(info->width, 32);
-
+		p->vpp_base_cfg.sto_stride_md = 4;
 		if (func->buf_get_paddr)
 			p->adr_md_vpp = func->buf_get_paddr(cfg->mdw_buf);
 	} break;
@@ -344,11 +343,10 @@ static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void 
 		struct pp_od_cfg *cfg = (struct pp_od_cfg *)param;
 		struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
 
-		p->vpp_base_cfg.sto_stride_od = 4;//PP_ALIGN(info->width, 32);
+		p->vpp_base_cfg.sto_stride_od = 4;
 		p->thd_od_vpp.thres_complex_od = cfg->thres_complex;
-		// TODO: may be need add to user config
-		p->thd_od_vpp.thres_complex_cnt_od = 1;
-		p->thd_od_vpp.thres_sad_od = 7;
+		p->thd_od_vpp.thres_complex_cnt_od = cfg->thres_complex_cnt;
+		p->thd_od_vpp.thres_sad_od = cfg->thres_sad;
 		if (func->buf_get_paddr)
 			p->adr_od_vpp = func->buf_get_paddr(cfg->odw_buf);
 	} break;
