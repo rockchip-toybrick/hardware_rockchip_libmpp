@@ -369,7 +369,7 @@ static MPP_RET vepu500_h265_setup_hal_bufs(H265eV500HalContext *ctx)
 	smear_r_size = MPP_ALIGN(prep->max_height, 512) / 512 * MPP_ALIGN(prep->max_width, 32) / 32 * 16;
 	smear_size = MPP_MAX(smear_size, smear_r_size);
 
-	if (frame_size > ctx->frame_size || new_max_cnt > old_max_cnt || smear_size > ctx->smear_size) {
+	if (frame_size != ctx->frame_size || new_max_cnt != old_max_cnt || smear_size != ctx->smear_size) {
 		size_t size[HAL_BUF_TYPE_BUTT] = { 0 };
 
 		if (!ctx->shared_buf->dpb_bufs) {
