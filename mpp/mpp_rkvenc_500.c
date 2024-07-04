@@ -64,8 +64,8 @@
 #define RKVENC_VIDEO_BSBR	(0x2bc)
 #define RKVENC_JPEG_BSBT	(0x400)
 #define RKVENC_JPEG_BSBB	(0x404)
-#define RKVENC_JPEG_BSBS	(0x40c)
-#define RKVENC_JPEG_BSBR	(0x408)
+#define RKVENC_JPEG_BSBS	(0x408)
+#define RKVENC_JPEG_BSBR	(0x40c)
 
 #define RKVENC_STATUS		(0x4020)
 
