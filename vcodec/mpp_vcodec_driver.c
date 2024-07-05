@@ -381,14 +381,15 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 			seq_puts(seq,
 				 "\n--------venc chn runing status--------------------------------------------------------------------\n");
 
-			seq_printf(seq, "%8s|%8s|%10s|%10s|%10s|%10s|%10s|%14s|%15s|%15s\n",
+			seq_printf(seq, "%8s|%8s|%10s|%10s|%10s|%10s|%10s|%14s|%15s|%15s|%11s\n",
 				   "ID", "runing", "combo_run", "cfg_gap", "strm_cnt", "strm_out",
-				   "gap_time", "cb_gap_time", "last_cb_start", "last_cb_end");
+				   "gap_time", "cb_gap_time", "last_cb_start", "last_cb_end", "queue_size");
 
-			seq_printf(seq, "%8d|%8u|%10u|%10u|%10u|%10u|%10u|%14u|%15llu|%15llu\n",
+			seq_printf(seq, "%8d|%8u|%10u|%10u|%10u|%10u|%10u|%14u|%15llu|%15llu%11u\n",
 				   i, runing, comb_run, chan->last_cfg_time, atomic_read(&chan->stream_count),
 				   atomic_read(&chan->str_out_cnt),
-				   chan->gap_time, chan->combo_gap_time, chan->last_jeg_combo_start,  chan->last_jeg_combo_end);
+				   chan->gap_time, chan->combo_gap_time, chan->last_jeg_combo_start,  chan->last_jeg_combo_end,
+				   chan->queue_size);
 
 			seq_printf(seq, "%8s|%15s|%15s|%15s|%15s|%15s|%15s|%15s\n",
 				   "ID", "pkt_total_cnt", "pkt_user_get", "pkt_user_put", "seq_user_get", "seq_user_put",

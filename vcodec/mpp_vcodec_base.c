@@ -514,6 +514,7 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 			queue_size = mpibuf_fn->buf_queue_size(entry->chan_id);
 		if (!queue_size)
 			queue_size = CHAN_MAX_YUV_POOL_SIZE;
+		entry->queue_size = queue_size;
 		entry->yuv_queue = mpibuf_fn->buf_queue_create(queue_size);
 	}
 

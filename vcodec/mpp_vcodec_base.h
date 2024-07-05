@@ -50,6 +50,7 @@ struct mpp_chan {
 	spinlock_t chan_lock;
 	void *handle;
 	struct mpi_queue *yuv_queue;
+	RK_U32 queue_size;
 	wait_queue_head_t wait;
 	wait_queue_head_t stop_wait;
 	spinlock_t stream_list_lock;
