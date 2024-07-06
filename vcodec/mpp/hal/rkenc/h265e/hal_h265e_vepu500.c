@@ -401,8 +401,6 @@ static MPP_RET vepu500_h265_setup_hal_bufs(H265eV500HalContext *ctx)
 
 static void vepu500_h265_rdo_cfg (HevcVepu500Sqi *reg)
 {
-	RdoSkipPar *p_rdo_skip = NULL;
-	RdoNoSkipPar *p_rdo_noskip = NULL;
 	// pre_cst_par    *p_pre_cst = NULL;
 
 	// reg->rdo_segment_cfg.rdo_segment_multi    = 0;
@@ -464,76 +462,6 @@ static void vepu500_h265_rdo_cfg (HevcVepu500Sqi *reg)
 	// reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th3 = 2;
 	// reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th4 = 1;
 	// reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th5 = 2;
-
-	p_rdo_skip = &reg->rdo_b32_skip;
-	p_rdo_skip->atf_thd0.madp_thd0 = 5  ;
-	p_rdo_skip->atf_thd0.madp_thd1 = 10 ;
-	p_rdo_skip->atf_thd1.madp_thd2 = 15 ;
-	p_rdo_skip->atf_thd1.madp_thd3 = 25 ;
-	p_rdo_skip->atf_wgt0.wgt0 = 14 ;
-	p_rdo_skip->atf_wgt0.wgt1 = 15 ;
-	p_rdo_skip->atf_wgt0.wgt2 = 16 ;
-	p_rdo_skip->atf_wgt0.wgt3 = 16 ;
-
-	p_rdo_noskip = &reg->rdo_b32_inter;
-	p_rdo_noskip->atf_thd0.madp_thd0    = 20;
-	p_rdo_noskip->atf_thd0.madp_thd1    = 40;
-	p_rdo_noskip->atf_thd1.madp_thd2    = 72;
-	p_rdo_noskip->atf_wgt.wgt0 = 16;
-	p_rdo_noskip->atf_wgt.wgt1 = 16;
-	p_rdo_noskip->atf_wgt.wgt2 = 16;
-	p_rdo_noskip->atf_wgt.wgt3 = 16;
-
-	p_rdo_noskip = &reg->rdo_b32_intra;
-	p_rdo_noskip->atf_thd0.madp_thd0 = 20;
-	p_rdo_noskip->atf_thd0.madp_thd1 = 40;
-	p_rdo_noskip->atf_thd1.madp_thd2 = 72;
-	p_rdo_noskip->atf_wgt.wgt0 = 27;
-	p_rdo_noskip->atf_wgt.wgt1 = 25;
-	p_rdo_noskip->atf_wgt.wgt2 = 20;
-	p_rdo_noskip->atf_wgt.wgt3 = 16;
-
-	p_rdo_skip = &reg->rdo_b16_skip;
-	p_rdo_skip->atf_thd0.madp_thd0 = 5  ;
-	p_rdo_skip->atf_thd0.madp_thd1 = 10 ;
-	p_rdo_skip->atf_thd1.madp_thd2 = 15 ;
-	p_rdo_skip->atf_thd1.madp_thd3 = 25 ;
-	p_rdo_skip->atf_wgt0.wgt0 = 20 ;
-	p_rdo_skip->atf_wgt0.wgt1 = 14 ;
-	p_rdo_skip->atf_wgt0.wgt2 = 15 ;
-	p_rdo_skip->atf_wgt0.wgt3 = 16 ;
-
-	p_rdo_noskip = &reg->rdo_b16_inter;
-	p_rdo_noskip->atf_thd0.madp_thd0 = 20;
-	p_rdo_noskip->atf_thd0.madp_thd1 = 40;
-	p_rdo_noskip->atf_thd1.madp_thd2 = 72;
-	p_rdo_noskip->atf_wgt.wgt0 = 16;
-	p_rdo_noskip->atf_wgt.wgt1 = 16;
-	p_rdo_noskip->atf_wgt.wgt2 = 16;
-	p_rdo_noskip->atf_wgt.wgt3 = 16;
-
-	p_rdo_noskip = &reg->rdo_b16_intra;
-	p_rdo_noskip->atf_thd0.madp_thd0 = 20;
-	p_rdo_noskip->atf_thd0.madp_thd1 = 40;
-	p_rdo_noskip->atf_thd1.madp_thd2 = 72;
-	p_rdo_noskip->atf_wgt.wgt0 = 27;
-	p_rdo_noskip->atf_wgt.wgt1 = 25;
-	p_rdo_noskip->atf_wgt.wgt2 = 20;
-	p_rdo_noskip->atf_wgt.wgt3 = 16;
-
-	// reg->rdo_b32_intra_atf_cnt_thd.thd0      = 14 ;
-	// reg->rdo_b32_intra_atf_cnt_thd.thd1      = 15 ;
-	// reg->rdo_b32_intra_atf_cnt_thd.thd2      = 16 ;
-	// reg->rdo_b32_intra_atf_cnt_thd.thd3      = 17 ;
-
-	// reg->rdo_b16_intra_atf_cnt_thd_comb.thd0 = 8 ;
-	// reg->rdo_b16_intra_atf_cnt_thd_comb.thd1 = 9 ;
-	// reg->rdo_b16_intra_atf_cnt_thd_comb.thd2 = 10 ;
-	// reg->rdo_b16_intra_atf_cnt_thd_comb.thd3 = 11 ;
-	// reg->rdo_atf_resi_thd_comb.big_th0     = 10;
-	// reg->rdo_atf_resi_thd_comb.big_th1     = 12;
-	// reg->rdo_atf_resi_thd_comb.small_th0   = 11;
-	// reg->rdo_atf_resi_thd_comb.small_th1   = 13;
 
 	// p_pre_cst = &reg->preintra32_cst;
 	/* preintra32 cst */
@@ -1851,6 +1779,92 @@ static MPP_RET vepu500_h265e_use_pass1_patch(H265eV500RegSet *regs, H265eV500Hal
 	return MPP_OK;
 }
 
+static void vepu500_h265_set_atf_regs(H265eV500HalContext *ctx)
+{
+	H265eV500RegSet *regs = ctx->regs;
+	HevcVepu500Sqi *reg = &regs->reg_sqi;
+	RK_U32 str = ctx->cfg->tune.atf_str;
+	RdoSkipPar *p_rdo_skip = NULL;
+	RdoNoSkipPar *p_rdo_noskip = NULL;
+
+	static RK_U16 b32_skip_thd2[4] = { 15, 15, 15, 200 };
+	static RK_U16 b32_skip_thd3[4] = { 72, 72, 72, 1000 };
+	static RK_U8 b32_skip_wgt0[4] = { 16, 20, 20, 16 };
+	static RK_U8 b32_skip_wgt3[4] = { 16, 16, 16, 17 };
+	static RK_U16 b16_skip_thd2[4] = { 15, 15, 15, 200 };
+	static RK_U16 b16_skip_thd3[4] = { 25, 25, 25, 1000 };
+	static RK_U8 b16_skip_wgt0[4] = { 16, 20, 20, 16 };
+	static RK_U8 b16_skip_wgt3[4] = { 16, 16, 16, 17 };
+	static RK_U16 b32_intra_thd0[4] = { 20, 20, 20, 24 };
+	static RK_U16 b32_intra_thd1[4] = { 40, 40, 40, 48 };
+	static RK_U16 b32_intra_thd2[4] = { 60, 72, 72, 96 };
+	static RK_U8 b32_intra_wgt0[4] = { 16, 22, 27, 28 };
+	static RK_U8 b32_intra_wgt1[4] = { 16, 20, 25, 26 };
+	static RK_U8 b32_intra_wgt2[4] = { 16, 18, 20, 24 };
+	static RK_U16 b16_intra_thd0[4] = { 20, 20, 20, 24 };
+	static RK_U16 b16_intra_thd1[4] = { 40, 40, 40, 48 };
+	static RK_U16 b16_intra_thd2[4] = { 60, 72, 72, 96 };
+	static RK_U8 b16_intra_wgt0[4] = { 16, 22, 27, 28 };
+	static RK_U8 b16_intra_wgt1[4] = { 16, 20, 25, 26 };
+	static RK_U8 b16_intra_wgt2[4] = { 16, 18, 20, 24 };
+
+	regs->reg_frm.reg0232_rdo_cfg.atf_e = !!str;
+
+	p_rdo_skip = &reg->rdo_b32_skip;
+	p_rdo_skip->atf_thd0.madp_thd0 = 5;
+	p_rdo_skip->atf_thd0.madp_thd1 = 10;
+	p_rdo_skip->atf_thd1.madp_thd2 = b32_skip_thd2[str];
+	p_rdo_skip->atf_thd1.madp_thd3 = b32_skip_thd3[str];
+	p_rdo_skip->atf_wgt0.wgt0 = b32_skip_wgt0[str];
+	p_rdo_skip->atf_wgt0.wgt1 = 16;
+	p_rdo_skip->atf_wgt0.wgt2 = 16;
+	p_rdo_skip->atf_wgt0.wgt3 = b32_skip_wgt3[str];
+
+	p_rdo_noskip = &reg->rdo_b32_inter;
+	p_rdo_noskip->atf_thd0.madp_thd0 = 20;
+	p_rdo_noskip->atf_thd0.madp_thd1 = 40;
+	p_rdo_noskip->atf_thd1.madp_thd2 = 72;
+	p_rdo_noskip->atf_wgt.wgt0 = 16;
+	p_rdo_noskip->atf_wgt.wgt1 = 16;
+	p_rdo_noskip->atf_wgt.wgt2 = 16;
+
+	p_rdo_noskip = &reg->rdo_b32_intra;
+	p_rdo_noskip->atf_thd0.madp_thd0 = b32_intra_thd0[str];
+	p_rdo_noskip->atf_thd0.madp_thd1 = b32_intra_thd1[str];
+	p_rdo_noskip->atf_thd1.madp_thd2 = b32_intra_thd2[str];
+	p_rdo_noskip->atf_wgt.wgt0 = b32_intra_wgt0[str];
+	p_rdo_noskip->atf_wgt.wgt1 = b32_intra_wgt1[str];
+	p_rdo_noskip->atf_wgt.wgt2 = b32_intra_wgt2[str];
+
+	p_rdo_skip = &reg->rdo_b16_skip;
+	p_rdo_skip->atf_thd0.madp_thd0 = 1;
+	p_rdo_skip->atf_thd0.madp_thd1 = 10;
+	p_rdo_skip->atf_thd1.madp_thd2 = b16_skip_thd2[str];
+	p_rdo_skip->atf_thd1.madp_thd3 = b16_skip_thd3[str];
+	p_rdo_skip->atf_wgt0.wgt0 = b16_skip_wgt0[str];
+	p_rdo_skip->atf_wgt0.wgt1 = 16;
+	p_rdo_skip->atf_wgt0.wgt2 = 16;
+	p_rdo_skip->atf_wgt0.wgt3 = b16_skip_wgt3[str];
+
+	p_rdo_noskip = &reg->rdo_b16_inter;
+	p_rdo_noskip->atf_thd0.madp_thd0 = 20;
+	p_rdo_noskip->atf_thd0.madp_thd1 = 40;
+	p_rdo_noskip->atf_thd1.madp_thd2 = 72;
+	p_rdo_noskip->atf_wgt.wgt0 = 16;
+	p_rdo_noskip->atf_wgt.wgt1 = 16;
+	p_rdo_noskip->atf_wgt.wgt2 = 16;
+	p_rdo_noskip->atf_wgt.wgt3 = 16;
+
+	p_rdo_noskip = &reg->rdo_b16_intra;
+	p_rdo_noskip->atf_thd0.madp_thd0 = b16_intra_thd0[str];
+	p_rdo_noskip->atf_thd0.madp_thd1 = b16_intra_thd1[str];
+	p_rdo_noskip->atf_thd1.madp_thd2 = b16_intra_thd2[str];
+	p_rdo_noskip->atf_wgt.wgt0 = b16_intra_wgt0[str];
+	p_rdo_noskip->atf_wgt.wgt1 = b16_intra_wgt1[str];
+	p_rdo_noskip->atf_wgt.wgt2 = b16_intra_wgt2[str];
+	p_rdo_noskip->atf_wgt.wgt3 = 16;
+}
+
 MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 {
 	H265eV500HalContext *ctx = (H265eV500HalContext *)hal;
@@ -1883,6 +1897,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_slice_regs(syn, reg_frm);
 	vepu500_h265_set_ref_regs(syn, reg_frm);
 	vepu500_h265_set_ext_line_buf(ctx, ctx->regs);
+	vepu500_h265_set_atf_regs(ctx);
 
 	if (ctx->osd_cfg.osd_data3)
 		vepu500_set_osd(&ctx->osd_cfg);
