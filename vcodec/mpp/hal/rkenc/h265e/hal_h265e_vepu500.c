@@ -2003,22 +2003,22 @@ static MPP_RET vepu500_h265_set_feedback(H265eV500HalContext *ctx, HalEncTask *e
 	fb->hw_status = hw_status;
 	hal_h265e_dbg_detail("hw_status: 0x%08x", hw_status);
 	if (hw_status & BIT(4)) {
-		hal_h265e_err("bit stream overflow");
+		hal_h265e_dbg_warning("bit stream overflow");
 		return MPP_ERR_INT_BS_OVFL;
 	}
 
 	if (hw_status & BIT(6)) {
-		hal_h265e_err("enc err\n");
+		hal_h265e_dbg_warning("enc err\n");
 		return MPP_NOK;
 	}
 
 	if (hw_status & BIT(7)) {
-		hal_h265e_err("wrap frame error\n");
+		hal_h265e_dbg_warning("wrap frame error\n");
 		return MPP_NOK;
 	}
 
 	if (hw_status & BIT(8)) {
-		hal_h265e_err("wdg timeout");
+		hal_h265e_dbg_warning("wdg timeout");
 		return MPP_NOK;
 	}
 

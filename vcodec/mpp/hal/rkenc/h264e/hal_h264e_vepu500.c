@@ -2068,7 +2068,7 @@ static MPP_RET hal_h264e_vepu500_status_check(HalVepu500RegSet *regs)
 		hal_h264e_dbg_detail("safe clear finsh");
 
 	if (regs->reg_ctl.int_sta.vbsf_oflw_sta) {
-		mpp_err_f("bit stream overflow");
+		hal_h264e_dbg_warning("bit stream overflow");
 		ret = MPP_NOK;
 	}
 
@@ -2076,17 +2076,17 @@ static MPP_RET hal_h264e_vepu500_status_check(HalVepu500RegSet *regs)
 		hal_h264e_dbg_detail("Bit stream write out set length");
 
 	if (regs->reg_ctl.int_sta.enc_err_sta) {
-		mpp_err_f("enc error");
+		hal_h264e_dbg_warning("enc error");
 		ret = MPP_NOK;
 	}
 
 	if (regs->reg_ctl.int_sta.wdg_sta) {
-		mpp_err_f("wdg timeout");
+		hal_h264e_dbg_warning("wdg timeout");
 		ret = MPP_NOK;
 	}
 
 	if (regs->reg_ctl.int_sta.vsrc_err_sta) {
-		mpp_err_f("wrap frame error");
+		hal_h264e_dbg_warning("wrap frame error");
 		ret = MPP_NOK;
 	}
 
