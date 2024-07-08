@@ -462,16 +462,6 @@ static void vepu500_h265_rdo_cfg (HevcVepu500Sqi *reg)
 	// reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th3 = 2;
 	// reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th4 = 1;
 	// reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th5 = 2;
-
-	// reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd0 = 1;
-	// reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd1 = 1;
-	// reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd2 = 1;
-	// reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_cnt_thd3   = 1;
-	// reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_thd4       = 1;
-	// reg->rdo_atr_i_cu32_madi_cfg1.i_cu32_madi_cost_multi = 16;
-	// reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_thd0       = 1;
-	// reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_thd1       = 1;
-	// reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_cost_multi = 16;
 }
 
 static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSet *regs)
@@ -1898,6 +1888,130 @@ static void vepu500_h265_set_anti_stripe_regs(H265eV500HalContext *ctx)
 	s->pre_i16_cst_wgt3.i4_lambda_mv_bit = 3;
 }
 
+static void vepu500_h265_set_atr_regs(H265eV500HalContext *ctx)
+{
+	H265eV500RegSet *regs = ctx->regs;
+	HevcVepu500Sqi *s = &regs->reg_sqi;
+	RK_U32 str = (ctx->frame_type == INTRA_FRAME) ?
+		     ctx->cfg->tune.atr_str : 0; //TODO: atr_str_i/atr_str_p
+
+	/* 0 - disable; 1 - weak; 2 - medium; 3 - strong */
+	if (str == 0) {
+		s->block_opt_cfg.block_en = 0; /* block_en and cmplx_en are not used so far(20240708) */
+		s->cmplx_opt_cfg.cmplx_en = 0;
+		s->line_opt_cfg.line_en = 0;
+	} else {
+		s->block_opt_cfg.block_en = 0;
+		s->cmplx_opt_cfg.cmplx_en = 0;
+		s->line_opt_cfg.line_en = 1;
+	}
+
+	s->subj_opt_cfg.subj_opt_en = 1;
+	s->subj_opt_cfg.subj_opt_strength = 3;
+	s->subj_opt_cfg.aq_subj_en = 0;
+	s->subj_opt_cfg.aq_subj_strength = 4;
+	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep0   = 64;
+	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep1   = 32;
+	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep2   = 16;
+	s->subj_opt_intra_coef.common_rdo_cu_intra_r_coef_dep0 = 192;
+	s->subj_opt_intra_coef.common_rdo_cu_intra_r_coef_dep1 = 160;
+
+	if (str == 3) {
+		s->block_opt_cfg.block_thre_cst_best_mad      = 1000;
+		s->block_opt_cfg.block_thre_cst_best_grdn_blk = 39;
+		s->block_opt_cfg.thre_num_grdnt_point_cmplx   = 3;
+		s->block_opt_cfg.block_delta_qp_flag          = 3;
+
+		s->cmplx_opt_cfg.cmplx_thre_cst_best_mad_dep0 = 4000;
+		s->cmplx_opt_cfg.cmplx_thre_cst_best_mad_dep1 = 2000;
+
+		s->cmplx_bst_mad_thd.cmplx_thre_cst_best_mad_dep2       = 200;
+		s->cmplx_bst_mad_thd.cmplx_thre_cst_best_grdn_blk_dep0  = 977;
+
+		s->cmplx_bst_grdn_thd.cmplx_thre_cst_best_grdn_blk_dep1 = 0;
+		s->cmplx_bst_grdn_thd.cmplx_thre_cst_best_grdn_blk_dep2 = 488;
+
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep0 = 4;
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep1 = 30;
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep2 = 30;
+		s->line_opt_cfg.line_thre_ratio_best_grdn_blk_dep0   = 7;
+		s->line_opt_cfg.line_thre_ratio_best_grdn_blk_dep1   = 6;
+
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep0 = 1;
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep1 = 50;
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep2 = 50;
+
+		s->subj_opt_dqp0.line_thre_qp   = 20;
+		s->subj_opt_dqp0.block_strength = 4;
+		s->subj_opt_dqp0.block_thre_qp  = 30;
+		s->subj_opt_dqp0.cmplx_strength = 4;
+		s->subj_opt_dqp0.cmplx_thre_qp  = 34;
+		s->subj_opt_dqp0.cmplx_thre_max_grdn_blk = 32;
+	} else if (str == 2) {
+		s->block_opt_cfg.block_thre_cst_best_mad      = 1000;
+		s->block_opt_cfg.block_thre_cst_best_grdn_blk = 39;
+		s->block_opt_cfg.thre_num_grdnt_point_cmplx   = 3;
+		s->block_opt_cfg.block_delta_qp_flag          = 3;
+
+		s->cmplx_opt_cfg.cmplx_thre_cst_best_mad_dep0 = 4000;
+		s->cmplx_opt_cfg.cmplx_thre_cst_best_mad_dep1 = 2000;
+
+		s->cmplx_bst_mad_thd.cmplx_thre_cst_best_mad_dep2      = 200;
+		s->cmplx_bst_mad_thd.cmplx_thre_cst_best_grdn_blk_dep0 = 977;
+
+		s->cmplx_bst_grdn_thd.cmplx_thre_cst_best_grdn_blk_dep1 = 0;
+		s->cmplx_bst_grdn_thd.cmplx_thre_cst_best_grdn_blk_dep2 = 488;
+
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep0 = 3;
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep1 = 20;
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep2 = 20;
+		s->line_opt_cfg.line_thre_ratio_best_grdn_blk_dep0   = 7;
+		s->line_opt_cfg.line_thre_ratio_best_grdn_blk_dep1   = 8;
+
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep0 = 1;
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep1 = 60;
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep2 = 60;
+
+		s->subj_opt_dqp0.line_thre_qp            = 25;
+		s->subj_opt_dqp0.block_strength          = 4;
+		s->subj_opt_dqp0.block_thre_qp           = 30;
+		s->subj_opt_dqp0.cmplx_strength          = 4;
+		s->subj_opt_dqp0.cmplx_thre_qp           = 34;
+		s->subj_opt_dqp0.cmplx_thre_max_grdn_blk = 32;
+	} else {
+		s->block_opt_cfg.block_thre_cst_best_mad      = 1000;
+		s->block_opt_cfg.block_thre_cst_best_grdn_blk = 39;
+		s->block_opt_cfg.thre_num_grdnt_point_cmplx   = 3;
+		s->block_opt_cfg.block_delta_qp_flag          = 3;
+
+		s->cmplx_opt_cfg.cmplx_thre_cst_best_mad_dep0 = 6000;
+		s->cmplx_opt_cfg.cmplx_thre_cst_best_mad_dep1 = 2000;
+
+		s->cmplx_bst_mad_thd.cmplx_thre_cst_best_mad_dep2       = 300;
+		s->cmplx_bst_mad_thd.cmplx_thre_cst_best_grdn_blk_dep0  = 1280;
+
+		s->cmplx_bst_grdn_thd.cmplx_thre_cst_best_grdn_blk_dep1 = 0;
+		s->cmplx_bst_grdn_thd.cmplx_thre_cst_best_grdn_blk_dep2 = 512;
+
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep0 = 3;
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep1 = 20;
+		s->line_opt_cfg.line_thre_min_cst_best_grdn_blk_dep2 = 20;
+		s->line_opt_cfg.line_thre_ratio_best_grdn_blk_dep0   = 7;
+		s->line_opt_cfg.line_thre_ratio_best_grdn_blk_dep1   = 8;
+
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep0 = 1;
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep1 = 70;
+		s->line_cst_bst_grdn.line_thre_max_cst_best_grdn_blk_dep2 = 70;
+
+		s->subj_opt_dqp0.line_thre_qp            = 30;
+		s->subj_opt_dqp0.block_strength          = 4;
+		s->subj_opt_dqp0.block_thre_qp           = 30;
+		s->subj_opt_dqp0.cmplx_strength          = 4;
+		s->subj_opt_dqp0.cmplx_thre_qp           = 34;
+		s->subj_opt_dqp0.cmplx_thre_max_grdn_blk = 32;
+	}
+}
+
 MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 {
 	H265eV500HalContext *ctx = (H265eV500HalContext *)hal;
@@ -1932,6 +2046,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_ext_line_buf(ctx, ctx->regs);
 	vepu500_h265_set_atf_regs(ctx);
 	vepu500_h265_set_anti_stripe_regs(ctx);
+	vepu500_h265_set_atr_regs(ctx);
 
 	if (ctx->osd_cfg.osd_data3)
 		vepu500_set_osd(&ctx->osd_cfg);

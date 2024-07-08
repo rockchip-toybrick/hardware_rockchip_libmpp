@@ -1120,7 +1120,7 @@ typedef struct HevcVepu500Sqi_t {
 		RK_U32 common_rdo_cu_intra_r_coef_dep0    : 8;
 		RK_U32 common_rdo_cu_intra_r_coef_dep1    : 8;
 		RK_U32 reserved                           : 16;
-	} subj_opt_inrar_coef;
+	} subj_opt_intra_coef;
 
 	/* 0x200c */
 	RK_U32 reserved_2051;
