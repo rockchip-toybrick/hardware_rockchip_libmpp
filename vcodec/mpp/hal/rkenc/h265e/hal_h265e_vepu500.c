@@ -463,51 +463,6 @@ static void vepu500_h265_rdo_cfg (HevcVepu500Sqi *reg)
 	// reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th4 = 1;
 	// reg->rdo_smear_st_thd1_comb.rdo_smear_madp_cnt_th5 = 2;
 
-	// p_pre_cst = &reg->preintra32_cst;
-	/* preintra32 cst */
-	reg->preintra32_cst_thd0.pre_intra32_cst_madi_thd0 = 2;
-	reg->preintra32_cst_thd0.pre_intra32_cst_madi_thd1 = 6;
-	reg->preintra32_cst_thd0.pre_intra32_cst_madi_thd2 = 16;
-	reg->preintra32_cst_thd0.pre_intra32_cst_madi_thd3 = 36;
-	reg->preintra32_cst_thd1.pre_intra32_cst_madi_thd4 = 16;
-	reg->preintra32_cst_thd1.pre_intra32_cst_madi_thd5 = 16;
-	reg->preintra32_cst_thd3.pre_intra32_mode_th = 5;
-	reg->preintra32_cst_thd3.pre_intra_qp_thd          = 18;
-
-	reg->preintra32_cst_wgt0.pre_intra32_cst_wgt0 = 16;
-	reg->preintra32_cst_wgt0.pre_intra32_cst_wgt1 = 16;
-	reg->preintra32_cst_wgt0.pre_intra32_cst_wgt2 = 16;
-	reg->preintra32_cst_wgt0.pre_intra32_cst_wgt3 = 16;
-	reg->preintra32_cst_wgt1.pre_intra32_cst_wgt4 = 16;
-	reg->preintra32_cst_wgt1.pre_intra32_cst_wgt5 = 16;
-	reg->preintra32_cst_wgt1.pre_intra32_cst_wgt6 = 16;
-	reg->preintra32_cst_wgt1.pre_intra32_cst_wgt7 = 16;
-	reg->preintra32_cst_wgt2.pre_intra32_cst_wgt8 = 16;
-	reg->preintra32_cst_wgt2.pre_intra32_cst_wgt9 = 16;
-	reg->preintra32_cst_wgt3.pre_intra16_lambda_mv_bit = 3;
-	reg->preintra32_cst_wgt3.pre_intra32_lambda_mv_bit = 3;
-
-	reg->preintra16_cst_thd0.pre_intra16_cst_madi_thd0 = 2;
-	reg->preintra16_cst_thd0.pre_intra16_cst_madi_thd1 = 6;
-	reg->preintra16_cst_thd0.pre_intra16_cst_madi_thd2 = 16;
-	reg->preintra16_cst_thd0.pre_intra16_cst_madi_thd3 = 36;
-	reg->preintra16_cst_thd1.pre_intra16_cst_madi_thd4 = 16;
-	reg->preintra16_cst_thd1.pre_intra16_cst_madi_thd5 = 16;
-	reg->preintra16_cst_thd3.pre_intra16_mode_th = 5;
-
-	reg->preintra16_cst_wgt0.pre_intra16_cst_wgt0 = 16;
-	reg->preintra16_cst_wgt0.pre_intra16_cst_wgt1 = 16;
-	reg->preintra16_cst_wgt0.pre_intra16_cst_wgt2 = 16;
-	reg->preintra16_cst_wgt0.pre_intra16_cst_wgt3 = 16;
-	reg->preintra16_cst_wgt1.pre_intra16_cst_wgt4 = 16;
-	reg->preintra16_cst_wgt1.pre_intra16_cst_wgt5 = 16;
-	reg->preintra16_cst_wgt1.pre_intra16_cst_wgt6 = 16;
-	reg->preintra16_cst_wgt1.pre_intra16_cst_wgt7 = 16;
-	reg->preintra16_cst_wgt2.pre_intra16_cst_wgt8 = 16;
-	reg->preintra16_cst_wgt2.pre_intra16_cst_wgt9 = 16;
-	reg->preintra16_cst_wgt3.pre_intra8_lambda_mv_bit  = 3;
-	reg->preintra16_cst_wgt3.pre_intra4_lambda_mv_bit  = 3;
-
 	// reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd0 = 1;
 	// reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd1 = 1;
 	// reg->rdo_atr_i_cu32_madi_cfg0.i_cu32_madi_thd2 = 1;
@@ -517,7 +472,6 @@ static void vepu500_h265_rdo_cfg (HevcVepu500Sqi *reg)
 	// reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_thd0       = 1;
 	// reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_thd1       = 1;
 	// reg->rdo_atr_i_cu16_madi_cfg0.i_cu16_madi_cost_multi = 16;
-
 }
 
 static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSet *regs)
@@ -1865,6 +1819,85 @@ static void vepu500_h265_set_atf_regs(H265eV500HalContext *ctx)
 	p_rdo_noskip->atf_wgt.wgt3 = 16;
 }
 
+/* Note: Anti-stripe is also named as anti-line in RV1106/RV1103B */
+static void vepu500_h265_set_anti_stripe_regs(H265eV500HalContext *ctx)
+{
+	H265eV500RegSet *regs = ctx->regs;
+	HevcVepu500Sqi *s = &regs->reg_sqi;
+
+	s->pre_i32_cst_wgt3.anti_strp_e = !!ctx->cfg->tune.atl_str;
+
+	s->pre_i32_cst_thd0.madi_thd0 = 5;
+	s->pre_i32_cst_thd0.madi_thd1 = 15;
+	s->pre_i32_cst_thd0.madi_thd2 = 5;
+	s->pre_i32_cst_thd0.madi_thd3 = 3;
+	s->pre_i32_cst_thd1.madi_thd4 = 3;
+	s->pre_i32_cst_thd1.madi_thd5 = 6;
+	s->pre_i32_cst_thd1.madi_thd6 = 7;
+	s->pre_i32_cst_thd1.madi_thd7 = 5;
+	s->pre_i32_cst_thd2.madi_thd8 = 10;
+	s->pre_i32_cst_thd2.madi_thd9 = 5;
+	s->pre_i32_cst_thd2.madi_thd10 = 7;
+	s->pre_i32_cst_thd2.madi_thd11 = 5;
+	s->pre_i32_cst_thd3.madi_thd12 = 7;
+	s->pre_i32_cst_thd3.madi_thd13 = 5;
+	s->pre_i32_cst_thd3.mode_th = 5;
+
+	s->pre_i32_cst_wgt0.wgt0 = 20;
+	s->pre_i32_cst_wgt0.wgt1 = 18;
+	s->pre_i32_cst_wgt0.wgt2 = 19;
+	s->pre_i32_cst_wgt0.wgt3 = 18;
+	s->pre_i32_cst_wgt1.wgt4 = 12;
+	s->pre_i32_cst_wgt1.wgt5 = 6;
+	s->pre_i32_cst_wgt1.wgt6 = 13;
+	s->pre_i32_cst_wgt1.wgt7 = 9;
+	s->pre_i32_cst_wgt2.wgt8 = 12;
+	s->pre_i32_cst_wgt2.wgt9 = 6;
+	s->pre_i32_cst_wgt2.wgt10 = 13;
+	s->pre_i32_cst_wgt2.wgt11 = 9;
+	s->pre_i32_cst_wgt3.wgt12 = 18;
+	s->pre_i32_cst_wgt3.wgt13 = 17;
+	s->pre_i32_cst_wgt3.wgt14 = 17;
+
+	s->pre_i16_cst_thd0.madi_thd0 = 5;
+	s->pre_i16_cst_thd0.madi_thd1 = 15;
+	s->pre_i16_cst_thd0.madi_thd2 = 5;
+	s->pre_i16_cst_thd0.madi_thd3 = 3;
+	s->pre_i16_cst_thd1.madi_thd4 = 3;
+	s->pre_i16_cst_thd1.madi_thd5 = 6;
+	s->pre_i16_cst_thd1.madi_thd6 = 7;
+	s->pre_i16_cst_thd1.madi_thd7 = 5;
+	s->pre_i16_cst_thd2.madi_thd8 = 10;
+	s->pre_i16_cst_thd2.madi_thd9 = 5;
+	s->pre_i16_cst_thd2.madi_thd10 = 7;
+	s->pre_i16_cst_thd2.madi_thd11 = 5;
+	s->pre_i16_cst_thd3.madi_thd12 = 7;
+	s->pre_i16_cst_thd3.madi_thd13 = 5;
+	s->pre_i16_cst_thd3.mode_th = 5;
+
+	s->pre_i16_cst_wgt0.wgt0 = 20;
+	s->pre_i16_cst_wgt0.wgt1 = 18;
+	s->pre_i16_cst_wgt0.wgt2 = 19;
+	s->pre_i16_cst_wgt0.wgt3 = 18;
+	s->pre_i16_cst_wgt1.wgt4 = 12;
+	s->pre_i16_cst_wgt1.wgt5 = 6;
+	s->pre_i16_cst_wgt1.wgt6 = 13;
+	s->pre_i16_cst_wgt1.wgt7 = 9;
+	s->pre_i16_cst_wgt2.wgt8 = 12;
+	s->pre_i16_cst_wgt2.wgt9 = 6;
+	s->pre_i16_cst_wgt2.wgt10 = 13;
+	s->pre_i16_cst_wgt2.wgt11 = 9;
+	s->pre_i16_cst_wgt3.wgt12 = 18;
+	s->pre_i16_cst_wgt3.wgt13 = 17;
+	s->pre_i16_cst_wgt3.wgt14 = 17;
+
+	s->pre_i32_cst_thd3.qp_thd = 28;
+	s->pre_i32_cst_wgt3.i32_lambda_mv_bit = 5;
+	s->pre_i32_cst_wgt3.i16_lambda_mv_bit = 4;
+	s->pre_i16_cst_wgt3.i8_lambda_mv_bit = 4;
+	s->pre_i16_cst_wgt3.i4_lambda_mv_bit = 3;
+}
+
 MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 {
 	H265eV500HalContext *ctx = (H265eV500HalContext *)hal;
@@ -1898,6 +1931,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_ref_regs(syn, reg_frm);
 	vepu500_h265_set_ext_line_buf(ctx, ctx->regs);
 	vepu500_h265_set_atf_regs(ctx);
+	vepu500_h265_set_anti_stripe_regs(ctx);
 
 	if (ctx->osd_cfg.osd_data3)
 		vepu500_set_osd(&ctx->osd_cfg);
