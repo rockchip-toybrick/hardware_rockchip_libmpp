@@ -662,7 +662,7 @@ static void *rkvenc_init_task(struct mpp_session *session,
 	struct rkvenc_task *task = NULL;
 	struct mpp_task *mpp_task;
 	struct mpp_dev *mpp = session->mpp;
-	u32 *wh_reg;
+	u32 *reg_tmp;
 	u32 resolution_addr = RKVENC_RSL;
 
 	mpp_debug_enter();
@@ -688,18 +688,21 @@ static void *rkvenc_init_task(struct mpp_session *session,
 	ret = rkvenc_task_get_format(mpp, task);
 	if (ret)
 		goto free_task;
-	/* check rec fbc is disable for reencode */
-	{
-		u32 val = task->reg[RKVENC_CLASS_PIC].data[REC_FBC_DIS_CLASS_OFFSET];
-		if (val & 0x80000000)
-			mpp_task->clbk_en = 0;
-	}
 
+	/*
+	 * check rec_fbc_dis flag.
+	 * rec fbc disable will be set when debreath pass1 frame
+	 */
+	reg_tmp = rkvenc_get_class_reg(task, 0x300);
+	if (*reg_tmp & BIT(31))
+		mpp_task->clbk_en = 0;
+
+	/* get resolution info */
 	if (task->fmt == 2)
 		resolution_addr = RKVENC_JPEG_RSL;
-	wh_reg = rkvenc_get_class_reg(task, resolution_addr);
-	mpp_task->width = (((*wh_reg) & 0x7ff) + 1) << 3;
-	mpp_task->height = ((((*wh_reg) >> 16) & 0x7ff) + 1) << 3;
+	reg_tmp = rkvenc_get_class_reg(task, resolution_addr);
+	mpp_task->width = (((*reg_tmp) & 0x7ff) + 1) << 3;
+	mpp_task->height = ((((*reg_tmp) >> 16) & 0x7ff) + 1) << 3;
 
 	task->clk_mode = CLK_MODE_NORMAL;
 
@@ -783,12 +786,31 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	struct rkvenc_hw_info *hw = enc->hw_info;
 	struct rkvenc2_session_priv *priv = mpp_task->session->priv;
 	u32 i, j;
-	u32 enc_start_val = 0;
 	struct mpp_request msg;
 	struct mpp_request *req;
 	u32 dvbm_cfg = 0;
 
 	mpp_debug_enter();
+
+	/* update online task info */
+	if (mpp_task->session->online) {
+		u32 frame_id = mpp_task->frame_id;
+		u32 pipe_id = mpp_task->pipe_id;
+		u32 *enc_id;
+
+		enc_id = rkvenc_get_class_reg(task, 0x308);
+		if (frame_id > 0xff) {
+			mpp_err("invalid frame id %d\n", frame_id);
+			frame_id &= 0xff;
+		}
+
+		if (pipe_id > 1) {
+			mpp_err("invalid pipe id %d\n", pipe_id);
+			pipe_id &= 0x1;
+		}
+
+		*enc_id |= (BIT(8) | frame_id) | (BIT(13) | (pipe_id << 12));
+	}
 
 	for (i = 0; i < task->w_req_cnt; i++) {
 		int ret;
@@ -805,14 +827,6 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 		regs = (u32 *)msg.data;
 		for (j = s; j < e; j++) {
 			off = msg.offset + j * sizeof(u32);
-			if (off == hw->enc_start_base) {
-				enc_start_val = regs[j];
-				continue;
-			}
-
-			/* skip dvbm info cfg */
-			if (off >= 0x68 && off <= 0x9c)
-				continue;
 
 			if (mpp_task->disable_jpeg && off == 0x47c)
 				regs[j] &= (~BIT(31));
@@ -824,26 +838,6 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 				dvbm_cfg = regs[j];
 				regs[j] |= DVBM_ISP_CONNETC | DVBM_VEPU_CONNETC | VEPU_CONNETC_CUR;
 				rkvenc_dvbm_show_info(mpp);
-			}
-
-			if (dvbm_cfg) {
-				if (off == 0x308) {
-					u32 frame_id = mpp_task->frame_id;
-					u32 pipe_id = mpp_task->pipe_id;
-
-					if (frame_id > 0xff) {
-						mpp_err("invalid frame id %d\n", frame_id);
-						frame_id &= 0xff;
-					}
-
-					if (pipe_id > 1) {
-						mpp_err("invalid pipe id %d\n", pipe_id);
-						pipe_id &= 0x1;
-					}
-
-					regs[j] |= (BIT(8) | frame_id);
-					regs[j] |= (BIT(13) | (pipe_id << 12));
-				}
 			}
 
 			mpp_write_relaxed(mpp, off, regs[j]);
@@ -872,7 +866,7 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	INIT_DELAYED_WORK(&mpp_task->timeout_work, rkvenc_task_timeout);
 	schedule_delayed_work(&mpp_task->timeout_work, msecs_to_jiffies(RKVENC_WORK_TIMEOUT_DELAY));
 	set_bit(TASK_STATE_RUNNING, &mpp_task->state);
-	mpp_write(mpp, hw->enc_start_base, enc_start_val);
+	mpp_write(mpp, hw->enc_start_base, 0x100);
 	atomic_set(&enc->on_work, 1);
 
 	if (dvbm_cfg)

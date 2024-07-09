@@ -92,7 +92,6 @@ typedef struct H265eV500HalContext_t {
 	/* two-pass deflicker */
 	MppBuffer               buf_pass1;
 
-	RK_U32                  enc_mode;
 	RK_U32                  frame_size;
 	RK_S32                  max_buf_cnt;
 	RK_S32                  hdr_status;
@@ -647,7 +646,6 @@ MPP_RET hal_h265e_v500_init(void *hal, MppEncHalCfg *cfg)
 
 	ctx->frame_cnt           = 0;
 	ctx->frame_cnt_gen_ready = 0;
-	ctx->enc_mode            = 1;
 	ctx->frame_type          = INTRA_FRAME;
 
 	cfg->type                = VPU_CLIENT_RKVENC;
@@ -1513,8 +1511,6 @@ static MPP_RET vepu500_h265_set_normal(H265eV500HalContext *ctx)
 	H265eV500RegSet *regs = ctx->regs;
 	Vepu500ControlCfg *reg_ctl = &regs->reg_ctl;
 
-	reg_ctl->enc_strt.lkt_num      = 0;
-	reg_ctl->enc_strt.vepu_cmd     = ctx->enc_mode;
 	reg_ctl->enc_clr.safe_clr      = 0;
 	reg_ctl->enc_clr.force_clr     = 0;
 	reg_ctl->enc_clr.dvbm_clr_disable = 1;

@@ -52,7 +52,6 @@ typedef struct JpegeV500HalContext_t {
 	void *roi_data;
 	MppEncCfgSet *cfg;
 
-	RK_U32 enc_mode;
 	RK_U32 frame_size;
 	RK_S32 max_buf_cnt;
 	RK_S32 hdr_status;
@@ -140,7 +139,6 @@ MPP_RET hal_jpege_v500_init(void *hal, MppEncHalCfg * cfg)
 	ctx->cfg = cfg->cfg;
 
 	ctx->frame_cnt = 0;
-	ctx->enc_mode = 1;
 	ctx->online = cfg->online;
 	cfg->type = VPU_CLIENT_RKVENC;
 	ret = mpp_dev_init(&cfg->dev, cfg->type);
@@ -401,8 +399,6 @@ MPP_RET hal_jpege_v500_gen_regs(void *hal, HalEncTask * task)
 		dma_sync_single_for_device(dev, task->output->mpi_buf_id, task->length, DMA_TO_DEVICE);
 	}
 
-	reg_ctl->enc_strt.lkt_num = 0;
-	reg_ctl->enc_strt.vepu_cmd = ctx->enc_mode;
 	reg_ctl->enc_clr.safe_clr = 0x0;
 	reg_ctl->enc_clr.force_clr = 0x0;
 

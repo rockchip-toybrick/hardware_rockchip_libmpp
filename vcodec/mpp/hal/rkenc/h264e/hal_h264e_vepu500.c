@@ -573,11 +573,6 @@ static MPP_RET hal_h264e_vepu500_get_task(void *hal, HalEncTask *task)
 static void setup_vepu500_normal(HalVepu500RegSet *regs)
 {
 	hal_h264e_dbg_func("enter\n");
-	/* reg000 VERSION is read only */
-
-	/* reg001 ENC_STRT */
-	regs->reg_ctl.enc_strt.lkt_num           = 0;
-	regs->reg_ctl.enc_strt.vepu_cmd          = 1;
 
 	regs->reg_ctl.opt_strg.cke               = 1;
 	regs->reg_ctl.opt_strg.resetn_hw_en      = 1;
