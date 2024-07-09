@@ -2031,7 +2031,7 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
 		if (enc->ref_buf_shared && !frm->is_idr)
 			break;
 
-		hal_task->length = 0;
+		hal_task->length -= hal_task->hw_length;
 		hal_task->hw_length = 0;
 		status->rc_reenc = 1;
 		enc_dbg_detail("task %d reenc %d times %d\n", frm->seq_idx,
