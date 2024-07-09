@@ -2068,7 +2068,7 @@ static MPP_RET hal_h264e_vepu500_status_check(HalVepu500RegSet *regs)
 
 	if (regs->reg_ctl.int_sta.vbsf_oflw_sta) {
 		hal_h264e_dbg_warning("bit stream overflow");
-		ret = MPP_NOK;
+		ret = MPP_ERR_INT_BS_OVFL;
 	}
 
 	if (regs->reg_ctl.int_sta.vbuf_lens_sta)
