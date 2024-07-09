@@ -575,6 +575,7 @@ static void setup_vepu500_normal(HalVepu500RegSet *regs)
 	hal_h264e_dbg_func("enter\n");
 
 	regs->reg_ctl.opt_strg.cke               = 1;
+	regs->reg_ctl.opt_strg.sram_ckg_en       = 1;
 	regs->reg_ctl.opt_strg.resetn_hw_en      = 1;
 	regs->reg_ctl.opt_strg.rfpr_err_e        = 1;
 
@@ -644,7 +645,12 @@ static void setup_vepu500_normal(HalVepu500RegSet *regs)
 	regs->reg_ctl.dtrns_map.rec_nfbc_bus_edin  = 0;
 
 	regs->reg_ctl.dtrns_cfg.axi_brsp_cke   = 0;
+	/* enable rdo clk gating */
+	{
+		RK_U32 *rdo_ckg = (RK_U32*)&regs->reg_ctl.rdo_ckg_h264;
 
+		*rdo_ckg = 0xffffffff;
+	}
 	hal_h264e_dbg_func("leave\n");
 }
 

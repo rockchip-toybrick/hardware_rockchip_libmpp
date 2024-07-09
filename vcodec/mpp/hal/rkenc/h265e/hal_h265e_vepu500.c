@@ -1545,8 +1545,16 @@ static MPP_RET vepu500_h265_set_normal(H265eV500HalContext *ctx)
 	reg_ctl->enc_wdg.vs_load_thd        = 0x1fffff;
 
 	reg_ctl->opt_strg.cke                = 1;
+	reg_ctl->opt_strg.sram_ckg_en        = 1;
 	reg_ctl->opt_strg.rfpr_err_e         = 1;
 	reg_ctl->opt_strg.resetn_hw_en       = 1;
+
+	/* enable rdo clk gating */
+	{
+		RK_U32 *rdo_ckg = (RK_U32*)&regs->reg_ctl.rdo_ckg_hevc;
+
+		*rdo_ckg = 0xffffffff;
+	}
 
 	return MPP_OK;
 }
