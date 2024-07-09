@@ -87,6 +87,7 @@ struct device * mpp_get_dev(MppDev ctx);
 
 RK_S32 mpp_dev_chnl_check_running(MppDev ctx);
 RK_S32 mpp_dev_chnl_unbind_jpeg_task(MppDev ctx);
+RK_S32 mpp_dev_chnl_control(MppDev ctx, RK_S32 cmd, void *param);
 
 
 #ifdef __cplusplus

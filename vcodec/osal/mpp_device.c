@@ -220,3 +220,14 @@ RK_S32 mpp_dev_chnl_unbind_jpeg_task(MppDev ctx)
 	return 0;
 }
 
+RK_S32 mpp_dev_chnl_control(MppDev ctx, RK_S32 cmd, void *param)
+{
+	MppDevImpl *p = (MppDevImpl *) ctx;
+	const MppDevApi *api = p->api;
+	void *impl_ctx = p->ctx;
+
+	if (api->control)
+		return api->control(impl_ctx, cmd, param);
+
+	return 0;
+}

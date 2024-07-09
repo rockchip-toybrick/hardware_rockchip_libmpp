@@ -420,8 +420,10 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 
 	enc_dbg_func("%p in\n", enc);
 
-	if (enc->enc_status != ENC_STATUS_START_DONE)
-		return MPP_NOK;
+	if (enc->enc_status != ENC_STATUS_START_DONE) {
+		ret = MPP_NOK;
+		goto done;
+	}
 
 	enc->enc_status = ENC_STATUS_RUN_TASK_IN;
 	/*
@@ -452,10 +454,13 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 	info.height = MPP_ALIGN(enc->cfg.prep.height, align);
 
 	ret = mpp_dev_ioctl(enc->dev, MPP_DEV_CMD_RUN_TASK, &info);
+	if (ret)
+		mpp_dev_chnl_control(enc->dev, MPP_CMD_VEPU_CONNECT_DVBM, NULL);
 
 	enc->enc_status = ret ? ENC_STATUS_START_DONE : ENC_STATUS_RUN_TASK_DONE;
 
 	enc_dbg_func("%p out\n", enc);
+done:
 
 	return ret;
 }
