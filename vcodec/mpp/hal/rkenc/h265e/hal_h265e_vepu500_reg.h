@@ -1117,9 +1117,9 @@ typedef struct HevcVepu500Sqi_t {
 
 	/* 0x00002008 reg2050 */
 	struct {
-		RK_U32 common_rdo_cu_intra_r_coef_dep0    : 8;
-		RK_U32 common_rdo_cu_intra_r_coef_dep1    : 8;
-		RK_U32 reserved                           : 16;
+		RK_U32 coef_dep0    : 8;
+		RK_U32 coef_dep1    : 8;
+		RK_U32 reserved     : 16;
 	} subj_opt_intra_coef;
 
 	/* 0x200c */
@@ -1176,24 +1176,24 @@ typedef struct HevcVepu500Sqi_t {
 
 	/* 0x00002020 reg2056 */
 	struct {
-		RK_U32 thre_ratio_dist_mv_confor_cime_gmv0      : 5;
-		RK_U32 reserved                                 : 3;
-		RK_U32 thre_ratio_dist_mv_confor_cime_gmv1      : 5;
-		RK_U32 reserved1                                : 3;
-		RK_U32 thre_ratio_dist_mv_inconfor_cime_gmv0    : 6;
-		RK_U32 reserved2                                : 2;
-		RK_U32 thre_ratio_dist_mv_inconfor_cime_gmv1    : 6;
-		RK_U32 reserved3                                : 2;
+		RK_U32 confor_cime_gmv0      : 5;
+		RK_U32 reserved              : 3;
+		RK_U32 confor_cime_gmv1      : 5;
+		RK_U32 reserved1             : 3;
+		RK_U32 inconfor_cime_gmv0    : 6;
+		RK_U32 reserved2             : 2;
+		RK_U32 inconfor_cime_gmv1    : 6;
+		RK_U32 reserved3             : 2;
 	} smear_bmv_dist_thd0;
 
 	/* 0x00002024 reg2057 */
 	struct {
-		RK_U32 thre_ratio_dist_mv_inconfor_cime_gmv2    : 6;
-		RK_U32 reserved                                 : 2;
-		RK_U32 thre_ratio_dist_mv_inconfor_cime_gmv3    : 6;
-		RK_U32 reserved1                                : 2;
-		RK_U32 thre_ratio_dist_mv_inconfor_cime_gmv4    : 6;
-		RK_U32 reserved2                                : 10;
+		RK_U32 inconfor_cime_gmv2    : 6;
+		RK_U32 reserved              : 2;
+		RK_U32 inconfor_cime_gmv3    : 6;
+		RK_U32 reserved1             : 2;
+		RK_U32 inconfor_cime_gmv4    : 6;
+		RK_U32 reserved2             : 10;
 	} smear_bmv_dist_thd1;
 
 	/* 0x00002028 reg2058 */
