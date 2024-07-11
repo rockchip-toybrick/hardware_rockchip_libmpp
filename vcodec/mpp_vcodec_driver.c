@@ -333,11 +333,13 @@ struct vcodec_dev {
 #ifdef CONFIG_PROC_FS
 	struct proc_dir_entry *procfs;
 	struct proc_dir_entry *venc_procfs;
+	struct proc_dir_entry *pp_procfs;
 #endif
 };
 
 #define MPP_VCODEC_NAME	"vcodec"
 #define MPP_ENC_NAME	"enc"
+#define MPP_PP_NAME	"pp"
 #define MPP_DEC_NAME	"dec"
 
 #ifdef CONFIG_PROC_FS
@@ -409,6 +411,15 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 	return 0;
 }
 
+extern void vepu_show_pp_info(struct seq_file *seq);
+
+static int rkvenc_show_pp_info(struct seq_file *seq, void *offset)
+{
+	vepu_show_pp_info(seq);
+
+	return 0;
+}
+
 static int vcodec_procfs_init(struct vcodec_dev *vdev)
 {
 
@@ -430,6 +441,17 @@ static int vcodec_procfs_init(struct vcodec_dev *vdev)
 	proc_create_single_data("venc_info", 0444,
 				vdev->venc_procfs, venc_proc_debug, NULL);
 
+	/* pp info */
+	vdev->pp_procfs = proc_mkdir(MPP_PP_NAME, vdev->procfs);
+	if (IS_ERR_OR_NULL(vdev->pp_procfs)) {
+		mpp_err("failed on open procfs %s\n", MPP_PP_NAME);
+		vdev->pp_procfs = NULL;
+		return -EIO;
+	}
+
+	/* for show pp chnl info */
+	proc_create_single_data("pp_info", 0444,
+				vdev->pp_procfs, rkvenc_show_pp_info, NULL);
 
 	return 0;
 }

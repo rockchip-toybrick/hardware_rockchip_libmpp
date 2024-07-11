@@ -9,7 +9,7 @@
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
-
+#include <linux/seq_file.h>
 #include "vepu_pp.h"
 #include "vepu_pp_api.h"
 #include "vepu_pp_service_api.h"
@@ -487,6 +487,102 @@ int vepu_pp_control(int chn, enum pp_cmd cmd, void *param)
 	return 0;
 }
 EXPORT_SYMBOL(vepu_pp_control);
+
+static void vepu_pp_show_chn_attr(struct seq_file *seq)
+{
+	struct pp_chn_info_t *info = NULL;
+	int i;
+
+	seq_puts(seq,
+		 "\n-----------------------------------pp channel attr---------------------------------------------\n");
+	seq_printf(seq, "%8s|%8s|%8s|%10s|%10s|%12s|%12s|%8s|%8s|%15s\n",
+		   "ID", "width", "height", "smear_en", "weightp_en", "max_width", "max_height", "md_en", "od_en",
+		   "down_scale_en");
+	for (i = 0; i < MAX_CHN_NUM; i++) {
+		info = &g_pp_ctx.chn_info[i];
+		if (info->buf_rfpw == NULL || info->buf_rfpr == NULL)
+			continue;
+
+		seq_printf(seq, "%8d|%8d|%8d|%10d|%10d|%12d|%12d|%8d|%8d|%15d\n",
+			   info->chn, info->width, info->height, info->smear_en,
+			   info->weightp_en, info->max_width, info->max_height,
+			   info->md_en, info->od_en, info->down_scale_en);
+	}
+}
+
+static void vepu_pp_show_com_cfg(struct seq_file *seq)
+{
+	struct pp_chn_info_t *info = NULL;
+	struct pp_param_t *p = NULL;
+	int i;
+
+	seq_puts(seq,
+		 "\n-----------------------------------pp common cfg-----------------------------------------------\n");
+	seq_printf(seq, "%8s|%8s|%15s|%15s\n",
+		   "ID", "fmt", "frm_acc_intval", "frm_acc_gop");
+	for (i = 0; i < MAX_CHN_NUM; i++) {
+		info = &g_pp_ctx.chn_info[i];
+		if (info->buf_rfpw == NULL || info->buf_rfpr == NULL)
+			continue;
+		p = &info->param;
+		seq_printf(seq, "%8d|%8d|%15d|%15d\n",
+			   info->chn, p->vsp_pic_con.src_cfmt,
+			   info->frm_accum_interval, info->frm_accum_gop);
+	}
+}
+
+static void vepu_pp_show_md_cfg(struct seq_file *seq)
+{
+	struct pp_chn_info_t *info = NULL;
+	struct pp_param_t *p = NULL;
+	int i;
+
+	seq_puts(seq,
+		 "\n-----------------------------------pp md cfg---------------------------------------------------\n");
+	seq_printf(seq, "%8s|%10s|%10s|%10s|%10s|%10s|%15s|%15s|%15s\n",
+		   "ID", "switch_sad", "thres_sad", "thres_move", "night_mode",
+		   "filter_sw", "thres_dust_mv", "thres_dust_blk", "thres_dust_chng");
+	for (i = 0; i < MAX_CHN_NUM; i++) {
+		info = &g_pp_ctx.chn_info[i];
+		if (info->buf_rfpw == NULL || info->buf_rfpr == NULL)
+			continue;
+		p = &info->param;
+		seq_printf(seq, "%8d|%10d|%10d|%10d|%10d|%10d|%15d|%15d|%15d\n",
+			   info->chn, p->md_con_base.switch_sad, p->md_con_base.thres_sad,
+			   p->md_con_base.thres_move, p->md_fly_chk.night_mode_en,
+			   p->md_fly_chk.flycatkin_flt_en, p->md_fly_chk.thres_dust_move,
+			   p->md_fly_chk.thres_dust_blk, p->md_fly_chk.thres_dust_chng);
+	}
+}
+
+static void vepu_pp_show_od_cfg(struct seq_file *seq)
+{
+	struct pp_chn_info_t *info = NULL;
+	struct pp_param_t *p = NULL;
+	int i;
+
+	seq_puts(seq,
+		 "\n-----------------------------------pp od cfg---------------------------------------------------\n");
+	seq_printf(seq, "%8s|%15s|%18s|%10s\n",
+		   "ID", "thres_complex", "thres_area_complex", "thres_sad");
+	for (i = 0; i < MAX_CHN_NUM; i++) {
+		info = &g_pp_ctx.chn_info[i];
+		if (info->buf_rfpw == NULL || info->buf_rfpr == NULL)
+			continue;
+		p = &info->param;
+		seq_printf(seq, "%8d|%15d|%18d|%10d\n",
+			   info->chn, p->od_con_cmplx.od_thres_complex,
+			   p->od_con_cmplx.od_thres_area_complex, p->od_con_sad.od_thres_sad);
+	}
+}
+
+void vepu_show_pp_info(struct seq_file *seq)
+{
+	vepu_pp_show_chn_attr(seq);
+	vepu_pp_show_com_cfg(seq);
+	vepu_pp_show_md_cfg(seq);
+	vepu_pp_show_od_cfg(seq);
+}
 
 #ifndef BUILD_ONE_KO
 static int __init vepu_pp_init(void)
