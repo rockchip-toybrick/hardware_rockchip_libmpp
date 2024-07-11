@@ -77,6 +77,10 @@
 #define RKVENC_DBG_DVBM_ISP1	(0x516c)
 #define RKVENC_DBG_ISP_WORK	(BIT(27))
 
+#define RKVENC_DVBM_REG_S	(0x68)
+#define RKVENC_DVBM_REG_E	(0x9c)
+#define RKVENC_DVBM_REG_NUM	(14)
+
 #define ISP_IS_WORK(mpp) 	\
 	mpp_read(mpp, RKVENC_DBG_DVBM_ISP1) & RKVENC_DBG_ISP_WORK
 
@@ -296,6 +300,7 @@ struct rkvenc_dev {
 	struct dvbm_port *dvbm_port;
 	unsigned long dvbm_setup;
 #endif
+	u32 dvbm_reg_save[RKVENC_DVBM_REG_NUM];
 };
 
 static struct rkvenc_hw_info rkvenc_500_hw_info = {
@@ -1993,6 +1998,20 @@ static void rkvenc_shutdown(struct platform_device *pdev)
 	dev_info(dev, "shutdown success\n");
 }
 
+static void rkvenc_dvbm_reg_sav_restore(struct mpp_dev *mpp, bool is_save)
+{
+	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
+	u32 off;
+
+	if (is_save) {
+		for (off = RKVENC_DVBM_REG_S; off <= RKVENC_DVBM_REG_E; off += 4)
+			enc->dvbm_reg_save[off / 4] = mpp_read(mpp, off);
+	} else {
+		for (off = RKVENC_DVBM_REG_S; off <= RKVENC_DVBM_REG_E; off += 4)
+			mpp_write(mpp, off, enc->dvbm_reg_save[off / 4]);
+	}
+}
+
 static int __maybe_unused rkvenc_runtime_suspend(struct device *dev)
 {
 	struct rkvenc_dev *enc = dev_get_drvdata(dev);
@@ -2002,6 +2021,7 @@ static int __maybe_unused rkvenc_runtime_suspend(struct device *dev)
 	if (!atomic_xchg(&mpp->suspend_en, 1))
 		down_write(&mpp->work_sem);
 
+	rkvenc_dvbm_reg_sav_restore(mpp, true);
 	mpp_debug(DEBUG_POWER, "%s suspend device --\n", dev_name(dev));
 
 	return 0;
@@ -2016,6 +2036,7 @@ static int __maybe_unused rkvenc_runtime_resume(struct device *dev)
 	if (atomic_xchg(&mpp->suspend_en, 0))
 		up_write(&mpp->work_sem);
 
+	rkvenc_dvbm_reg_sav_restore(mpp, false);
 	mpp_debug(DEBUG_POWER, "%s resume device --\n", dev_name(dev));
 
 	return 0;
