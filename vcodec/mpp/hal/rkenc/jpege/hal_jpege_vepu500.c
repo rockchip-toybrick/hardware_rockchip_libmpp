@@ -325,8 +325,6 @@ MPP_RET hal_jpege_vepu500_set_osd(JpegeV500HalContext *ctx)
 
 static void vepu500_jpeg_set_dvbm(JpegV500RegSet *regs, RK_U32 width)
 {
-	regs->reg_ctl.enc_clr.dvbm_clr_disable = 1;
-
 	regs->reg_ctl.vs_ldly.dvbm_ack_sel = 0;
 	regs->reg_ctl.vs_ldly.dvbm_inf_sel = 0;
 
@@ -401,6 +399,7 @@ MPP_RET hal_jpege_v500_gen_regs(void *hal, HalEncTask * task)
 
 	reg_ctl->enc_clr.safe_clr = 0x0;
 	reg_ctl->enc_clr.force_clr = 0x0;
+	reg_ctl->enc_clr.dvbm_clr_disable = 1;
 
 	reg_ctl->int_en.enc_done_en          = 1;
 	reg_ctl->int_en.lkt_node_done_en     = 1;

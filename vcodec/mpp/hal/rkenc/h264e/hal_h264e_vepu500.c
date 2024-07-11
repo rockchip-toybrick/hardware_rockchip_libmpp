@@ -582,6 +582,7 @@ static void setup_vepu500_normal(HalVepu500RegSet *regs)
 	/* reg002 ENC_CLR */
 	regs->reg_ctl.enc_clr.safe_clr           = 0;
 	regs->reg_ctl.enc_clr.force_clr          = 0;
+	regs->reg_ctl.enc_clr.dvbm_clr_disable 	 = 1;
 
 	/* reg003 LKT_ADDR */
 	// regs->reg_ctl.lkt_addr           = 0;
@@ -1899,8 +1900,6 @@ static MPP_RET vepu500_h264e_set_dvbm(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 {
 	HalVepu500RegSet *regs = ctx->regs_set;
 	RK_U32 width = ctx->cfg->prep.width;
-
-	regs->reg_ctl.enc_clr.dvbm_clr_disable = 1;
 
 	regs->reg_ctl.vs_ldly.dvbm_ack_sel = 0;
 	regs->reg_ctl.vs_ldly.dvbm_inf_sel = 0;
