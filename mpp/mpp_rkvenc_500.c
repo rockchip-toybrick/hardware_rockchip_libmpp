@@ -728,7 +728,7 @@ static void rkvenc_dvbm_status_dump(struct mpp_dev *mpp)
 	pr_err("reg[%#x] 0x%08x\n", off, mpp_read(mpp, off));
 
 	// for (off = 0x68; off <= 0x9c; off += 4)
-	// 	mpp_err("reg[%#x] 0x%08x\n", off, mpp_read(mpp, off));
+	// 	pr_err("reg[%#x] 0x%08x\n", off, mpp_read(mpp, off));
 
 	off = 0x308;
 	pr_err("reg[%#x] 0x%08x\n", off, mpp_read(mpp, off));
@@ -1705,19 +1705,6 @@ static int rkvenc_dvbm_setup(struct mpp_dev *mpp, struct dvbm_isp_cfg_t *isp_cfg
 	mpp_write(mpp, dvbm_stride[isp_id].y_fstrid, isp_cfg->ybuf_fstd);
 	mpp_write(mpp, dvbm_stride[isp_id].c_fstrid, isp_cfg->cbuf_fstd);
 
-
-
-	// {
-	// 	int i;
-
-	// 	for (i = 0x60; i <= 0x9c; i+=4)
-	// 		pr_err("reg[%03x] 0x%08x\n", i, mpp_read(mpp, i));
-	// 	i = 0x308;
-	// 	pr_err("reg[%03x] 0x%08x\n", i, mpp_read(mpp, i));
-	// 	i = 0x4020;
-	// 	pr_err("reg[%03x] 0x%08x\n", i, mpp_read(mpp, i));
-	// }
-
 	return 0;
 }
 
@@ -1733,7 +1720,6 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		mpp_debug(DEBUG_ISP_INFO, "isp %d connect\n", isp_id);
 		mpp_write(mpp, 0x60, BIT(4) | BIT(0) | VEPU_CONNETC_CUR);
 		set_bit(isp_id, &enc->dvbm_setup);
-		// rkvenc_dvbm_status_dump(mpp);
 	} break;
 	case DVBM_ISP_REQ_DISCONNECT: {
 		u32 isp_id = *(u32*)arg;
@@ -1761,13 +1747,11 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		else
 #endif
 			mpp_debug(DEBUG_ISP_INFO, "isp frame %d start\n", id);
-		rkvenc_dvbm_status_dump(mpp);
 	} break;
 	case DVBM_VEPU_NOTIFY_FRM_END: {
 		u32 id = *(u32*)arg;
 
 		mpp_debug(DEBUG_ISP_INFO, "isp frame %d end\n", id);
-		rkvenc_dvbm_status_dump(mpp);
 	} break;
 	default : {
 	} break;
