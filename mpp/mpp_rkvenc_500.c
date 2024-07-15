@@ -82,7 +82,7 @@
 #define RKVENC_DVBM_REG_NUM	(14)
 
 #define ISP_IS_WORK(mpp) 	\
-	mpp_read(mpp, RKVENC_DBG_DVBM_ISP1) & (RKVENC_DBG_ISP_WORK|BIT(25))
+	(mpp_read(mpp, RKVENC_DBG_DVBM_ISP1) & (RKVENC_DBG_ISP_WORK|BIT(25)))
 
 #define DVBM_VEPU_CONNECT(mpp) 	\
 	mpp_read(mpp, RKVENC_DVBM_CFG) & DVBM_VEPU_CONNETC
@@ -304,6 +304,8 @@ struct rkvenc_dev {
 #endif
 	u32 dvbm_reg_save[RKVENC_DVBM_REG_NUM];
 	bool skip_dvbm_discnct;
+	spinlock_t dvbm_lock;
+	atomic_t isp_fcnt;
 };
 
 static struct rkvenc_hw_info rkvenc_500_hw_info = {
@@ -787,15 +789,31 @@ static void rkvenc_dvbm_show_info(struct mpp_dev *mpp)
 		     mpp_read(mpp, 0x5168) & 0xff, isp1, (isp1 >> 16) & 0xff, isp1 & 0x3fff);
 }
 
-static int rkvenc_connect_dvbm(struct mpp_dev *mpp)
+static int rkvenc_connect_dvbm(struct mpp_dev *mpp, u32 dvbm_cfg)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
-	u32 dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
+	unsigned long flag;
+	bool dual_wrap = (enc->dvbm_setup & 0x3) == 0x3;
 
-	if (dvbm_cfg & DVBM_VEPU_CONNETC)
+	dvbm_cfg = dvbm_cfg ? dvbm_cfg : mpp_read(mpp, RKVENC_DVBM_CFG);
+	spin_lock_irqsave(&enc->dvbm_lock, flag);
+	if (atomic_read(&enc->on_work) && DVBM_VEPU_CONNECT(mpp)) {
 		enc->skip_dvbm_discnct = true;
-	dvbm_cfg |= DVBM_ISP_CONNETC | DVBM_VEPU_CONNETC | VEPU_CONNETC_CUR;
+		goto done;
+	}
+	dvbm_cfg &= ~(DVBM_VEPU_CONNETC | VEPU_CONNETC_CUR);
+	if (dual_wrap) {
+		if (ISP_IS_WORK(mpp))
+			dvbm_cfg |= DVBM_ISP_CONNETC | VEPU_CONNETC_CUR;
+		else
+			dvbm_cfg |= DVBM_ISP_CONNETC ;
+	} else {
+		dvbm_cfg |= DVBM_ISP_CONNETC | VEPU_CONNETC_CUR;
+	}
 	mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
+	mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg | DVBM_VEPU_CONNETC);
+done:
+	spin_unlock_irqrestore(&enc->dvbm_lock, flag);
 	rkvenc_dvbm_show_info(mpp);
 
 	return 0;
@@ -858,8 +876,8 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 				if (!regs[j])
 					continue;
 				dvbm_cfg = regs[j];
-				regs[j] |= DVBM_ISP_CONNETC | DVBM_VEPU_CONNETC | VEPU_CONNETC_CUR;
-				rkvenc_dvbm_show_info(mpp);
+				rkvenc_connect_dvbm(mpp, dvbm_cfg);
+				continue;
 			}
 
 			mpp_write_relaxed(mpp, off, regs[j]);
@@ -1057,21 +1075,33 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 		u32 enc_st = mpp_read(mpp, RKVENC_STATUS);
 		u32 dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
 
-		if (mpp->irq_status & RKVENC_SOURCE_ERR)
-			mpp_err("chan %d task %d pipe %d frame id %d err 0x%08x\n",
+		if (mpp->irq_status & RKVENC_SOURCE_ERR) {
+			if (atomic_read(&enc->isp_fcnt) <= 1) {
+				dvbm_cfg &= ~DVBM_VEPU_CONNETC;
+				mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
+				mpp_write(mpp, RKVENC_STATUS, 0);
+				dvbm_cfg |= VEPU_CONNETC_CUR;
+				mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
+				mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg | DVBM_VEPU_CONNETC);
+				mpp_write(mpp, 0x10, 0x100);
+				return IRQ_HANDLED;
+			}
+			mpp_err("chan %d task %d pipe %d frame id %d err 0x%08x cfg %#x 0x%08x\n",
 				session->chn_id, mpp_task->task_index, mpp_task->pipe_id,
-				mpp_task->frame_id, enc_st);
+				mpp_task->frame_id, enc_st, dvbm_cfg, mpp_read(mpp, 0x516c));
+		}
 		mpp_dbg_dvbm("st enc 0x%08x\n", enc_st);
 
 		if (enc->skip_dvbm_discnct) {
-			if (mpp->irq_status & RKVENC_SOURCE_ERR) {
+			if ((mpp->irq_status & RKVENC_SOURCE_ERR)) {
 				dvbm_cfg &= ~DVBM_VEPU_CONNETC;
 				mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
 
 				mpp_write(mpp, RKVENC_STATUS, 0);
 
-				dvbm_cfg |= DVBM_VEPU_CONNETC;
+				dvbm_cfg |= VEPU_CONNETC_CUR;
 				mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
+				mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg | DVBM_VEPU_CONNETC);
 			}
 			enc->skip_dvbm_discnct = false;
 		} else {
@@ -1247,7 +1277,9 @@ static int rkvenc_control(struct mpp_session *session, struct mpp_request *req)
 		return rkvenc_unbind_jpeg_task(session);
 	} break;
 	case MPP_CMD_VEPU_CONNECT_DVBM: {
-		return rkvenc_connect_dvbm(session->mpp);
+		u32 dvbm_cfg = mpp_read(session->mpp, RKVENC_DVBM_CFG);
+
+		return rkvenc_connect_dvbm(session->mpp, dvbm_cfg);
 	} break;
 	default: {
 		mpp_err("unknown mpp ioctl cmd %x\n", req->cmd);
@@ -1756,6 +1788,8 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 
 		mpp_debug(DEBUG_ISP_INFO, "isp %d connect\n", isp_id);
 		mpp_write(mpp, 0x60, BIT(4) | BIT(0) | VEPU_CONNETC_CUR);
+		if (!enc->dvbm_setup)
+			atomic_set(&enc->isp_fcnt, 0);
 		set_bit(isp_id, &enc->dvbm_setup);
 	} break;
 	case DVBM_ISP_REQ_DISCONNECT: {
@@ -1766,6 +1800,7 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		if (!enc->dvbm_setup) {
 			mpp_write(mpp, 0x60, 0);
 			mpp->always_on = 0;
+			atomic_set(&enc->isp_fcnt, 0);
 		}
 	} break;
 	case DVBM_ISP_SET_DVBM_CFG: {
@@ -1784,6 +1819,7 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		else
 #endif
 			mpp_debug(DEBUG_ISP_INFO, "isp frame %d start\n", id);
+		atomic_inc(&enc->isp_fcnt);
 	} break;
 	case DVBM_VEPU_NOTIFY_FRM_END: {
 		u32 id = *(u32*)arg;
@@ -1968,6 +2004,7 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	rkvenc_dvbm_init(mpp);
 
 	enc->hw_info = to_rkvenc_info(mpp->var->hw_info);
+	spin_lock_init(&enc->dvbm_lock);
 	rkvenc_procfs_init(mpp);
 	mpp_dev_register_srv(mpp, mpp->srv);
 
