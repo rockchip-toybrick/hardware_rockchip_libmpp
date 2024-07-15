@@ -2271,7 +2271,7 @@ static int __maybe_unused rkvenc_runtime_resume(struct device *dev)
 	mpp_debug(DEBUG_POWER, "%s resume device ++\n", dev_name(dev));
 	if (atomic_xchg(&mpp->suspend_en, 0))
 		up_write(&mpp->work_sem);
-
+	mpp_taskqueue_trigger_work(mpp);
 	mpp_debug(DEBUG_POWER, "%s resume device --\n", dev_name(dev));
 
 	return 0;
