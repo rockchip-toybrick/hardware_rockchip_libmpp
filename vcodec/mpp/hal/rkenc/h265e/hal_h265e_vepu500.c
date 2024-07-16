@@ -986,6 +986,16 @@ static MPP_RET vepu500_h265_set_rdo_regs(H265eV500HalContext *ctx, H265eV500RegS
 	return MPP_OK;
 }
 
+static void vepu500_h265_set_quant_regs(H265eV500HalContext *ctx)
+{
+	H265eV500RegSet *regs = ctx->regs;
+	HevcVepu500Param *s = &regs->reg_param;
+
+	//TODO: bias_madi_thd_comb...
+	s->qnt1_i_bias_comb.bias_i_val3 = 171;
+	s->qnt1_p_bias_comb.bias_p_val3 = 85;
+}
+
 static void vepu500_h265_set_sao_regs(H265eV500HalContext *ctx)
 {
 	H265eV500RegSet *regs = ctx->regs;
@@ -2044,6 +2054,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_pp_regs(regs, fmt, &ctx->cfg->prep);
 	vepu500_h265_set_rc_regs(ctx, regs, task);
 	vepu500_h265_set_rdo_regs(ctx, regs);
+	vepu500_h265_set_quant_regs(ctx);
 	vepu500_h265_set_sao_regs(ctx);
 	vepu500_h265_set_slice_regs(syn, reg_frm);
 	vepu500_h265_set_ref_regs(syn, reg_frm);
