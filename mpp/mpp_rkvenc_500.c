@@ -2037,6 +2037,7 @@ static int __maybe_unused rkvenc_runtime_resume(struct device *dev)
 		up_write(&mpp->work_sem);
 
 	rkvenc_dvbm_reg_sav_restore(mpp, false);
+	mpp_taskqueue_trigger_work(mpp);
 	mpp_debug(DEBUG_POWER, "%s resume device --\n", dev_name(dev));
 
 	return 0;
