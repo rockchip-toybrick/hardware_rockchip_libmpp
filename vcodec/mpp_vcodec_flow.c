@@ -152,7 +152,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			if (comb_chan->state != CHAN_STATE_RUN)
 				comb_chan = NULL;
 
-			if (atomic_read(&comb_chan->runing) > 0) {
+			if (comb_chan && atomic_read(&comb_chan->runing) > 0) {
 				mpp_err_f("chan %d combo chan %d state is wating irq\n",
 					  chan_id, frm_info.jpeg_chan_id);
 				comb_chan = NULL;
