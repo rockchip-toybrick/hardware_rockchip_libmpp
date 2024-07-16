@@ -2138,6 +2138,23 @@ typedef struct Vepu500OsdCfg_t {
 	MppEncOSDData3 *osd_data3;
 } Vepu500OsdCfg;
 
+/* ROI block configuration */
+typedef struct Vepu500H264RoiBlkCfg {
+	RK_U32 qp_adju        : 8;
+	RK_U32 mdc_adju_inter : 4;
+	RK_U32 mdc_adju_skip  : 4;
+	RK_U32 mdc_adju_intra : 4;
+	RK_U32 reserved       : 12;
+} Vepu500H264RoiBlkCfg;
+
+typedef struct Vepu500H265RoiBlkCfg {
+	RK_U32 qp_adju        : 8;
+	RK_U32 reserved       : 12;
+	RK_U32 mdc_adju_inter : 4;
+	RK_U32 mdc_adju_skip  : 4;
+	RK_U32 mdc_adju_intra : 4;
+} Vepu500H265RoiBlkCfg;
+
 typedef struct Vepu500JpegCfg_t {
 	MppDev dev;
 	void *jpeg_reg_base;
