@@ -162,6 +162,24 @@ static RK_S32 aq_P_qp_dealt_smart[16] = {
 	4, 6, 7, 9,
 };
 
+static RK_U32 lamd_moda_qp[60] = {
+	0x0000001d, 0x00000036, 0x0000002e, 0x0000003a,
+	0x00000049, 0x0000005c, 0x00000074, 0x00000092,
+	0x000000b8, 0x000000e8, 0x00000124, 0x00000170,
+	0x000001cf, 0x00000248, 0x000002df, 0x0000039f,
+	0x0000048f, 0x000005bf, 0x0000073d, 0x0000091f,
+	0x00000b7e, 0x00000e7a, 0x0000123d, 0x000016fb,
+	0x00001cf4, 0x0000247b, 0x00002df6, 0x000039e9,
+	0x000048f6, 0x00005bed, 0x000073d1, 0x000091ec,
+	0x0000b7d9, 0x0000e7a2, 0x000123d7, 0x00016fb2,
+	0x0001cf44, 0x000247ae, 0x0002df64, 0x00039e89,
+	0x00048f5c, 0x0005bec8, 0x00073d12, 0x00091eb8,
+	0x000b7d90, 0x000e7a23, 0x00123d71, 0x0016fb20,
+	0x001cf446, 0x00247ae1, 0x002df640, 0x0039e88c,
+	0x0048f5c3, 0x005bec81, 0x0073d119, 0x0091eb85,
+	0x00b7d902, 0x00e7a232, 0x0123d70a, 0x016fb204,
+};
+
 static RK_U32 lamd_modb_qp[60] = {
 	0x0000002c, 0x00000038, 0x00000044, 0x00000058,
 	0x00000070, 0x00000089, 0x000000b0, 0x000000e0,
@@ -984,8 +1002,8 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 	hevc_vepu540c_wgt *reg_wgt = &regs->reg_wgt;
 	vepu540c_rdo_cfg *reg_rdo = &regs->reg_rdo;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
-	RK_S32 lambda_idx = ctx->frame_type == INTRA_FRAME ? ctx->cfg->tune.lambda_i_idx :
-			    ctx->cfg->tune.lambda_idx;
+	RK_S32 lmd_idx = ctx->frame_type == INTRA_FRAME ? ctx->cfg->tune.lambda_i_idx :
+			 ctx->cfg->tune.lambda_idx;
 	vepu540c_h265_rdo_cfg(ctx, reg_rdo, task);
 	setup_vepu540c_hevc_scl_cfg(&regs->reg_scl_jpgtbl.scl, task);
 
@@ -998,8 +1016,7 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 			step[i] = hw->aq_step_i[i] & 0x3f;
 		}
 		reg_wgt->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
-		memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0],
-		       &lamd_modb_qp[lambda_idx], H265E_LAMBDA_TAB_SIZE);
+		memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0], &lamd_moda_qp[lmd_idx], H265E_LAMBDA_TAB_SIZE);
 	} else {
 		RK_U8 *thd = (RK_U8 *) & rc_regs->aq_tthd0;
 		RK_S8 *step = (RK_S8 *) & rc_regs->aq_stp0;
@@ -1008,13 +1025,7 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 			step[i] = hw->aq_step_p[i] & 0x3f;
 		}
 		reg_wgt->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
-		if (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC ||
-		    ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC_PTZ)
-			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0],
-			       &lamd_modb_qp[lambda_idx], H265E_LAMBDA_TAB_SIZE);
-		else
-			memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0],
-			       &lamd_modb_qp[lambda_idx], H265E_LAMBDA_TAB_SIZE);
+		memcpy(&reg_wgt->rdo_wgta_qp_grpa_0_51[0], &lamd_modb_qp[lmd_idx], H265E_LAMBDA_TAB_SIZE);
 	}
 
 	reg_wgt->reg1484_qnt_bias_comb.qnt_bias_i = 171;
