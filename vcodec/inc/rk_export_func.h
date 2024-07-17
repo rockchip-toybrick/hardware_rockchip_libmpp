@@ -62,6 +62,7 @@ struct vcodec_mpibuf_fn {
 	struct mpi_buf *(*buf_pool_request_buf)(struct mpi_buf_pool *pool);
 	int (*buf_pool_get_free_num)(struct mpi_buf_pool *pool);
 	struct mpi_buf *(*buf_alloc_with_name)(size_t size, const char *name);
+	int (*get_struct_size)(void);
 };
 
 struct vcodec_set_dev_fn {
@@ -88,6 +89,7 @@ struct vcodec_mpidev_fn {
 	int (*set_intra_info)(RK_S32 chn_id, RK_U64 dts, RK_U64 pts, RK_U32 is_intra);
 	int (*notify_drop_frm)(RK_S32 chn_id);
 	int (*notify)(RK_S32 chn_id, int cmd, void *arg);
+	int (*get_struct_size)(void);
 };
 
 struct vcodec_mppdev_svr_fn {

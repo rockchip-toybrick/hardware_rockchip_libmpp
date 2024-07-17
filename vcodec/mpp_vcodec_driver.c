@@ -572,6 +572,13 @@ struct vcodec_mpidev_fn *get_mpidev_ops(void)
 	if (!mpidev_ops)
 		mpp_err("should call vmpi_register_fn2vcocdec \n");
 
+	if (mpidev_ops->get_struct_size) {
+		if (sizeof(struct vcodec_mpidev_fn) != mpidev_ops->get_struct_size()) {
+			mpp_err("struct vcodec_mpidev_fn mismatch!\n");
+			mpp_assert(0);
+		}
+	}
+
 	return mpidev_ops;
 }
 
@@ -579,6 +586,13 @@ struct vcodec_mpibuf_fn *get_mpibuf_ops(void)
 {
 	if (!mpibuf_ops)
 		mpp_err("should call vmpi_register_fn2vcocdec \n");
+
+	if (mpibuf_ops->get_struct_size) {
+		if (sizeof(struct vcodec_mpibuf_fn) != mpibuf_ops->get_struct_size()) {
+			mpp_err("struct vcodec_mpibuf_fn mismatch!\n");
+			mpp_assert(0);
+		}
+	}
 
 	return mpibuf_ops;
 }
