@@ -412,6 +412,7 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 	HevcVepu500Param *reg_param = &regs->reg_param;
 	RK_S32 lambda_idx = ctx->cfg->tune.lambda_i_idx;
 
+	reg_param->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
 	reg_frm->reg0248_sao_cfg.sao_lambda_multi = ctx->cfg->codec.h265.sao_cfg.sao_bit_ratio;
 	memcpy(&reg_param->pprd_lamb_satd_0_51[0], lambda_tbl_pre_inter, sizeof(lambda_tbl_pre_inter));
 
@@ -424,13 +425,11 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 			aq_thd = &hw->aq_thrd_i[0];
 			aq_step = &hw->aq_step_i[0];
 			lambda_tbl = &rdo_lambda_table_I[lambda_idx];
-			reg_param->iprd_lamb_satd_ofst.lambda_satd_offset = 3;
 		} else {
 			lambda_idx = ctx->cfg->tune.lambda_idx;
 			aq_thd = &hw->aq_thrd_p[0];
 			aq_step = &hw->aq_step_p[0];
 			lambda_tbl = &rdo_lambda_table_P[lambda_idx];
-			reg_param->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
 		}
 
 		memcpy(&reg_param->rdo_wgta_qp_grpa_0_51[0], lambda_tbl, H265E_LAMBDA_TAB_SIZE);
@@ -1598,7 +1597,7 @@ static MPP_RET vepu500_h265_set_prep(void *hal, HalEncTask *task)
 	reg_frm->reg0192_enc_pic.bs_scp        = 1;
 	reg_frm->reg0192_enc_pic.log2_ctu_num_hevc  = mpp_ceil_log2(pic_wd32 * pic_h32);
 
-	reg_klut->klut_ofst.chrm_klut_ofst = (ctx->frame_type == INTRA_FRAME) ? 0 : 3;
+	reg_klut->klut_ofst.chrm_klut_ofst = (ctx->frame_type == INTRA_FRAME) ? 6 : 9;
 
 	reg_frm->reg0232_rdo_cfg.chrm_spcl  = 0;
 	reg_frm->reg0232_rdo_cfg.cu_inter_e = 0xdb;
