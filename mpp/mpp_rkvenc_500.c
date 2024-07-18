@@ -789,6 +789,29 @@ static void rkvenc_dvbm_show_info(struct mpp_dev *mpp)
 		     mpp_read(mpp, 0x5168) & 0xff, isp1, (isp1 >> 16) & 0xff, isp1 & 0x3fff);
 }
 
+static int rkvenc_disconnect_dvbm(struct mpp_dev *mpp, u32 dvbm_cfg)
+{
+	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
+	unsigned long flag;
+
+	dvbm_cfg = dvbm_cfg ? dvbm_cfg : mpp_read(mpp, RKVENC_DVBM_CFG);
+	spin_lock_irqsave(&enc->dvbm_lock, flag);
+	enc->skip_dvbm_discnct = false;
+	/* check if encode online task */
+	if (atomic_read(&enc->on_work) && (mpp_read(mpp, 0x308) & BIT(16)))
+		goto done;
+
+	if (!(dvbm_cfg & DVBM_VEPU_CONNETC))
+		goto done;
+
+	dvbm_cfg &= ~(DVBM_VEPU_CONNETC | VEPU_CONNETC_CUR);
+	mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
+done:
+	spin_unlock_irqrestore(&enc->dvbm_lock, flag);
+
+	return 0;
+}
+
 static int rkvenc_connect_dvbm(struct mpp_dev *mpp, u32 dvbm_cfg)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
@@ -797,8 +820,8 @@ static int rkvenc_connect_dvbm(struct mpp_dev *mpp, u32 dvbm_cfg)
 
 	dvbm_cfg = dvbm_cfg ? dvbm_cfg : mpp_read(mpp, RKVENC_DVBM_CFG);
 	spin_lock_irqsave(&enc->dvbm_lock, flag);
-	if (atomic_read(&enc->on_work) && DVBM_VEPU_CONNECT(mpp)) {
-		enc->skip_dvbm_discnct = true;
+	if (DVBM_VEPU_CONNECT(mpp)) {
+		enc->skip_dvbm_discnct = !!atomic_read(&enc->on_work);
 		goto done;
 	}
 	dvbm_cfg &= ~(DVBM_VEPU_CONNETC | VEPU_CONNETC_CUR);
@@ -1278,8 +1301,12 @@ static int rkvenc_control(struct mpp_session *session, struct mpp_request *req)
 	} break;
 	case MPP_CMD_VEPU_CONNECT_DVBM: {
 		u32 dvbm_cfg = mpp_read(session->mpp, RKVENC_DVBM_CFG);
+		u32 connect = *(u32*)req->data;
 
-		return rkvenc_connect_dvbm(session->mpp, dvbm_cfg);
+		if (connect)
+			return rkvenc_connect_dvbm(session->mpp, dvbm_cfg);
+		else
+			return rkvenc_disconnect_dvbm(session->mpp, dvbm_cfg);
 	} break;
 	default: {
 		mpp_err("unknown mpp ioctl cmd %x\n", req->cmd);
