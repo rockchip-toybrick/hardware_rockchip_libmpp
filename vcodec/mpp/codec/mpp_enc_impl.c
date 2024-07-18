@@ -2023,11 +2023,11 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
 		goto TASK_DONE;
 
 	while (frm->reencode && frm->reencode_times < enc->cfg.rc.max_reenc_times) {
-		if (enc->online) {
-			mpp_err_f("chan %d wrap enc not support reenc\n", enc->chan_id);
+		/* only support I frame drop when online case */
+		if (enc->online && !frm->is_idr && !frm->drop)
 			break;
-		}
 
+		/* only support I frame reenc/drop when ref/recn shared*/
 		if (enc->ref_buf_shared && !frm->is_idr)
 			break;
 
