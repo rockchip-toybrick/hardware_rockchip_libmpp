@@ -688,10 +688,8 @@ MPP_RET hal_jpege_v540c_ret_task(void *hal, HalEncTask * task)
 	rc_info->bit_real = task->hw_length * 8;
 	rc_info->quality_real = rc_info->quality_target;
 
-	if (task->jpeg_overflow) {
-		mpp_err("jpege bit stream overflow");
-		return MPP_NOK;
-	}
+	if (task->jpeg_overflow)
+		return MPP_ERR_INT_BS_OVFL;
 
 	ctx->session_run = 0;
 	hal_jpege_leave();
