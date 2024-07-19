@@ -126,6 +126,7 @@ enum {
 	PP_BASE_CFG	= 0x530,
 	PP_MD_THD	= 0x534,
 	PP_OD_THD	= 0x538,
+	BMAP_CFG	= 0x108c,
 };
 
 struct rkvenc_pp_param {
@@ -157,6 +158,7 @@ struct rkvenc_pp_param {
 	u32 pp_base_cfg;
 	u32 pp_md_thd;
 	u32 pp_od_thd;
+	u32 bmap_cfg;
 };
 
 struct rkvenc_pp_out {
@@ -925,6 +927,7 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	mpp_write_relaxed(mpp, PP_BASE_CFG, param->pp_base_cfg);
 	mpp_write_relaxed(mpp, PP_MD_THD, param->pp_md_thd);
 	mpp_write_relaxed(mpp, PP_OD_THD, param->pp_od_thd);
+	mpp_write_relaxed(mpp, BMAP_CFG, param->bmap_cfg);
 
 	/* init current task */
 	mpp->cur_task = mpp_task;
