@@ -1120,8 +1120,7 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 
 	if (info->st_gop) {
 		cfg->vgop = info->st_gop;
-		if (cfg->vgop >= rc->fps_out_num / rc->fps_out_denorm &&
-		    cfg->vgop < cfg->igop) {
+		if (cfg->vgop < cfg->igop) {
 			cfg->gop_mode = SMART_P;
 			if (!cfg->vi_quality_delta)
 				cfg->vi_quality_delta = 2;
