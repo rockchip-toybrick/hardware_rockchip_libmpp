@@ -142,6 +142,8 @@ enum enc_status {
 	ENC_STATUS_RUN_TASK_DONE,
 	ENC_STATUS_INT_IN,
 	ENC_STATUS_INT_DONE,
+	ENC_STATUS_SLICE_INFO_IN,
+	ENC_STATUS_SLICE_INFO_DONE,
 	ENC_STATUS_BUTT,
 };
 
@@ -155,6 +157,7 @@ MPP_RET mpp_enc_impl_alloc_task(MppEncImpl * enc);
 MPP_RET mpp_enc_impl_free_task(MppEncImpl * enc);
 MPP_RET mpp_enc_proc_rc_update(MppEncImpl * enc);
 MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet, MppPacket * jpeg_packet);
+void mpp_enc_impl_slice_info(MppEnc ctx, void *param, MppPacket *packet);
 MPP_RET mpp_enc_impl_hw_start(MppEnc ctx, MppEnc jpeg_ctx);
 void    mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id);
 MPP_RET mpp_enc_unref_osd_buf(MppEncOSDData3 *osd);

@@ -27,8 +27,8 @@ void mpp_packet_pool_info_show(void *seq_file);
  */
 MPP_RET mpp_packet_new(MppPacket *packet);
 
-MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, size_t min_size,
-				RK_U32 type, RK_S32 chan_id);
+MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, RK_U32 align,
+				size_t min_size, RK_U32 type, RK_S32 chan_id);
 
 MPP_RET mpp_packet_init(MppPacket *packet, void *data, size_t size);
 MPP_RET mpp_packet_init_with_buffer(MppPacket *packet, MppBuffer buffer);

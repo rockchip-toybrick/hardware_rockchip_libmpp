@@ -1192,7 +1192,7 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 	mpp_taskqueue_trigger_work(mpp);
 
 	if (session->callback && mpp_task->clbk_en)
-		session->callback(session->chn_id);
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 
 	up_read(&mpp->work_sem);
 	mpp_debug_leave();
@@ -1475,7 +1475,7 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	mpp_taskqueue_pop_running(mpp->queue, task);
 
 	if (session->callback && clbk_en)
-		session->callback(session->chn_id);
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 	if (mpp->hw_ops->reset)
 		mpp->hw_ops->reset(mpp);
 	mpp_taskqueue_trigger_work(mpp);

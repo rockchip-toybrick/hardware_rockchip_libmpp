@@ -516,7 +516,7 @@ static void mpp_task_timeout_work(struct work_struct *work_s)
 	/* remove task from taskqueue running list */
 	mpp_taskqueue_pop_running(mpp->queue, task);
 	if (session->callback && clbk_en)
-		session->callback(session->chn_id);
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 
 }
 
@@ -800,7 +800,7 @@ again:
 			atomic_inc(&task->abort_request);
 			set_bit(TASK_STATE_DONE, &task->state);
 			if (session->callback)
-				session->callback(session->chn_id);
+				session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 		}
 	}
 
@@ -1416,7 +1416,7 @@ int mpp_task_finish(struct mpp_session *session,
 	mpp_taskqueue_pop_running(mpp->queue, task);
 
 	if (session->callback && clbk_en)
-		session->callback(session->chn_id);
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 
 	return 0;
 }

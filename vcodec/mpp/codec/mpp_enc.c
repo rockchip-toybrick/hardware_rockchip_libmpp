@@ -543,6 +543,17 @@ MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
 	return ret;
 }
 
+void mpp_enc_slice_info(MppEnc ctx, void *param, MppPacket *packet)
+{
+	MppEncImpl *enc = (MppEncImpl *) ctx;
+
+	enc->enc_status = ENC_STATUS_SLICE_INFO_IN;
+	mpp_enc_impl_slice_info(ctx, param, packet);
+	enc->enc_status = ENC_STATUS_SLICE_INFO_DONE;
+
+	return;
+}
+
 void mpp_enc_proc_debug(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;

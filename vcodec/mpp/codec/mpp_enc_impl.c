@@ -1341,7 +1341,7 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 			return MPP_NOK;
 		}
 	}
-	ret = mpp_packet_new_ring_buf(&enc->packet, enc->ring_pool, 0, is_intra, enc->chan_id);
+	ret = mpp_packet_new_ring_buf(&enc->packet, enc->ring_pool, 128, 0, is_intra, enc->chan_id);
 	if (ret) {
 		if (ret == MPP_ERR_NULL_PTR)
 			enc->pkt_fail_cnt++ ;
@@ -2094,7 +2094,8 @@ TASK_DONE:
 		mpp_packet_deinit(&enc->packet);
 	} else {
 		/* setup output packet and meta data */
-		mpp_packet_set_length(enc->packet, hal_task->length);
+		if (!(mpp_packet_get_flag(enc->packet) & MPP_PACKET_FLAG_PARTITION))
+			mpp_packet_set_length(enc->packet, hal_task->length);
 		if (frm->is_intra)
 			mpp_packet_set_flag(enc->packet, MPP_PACKET_FLAG_INTRA); //set as key frame
 		if (mpp_frame_get_eos(enc->frame))
@@ -2138,6 +2139,46 @@ TASK_DONE:
 		mpp_enc_comb_end_jpeg(jpeg_ctx, jpeg_packet);
 
 	return ret;
+}
+
+void mpp_enc_impl_slice_info(MppEnc ctx, void *param, MppPacket *packet)
+{
+	MppEncImpl *enc = (MppEncImpl *) ctx;
+	EncTask *task = (EncTask *)enc->enc_task;
+	HalEncTask *hal_task = &task->info.enc;
+	MppEncSliceInfo slice_info = *(MppEncSliceInfo *)param;
+	MppPacketImpl *impl = (MppPacketImpl *)hal_task->packet;
+	MppPacket new_packet = NULL;
+	EncRcTask *rc_task = &enc->rc_task;
+	EncFrmStatus *frm = &rc_task->frm;
+	RK_S32 slice_length;
+
+	enc_dbg_detail("slice_info len %d %s, packet %p len %d\n",
+		       slice_info.length, slice_info.last ? "last" : "continue",
+		       impl, impl->length);
+
+	/* first slice include header packet */
+	slice_length = slice_info.length + impl->length;
+	if (slice_info.last) {
+		impl->length = slice_length;
+		impl->flag |= MPP_PACKET_FLAG_PARTITION;
+		impl->flag |= MPP_PACKET_FLAG_EOI;
+		enc->packet = impl;
+	} else {
+		impl->length = slice_length;
+		impl->flag |= MPP_PACKET_FLAG_PARTITION;
+		if (frm->is_intra)
+			impl->flag |= MPP_PACKET_FLAG_INTRA;
+		impl->temporal_id = frm->temporal_id;
+		if (mpp_packet_ring_buf_put_used((MppPacket *)impl, enc->chan_id, enc->dev))
+			mpp_err_f("ring_buf_put_used fail.\n");
+		*packet = impl;
+		mpp_packet_new_ring_buf(&new_packet, enc->ring_pool, 1, 0, 0, enc->chan_id);
+		mpp_assert(new_packet);
+		hal_task->packet = new_packet;
+	}
+
+	return;
 }
 
 void mpp_enc_impl_pkt_full_inc(MppEnc ctx)

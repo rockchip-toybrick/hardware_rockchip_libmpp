@@ -173,8 +173,8 @@ static MPP_RET mpp_packet_vsm_buf_free(MppPacketImpl *p, RK_S32 chan_id)
 	return MPP_OK;
 }
 
-MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, size_t min_size,
-				RK_U32 type, RK_S32 chan_id)
+MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, RK_U32 align,
+				size_t min_size, RK_U32 type, RK_S32 chan_id)
 {
 	MppPacketImpl *p = NULL;
 
@@ -195,7 +195,7 @@ MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, size_t m
 		min_size = (min_size + SZ_1K) & (SZ_1K - 1);
 
 	if (pool) {
-		if (ring_buf_get_free(pool, &p->buf, 128, min_size, 1)) {
+		if (ring_buf_get_free(pool, &p->buf, align, min_size, 1)) {
 			mpp_mem_pool_put(g_packet_pool, p);
 			return MPP_ERR_MALLOC;
 		}
@@ -209,6 +209,7 @@ MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, size_t m
 	p->data = p->pos = p->buf.buf_start;
 	p->size = p->buf.size;
 	p->length = 0;
+	p->flag = 0;
 	setup_mpp_packet_name(p);
 	p->ring_pool = pool;
 	*packet = p;

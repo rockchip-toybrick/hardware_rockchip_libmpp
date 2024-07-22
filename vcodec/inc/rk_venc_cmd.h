@@ -1057,6 +1057,7 @@ typedef enum MppEncSliceSplit_e {
 	/* change on quant parameter */
 	MPP_ENC_SPLIT_CFG_CHANGE_MODE           = (1 << 0),
 	MPP_ENC_SPLIT_CFG_CHANGE_ARG            = (1 << 1),
+	MPP_ENC_SPLIT_CFG_CHANGE_OUTPUT         = (1 << 2),
 	MPP_ENC_SPLIT_CFG_CHANGE_ALL            = (0xFFFFFFFF),
 } MppEncSliceSplitChange;
 
@@ -1065,6 +1066,10 @@ typedef enum MppEncSplitMode_e {
 	MPP_ENC_SPLIT_BY_BYTE,
 	MPP_ENC_SPLIT_BY_CTU,
 } MppEncSplitMode;
+
+typedef enum MppEncSplitOutMode_e {
+	MPP_ENC_SPLIT_OUT_LOWDELAY              = (1 << 0),
+} MppEncSplitOutMode;
 
 typedef struct MppEncSliceSplit_t {
 	RK_U32  change;
@@ -1087,6 +1092,14 @@ typedef struct MppEncSliceSplit_t {
 	 * for each slice.
 	 */
 	RK_U32  split_arg;
+
+	/*
+	* slice split output mode
+	*
+	* MPP_ENC_SPLIT_OUT_LOWDELAY
+	* - When enabled encoder will lowdelay output each slice in a single packet
+	*/
+	RK_U32  split_out;
 } MppEncSliceSplit;
 
 /**

@@ -41,6 +41,15 @@ typedef struct MppDevRegRdCfg_t {
 	RK_U32 offset;
 } MppDevRegRdCfg;
 
+/* slice fifo */
+typedef union MppEncSliceInfo_u {
+	RK_U32 val;
+	struct {
+		RK_U32 length  : 31;
+		RK_U32 last    : 1;
+	};
+} MppEncSliceInfo;
+
 typedef struct MppDevApi_t {
 	const char *name;
 	RK_U32 ctx_size;

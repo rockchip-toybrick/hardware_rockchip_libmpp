@@ -56,6 +56,7 @@
 #define PRINT_FUNCTION				0x80000000
 #define PRINT_LINE				0x40000000
 
+#define DEBUG_SLICE                             0x10000000
 /* reuse debug flag */
 #define DEBUG_DVBM_INFO				0x00000008
 #define DEBUG_ISP_INFO				0x00000040

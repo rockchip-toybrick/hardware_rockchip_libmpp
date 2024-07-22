@@ -267,7 +267,7 @@ void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry,
 	chan_entry->reenc = 0;
 }
 
-void mpp_vcodec_enc_int_handle(int chan_id)
+static void mpp_vcodec_event_frame(int chan_id)
 {
 	MppPacket packet = NULL;
 	MppPacket jpeg_packet = NULL;
@@ -316,6 +316,39 @@ void mpp_vcodec_enc_int_handle(int chan_id)
 	atomic_dec(&chan_entry->runing);
 	wake_up(&chan_entry->stop_wait);
 	vcodec_thread_trigger(venc->thd);
+
+	return;
+}
+
+static void mpp_vcodec_event_slice(int chan_id, void *param)
+{
+	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
+	MppPacket packet = NULL;
+
+	if (atomic_read(&chan_entry->cfg.comb_runing)) {
+		mpp_err("combo running fail because slice fifo.");
+	}
+
+	mpp_enc_slice_info((MppEnc)chan_entry->handle, param, &packet);
+	if (packet)
+		mpp_vcodec_enc_add_packet_list(chan_entry, packet);
+
+	return;
+}
+
+void mpp_vcodec_enc_int_handle(int chan_id, int event, void *param)
+{
+	switch (event) {
+	case MPP_VCODEC_EVENT_FRAME: {
+		mpp_vcodec_event_frame(chan_id);
+	} break;
+	case MPP_VCODEC_EVENT_SLICE: {
+		mpp_vcodec_event_slice(chan_id, param);
+	} break;
+	default: {
+		mpp_err("mpp vcodec event %d is invalid.\n", event);
+	} break;
+	}
 
 	return;
 }

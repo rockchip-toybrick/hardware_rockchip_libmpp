@@ -1730,7 +1730,8 @@ static void vepu540c_h265_setup_split(H265eV540cRegSet *regs, MppEncCfgSet *enc_
 		regs->reg_base.reg0218_sli_cnum.sli_splt_cnum_m1 = 0;
 
 		regs->reg_base.reg0217_sli_byte.sli_splt_byte = cfg->split_arg;
-		regs->reg_base.reg0192_enc_pic.slen_fifo = 0;
+		regs->reg_base.reg0192_enc_pic.slen_fifo = cfg->split_out ? 1 : 0;
+		regs->reg_ctl.reg0008_int_en.vslc_done_en = cfg->split_out ? 1 : 0;
 	} break;
 	case MPP_ENC_SPLIT_BY_CTU : {
 		regs->reg_base.reg0216_sli_splt.sli_splt = 1;
@@ -1741,7 +1742,8 @@ static void vepu540c_h265_setup_split(H265eV540cRegSet *regs, MppEncCfgSet *enc_
 		regs->reg_base.reg0218_sli_cnum.sli_splt_cnum_m1 = cfg->split_arg - 1;
 
 		regs->reg_base.reg0217_sli_byte.sli_splt_byte = 0;
-		regs->reg_base.reg0192_enc_pic.slen_fifo = 0;
+		regs->reg_base.reg0192_enc_pic.slen_fifo = cfg->split_out ? 1 : 0;
+		regs->reg_ctl.reg0008_int_en.vslc_done_en = cfg->split_out ? 1 : 0;
 	} break;
 	default : {
 		mpp_log_f("invalide slice split mode %d\n", cfg->split_mode);

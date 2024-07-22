@@ -779,7 +779,7 @@ static void setup_vepu540c_normal(HalVepu540cRegSet *regs)
 	/* reg006 INT_CLR is not set */
 	/* reg007 INT_STA is read only */
 	/* reg008 ~ reg0011 gap */
-	regs->reg_ctl.enc_wdg.vs_load_thd = 0xffff;
+	regs->reg_ctl.enc_wdg.vs_load_thd = 0xfffff;
 	regs->reg_ctl.enc_wdg.rfp_load_thd = 0; //xff;
 
 	/* reg015 DTRNS_MAP */
@@ -1834,7 +1834,8 @@ static void setup_vepu540c_split(HalVepu540cRegSet *regs,
 		regs->reg_base.sli_cnum.sli_splt_cnum_m1 = 0;
 
 		regs->reg_base.sli_byte.sli_splt_byte = cfg->split_arg;
-		regs->reg_base.enc_pic.slen_fifo = 0;
+		regs->reg_base.enc_pic.slen_fifo = cfg->split_out ? 1 : 0;
+		regs->reg_ctl.int_en.vslc_done_en = cfg->split_out ? 1 : 0;
 	}
 	break;
 	case MPP_ENC_SPLIT_BY_CTU: {
@@ -1847,7 +1848,8 @@ static void setup_vepu540c_split(HalVepu540cRegSet *regs,
 			cfg->split_arg - 1;
 
 		regs->reg_base.sli_byte.sli_splt_byte = 0;
-		regs->reg_base.enc_pic.slen_fifo = 0;
+		regs->reg_base.enc_pic.slen_fifo = cfg->split_out ? 1 : 0;
+		regs->reg_ctl.int_en.vslc_done_en = cfg->split_out ? 1 : 0;
 	}
 	break;
 	default: {

@@ -63,6 +63,24 @@
 #define RKVENC_JPEG_BSBS	(0x40c)
 #define RKVENC_JPEG_BSBR	(0x408)
 
+#define RKVENC_REG_EXT_LINE_BUF_BASE	(22)
+
+#define RKVENC_REG_ENC_PIC      (36)
+#define RKVENC_BIT_ENC_STND     (BIT(0))
+#define RKVENC_BIT_VAL_H264     (0)
+#define RKVENC_BIT_VAL_H265     (1)
+#define RKVENC_BIT_SLEN_FIFO    BIT(30)
+#define RKVENC_REG_SLI_SPLIT	(60)
+#define RKVENC_BIT_SLI_SPLIT	BIT(0)
+#define RKVENC_BIT_SLI_FLUSH	BIT(15)
+
+#define INT_STA_ENC_DONE_STA	BIT(0)
+#define INT_STA_SCLR_DONE_STA	BIT(2)
+#define INT_STA_SLC_DONE_STA	BIT(3)
+
+#define RKVENC_REG_SLICE_NUM_BASE	(0x4034)
+#define RKVENC_REG_SLICE_LEN_BASE	(0x4038)
+
 #define to_rkvenc_info(info)		\
 		container_of(info, struct rkvenc_hw_info, hw)
 #define to_rkvenc_task(ctx)		\
@@ -180,6 +198,10 @@ struct rkvenc_task {
 	struct mpp_request r_reqs[MPP_MAX_MSG_NUM];
 	struct mpp_dma_buffer *table;
 	u32 task_no;
+	/* split output / slice mode info */
+	u32 task_split;
+	u32 last_slice_found;
+	MppEncSliceInfo sli_info;
 };
 
 struct rkvenc_link_header {
@@ -827,6 +849,32 @@ static void update_online_info(struct mpp_dev *mpp, u32 pipe_id)
 }
 #endif
 
+static void rkvenc_check_split_task(struct rkvenc_task *task)
+{
+	u32 slen_fifo_en = 0;
+	u32 sli_split_en = 0;
+
+	if (task->reg[RKVENC_CLASS_PIC].valid) {
+		u32 *reg = task->reg[RKVENC_CLASS_PIC].data;
+		u32 enc_stnd = reg[RKVENC_REG_ENC_PIC] & RKVENC_BIT_ENC_STND;
+
+		slen_fifo_en = (reg[RKVENC_REG_ENC_PIC] & RKVENC_BIT_SLEN_FIFO) ? 1 : 0;
+		sli_split_en = (reg[RKVENC_REG_SLI_SPLIT] & RKVENC_BIT_SLI_SPLIT) ? 1 : 0;
+
+		/*
+		 * FIXUP: rkvenc2 hardware bug:
+		 * H.264 encoding has bug when external line buffer and slice flush both
+		 * are enabled.
+		 */
+		if (sli_split_en && slen_fifo_en &&
+		    enc_stnd == RKVENC_BIT_VAL_H264 &&
+		    reg[RKVENC_REG_EXT_LINE_BUF_BASE])
+			reg[RKVENC_REG_SLI_SPLIT] &= ~RKVENC_BIT_SLI_FLUSH;
+	}
+
+	task->task_split = sli_split_en && slen_fifo_en;
+}
+
 static void *rkvenc_alloc_task(struct mpp_session *session,
 			       struct mpp_task_msgs *msgs)
 {
@@ -882,6 +930,7 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 
 	task->clk_mode = CLK_MODE_NORMAL;
 
+	rkvenc_check_split_task(task);
 	mpp_debug_leave();
 
 	return mpp_task;
@@ -1268,6 +1317,32 @@ static void rkvenc_clear_dvbm_info(struct mpp_dev *mpp)
 		       dvbm_info, dvbm_en);
 }
 
+static void rkvenc_read_slice_len(struct mpp_task *mpp_task, struct rkvenc_task *task,
+				  struct mpp_dev *mpp, u32 sli_num)
+{
+	struct mpp_session *session = mpp_task->session;
+	u32 i;
+	u32 last = 0;
+
+	last = mpp->irq_status & INT_STA_ENC_DONE_STA;
+	for (i = 0; i < sli_num; i++) {
+		task->sli_info.val = mpp_read_relaxed(mpp, RKVENC_REG_SLICE_LEN_BASE);
+
+		if (last && i == sli_num - 1) {
+			task->sli_info.last = 1;
+			task->last_slice_found = 1;
+		}
+
+		mpp_debug(DEBUG_SLICE, "wr %3d len %d %s\n",
+			  i, task->sli_info.length,
+			  task->sli_info.last ? "last" : "continue");
+
+		if (session->callback && mpp_task->clbk_en)
+			session->callback(session->chn_id, MPP_VCODEC_EVENT_SLICE,
+					  &task->sli_info.val);
+	}
+}
+
 irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 {
 	struct mpp_dev *mpp = param;
@@ -1277,10 +1352,12 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	struct rkvenc_task *task;
 	struct mpp_session *session;
 	struct rkvenc2_session_priv *priv;
+	u32 sli_num;
 
 	mpp_debug_enter();
 
 	/* get irq status */
+	sli_num = mpp_read_relaxed(mpp, RKVENC_REG_SLICE_NUM_BASE);
 	mpp->irq_status = mpp_read(mpp, hw->int_sta_base);
 	if (!mpp->irq_status)
 		return IRQ_NONE;
@@ -1303,6 +1380,30 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	task = to_rkvenc_task(mpp_task);
 	session = mpp_task->session;
 	priv = mpp_task->session->priv;
+
+	/* slice fifo */
+	if (task && task->task_split) {
+		if (mpp->irq_status & INT_STA_SLC_DONE_STA) {
+			rkvenc_read_slice_len(mpp_task, task, mpp, sli_num);
+			if ((mpp->irq_status & INT_STA_ENC_DONE_STA) == 0) {
+				mpp_debug(DEBUG_SLICE,
+					  "mpp->irq_status[0x%08x] slice done return.\n",
+					  mpp->irq_status);
+				return IRQ_HANDLED;
+			}
+		}
+
+		if (task->last_slice_found == 0 && (mpp->irq_status & INT_STA_ENC_DONE_STA)) {
+			mpp_debug(DEBUG_SLICE, "send empty slice info packet.\n");
+			task->sli_info.last = 1;
+			task->sli_info.length = 0;
+			task->last_slice_found = 1;
+			if (session->callback && mpp_task->clbk_en)
+				session->callback(session->chn_id, MPP_VCODEC_EVENT_SLICE,
+						  &task->sli_info.val);
+		}
+
+	}
 
 	if (test_and_set_bit(TASK_STATE_HANDLE, &mpp_task->state)) {
 		mpp_err("task %d has been handled state %#lx\n",
@@ -1368,7 +1469,7 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	mpp_taskqueue_trigger_work(mpp);
 
 	if (session->callback && mpp_task->clbk_en)
-		session->callback(session->chn_id);
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 
 	up_read(&mpp->work_sem);
 	mpp_debug_leave();
@@ -1492,6 +1593,10 @@ static int rkvenc_free_task(struct mpp_session *session, struct mpp_task *mpp_ta
 
 	mpp_task_finalize(session, mpp_task);
 	rkvenc_invalid_class_msg(task);
+
+	task->task_split = 0;
+	task->last_slice_found = 0;
+
 	return 0;
 }
 
@@ -1662,7 +1767,7 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	mpp_taskqueue_pop_running(mpp->queue, task);
 
 	if (session->callback && clbk_en)
-		session->callback(session->chn_id);
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 	if (mpp->hw_ops->reset)
 		mpp->hw_ops->reset(mpp);
 	mpp_taskqueue_trigger_work(mpp);

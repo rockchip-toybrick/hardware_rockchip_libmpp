@@ -21,6 +21,8 @@
 #define MPP_PACKET_FLAG_INTERNAL        (0x00000004)
 #define MPP_PACKET_FLAG_EXTERNAL        (0x00000008)
 #define MPP_PACKET_FLAG_INTRA           (0x00000010)
+#define MPP_PACKET_FLAG_PARTITION       (0x00000020)
+#define MPP_PACKET_FLAG_EOI             (0x00000040)
 
 typedef union MppPacketStatus_t {
 	RK_U32 val;

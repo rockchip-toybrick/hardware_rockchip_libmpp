@@ -252,6 +252,15 @@ struct mpp_dev {
 	void __iomem *isp_base;
 };
 
+/* slice fifo */
+typedef union MppEncSliceInfo_u {
+	u32 val;
+	struct {
+		u32 length  : 31;
+		u32 last    : 1;
+	};
+} MppEncSliceInfo;
+
 struct mpp_session {
 	enum MPP_DEVICE_TYPE device_type;
 	u32 index;
@@ -292,7 +301,7 @@ struct mpp_session {
 	int (*wait_result)(struct mpp_session *session,
 			   struct mpp_task_msgs *msgs);
 	void (*deinit)(struct mpp_session *session);
-	void (*callback)(u32 chn_id);
+	void (*callback)(u32 chn_id, u32 event, void *param);
 };
 
 /* task state in work thread */
@@ -312,6 +321,12 @@ enum mpp_task_state {
 	TASK_STATE_PROC_DONE	= 11,
 	TASK_STATE_LINK_FILLED	= 12,
 	TASK_STATE_LINK_CONFIG	= 13,
+};
+
+enum mpp_vcodec_event_type {
+	MPP_VCODEC_EVENT_FRAME,
+	MPP_VCODEC_EVENT_SLICE,
+	MPP_VCODEC_EVENT_BUTT,
 };
 
 /* The context for the a task */
