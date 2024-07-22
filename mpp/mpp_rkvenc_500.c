@@ -71,6 +71,7 @@
 
 /* dvbm regs */
 #define RKVENC_DVBM_CFG		(0x60)
+#define RKVENC_DVBM_EN		(BIT(0))
 #define VEPU_CONNETC_CUR	(BIT(2))
 #define DVBM_ISP_CONNETC	(BIT(4))
 #define DVBM_VEPU_CONNETC	(BIT(5))
@@ -307,6 +308,7 @@ struct rkvenc_dev {
 	unsigned long dvbm_setup;
 #endif
 	u32 dvbm_reg_save[RKVENC_DVBM_REG_NUM];
+	u32 dvbm_cfg;
 	bool skip_dvbm_discnct;
 	spinlock_t dvbm_lock;
 	atomic_t isp_fcnt;
@@ -835,7 +837,10 @@ static int rkvenc_connect_dvbm(struct mpp_dev *mpp, u32 dvbm_cfg)
 		else
 			dvbm_cfg |= DVBM_ISP_CONNETC ;
 	} else {
-		dvbm_cfg |= DVBM_ISP_CONNETC | VEPU_CONNETC_CUR;
+		if (atomic_read(&enc->isp_fcnt) > 0)
+			dvbm_cfg |= DVBM_ISP_CONNETC | VEPU_CONNETC_CUR;
+		else
+			dvbm_cfg |= DVBM_ISP_CONNETC;
 	}
 	mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
 	mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg | DVBM_VEPU_CONNETC);
@@ -1822,7 +1827,8 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		u32 isp_id = *(u32*)arg;
 
 		mpp_debug(DEBUG_ISP_INFO, "isp %d connect\n", isp_id);
-		mpp_write(mpp, 0x60, BIT(4) | BIT(0) | VEPU_CONNETC_CUR);
+		mpp_write(mpp, RKVENC_DVBM_CFG, DVBM_ISP_CONNETC | RKVENC_DVBM_EN |
+			  VEPU_CONNETC_CUR);
 		if (!enc->dvbm_setup)
 			atomic_set(&enc->isp_fcnt, 0);
 		set_bit(isp_id, &enc->dvbm_setup);
@@ -1833,7 +1839,7 @@ int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		clear_bit(isp_id, &enc->dvbm_setup);
 		mpp_debug(DEBUG_ISP_INFO, "isp %d disconnect 0x%lx\n", isp_id, enc->dvbm_setup);
 		if (!enc->dvbm_setup) {
-			mpp_write(mpp, 0x60, 0);
+			mpp_write(mpp, RKVENC_DVBM_CFG, 0);
 			mpp->always_on = 0;
 			atomic_set(&enc->isp_fcnt, 0);
 		}
@@ -2108,11 +2114,22 @@ static void rkvenc_dvbm_reg_sav_restore(struct mpp_dev *mpp, bool is_save)
 	u32 off;
 
 	if (is_save) {
+		enc->dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
+		if (!(enc->dvbm_cfg & RKVENC_DVBM_EN))
+			return;
 		for (off = RKVENC_DVBM_REG_S; off <= RKVENC_DVBM_REG_E; off += 4)
 			enc->dvbm_reg_save[off / 4] = mpp_read(mpp, off);
 	} else {
+		u32 dvbm_cfg;
+
+		if (!(enc->dvbm_cfg & RKVENC_DVBM_EN))
+			return;
+
 		for (off = RKVENC_DVBM_REG_S; off <= RKVENC_DVBM_REG_E; off += 4)
 			mpp_write(mpp, off, enc->dvbm_reg_save[off / 4]);
+		dvbm_cfg = enc->dvbm_cfg & (~DVBM_VEPU_CONNETC);
+		mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
+		atomic_set(&enc->isp_fcnt, 0);
 	}
 }
 
