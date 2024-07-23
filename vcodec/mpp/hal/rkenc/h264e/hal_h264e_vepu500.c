@@ -142,45 +142,19 @@ typedef struct HalH264eVepu500Ctx_t {
 	RK_U32                  smear_size;
 } HalH264eVepu500Ctx;
 
-// #define CHROMA_KLUT_TAB_SIZE    (24 * sizeof(RK_U32))
-
-// static RK_U32 h264e_klut_weight[30] = {
-//     0x0a000010, 0x00064000, 0x14000020, 0x000c8000,
-//     0x28000040, 0x00194000, 0x50800080, 0x0032c000,
-//     0xa1000100, 0x00658000, 0x42800200, 0x00cb0001,
-//     0x85000400, 0x01964002, 0x0a000800, 0x032c8005,
-//     0x14001000, 0x0659400a, 0x28802000, 0x0cb2c014,
-//     0x51004000, 0x1965c028, 0xa2808000, 0x32cbc050,
-//     0x4500ffff, 0x659780a1, 0x8a81fffe, 0xCC000142,
-//     0xFF83FFFF, 0x000001FF,
-// };
-
-// static RK_U32 h264_mode_bias[16] = {
-//     0,  2,  4,  6,
-//     8,  10, 12, 14,
-//     16, 18, 20, 24,
-//     28, 32, 64, 128
-// };
-
 static RK_S32 h264_aq_tthd_default[16] = {
-	0,  0,  0,  0,
-	3,  3,  5,  5,
-	8,  8,  8,  15,
-	15, 20, 25, 25,
+	0,  0,  0,  0,  3,  3,  5,  5,
+	8,  8,  15, 15, 20, 25, 25, 25
 };
 
 static RK_S32 h264_P_aq_step_default[16] = {
-	-8, -7, -6, -5,
-	-4, -3, -2, -1,
-	0,  1,  2,  3,
-	4,  5,  7,  8,
+	-8, -7, -6, -5, -4, -3, -2, -1,
+	1,  2,  3,  4,  5,  6,  7,  8
 };
 
 static RK_S32 h264_I_aq_step_default[16] = {
-	-8, -7, -6, -5,
-	-4, -3, -2, -1,
-	0,  1,  2,  3,
-	4,  5,  8,  8,
+	-8, -7, -6, -5, -4, -3, -2, -1,
+	1,  2,  3,  4,  5,  6,  7,  8
 };
 
 static void clear_ext_line_bufs(HalH264eVepu500Ctx *ctx)
@@ -1057,8 +1031,8 @@ static void setup_vepu500_rdo_pred(HalVepu500RegSet *regs, H264eSps *sps,
 	regs->reg_frm.rdo_cfg.scl_lst_sel    = pps->scaling_list_mode;
 	regs->reg_frm.rdo_cfg.atf_e          = 1;
 	regs->reg_frm.rdo_cfg.atr_e          = 1;
-	// regs->reg_frm.rdo_cfg.intra_cost_e   = 1;
-	regs->reg_frm.rdo_mark_mode.rdo_mark_mode       = 0x100;
+	regs->reg_frm.rdo_cfg.atr_mult_sel_e = 1;
+	regs->reg_frm.rdo_mark_mode.rdo_mark_mode = 0;
 
 	hal_h264e_dbg_func("leave\n");
 }
@@ -1161,8 +1135,8 @@ static void setup_vepu500_rdo_cfg(Vepu500SqiCfg *reg)
 	hal_h264e_dbg_func("leave\n");
 }
 
-static void setup_vepu500_rc_base(HalVepu500RegSet *regs, H264eSps *sps,
-				  H264eSlice *slice, MppEncHwCfg *hw,
+static void setup_vepu500_rc_base(HalH264eVepu500Ctx *ctx, HalVepu500RegSet *regs,
+				  H264eSps *sps, H264eSlice *slice, MppEncHwCfg *hw,
 				  EncRcTask *rc_task)
 {
 	EncRcTaskInfo *rc_info = &rc_task->info;
@@ -1190,18 +1164,33 @@ static void setup_vepu500_rc_base(HalVepu500RegSet *regs, H264eSps *sps,
 	hal_h264e_dbg_func("enter\n");
 
 	regs->reg_frm.enc_pic.pic_qp         = qp_target;
-
 	regs->reg_frm.rc_cfg.rc_en          = 1;
 	regs->reg_frm.rc_cfg.aq_en          = 1;
-	// regs->reg_frm.rc_cfg.aq_mode        = 0;
 	regs->reg_frm.rc_cfg.rc_ctu_num     = mb_w;
 
 	regs->reg_frm.rc_qp.rc_qp_range    = (slice->slice_type == H264_I_SLICE) ?
 					     hw->qp_delta_row_i : hw->qp_delta_row;
 	regs->reg_frm.rc_qp.rc_max_qp      = qp_max;
 	regs->reg_frm.rc_qp.rc_min_qp      = qp_min;
+	regs->reg_frm.rc_tgt.ctu_ebit      = mb_target_bits_mul_16;
 
-	regs->reg_frm.rc_tgt.ctu_ebit       = mb_target_bits_mul_16;
+	{
+		MppEncRcCfg *rc = &ctx->cfg->rc;
+		RK_S32 fqp_min, fqp_max;
+
+		if (slice->slice_type == H264_I_SLICE) {
+			fqp_min = rc->fm_lvl_qp_min_i;
+			fqp_max = rc->fm_lvl_qp_max_i;
+		} else {
+			fqp_min = rc->fm_lvl_qp_min_p;
+			fqp_max = rc->fm_lvl_qp_max_p;
+		}
+
+		if (fqp_min == fqp_max) {
+			regs->reg_frm.enc_pic.pic_qp = fqp_min;
+			regs->reg_frm.rc_qp.rc_qp_range = 0;
+		}
+	}
 
 	regs->reg_rc_roi.rc_adj0.qp_adj0        = -2;
 	regs->reg_rc_roi.rc_adj0.qp_adj1        = -1;
@@ -1740,21 +1729,10 @@ static RK_U32 h264e_lambda_default[58] = {
 
 static void setup_vepu500_l2(HalVepu500RegSet *regs, H264eSlice *slice, MppEncHwCfg *hw)
 {
-	RK_U32 i;
-
 	hal_h264e_dbg_func("enter\n");
 
 	memcpy(regs->reg_param.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[6], H264E_LAMBDA_TAB_SIZE);
 
-	/*
-		if (hw->qbias_en) {
-		    regs->reg_param.qnt_bias.qnt_bias_i = hw->qbias_i;
-		    regs->reg_param.qnt_bias.qnt_bias_p = hw->qbias_p;
-		} else {
-		    regs->reg_param.qnt_bias.qnt_bias_i = 683;
-		    regs->reg_param.qnt_bias.qnt_bias_p = 341;
-		}
-	 */
 	regs->reg_param.iprd_tthdy4_0.iprd_tthdy4_0 = 1;
 	regs->reg_param.iprd_tthdy4_0.iprd_tthdy4_1 = 3;
 	regs->reg_param.iprd_tthdy4_1.iprd_tthdy4_2 = 6;
@@ -1792,7 +1770,7 @@ static void setup_vepu500_l2(HalVepu500RegSet *regs, H264eSlice *slice, MppEncHw
 		regs->reg_param.me_sqi.cime_fuse   = 1;
 		regs->reg_param.me_sqi.itp_mode    = 0;
 		regs->reg_param.me_sqi.move_lambda = 0;
-		regs->reg_param.me_sqi.rime_lvl_mrg     = 0;
+		regs->reg_param.me_sqi.rime_lvl_mrg     = 1;
 		regs->reg_param.me_sqi.rime_prelvl_en   = 0;
 		regs->reg_param.me_sqi.rime_prersu_en   = 0;
 
@@ -1803,6 +1781,8 @@ static void setup_vepu500_l2(HalVepu500RegSet *regs, H264eSlice *slice, MppEncHw
 
 		/* 0x1768 */
 		regs->reg_param.cime_madp_th.cime_madp_th = 16;
+		regs->reg_param.cime_madp_th.ratio_consi_cfg = 13;
+		regs->reg_param.cime_madp_th.ratio_bmv_dist = 9;
 
 		/* 0x176c */
 		regs->reg_param.cime_multi.cime_multi0 = 8;
@@ -1843,39 +1823,6 @@ static void setup_vepu500_l2(HalVepu500RegSet *regs, H264eSlice *slice, MppEncHw
 		regs->reg_rc_roi.madp_st_thd0.madp_th1 = 9 << 4;
 		/* 0x106C */
 		regs->reg_rc_roi.madp_st_thd1.madp_th2 = 15 << 4;
-	}
-
-	{
-		RK_U8* thd = (RK_U8*)&regs->reg_rc_roi.aq_tthd0;
-		RK_S32 *aq_step, *aq_thd;
-
-		if (slice->slice_type == H264_I_SLICE) {
-			aq_thd = &hw->aq_thrd_i[0];
-			aq_step = &hw->aq_step_i[0];
-		} else {
-			aq_thd = &hw->aq_thrd_p[0];
-			aq_step = &hw->aq_step_p[0];
-		}
-
-		regs->reg_rc_roi.aq_stp0.aq_stp_0t1 = aq_step[0] & 0x1f;
-		regs->reg_rc_roi.aq_stp0.aq_stp_1t2 = aq_step[1] & 0x1f;
-		regs->reg_rc_roi.aq_stp0.aq_stp_2t3 = aq_step[2] & 0x1f;
-		regs->reg_rc_roi.aq_stp0.aq_stp_3t4 = aq_step[3] & 0x1f;
-		regs->reg_rc_roi.aq_stp0.aq_stp_4t5 = aq_step[4] & 0x1f;
-		regs->reg_rc_roi.aq_stp1.aq_stp_5t6 = aq_step[5] & 0x1f;
-		regs->reg_rc_roi.aq_stp1.aq_stp_6t7 = aq_step[6] & 0x1f;
-		regs->reg_rc_roi.aq_stp1.aq_stp_7t8 = aq_step[7] & 0x1f;
-		regs->reg_rc_roi.aq_stp1.aq_stp_8t9 = aq_step[8] & 0x1f;
-		regs->reg_rc_roi.aq_stp1.aq_stp_9t10 = aq_step[9] & 0x1f;
-		regs->reg_rc_roi.aq_stp1.aq_stp_10t11 = aq_step[10] & 0x1f;
-		regs->reg_rc_roi.aq_stp2.aq_stp_11t12 = aq_step[11] & 0x1f;
-		regs->reg_rc_roi.aq_stp2.aq_stp_12t13 = aq_step[12] & 0x1f;
-		regs->reg_rc_roi.aq_stp2.aq_stp_13t14 = aq_step[13] & 0x1f;
-		regs->reg_rc_roi.aq_stp2.aq_stp_14t15 = aq_step[14] & 0x1f;
-		regs->reg_rc_roi.aq_stp2.aq_stp_b15 = aq_step[15];
-
-		for (i = 0; i < 16; i++)
-			thd[i] = aq_thd[i];
 	}
 
 	hal_h264e_dbg_func("leave\n");
@@ -1925,6 +1872,66 @@ static MPP_RET vepu500_h264e_set_dvbm(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	return MPP_OK;
 }
 
+static void setup_vepu500_aq(HalH264eVepu500Ctx *ctx)
+{
+	MppEncCfgSet *cfg = ctx->cfg;
+	MppEncHwCfg *hw = &cfg->hw;
+	Vepu500RcRoiCfg *s = &ctx->regs_set->reg_rc_roi;
+	RK_U8* thd = (RK_U8*)&s->aq_tthd0;
+	RK_S32 *aq_step, *aq_thd;
+	RK_U8 i;
+
+	if (ctx->slice->slice_type == H264_I_SLICE) {
+		aq_thd = &hw->aq_thrd_i[0];
+		aq_step = &hw->aq_step_i[0];
+	} else {
+		aq_thd = &hw->aq_thrd_p[0];
+		aq_step = &hw->aq_step_p[0];
+	}
+
+	for (i = 0; i < 16; i++)
+		thd[i] = aq_thd[i] & 0xff;
+
+	s->aq_stp0.aq_stp_s0 = aq_step[0] & 0x1f;
+	s->aq_stp0.aq_stp_0t1 = aq_step[1] & 0x1f;
+	s->aq_stp0.aq_stp_1t2 = aq_step[2] & 0x1f;
+	s->aq_stp0.aq_stp_2t3 = aq_step[3] & 0x1f;
+	s->aq_stp0.aq_stp_3t4 = aq_step[4] & 0x1f;
+	s->aq_stp0.aq_stp_4t5 = aq_step[5] & 0x1f;
+	s->aq_stp1.aq_stp_5t6 = aq_step[6] & 0x1f;
+	s->aq_stp1.aq_stp_6t7 = aq_step[7] & 0x1f;
+	s->aq_stp1.aq_stp_7t8 = 0;
+	s->aq_stp1.aq_stp_8t9 = aq_step[8] & 0x1f;
+	s->aq_stp1.aq_stp_9t10 = aq_step[9] & 0x1f;
+	s->aq_stp1.aq_stp_10t11 = aq_step[10] & 0x1f;
+	s->aq_stp2.aq_stp_11t12 = aq_step[11] & 0x1f;
+	s->aq_stp2.aq_stp_12t13 = aq_step[12] & 0x1f;
+	s->aq_stp2.aq_stp_13t14 = aq_step[13] & 0x1f;
+	s->aq_stp2.aq_stp_14t15 = aq_step[14] & 0x1f;
+	s->aq_stp2.aq_stp_b15 = aq_step[15] & 0x1f;
+	s->aq_clip.aq16_rnge = 5;
+}
+
+static void setup_vepu500_quant(HalH264eVepu500Ctx *ctx)
+{
+	HalVepu500RegSet *regs = ctx->regs_set;
+	Vepu500Param *s = &regs->reg_param;
+
+	s->bias_madi_thd_comb.bias_madi_th0 = 0;//5;
+	s->bias_madi_thd_comb.bias_madi_th1 = 0;//13;
+	s->bias_madi_thd_comb.bias_madi_th2 = 0;//27;
+
+	s->qnt0_i_bias_comb.bias_i_val0 = 0;//171;
+	s->qnt0_i_bias_comb.bias_i_val1 = 0;//150;
+	s->qnt0_i_bias_comb.bias_i_val2 = 0;//120;
+	s->qnt1_i_bias_comb.bias_i_val3 = 683;//100;
+
+	s->qnt0_p_bias_comb.bias_p_val0 = 0;//85;
+	s->qnt0_p_bias_comb.bias_p_val1 = 0;//80;
+	s->qnt0_p_bias_comb.bias_p_val2 = 0;//70;
+	s->qnt1_p_bias_comb.bias_p_val3 = 341;//65;
+}
+
 static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 {
 	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *)hal;
@@ -1952,8 +1959,10 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu500_codec(regs, sps, pps, slice);
 	setup_vepu500_rdo_pred(regs, sps, pps, slice);
 	setup_vepu500_rdo_cfg(&regs->reg_sqi);
+	setup_vepu500_aq(ctx);
+	setup_vepu500_quant(ctx);
 
-	setup_vepu500_rc_base(regs, sps, slice, &cfg->hw, rc_task);
+	setup_vepu500_rc_base(ctx, regs, sps, slice, &cfg->hw, rc_task);
 	setup_vepu500_io_buf(ctx, task);
 	setup_vepu500_recn_refr(ctx, regs);
 

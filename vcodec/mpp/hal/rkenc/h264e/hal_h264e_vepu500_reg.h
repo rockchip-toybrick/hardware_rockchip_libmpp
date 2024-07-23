@@ -660,11 +660,7 @@ typedef struct Vepu500RcRoiCfg_t {
 	/* 0x00001060 reg1048 */
 	struct {
 		RK_U32 aq16_rnge         : 4;
-		RK_U32 aq32_rnge         : 4;
-		RK_U32 aq8_rnge          : 5;
-		RK_U32 aq16_dif0         : 5;
-		RK_U32 aq16_dif1         : 5;
-		RK_U32 reserved          : 1;
+		RK_U32 reserved          : 20;
 		RK_U32 aq_cme_en         : 1;
 		RK_U32 aq_subj_cme_en    : 1;
 		RK_U32 aq_rme_en         : 1;
