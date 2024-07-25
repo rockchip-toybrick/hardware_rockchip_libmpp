@@ -100,6 +100,10 @@
 enum {
 	INT_EN		= 0x20,
 	INT_MSK		= 0x24,
+	ADR_VSY_T	= 0x270,
+	ADR_VSC_T	= 0x274,
+	ADR_VSY_B	= 0x278,
+	ADR_VSC_B	= 0x27c,
 	SRC0_ADDR	= 0x280,
 	SRC1_ADDR	= 0x284,
 	SRC2_ADDR	= 0x288,
@@ -957,6 +961,10 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 	mpp_write_relaxed(mpp, INT_EN, param->int_en);
 	mpp_write_relaxed(mpp, INT_MSK, param->int_msk);
+	mpp_write_relaxed(mpp, ADR_VSY_T, 0);
+	mpp_write_relaxed(mpp, ADR_VSC_T, 0);
+	mpp_write_relaxed(mpp, ADR_VSY_B, 0);
+	mpp_write_relaxed(mpp, ADR_VSC_B, 0);
 	mpp_write_relaxed(mpp, SRC0_ADDR, param->src0_addr);
 	mpp_write_relaxed(mpp, SRC1_ADDR, param->src1_addr);
 	mpp_write_relaxed(mpp, SRC2_ADDR, param->src2_addr);
