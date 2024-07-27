@@ -1057,7 +1057,7 @@ static void setup_vepu500_rdo_pred(HalH264eVepu500Ctx *ctx, H264eSps *sps,
 	regs->reg_frm.rdo_cfg.ccwa_e         = 1;
 	regs->reg_frm.rdo_cfg.scl_lst_sel    = pps->scaling_list_mode;
 	regs->reg_frm.rdo_cfg.atf_e          = 1;
-	regs->reg_frm.rdo_cfg.atr_e          = 1;
+	regs->reg_frm.rdo_cfg.atr_e          = ctx->cfg->tune.atr_str > 0;;
 	regs->reg_frm.rdo_cfg.atr_mult_sel_e = 1;
 	regs->reg_frm.rdo_mark_mode.rdo_mark_mode = 0;
 
@@ -1944,6 +1944,47 @@ static void setup_vepu500_anti_stripe(HalH264eVepu500Ctx *ctx)
 	s->iprd_wgtc8.iprd_wgtc8_3 = 19;
 }
 
+static void setup_vepu500_anti_ringing(HalH264eVepu500Ctx *ctx)
+{
+	HalVepu500RegSet *regs = ctx->regs_set;
+	Vepu500SqiCfg *s = &regs->reg_sqi;
+
+	s->atr_thd.atr_qp = 32;
+	if (ctx->slice->slice_type == H264_I_SLICE) {
+		s->atr_thd.atr_thd0 = 1;
+		s->atr_thd.atr_thd1 = 2;
+		s->atr_thd.atr_thd2 = 6;
+
+		s->atr_wgt16.atr_lv16_wgt0 = 16;
+		s->atr_wgt16.atr_lv16_wgt1 = 16;
+		s->atr_wgt16.atr_lv16_wgt2 = 16;
+
+		s->atr_wgt8.atr_lv8_wgt0 = 22;
+		s->atr_wgt8.atr_lv8_wgt1 = 21;
+		s->atr_wgt8.atr_lv8_wgt2 = 20;
+
+		s->atr_wgt4.atr_lv4_wgt0 = 20;
+		s->atr_wgt4.atr_lv4_wgt1 = 18;
+		s->atr_wgt4.atr_lv4_wgt2 = 16;
+	} else {
+		s->atr_thd.atr_thd0 = 2;
+		s->atr_thd.atr_thd1 = 4;
+		s->atr_thd.atr_thd2 = 9;
+
+		s->atr_wgt16.atr_lv16_wgt0 = 25;
+		s->atr_wgt16.atr_lv16_wgt1 = 20;
+		s->atr_wgt16.atr_lv16_wgt2 = 16;
+
+		s->atr_wgt8.atr_lv8_wgt0 = 25;
+		s->atr_wgt8.atr_lv8_wgt1 = 20;
+		s->atr_wgt8.atr_lv8_wgt2 = 18;
+
+		s->atr_wgt4.atr_lv4_wgt0 = 25;
+		s->atr_wgt4.atr_lv4_wgt1 = 20;
+		s->atr_wgt4.atr_lv4_wgt2 = 16;
+	}
+}
+
 static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 {
 	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *)hal;
@@ -1974,6 +2015,7 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu500_aq(ctx);
 	setup_vepu500_quant(ctx);
 	setup_vepu500_anti_stripe(ctx);
+	setup_vepu500_anti_ringing(ctx);
 
 	setup_vepu500_rc_base(ctx, regs, sps, slice, &cfg->hw, rc_task);
 	setup_vepu500_io_buf(ctx, task);
