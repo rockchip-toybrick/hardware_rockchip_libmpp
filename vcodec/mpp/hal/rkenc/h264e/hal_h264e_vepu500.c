@@ -142,6 +142,26 @@ typedef struct HalH264eVepu500Ctx_t {
 	RK_U32                  smear_size;
 } HalH264eVepu500Ctx;
 
+#define H264E_LAMBDA_TAB_SIZE       (52 * sizeof(RK_U32))
+
+static RK_U32 h264e_lambda_default[60] = {
+	0x00000005, 0x00000006, 0x00000007, 0x00000009,
+	0x0000000b, 0x0000000e, 0x00000012, 0x00000016,
+	0x0000001c, 0x00000024, 0x0000002d, 0x00000039,
+	0x00000048, 0x0000005b, 0x00000073, 0x00000091,
+	0x000000b6, 0x000000e6, 0x00000122, 0x0000016d,
+	0x000001cc, 0x00000244, 0x000002db, 0x00000399,
+	0x00000489, 0x000005b6, 0x00000733, 0x00000912,
+	0x00000b6d, 0x00000e66, 0x00001224, 0x000016db,
+	0x00001ccc, 0x00002449, 0x00002db7, 0x00003999,
+	0x00004892, 0x00005b6f, 0x00007333, 0x00009124,
+	0x0000b6de, 0x0000e666, 0x00012249, 0x00016dbc,
+	0x0001cccc, 0x00024492, 0x0002db79, 0x00039999,
+	0x00048924, 0x0005b6f2, 0x00073333, 0x00091249,
+	0x000b6de5, 0x000e6666, 0x00122492, 0x0016dbcb,
+	0x001ccccc, 0x00244924, 0x002db796, 0x00399998,
+};
+
 static RK_S32 h264_aq_tthd_default[16] = {
 	0,  0,  0,  0,  3,  3,  5,  5,
 	8,  8,  15, 15, 20, 25, 25, 25
@@ -1011,16 +1031,23 @@ static void setup_vepu500_codec(HalVepu500RegSet *regs, H264eSps *sps,
 	hal_h264e_dbg_func("leave\n");
 }
 
-static void setup_vepu500_rdo_pred(HalVepu500RegSet *regs, H264eSps *sps,
+static void setup_vepu500_rdo_pred(HalH264eVepu500Ctx *ctx, H264eSps *sps,
 				   H264ePps *pps, H264eSlice *slice)
 {
+	HalVepu500RegSet *regs = ctx->regs_set;
+	RK_S32 lambda_idx = 0;
 	hal_h264e_dbg_func("enter\n");
 
-	if (slice->slice_type == H264_I_SLICE)
+	if (slice->slice_type == H264_I_SLICE) {
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 6;
-
-	else
+		lambda_idx = ctx->cfg->tune.lambda_i_idx;
+	} else {
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 9;
+		lambda_idx = ctx->cfg->tune.lambda_idx;
+	}
+
+	memcpy(regs->reg_param.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[lambda_idx],
+	       H264E_LAMBDA_TAB_SIZE);
 
 	regs->reg_frm.rdo_cfg.rect_size      = (sps->profile_idc == H264_PROFILE_BASELINE &&
 						sps->level_idc <= H264_LEVEL_3_0) ? 1 : 0;
@@ -1707,31 +1734,9 @@ static void setup_vepu500_me(HalVepu500RegSet *regs, H264eSps *sps,
 	hal_h264e_dbg_func("leave\n");
 }
 
-#define H264E_LAMBDA_TAB_SIZE       (52 * sizeof(RK_U32))
-
-static RK_U32 h264e_lambda_default[58] = {
-	0x00000003, 0x00000005, 0x00000006, 0x00000007,
-	0x00000009, 0x0000000b, 0x0000000e, 0x00000012,
-	0x00000016, 0x0000001c, 0x00000024, 0x0000002d,
-	0x00000039, 0x00000048, 0x0000005b, 0x00000073,
-	0x00000091, 0x000000b6, 0x000000e6, 0x00000122,
-	0x0000016d, 0x000001cc, 0x00000244, 0x000002db,
-	0x00000399, 0x00000489, 0x000005b6, 0x00000733,
-	0x00000912, 0x00000b6d, 0x00000e66, 0x00001224,
-	0x000016db, 0x00001ccc, 0x00002449, 0x00002db7,
-	0x00003999, 0x00004892, 0x00005b6f, 0x00007333,
-	0x00009124, 0x0000b6de, 0x0000e666, 0x00012249,
-	0x00016dbc, 0x0001cccc, 0x00024492, 0x0002db79,
-	0x00039999, 0x00048924, 0x0005b6f2, 0x00073333,
-	0x00091249, 0x000b6de5, 0x000e6666, 0x00122492,
-	0x0016dbcb, 0x001ccccc,
-};
-
 static void setup_vepu500_l2(HalVepu500RegSet *regs, H264eSlice *slice, MppEncHwCfg *hw)
 {
 	hal_h264e_dbg_func("enter\n");
-
-	memcpy(regs->reg_param.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[6], H264E_LAMBDA_TAB_SIZE);
 
 	/* CIME */
 	{
@@ -1964,7 +1969,7 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	if (ctx->online)
 		vepu500_h264e_set_dvbm(ctx, task);
 	setup_vepu500_codec(regs, sps, pps, slice);
-	setup_vepu500_rdo_pred(regs, sps, pps, slice);
+	setup_vepu500_rdo_pred(ctx, sps, pps, slice);
 	setup_vepu500_rdo_cfg(&regs->reg_sqi);
 	setup_vepu500_aq(ctx);
 	setup_vepu500_quant(ctx);
