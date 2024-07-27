@@ -1733,36 +1733,6 @@ static void setup_vepu500_l2(HalVepu500RegSet *regs, H264eSlice *slice, MppEncHw
 
 	memcpy(regs->reg_param.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[6], H264E_LAMBDA_TAB_SIZE);
 
-	regs->reg_param.iprd_tthdy4_0.iprd_tthdy4_0 = 1;
-	regs->reg_param.iprd_tthdy4_0.iprd_tthdy4_1 = 3;
-	regs->reg_param.iprd_tthdy4_1.iprd_tthdy4_2 = 6;
-	regs->reg_param.iprd_tthdy4_1.iprd_tthdy4_3 = 8;
-	regs->reg_param.iprd_tthdc8_0.iprd_tthdc8_0 = 1;
-	regs->reg_param.iprd_tthdc8_0.iprd_tthdc8_1 = 3;
-	regs->reg_param.iprd_tthdc8_1.iprd_tthdc8_2 = 6;
-	regs->reg_param.iprd_tthdc8_1.iprd_tthdc8_3 = 8;
-	regs->reg_param.iprd_tthdy8_0.iprd_tthdy8_0 = 1;
-	regs->reg_param.iprd_tthdy8_0.iprd_tthdy8_1 = 3;
-	regs->reg_param.iprd_tthdy8_1.iprd_tthdy8_2 = 6;
-	regs->reg_param.iprd_tthdy8_1.iprd_tthdy8_3 = 8;
-	regs->reg_param.iprd_tthd_ul.iprd_tthd_ul = 4;
-	regs->reg_param.iprd_wgty8.iprd_wgty8_0 = 22;
-	regs->reg_param.iprd_wgty8.iprd_wgty8_1 = 23;
-	regs->reg_param.iprd_wgty8.iprd_wgty8_2 = 20;
-	regs->reg_param.iprd_wgty8.iprd_wgty8_3 = 22;
-	regs->reg_param.iprd_wgty4.iprd_wgty4_0 = 22;
-	regs->reg_param.iprd_wgty4.iprd_wgty4_1 = 26;
-	regs->reg_param.iprd_wgty4.iprd_wgty4_2 = 20;
-	regs->reg_param.iprd_wgty4.iprd_wgty4_3 = 22;
-	regs->reg_param.iprd_wgty16.iprd_wgty16_0 = 22;
-	regs->reg_param.iprd_wgty16.iprd_wgty16_1 = 26;
-	regs->reg_param.iprd_wgty16.iprd_wgty16_2 = 20;
-	regs->reg_param.iprd_wgty16.iprd_wgty16_3 = 22;
-	regs->reg_param.iprd_wgtc8.iprd_wgtc8_0 = 18;
-	regs->reg_param.iprd_wgtc8.iprd_wgtc8_1 = 21;
-	regs->reg_param.iprd_wgtc8.iprd_wgtc8_2 = 20;
-	regs->reg_param.iprd_wgtc8.iprd_wgtc8_3 = 19;
-
 	/* CIME */
 	{
 		/* 0x1760 */
@@ -1932,6 +1902,43 @@ static void setup_vepu500_quant(HalH264eVepu500Ctx *ctx)
 	s->qnt1_p_bias_comb.bias_p_val3 = 341;//65;
 }
 
+static void setup_vepu500_anti_stripe(HalH264eVepu500Ctx *ctx)
+{
+	HalVepu500RegSet *regs = ctx->regs_set;
+	Vepu500Param *s = &regs->reg_param;
+	RK_S32 str = ctx->cfg->tune.atl_str;
+
+	s->iprd_tthdy4_0.iprd_tthdy4_0 = 1;
+	s->iprd_tthdy4_0.iprd_tthdy4_1 = 3;
+	s->iprd_tthdy4_1.iprd_tthdy4_2 = 6;
+	s->iprd_tthdy4_1.iprd_tthdy4_3 = 8;
+	s->iprd_tthdc8_0.iprd_tthdc8_0 = 1;
+	s->iprd_tthdc8_0.iprd_tthdc8_1 = 3;
+	s->iprd_tthdc8_1.iprd_tthdc8_2 = 6;
+	s->iprd_tthdc8_1.iprd_tthdc8_3 = 8;
+	s->iprd_tthdy8_0.iprd_tthdy8_0 = 1;
+	s->iprd_tthdy8_0.iprd_tthdy8_1 = 3;
+	s->iprd_tthdy8_1.iprd_tthdy8_2 = 6;
+	s->iprd_tthdy8_1.iprd_tthdy8_3 = 8;
+	s->iprd_tthd_ul.iprd_tthd_ul = str ? 4 : 255;
+	s->iprd_wgty8.iprd_wgty8_0 = str ? 22 : 16;
+	s->iprd_wgty8.iprd_wgty8_1 = str ? 23 : 16;
+	s->iprd_wgty8.iprd_wgty8_2 = str ? 20 : 16;
+	s->iprd_wgty8.iprd_wgty8_3 = str ? 22 : 16;
+	s->iprd_wgty4.iprd_wgty4_0 = str ? 22 : 16;
+	s->iprd_wgty4.iprd_wgty4_1 = str ? 26 : 16;
+	s->iprd_wgty4.iprd_wgty4_2 = str ? 20 : 16;
+	s->iprd_wgty4.iprd_wgty4_3 = str ? 22 : 16;
+	s->iprd_wgty16.iprd_wgty16_0 = 22;
+	s->iprd_wgty16.iprd_wgty16_1 = 26;
+	s->iprd_wgty16.iprd_wgty16_2 = 20;
+	s->iprd_wgty16.iprd_wgty16_3 = 22;
+	s->iprd_wgtc8.iprd_wgtc8_0 = 18;
+	s->iprd_wgtc8.iprd_wgtc8_1 = 21;
+	s->iprd_wgtc8.iprd_wgtc8_2 = 20;
+	s->iprd_wgtc8.iprd_wgtc8_3 = 19;
+}
+
 static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 {
 	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *)hal;
@@ -1961,6 +1968,7 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu500_rdo_cfg(&regs->reg_sqi);
 	setup_vepu500_aq(ctx);
 	setup_vepu500_quant(ctx);
+	setup_vepu500_anti_stripe(ctx);
 
 	setup_vepu500_rc_base(ctx, regs, sps, slice, &cfg->hw, rc_task);
 	setup_vepu500_io_buf(ctx, task);
