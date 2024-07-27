@@ -1175,122 +1175,94 @@ typedef struct Vepu500SqiCfg_t {
 
 	/* 0x00002070 reg2076 */
 	struct {
-		RK_U32 cu16_rdo_skip_atf_madp_thd0    : 12;
-		RK_U32 reserved                       : 4;
-		RK_U32 cu16_rdo_skip_atf_madp_thd1    : 12;
-		RK_U32 reserved1                      : 4;
+		RK_U32 madp_thd0    : 12;
+		RK_U32 reserved     : 4;
+		RK_U32 madp_thd1    : 12;
+		RK_U32 reserved1    : 4;
 	} rdo_b16_skip_atf_thd0;
 
 	/* 0x00002074 reg2077 */
 	struct {
-		RK_U32 cu16_rdo_skip_atf_madp_thd2    : 12;
-		RK_U32 reserved                       : 4;
-		RK_U32 cu16_rdo_skip_atf_madp_thd3    : 12;
-		RK_U32 reserved1                      : 4;
+		RK_U32 madp_thd2    : 12;
+		RK_U32 reserved     : 4;
+		RK_U32 madp_thd3    : 12;
+		RK_U32 reserved1    : 4;
 	} rdo_b16_skip_atf_thd1;
 
 	/* 0x00002078 reg2078 */
 	struct {
-		RK_U32 cu16_rdo_skip_atf_wgt0    : 8;
-		RK_U32 cu16_rdo_skip_atf_wgt1    : 8;
-		RK_U32 cu16_rdo_skip_atf_wgt2    : 8;
-		RK_U32 cu16_rdo_skip_atf_wgt3    : 8;
+		RK_U32 wgt0    : 8;
+		RK_U32 wgt1    : 8;
+		RK_U32 wgt2    : 8;
+		RK_U32 wgt3    : 8;
 	} rdo_b16_skip_atf_wgt0;
 
 	/* 0x0000207c reg2079 */
 	struct {
-		RK_U32 cu16_rdo_skip_atf_wgt4    : 8;
-		RK_U32 reserved                  : 24;
+		RK_U32 wgt4      : 8;
+		RK_U32 reserved  : 24;
 	} rdo_b16_skip_atf_wgt1;
 
 	/* 0x00002080 reg2080 */
-	struct {
-		RK_U32 cu32_rdo_inter_atf_madp_thd0    : 12;
-		RK_U32 reserved                        : 4;
-		RK_U32 cu32_rdo_inter_atf_madp_thd1    : 12;
-		RK_U32 reserved1                       : 4;
-	} rdo_b32_inter_atf_thd0_hevc;
+	RK_U32 rdo_b32_inter_atf_thd0_hevc;
 
 	/* 0x00002084 reg2081 */
-	struct {
-		RK_U32 cu32_rdo_inter_atf_madp_thd2    : 12;
-		RK_U32 reserved                        : 4;
-		RK_U32 atf_bypass_pri_flag             : 1;
-		RK_U32 reserved1                       : 15;
-	} rdo_b32_inter_atf_thd1_hevc;
+	RK_U32 rdo_b32_inter_atf_thd1_hevc;
 
 	/* 0x00002088 reg2082 */
-	struct {
-		RK_U32 cu32_rdo_inter_atf_wgt0    : 8;
-		RK_U32 cu32_rdo_inter_atf_wgt1    : 8;
-		RK_U32 cu32_rdo_inter_atf_wgt2    : 8;
-		RK_U32 reserved                   : 8;
-	} rdo_b32_inter_atf_wgt_hevc;
+	RK_U32 rdo_b32_inter_atf_wgt_hevc;
 
 	/* 0x0000208c reg2083 */
 	struct {
-		RK_U32 cu16_rdo_inter_atf_madp_thd0    : 12;
-		RK_U32 reserved                        : 4;
-		RK_U32 cu16_rdo_inter_atf_madp_thd1    : 12;
-		RK_U32 reserved1                       : 4;
+		RK_U32 madp_thd0    : 12;
+		RK_U32 reserved     : 4;
+		RK_U32 madp_thd1    : 12;
+		RK_U32 reserved1    : 4;
 	} rdo_b16_inter_atf_thd0;
 
 	/* 0x00002090 reg2084 */
 	struct {
-		RK_U32 cu16_rdo_inter_atf_madp_thd2    : 12;
-		RK_U32 reserved                        : 20;
+		RK_U32 madp_thd2    : 12;
+		RK_U32 reserved     : 20;
 	} rdo_b16_inter_atf_thd1;
 
 	/* 0x00002094 reg2085 */
 	struct {
-		RK_U32 cu16_rdo_inter_atf_wgt0         : 8;
-		RK_U32 cu16_rdo_inter_atf_wgt1         : 8;
-		RK_U32 cu16_rdo_inter_atf_wgt2         : 8;
-		RK_U32 cu16_rdo_inter_atf_wgt3         : 8;
+		RK_U32 wgt0         : 8;
+		RK_U32 wgt1         : 8;
+		RK_U32 wgt2         : 8;
+		RK_U32 wgt3         : 8;
 	} rdo_b16_inter_atf_wgt;
 
 	/* 0x00002098 reg2086 */
-	struct {
-		RK_U32 cu32_rdo_intra_atf_madp_thd0    : 12;
-		RK_U32 reserved                        : 4;
-		RK_U32 cu32_rdo_intra_atf_madp_thd1    : 12;
-		RK_U32 reserved1                       : 4;
-	} rdo_b32_intra_atf_thd0_hevc;
+	RK_U32 rdo_b32_intra_atf_thd0_hevc;
 
 	/* 0x0000209c reg2087 */
-	struct {
-		RK_U32 cu32_rdo_intra_atf_madp_thd2    : 12;
-		RK_U32 reserved                        : 20;
-	} rdo_b32_intra_atf_thd1_hevc;
+	RK_U32 rdo_b32_intra_atf_thd1_hevc;
 
 	/* 0x000020a0 reg2088 */
-	struct {
-		RK_U32 cu32_rdo_intra_atf_wgt0    : 8;
-		RK_U32 cu32_rdo_intra_atf_wgt1    : 8;
-		RK_U32 cu32_rdo_intra_atf_wgt2    : 8;
-		RK_U32 reserved                   : 8;
-	} rdo_b32_intra_atf_wgt_hevc;
+	RK_U32 rdo_b32_intra_atf_wgt_hevc;
 
 	/* 0x000020a4 reg2089 */
 	struct {
-		RK_U32 cu16_rdo_intra_atf_madp_thd0    : 12;
-		RK_U32 reserved                        : 4;
-		RK_U32 cu16_rdo_intra_atf_madp_thd1    : 12;
-		RK_U32 reserved1                       : 4;
+		RK_U32 madp_thd0    : 12;
+		RK_U32 reserved     : 4;
+		RK_U32 madp_thd1    : 12;
+		RK_U32 reserved1    : 4;
 	} rdo_b16_intra_atf_thd0;
 
 	/* 0x000020a8 reg2090 */
 	struct {
-		RK_U32 cu16_rdo_intra_atf_madp_thd2    : 12;
-		RK_U32 reserved                        : 20;
+		RK_U32 madp_thd2    : 12;
+		RK_U32 reserved     : 20;
 	} rdo_b16_intra_atf_thd1;
 
 	/* 0x000020ac reg2091 */
 	struct {
-		RK_U32 cu16_rdo_intra_atf_wgt0         : 8;
-		RK_U32 cu16_rdo_intra_atf_wgt1         : 8;
-		RK_U32 cu16_rdo_intra_atf_wgt2         : 8;
-		RK_U32 cu16_rdo_intra_atf_wgt3    : 8;
+		RK_U32 wgt0         : 8;
+		RK_U32 wgt1         : 8;
+		RK_U32 wgt2         : 8;
+		RK_U32 wgt3    : 8;
 	} rdo_b16_intra_atf_wgt;
 
 	/* 0x20b0 */
@@ -1298,26 +1270,26 @@ typedef struct Vepu500SqiCfg_t {
 
 	/* 0x000020b4 reg2093 */
 	struct {
-		RK_U32 cu16_rdo_intra_atf_cnt_thd0    : 4;
-		RK_U32 reserved                       : 4;
-		RK_U32 cu16_rdo_intra_atf_cnt_thd1    : 4;
-		RK_U32 reserved1                      : 4;
-		RK_U32 cu16_rdo_intra_atf_cnt_thd2    : 4;
-		RK_U32 reserved2                      : 4;
-		RK_U32 cu16_rdo_intra_atf_cnt_thd3    : 4;
-		RK_U32 reserved3                      : 4;
+		RK_U32 cnt_thd0    : 4;
+		RK_U32 reserved    : 4;
+		RK_U32 cnt_thd1    : 4;
+		RK_U32 reserved1   : 4;
+		RK_U32 cnt_thd2    : 4;
+		RK_U32 reserved2   : 4;
+		RK_U32 cnt_thd3    : 4;
+		RK_U32 reserved3   : 4;
 	} rdo_b16_intra_atf_cnt_thd;
 
 	/* 0x000020b8 reg2094 */
 	struct {
-		RK_U32 rdo_atf_resi_big_th0      : 6;
-		RK_U32 reserved                  : 2;
-		RK_U32 rdo_atf_resi_big_th1      : 6;
-		RK_U32 reserved1                 : 2;
-		RK_U32 rdo_atf_resi_small_th0    : 6;
-		RK_U32 reserved2                 : 2;
-		RK_U32 rdo_atf_resi_small_th1    : 6;
-		RK_U32 reserved3                 : 2;
+		RK_U32 big_th0      : 6;
+		RK_U32 reserved     : 2;
+		RK_U32 big_th1      : 6;
+		RK_U32 reserved1    : 2;
+		RK_U32 small_th0    : 6;
+		RK_U32 reserved2    : 2;
+		RK_U32 small_th1    : 6;
+		RK_U32 reserved3    : 2;
 	} rdo_atf_resi_thd;
 
 	/* 0x20bc reg2095 - 0x0000215c reg2135*/

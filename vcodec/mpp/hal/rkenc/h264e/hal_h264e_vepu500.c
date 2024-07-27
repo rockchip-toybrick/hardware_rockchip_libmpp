@@ -1056,8 +1056,8 @@ static void setup_vepu500_rdo_pred(HalH264eVepu500Ctx *ctx, H264eSps *sps,
 	regs->reg_frm.rdo_cfg.chrm_spcl      = 1;
 	regs->reg_frm.rdo_cfg.ccwa_e         = 1;
 	regs->reg_frm.rdo_cfg.scl_lst_sel    = pps->scaling_list_mode;
-	regs->reg_frm.rdo_cfg.atf_e          = 1;
-	regs->reg_frm.rdo_cfg.atr_e          = ctx->cfg->tune.atr_str > 0;;
+	regs->reg_frm.rdo_cfg.atf_e          = ctx->cfg->tune.atf_str > 0;
+	regs->reg_frm.rdo_cfg.atr_e          = ctx->cfg->tune.atr_str > 0;
 	regs->reg_frm.rdo_cfg.atr_mult_sel_e = 1;
 	regs->reg_frm.rdo_mark_mode.rdo_mark_mode = 0;
 
@@ -1123,41 +1123,6 @@ static void setup_vepu500_rdo_cfg(Vepu500SqiCfg *reg)
 	reg->rdo_smear_st_thd.rdo_smear_madp_cnt_th1 = 5;
 	reg->rdo_smear_st_thd.rdo_smear_madp_cnt_th2 = 1;
 	reg->rdo_smear_st_thd.rdo_smear_madp_cnt_th3 = 3;
-
-	reg->rdo_b16_skip_atf_thd0.cu16_rdo_skip_atf_madp_thd0 = 1;
-	reg->rdo_b16_skip_atf_thd0.cu16_rdo_skip_atf_madp_thd1 = 10;
-	reg->rdo_b16_skip_atf_thd1.cu16_rdo_skip_atf_madp_thd2 = 15;
-	reg->rdo_b16_skip_atf_thd1.cu16_rdo_skip_atf_madp_thd3 = 25;
-	reg->rdo_b16_skip_atf_wgt0.cu16_rdo_skip_atf_wgt0 = 20;
-	reg->rdo_b16_skip_atf_wgt0.cu16_rdo_skip_atf_wgt1 = 16;
-	reg->rdo_b16_skip_atf_wgt0.cu16_rdo_skip_atf_wgt2 = 16;
-	reg->rdo_b16_skip_atf_wgt0.cu16_rdo_skip_atf_wgt3 = 16;
-	reg->rdo_b16_skip_atf_wgt1.cu16_rdo_skip_atf_wgt4 = 16;
-
-	reg->rdo_b16_inter_atf_thd0.cu16_rdo_inter_atf_madp_thd0 = 20;
-	reg->rdo_b16_inter_atf_thd0.cu16_rdo_inter_atf_madp_thd1 = 40;
-	reg->rdo_b16_inter_atf_thd1.cu16_rdo_inter_atf_madp_thd2 = 72;
-	reg->rdo_b16_inter_atf_wgt.cu16_rdo_inter_atf_wgt0 = 16;
-	reg->rdo_b16_inter_atf_wgt.cu16_rdo_inter_atf_wgt1 = 16;
-	reg->rdo_b16_inter_atf_wgt.cu16_rdo_inter_atf_wgt2 = 16;
-	reg->rdo_b16_inter_atf_wgt.cu16_rdo_inter_atf_wgt3 = 16;
-
-	reg->rdo_b16_intra_atf_thd0.cu16_rdo_intra_atf_madp_thd0 = 20;
-	reg->rdo_b16_intra_atf_thd0.cu16_rdo_intra_atf_madp_thd1 = 40;
-	reg->rdo_b16_intra_atf_thd1.cu16_rdo_intra_atf_madp_thd2 = 72;
-	reg->rdo_b16_intra_atf_wgt.cu16_rdo_intra_atf_wgt0 = 27;
-	reg->rdo_b16_intra_atf_wgt.cu16_rdo_intra_atf_wgt1 = 25;
-	reg->rdo_b16_intra_atf_wgt.cu16_rdo_intra_atf_wgt2 = 20;
-	reg->rdo_b16_intra_atf_wgt.cu16_rdo_intra_atf_wgt3 = 16;
-
-	reg->rdo_b16_intra_atf_cnt_thd.cu16_rdo_intra_atf_cnt_thd0 = 1;
-	reg->rdo_b16_intra_atf_cnt_thd.cu16_rdo_intra_atf_cnt_thd1 = 4;
-	reg->rdo_b16_intra_atf_cnt_thd.cu16_rdo_intra_atf_cnt_thd2 = 1;
-	reg->rdo_b16_intra_atf_cnt_thd.cu16_rdo_intra_atf_cnt_thd3 = 4;
-	reg->rdo_atf_resi_thd.rdo_atf_resi_big_th0 = 16;
-	reg->rdo_atf_resi_thd.rdo_atf_resi_big_th1 = 16;
-	reg->rdo_atf_resi_thd.rdo_atf_resi_small_th0 = 8;
-	reg->rdo_atf_resi_thd.rdo_atf_resi_small_th1 = 8;
 
 	hal_h264e_dbg_func("leave\n");
 }
@@ -1985,6 +1950,60 @@ static void setup_vepu500_anti_ringing(HalH264eVepu500Ctx *ctx)
 	}
 }
 
+static void setup_vepu500_anti_flicker(HalH264eVepu500Ctx *ctx)
+{
+	HalVepu500RegSet *regs = ctx->regs_set;
+	Vepu500SqiCfg *reg = &regs->reg_sqi;
+	RK_U32 str = ctx->cfg->tune.atf_str;
+
+	static RK_U8 pskip_atf_th0[4] = { 0, 0, 0, 1 };
+	static RK_U8 pskip_atf_th1[4] = { 7, 7, 7, 10 };
+	static RK_U8 pskip_atf_wgt0[4] = { 16, 16, 16, 20 };
+	static RK_U8 pskip_atf_wgt1[4] = { 16, 16, 14, 16 };
+	static RK_U8 intra_atf_th0[4] = { 8, 16, 20, 20 };
+	static RK_U8 intra_atf_th1[4] = { 16, 32, 40, 40 };
+	static RK_U8 intra_atf_th2[4] = { 32, 56, 72, 72 };
+	static RK_U8 intra_atf_wgt0[4] = { 16, 24, 27, 27 };
+	static RK_U8 intra_atf_wgt1[4] = { 16, 22, 25, 25 };
+	static RK_U8 intra_atf_wgt2[4] = { 16, 19, 20, 20 };
+
+	reg->rdo_b16_skip_atf_thd0.madp_thd0 = pskip_atf_th0[str];
+	reg->rdo_b16_skip_atf_thd0.madp_thd1 = pskip_atf_th1[str];
+	reg->rdo_b16_skip_atf_thd1.madp_thd2 = 15;
+	reg->rdo_b16_skip_atf_thd1.madp_thd3 = 25;
+	reg->rdo_b16_skip_atf_wgt0.wgt0 = pskip_atf_wgt0[str];
+	reg->rdo_b16_skip_atf_wgt0.wgt1 = pskip_atf_wgt1[str];
+	reg->rdo_b16_skip_atf_wgt0.wgt2 = 16;
+	reg->rdo_b16_skip_atf_wgt0.wgt3 = 16;
+	reg->rdo_b16_skip_atf_wgt1.wgt4 = 16;
+
+	reg->rdo_b16_inter_atf_thd0.madp_thd0 = 20;
+	reg->rdo_b16_inter_atf_thd0.madp_thd1 = 40;
+	reg->rdo_b16_inter_atf_thd1.madp_thd2 = 72;
+	reg->rdo_b16_inter_atf_wgt.wgt0 = 16;
+	reg->rdo_b16_inter_atf_wgt.wgt1 = 16;
+	reg->rdo_b16_inter_atf_wgt.wgt2 = 16;
+	reg->rdo_b16_inter_atf_wgt.wgt3 = 16;
+
+	reg->rdo_b16_intra_atf_thd0.madp_thd0 = intra_atf_th0[str];
+	reg->rdo_b16_intra_atf_thd0.madp_thd1 = intra_atf_th1[str];
+	reg->rdo_b16_intra_atf_thd1.madp_thd2 = intra_atf_th2[str];
+	reg->rdo_b16_intra_atf_wgt.wgt0 = intra_atf_wgt0[str];
+	reg->rdo_b16_intra_atf_wgt.wgt1 = intra_atf_wgt1[str];
+	reg->rdo_b16_intra_atf_wgt.wgt2 = intra_atf_wgt2[str];
+	reg->rdo_b16_intra_atf_wgt.wgt3 = 16;
+
+	reg->rdo_b16_intra_atf_cnt_thd.cnt_thd0 = 1;
+	reg->rdo_b16_intra_atf_cnt_thd.cnt_thd1 = 4;
+	reg->rdo_b16_intra_atf_cnt_thd.cnt_thd2 = 1;
+	reg->rdo_b16_intra_atf_cnt_thd.cnt_thd3 = 4;
+
+	reg->rdo_atf_resi_thd.big_th0 = 16;
+	reg->rdo_atf_resi_thd.big_th1 = 16;
+	reg->rdo_atf_resi_thd.small_th0 = 8;
+	reg->rdo_atf_resi_thd.small_th1 = 8;
+}
+
 static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 {
 	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *)hal;
@@ -2016,6 +2035,7 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu500_quant(ctx);
 	setup_vepu500_anti_stripe(ctx);
 	setup_vepu500_anti_ringing(ctx);
+	setup_vepu500_anti_flicker(ctx);
 
 	setup_vepu500_rc_base(ctx, regs, sps, slice, &cfg->hw, rc_task);
 	setup_vepu500_io_buf(ctx, task);
