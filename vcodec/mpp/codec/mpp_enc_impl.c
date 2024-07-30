@@ -2027,7 +2027,7 @@ MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
 
 	while (frm->reencode && frm->reencode_times < enc->cfg.rc.max_reenc_times) {
 		/* only support I frame drop when online case */
-		if (enc->online && !frm->is_idr && !frm->drop)
+		if (enc->online && (!frm->is_idr || !frm->drop))
 			break;
 
 		/* only support I frame reenc/drop when ref/recn shared*/
