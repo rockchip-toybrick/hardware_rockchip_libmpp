@@ -2071,10 +2071,12 @@ static void vepu500_h264_tune_qpmap_normal(HalH264eVepu500Ctx *ctx, HalEncTask *
 {
 	MppEncPrepCfg *prep = &ctx->cfg->prep;
 	RK_U32 b16_num = MPP_ALIGN(prep->width, 64) * MPP_ALIGN(prep->height, 16) / 256;
+	RK_U32 md_stride = MPP_ALIGN(prep->width, 256) / 16;
+	RK_U32 b16_stride = MPP_ALIGN(prep->width, 64) / 16;
 	MppBuffer md_info_buf = task->mv_info;
 	RK_U8 *md_info = mpp_buffer_get_ptr(md_info_buf);
 	RK_U8 *mv_flag = task->mv_flag;
-	RK_U32 j;
+	RK_U32 j, k;
 	RK_S32 motion_b16_num = 0;
 	RK_U16 sad_b16 = 0;
 	RK_U8 move_flag;
@@ -2087,7 +2089,8 @@ static void vepu500_h264_tune_qpmap_normal(HalH264eVepu500Ctx *ctx, HalEncTask *
 		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
 
 		for (j = 0; j < b16_num; j++) {
-			sad_b16 = (md_info[j] & 0x3F) << 2; /* SAD of 16x16 */
+			k = (j % b16_stride) + (j / b16_stride) * md_stride;
+			sad_b16 = (md_info[k] & 0x3F) << 2; /* SAD of 16x16 */
 			mv_flag[j] = ((mv_flag[j] << 2) & 0x3f); /* shift move flag of last frame */
 			move_flag = sad_b16 > 144 ? 2 : (sad_b16 > 72) ? 1 : 0;
 			mv_flag[j] |= move_flag; /* save move flag of current frame */
@@ -2150,10 +2153,12 @@ static void vepu500_h264_tune_qpmap_smart(HalH264eVepu500Ctx *ctx, HalEncTask *t
 {
 	MppEncPrepCfg *prep = &ctx->cfg->prep;
 	RK_U32 b16_num = MPP_ALIGN(prep->width, 64) * MPP_ALIGN(prep->height, 16) / 256;
+	RK_U32 md_stride = MPP_ALIGN(prep->width, 256) / 16;
+	RK_U32 b16_stride = MPP_ALIGN(prep->width, 64) / 16;
 	MppBuffer md_info_buf = task->mv_info;
 	RK_U8 *md_info = mpp_buffer_get_ptr(md_info_buf);
 	RK_U8 *mv_flag = task->mv_flag;
-	RK_U32 j;
+	RK_U32 j, k;
 	RK_S32 motion_b16_num = 0;
 	RK_U16 sad_b16 = 0;
 	RK_U8 move_flag;
@@ -2166,7 +2171,8 @@ static void vepu500_h264_tune_qpmap_smart(HalH264eVepu500Ctx *ctx, HalEncTask *t
 		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
 
 		for (j = 0; j < b16_num; j++) {
-			sad_b16 = (md_info[j] & 0x3F) << 2; /* SAD of 16x16 */
+			k = (j % b16_stride) + (j / b16_stride) * md_stride;
+			sad_b16 = (md_info[k] & 0x3F) << 2; /* SAD of 16x16 */
 			mv_flag[j] = ((mv_flag[j] << 2) & 0x3f); /* shift move flag of last frame */
 			move_flag = sad_b16 > 144 ? 2 : (sad_b16 > 72) ? 1 : 0;
 			mv_flag[j] |= move_flag; /* save move flag of current frame */

@@ -2123,10 +2123,12 @@ static void vepu500_h265_tune_qpmap_normal(H265eV500HalContext *ctx, HalEncTask 
 	HevcVepu500Frame *reg_frm = &regs->reg_frm;
 	MppEncPrepCfg *prep = &ctx->cfg->prep;
 	RK_U32 b16_num = MPP_ALIGN(prep->width, 32) * MPP_ALIGN(prep->height, 32) / 256;
+	RK_U32 md_stride = MPP_ALIGN(prep->width, 128) / 32;
+	RK_U32 b32_stride = MPP_ALIGN(prep->width, 32) / 32;
 	MppBuffer md_info_buf = task->mv_info;
 	RK_U8 *md_info = mpp_buffer_get_ptr(md_info_buf);
 	RK_U8 *mv_flag = task->mv_flag;
-	RK_U32 idx, k, j;
+	RK_U32 idx, k, j, b32_idx;
 	RK_S32 motion_b16_num = 0, motion_b32_num = 0;
 	RK_U16 sad_b16 = 0;
 	RK_U8 move_flag;
@@ -2141,9 +2143,10 @@ static void vepu500_h265_tune_qpmap_normal(H265eV500HalContext *ctx, HalEncTask 
 
 		for (idx = 0; idx < b16_num / 4; idx++) {
 			motion_b16_num = 0;
+			b32_idx = (idx % b32_stride) + (idx / b32_stride) * md_stride;
 
 			for (k = 0; k < 4; k ++) {
-				j = idx * 4 + k;
+				j = b32_idx * 4 + k;
 				sad_b16 = (md_info[j] & 0x3F) << 2; /* SAD of 16x16 */
 				mv_flag[j] = ((mv_flag[j] << 2) & 0x3f); /* shift move flag of last frame */
 				move_flag = sad_b16 > 90 ? 3 : (sad_b16 > 50 ? 2 : (sad_b16 > 15 ? 1 : 0));
@@ -2221,10 +2224,12 @@ static void vepu500_h265_tune_qpmap_smart(H265eV500HalContext *ctx, HalEncTask *
 	HevcVepu500Frame *reg_frm = &regs->reg_frm;
 	MppEncPrepCfg *prep = &ctx->cfg->prep;
 	RK_U32 b16_num = MPP_ALIGN(prep->width, 32) * MPP_ALIGN(prep->height, 32) / 256;
+	RK_U32 md_stride = MPP_ALIGN(prep->width, 128) / 32 * 4;
+	RK_U32 b16_stride = MPP_ALIGN(prep->width, 32) / 32 * 4;
 	MppBuffer md_info_buf = task->mv_info;
 	RK_U8 *md_info = mpp_buffer_get_ptr(md_info_buf);
 	RK_U8 *mv_flag = task->mv_flag;
-	RK_U32 idx;
+	RK_U32 idx, b16_idx;
 	RK_S32 motion_b16_num = 0;
 	RK_U16 sad_b16 = 0;
 	RK_U8 move_flag;
@@ -2238,7 +2243,8 @@ static void vepu500_h265_tune_qpmap_smart(H265eV500HalContext *ctx, HalEncTask *
 		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
 
 		for (idx = 0; idx < b16_num; idx++) {
-			sad_b16 = (md_info[idx] & 0x3F) << 2; /* SAD of 16x16 */
+			b16_idx = (idx % b16_stride) + (idx / b16_stride) * md_stride;
+			sad_b16 = (md_info[b16_idx] & 0x3F) << 2; /* SAD of 16x16 */
 			mv_flag[idx] = ((mv_flag[idx] << 2) & 0x3F);
 			move_flag = sad_b16 > 90 ? 3 : (sad_b16 > 50 ? 2 : (sad_b16 > 15 ? 1 : 0));
 			mv_flag[idx] |= move_flag; /* save move flag of current frame */
