@@ -760,6 +760,45 @@ static MPP_RET setup_vepu500_prep(HalVepu500RegSet *regs, MppEncPrepCfg *prep,
 	return ret;
 }
 
+static void setup_vepu500_vsp_filtering(HalH264eVepu500Ctx *ctx)
+{
+	HalVepu500RegSet *regs = ctx->regs_set;
+	Vepu500FrameCfg *s = &regs->reg_frm;
+	MppEncCfgSet *cfg = ctx->cfg;
+	MppEncHwCfg *hw = &cfg->hw;
+	RK_U32 slice_type = ctx->slice->slice_type;
+	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
+	RK_U8 bit_chg_lvl = ctx->last_frame_fb.tgt_sub_real_lvl[5]; /* [0, 2] */
+	RK_U8 corner_str = 0, edge_str = 0, internal_str = 0; /* [0, 3] */
+
+	if (ctx->qpmap_en && (deblur_str % 2 == 0) &&
+	    (hw->flt_str_i == 0) && (hw->flt_str_p == 0)) {
+		if (bit_chg_lvl == 2 && slice_type != H264_I_SLICE) {
+			corner_str = 3;
+			edge_str = 3;
+			internal_str = 3;
+		} else if (bit_chg_lvl > 0) {
+			corner_str = 2;
+			edge_str = 2;
+			internal_str = 2;
+		}
+	} else {
+		if (slice_type == H264_I_SLICE) {
+			corner_str = hw->flt_str_i;
+			edge_str = hw->flt_str_i;
+			internal_str = hw->flt_str_i;
+		} else {
+			corner_str = hw->flt_str_p;
+			edge_str = hw->flt_str_p;
+			internal_str = hw->flt_str_p;
+		}
+	}
+
+	s->src_flt_cfg.pp_corner_filter_strength = corner_str;
+	s->src_flt_cfg.pp_edge_filter_strength = edge_str;
+	s->src_flt_cfg.pp_internal_filter_strength = internal_str;
+}
+
 static MPP_RET vepu500_h264e_save_pass1_patch(HalVepu500RegSet *regs, HalH264eVepu500Ctx *ctx)
 {
 	RK_S32 width_align = MPP_ALIGN(ctx->cfg->prep.width, 16);
@@ -2286,6 +2325,8 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	if (ret)
 		return ret;
 
+	setup_vepu500_vsp_filtering(ctx);
+
 	if (ctx->online)
 		vepu500_h264e_set_dvbm(ctx, task);
 	setup_vepu500_codec(regs, sps, pps, slice);
@@ -2454,6 +2495,41 @@ static MPP_RET hal_h264e_vepu500_wait(void *hal, HalEncTask *task)
 	return ret;
 }
 
+static void h264e_vepu500_update_bitrate_info(HalH264eVepu500Ctx *ctx, HalEncTask * task)
+{
+	vepu500_h264_fbk *fb = &ctx->feedback;
+	EncRcTaskInfo *rc_info = &task->rc_task->info;
+	RK_S32 bit_tgt = rc_info->bit_target;
+	RK_S32 bit_real = rc_info->bit_real;
+	RK_S32 real_lvl, i = 0;
+
+	memcpy(fb->tgt_sub_real_lvl, ctx->last_frame_fb.tgt_sub_real_lvl, 6 * sizeof(RK_S8));
+	for (i = 3; i >= 0; i--)
+		fb->tgt_sub_real_lvl[i + 1] = fb->tgt_sub_real_lvl[i];
+
+	if (bit_tgt > bit_real) {
+		fb->tgt_sub_real_lvl[0] = (bit_tgt > bit_real * 6 / 4) ? 3 :
+					  (bit_tgt > bit_real * 5 / 4) ? 2 :
+					  (bit_tgt > bit_real * 9 / 8) ? 1 : 0;
+	} else {
+		fb->tgt_sub_real_lvl[0] = (bit_real > bit_tgt * 2) ? -5 :
+					  (bit_real > bit_tgt * 7 / 4) ? -4 :
+					  (bit_real > bit_tgt * 6 / 4) ? -3 :
+					  (bit_real > bit_tgt * 5 / 4) ? -2 : -1;
+	}
+
+	for (i = 0; i < 5; i ++)
+		real_lvl += fb->tgt_sub_real_lvl[i];
+
+	if (task->rc_task->frm.is_intra)
+		fb->tgt_sub_real_lvl[5] = 0;
+
+	if (real_lvl < -9)
+		fb->tgt_sub_real_lvl[5] = 2;
+	else if (real_lvl < -2 && fb->tgt_sub_real_lvl[5] < 2)
+		fb->tgt_sub_real_lvl[5] = 1;
+}
+
 static MPP_RET hal_h264e_vepu500_ret_task(void * hal, HalEncTask * task)
 {
 	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *)hal;
@@ -2468,7 +2544,6 @@ static MPP_RET hal_h264e_vepu500_ret_task(void * hal, HalEncTask * task)
 	RK_U32 madi_th_cnt[4], madp_th_cnt[4];
 	RK_U32 madi_cnt = 0, madp_cnt = 0;
 	RK_U32 md_cnt;
-	RK_S32 i = 0, tgt_sub_real_lvl = 0;
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 
@@ -2573,43 +2648,6 @@ static MPP_RET hal_h264e_vepu500_ret_task(void * hal, HalEncTask * task)
 	task->hal_ret.data   = &ctx->hal_rc_cfg;
 	task->hal_ret.number = 1;
 
-	/* store infos to feedback */
-	memcpy(fb->tgt_sub_real_lvl, ctx->last_frame_fb.tgt_sub_real_lvl, 6 * sizeof(RK_S8));
-	for (i = 3; i >= 0; i --)
-		fb->tgt_sub_real_lvl[i + 1] = fb->tgt_sub_real_lvl[i];
-
-	if (rc_info->bit_target > rc_info->bit_real) {
-		if (rc_info->bit_target > rc_info->bit_real * 6 / 4)
-			fb->tgt_sub_real_lvl[0] = 3;
-		else if (rc_info->bit_target > rc_info->bit_real * 5 / 4)
-			fb->tgt_sub_real_lvl[0] = 2;
-		else if (rc_info->bit_target > rc_info->bit_real * 9 / 8)
-			fb->tgt_sub_real_lvl[0] = 1;
-		else
-			fb->tgt_sub_real_lvl[0] = 0;
-	} else {
-		if (rc_info->bit_real > rc_info->bit_target * 2)
-			fb->tgt_sub_real_lvl[0] = -5;
-		else if (rc_info->bit_real > rc_info->bit_target * 7 / 4)
-			fb->tgt_sub_real_lvl[0] = -4;
-		else if (rc_info->bit_real > rc_info->bit_target * 6 / 4)
-			fb->tgt_sub_real_lvl[0] = -3;
-		else if (rc_info->bit_real > rc_info->bit_target * 5 / 4)
-			fb->tgt_sub_real_lvl[0] = -2;
-		else
-			fb->tgt_sub_real_lvl[0] = -1;
-	}
-
-	tgt_sub_real_lvl = 0;
-	for (i = 0; i < 5; i ++)
-		tgt_sub_real_lvl += fb->tgt_sub_real_lvl[i];
-	if (task->rc_task->frm.is_intra)
-		fb->tgt_sub_real_lvl[5] = 0;
-	if (tgt_sub_real_lvl < -9)
-		fb->tgt_sub_real_lvl[5] = 2;
-	else if (tgt_sub_real_lvl < -2 && fb->tgt_sub_real_lvl[5] < 2)
-		fb->tgt_sub_real_lvl[5] = 1;
-
 	fb->st_mb_num = mbs;
 	fb->st_smear_cnt[0] = reg_st->st_smear_cnt0.rdo_smear_cnt0;
 	fb->st_smear_cnt[1] = reg_st->st_smear_cnt0.rdo_smear_cnt1;
@@ -2618,6 +2656,8 @@ static MPP_RET hal_h264e_vepu500_ret_task(void * hal, HalEncTask * task)
 	fb->st_smear_cnt[4] = fb->st_smear_cnt[0] + fb->st_smear_cnt[1] +
 			      fb->st_smear_cnt[2] + fb->st_smear_cnt[3];
 	fb->frame_type = ctx->slice->slice_type;
+
+	h264e_vepu500_update_bitrate_info(ctx, task);
 
 	hal_h264e_dbg_func("leave %p\n", hal);
 
