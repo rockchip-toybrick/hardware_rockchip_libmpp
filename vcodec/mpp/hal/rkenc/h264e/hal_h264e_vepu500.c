@@ -177,6 +177,21 @@ static RK_S32 h264_I_aq_step_default[16] = {
 	1,  2,  3,  4,  5,  6,  7,  8
 };
 
+static RK_S32 h264_aq_tthd_smart[16] = {
+	0,  0,  0,  0,  3,  3,  5,  5,
+	8,  8,  15, 15, 20, 25, 28, 28
+};
+
+static RK_S32 h264_P_aq_step_smart[16] = {
+	-8, -7, -6, -5, -4, -3, -2, -1,
+	1,  2,  3,  4,  6,  8,  8,  10
+};
+
+static RK_S32 h264_I_aq_step_smart[16] = {
+	-8, -7, -6, -5, -4, -3, -2, -1,
+	1,  2,  3,  4,  6,  8,  8,  10
+};
+
 static void clear_ext_line_bufs(HalH264eVepu500Ctx *ctx)
 {
 	RK_U32 i;
@@ -273,10 +288,10 @@ static MPP_RET hal_h264e_vepu500_init(void *hal, MppEncHalCfg *cfg)
 		hw->flt_str_i = 0;
 		hw->flt_str_p = 0;
 		if (p->smart_en) {
-			// memcpy(hw->aq_thrd_i, h264_aq_tthd_smart, sizeof(hw->aq_thrd_i));
-			// memcpy(hw->aq_thrd_p, h264_aq_tthd_smart, sizeof(hw->aq_thrd_p));
-			// memcpy(hw->aq_step_i, h264_I_aq_step_smart, sizeof(hw->aq_step_i));
-			// memcpy(hw->aq_step_p, h264_P_aq_step_smart, sizeof(hw->aq_step_p));
+			memcpy(hw->aq_thrd_i, h264_aq_tthd_smart, sizeof(hw->aq_thrd_i));
+			memcpy(hw->aq_thrd_p, h264_aq_tthd_smart, sizeof(hw->aq_thrd_p));
+			memcpy(hw->aq_step_i, h264_I_aq_step_smart, sizeof(hw->aq_step_i));
+			memcpy(hw->aq_step_p, h264_P_aq_step_smart, sizeof(hw->aq_step_p));
 		} else  {
 			memcpy(hw->aq_thrd_i, h264_aq_tthd_default, sizeof(hw->aq_thrd_i));
 			memcpy(hw->aq_thrd_p, h264_aq_tthd_default, sizeof(hw->aq_thrd_p));
@@ -1119,6 +1134,7 @@ static void setup_vepu500_rc_base(HalH264eVepu500Ctx *ctx, HalVepu500RegSet *reg
 	RK_S32 negative_bits_thd;
 	RK_S32 positive_bits_thd;
 
+	hal_h264e_dbg_func("enter\n");
 	hal_h264e_dbg_rc("bittarget %d qp [%d %d %d]\n", rc_info->bit_target,
 			 qp_min, qp_target, qp_max);
 
@@ -1129,18 +1145,19 @@ static void setup_vepu500_rc_base(HalH264eVepu500Ctx *ctx, HalVepu500RegSet *reg
 	negative_bits_thd = 0 - 5 * mb_target_bits / 16;
 	positive_bits_thd = 5 * mb_target_bits / 16;
 
-	hal_h264e_dbg_func("enter\n");
-
 	regs->reg_frm.enc_pic.pic_qp         = qp_target;
 	regs->reg_frm.rc_cfg.rc_en          = 1;
 	regs->reg_frm.rc_cfg.aq_en          = 1;
 	regs->reg_frm.rc_cfg.rc_ctu_num     = mb_w;
-
-	regs->reg_frm.rc_qp.rc_qp_range    = (slice->slice_type == H264_I_SLICE) ?
-					     hw->qp_delta_row_i : hw->qp_delta_row;
 	regs->reg_frm.rc_qp.rc_max_qp      = qp_max;
 	regs->reg_frm.rc_qp.rc_min_qp      = qp_min;
 	regs->reg_frm.rc_tgt.ctu_ebit      = mb_target_bits_mul_16;
+
+	if (ctx->smart_en)
+		regs->reg_frm.rc_qp.rc_qp_range = 0;
+	else
+		regs->reg_frm.rc_qp.rc_qp_range = (slice->slice_type == H264_I_SLICE) ?
+						  hw->qp_delta_row_i : hw->qp_delta_row;
 
 	{
 		MppEncRcCfg *rc = &ctx->cfg->rc;
@@ -1828,7 +1845,7 @@ static void setup_vepu500_aq(HalH264eVepu500Ctx *ctx)
 	s->aq_stp2.aq_stp_13t14 = aq_step[13] & 0x1f;
 	s->aq_stp2.aq_stp_14t15 = aq_step[14] & 0x1f;
 	s->aq_stp2.aq_stp_b15 = aq_step[15] & 0x1f;
-	s->aq_clip.aq16_rnge = 5;
+	s->aq_clip.aq16_rnge = 15;
 }
 
 static void setup_vepu500_quant(HalH264eVepu500Ctx *ctx)
