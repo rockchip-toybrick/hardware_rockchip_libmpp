@@ -1047,6 +1047,43 @@ static MPP_RET vepu500_h265_set_pp_regs(H265eV500RegSet *regs, VepuFmtCfg *fmt,
 	return MPP_OK;
 }
 
+static void vepu500_h265_set_vsp_filtering(H265eV500HalContext *ctx)
+{
+	H265eV500RegSet *regs = ctx->regs;
+	HevcVepu500Frame *s = &regs->reg_frm;
+	MppEncCfgSet *cfg = ctx->cfg;
+	MppEncHwCfg *hw = &cfg->hw;
+	RK_U8 bit_chg_lvl = ctx->last_frame_fb.tgt_sub_real_lvl[5]; /* [0, 2] */
+	RK_U8 corner_str = 0, edge_str = 0, internal_str = 0; /* [0, 3] */
+
+	if (ctx->qpmap_en && (ctx->cfg->tune.deblur_str % 2 == 0) &&
+	    (hw->flt_str_i == 0) && (hw->flt_str_p == 0)) {
+		if (bit_chg_lvl == 2 && ctx->frame_type != INTRA_FRAME) {
+			corner_str = 3;
+			edge_str = 3;
+			internal_str = 3;
+		} else if (bit_chg_lvl > 0) {
+			corner_str = 2;
+			edge_str = 2;
+			internal_str = 2;
+		}
+	} else {
+		if (ctx->frame_type == INTRA_FRAME) {
+			corner_str = hw->flt_str_i;
+			edge_str = hw->flt_str_i;
+			internal_str = hw->flt_str_i;
+		} else {
+			corner_str = hw->flt_str_p;
+			edge_str = hw->flt_str_p;
+			internal_str = hw->flt_str_p;
+		}
+	}
+
+	s->reg0207_src_flt_cfg.pp_corner_filter_strength = corner_str;
+	s->reg0207_src_flt_cfg.pp_edge_filter_strength = edge_str;
+	s->reg0207_src_flt_cfg.pp_internal_filter_strength = internal_str;
+}
+
 static void vepu500_h265_set_slice_regs(H265eSyntax_new *syn, HevcVepu500Frame *regs)
 {
 	regs->reg0237_synt_sps.smpl_adpt_ofst_e     = syn->pp.sample_adaptive_offset_enabled_flag;
@@ -2374,6 +2411,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_split(regs, ctx->cfg);
 	vepu500_h265_set_hw_address(ctx, reg_frm, task);
 	vepu500_h265_set_pp_regs(regs, fmt, &ctx->cfg->prep);
+	vepu500_h265_set_vsp_filtering(ctx);
 	vepu500_h265_set_rc_regs(ctx, regs, task);
 	vepu500_h265_set_rdo_regs(ctx, regs);
 	vepu500_h265_set_quant_regs(ctx);
@@ -2668,6 +2706,41 @@ MPP_RET hal_h265e_v500_get_task(void *hal, HalEncTask *task)
 	return MPP_OK;
 }
 
+static void vepu500_h265e_update_bitrate_info(H265eV500HalContext *ctx, HalEncTask * task)
+{
+	vepu500_h265_fbk *fb = &ctx->feedback;
+	EncRcTaskInfo *rc_info = &task->rc_task->info;
+	RK_S32 bit_tgt = rc_info->bit_target;
+	RK_S32 bit_real = rc_info->bit_real;
+	RK_S32 real_lvl, i = 0;
+
+	memcpy(fb->tgt_sub_real_lvl, ctx->last_frame_fb.tgt_sub_real_lvl, 6 * sizeof(RK_S8));
+	for (i = 3; i >= 0; i--)
+		fb->tgt_sub_real_lvl[i + 1] = fb->tgt_sub_real_lvl[i];
+
+	if (bit_tgt > bit_real) {
+		fb->tgt_sub_real_lvl[0] = (bit_tgt > bit_real * 6 / 4) ? 3 :
+					  (bit_tgt > bit_real * 5 / 4) ? 2 :
+					  (bit_tgt > bit_real * 9 / 8) ? 1 : 0;
+	} else {
+		fb->tgt_sub_real_lvl[0] = (bit_real > bit_tgt * 2) ? -5 :
+					  (bit_real > bit_tgt * 7 / 4) ? -4 :
+					  (bit_real > bit_tgt * 6 / 4) ? -3 :
+					  (bit_real > bit_tgt * 5 / 4) ? -2 : -1;
+	}
+
+	for (i = 0; i < 5; i ++)
+		real_lvl += fb->tgt_sub_real_lvl[i];
+
+	if (task->rc_task->frm.is_intra)
+		fb->tgt_sub_real_lvl[5] = 0;
+
+	if (real_lvl < -9)
+		fb->tgt_sub_real_lvl[5] = 2;
+	else if (real_lvl < -2 && fb->tgt_sub_real_lvl[5] < 2)
+		fb->tgt_sub_real_lvl[5] = 1;
+}
+
 MPP_RET hal_h265e_v500_ret_task(void *hal, HalEncTask *task)
 {
 	H265eV500HalContext *ctx = (H265eV500HalContext *)hal;
@@ -2683,6 +2756,8 @@ MPP_RET hal_h265e_v500_ret_task(void *hal, HalEncTask *task)
 
 	enc_task->hw_length = fb->out_strm_size;
 	enc_task->length += fb->out_strm_size;
+
+	vepu500_h265e_update_bitrate_info(ctx, task);
 
 	hal_h265e_dbg_detail("output stream size %d\n", fb->out_strm_size);
 
