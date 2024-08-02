@@ -1857,6 +1857,7 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame)
 	hal_task->input = enc->frm_buf;
 	hal_task->packet = enc->packet;
 	hal_task->output = enc->pkt_buf;
+	hal_task->online = enc->online;
 
 	status->pkt_buf_rdy = 1;
 

@@ -486,6 +486,26 @@ done:
 	return ret;
 }
 
+MPP_RET mpp_enc_set_online_mode(MppEnc ctx, RK_U32 mode)
+{
+	MppEncImpl *enc = (MppEncImpl *) ctx;
+	MPP_RET ret = MPP_OK;
+
+	if (NULL == enc) {
+		mpp_err_f("found NULL input enc\n");
+		return MPP_ERR_NULL_PTR;
+	}
+
+	enc_dbg_func("%p in\n", enc);
+
+	enc->online = mode;
+	mpp_dev_chnl_control(enc->dev, MPP_CMD_VEPU_SET_ONLINE_MODE, &mode);
+
+	enc_dbg_func("%p out\n", enc);
+
+	return ret;
+}
+
 RK_S32 mpp_enc_check_hw_running(MppEnc ctx)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;

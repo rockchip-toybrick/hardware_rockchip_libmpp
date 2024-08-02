@@ -371,6 +371,31 @@ int mpp_vcodec_enc_run_task(RK_U32 chan_id, RK_S64 pts, RK_S64 dts)
 	return mpp_enc_run_task(chan_entry->handle, pts, dts);
 }
 
+int mpp_vcodec_enc_set_online_mode(RK_U32 chan_id, RK_U32 mode)
+{
+	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
+	unsigned long lock_flag;
+
+	if (!chan_entry)
+		return -EINVAL;
+
+	spin_lock_irqsave(&chan_entry->chan_lock, lock_flag);
+	if (chan_entry->state != CHAN_STATE_RUN) {
+		spin_unlock_irqrestore(&chan_entry->chan_lock, lock_flag);
+		return MPP_NOK;
+	}
+	spin_unlock_irqrestore(&chan_entry->chan_lock, lock_flag);
+
+	if (mode >= MPP_ENC_ONLINE_MODE_BUT) {
+		mpp_err_f("online mode invalid %d\n", mode);
+		return MPP_NOK;
+	}
+
+	chan_entry->cfg.online = mode;
+
+	return mpp_enc_set_online_mode(chan_entry->handle, mode);
+}
+
 int mpp_vcodec_enc_routine(void *param)
 {
 	RK_U32 started_chan_num = 0;

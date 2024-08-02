@@ -323,13 +323,18 @@ MPP_RET hal_jpege_vepu500_set_osd(JpegeV500HalContext *ctx)
 	return MPP_OK;
 }
 
-static void vepu500_jpeg_set_dvbm(JpegV500RegSet *regs, RK_U32 width)
+static void vepu500_jpeg_set_dvbm(JpegeV500HalContext *ctx, RK_U32 width)
 {
-	regs->reg_ctl.vs_ldly.dvbm_ack_sel = 0;
-	regs->reg_ctl.vs_ldly.dvbm_inf_sel = 0;
+	JpegV500RegSet *regs = ctx->regs;
+
+	if (ctx->online == MPP_ENC_ONLINE_MODE_SW) {
+		regs->reg_ctl.vs_ldly.dvbm_ack_soft = 1;
+		regs->reg_ctl.vs_ldly.dvbm_ack_sel  = 1;
+		regs->reg_ctl.vs_ldly.dvbm_inf_sel  = 1;
+		regs->reg_ctl.dvbm_cfg.src_badr_sel = 1;
+	}
 
 	regs->reg_ctl.dvbm_cfg.dvbm_en = 1;
-	regs->reg_ctl.dvbm_cfg.src_badr_sel = 0;
 	/* 1: cur frame 0: next frame */
 	regs->reg_ctl.dvbm_cfg.ptr_gbck = 0;
 	regs->reg_ctl.dvbm_cfg.src_oflw_drop = 1;
@@ -432,7 +437,7 @@ MPP_RET hal_jpege_v500_gen_regs(void *hal, HalEncTask * task)
 	reg_ctl->enc_wdg.vs_load_thd = 0x1fffff;
 
 	if (ctx->online)
-		vepu500_jpeg_set_dvbm(regs, syntax->width);
+		vepu500_jpeg_set_dvbm(ctx, syntax->width);
 	hal_jpege_vepu500_set_osd(ctx);
 	vepu500_set_jpeg_reg(cfg);
 	hal_jpege_vepu500_set_qtable(regs, qtable);
@@ -602,8 +607,8 @@ MPP_RET hal_jpege_v500_get_task(void *hal, HalEncTask * task)
 	hal_jpege_enter();
 
 	memcpy(&ctx->syntax, syntax, sizeof(ctx->syntax));
-
 	ctx->last_frame_type = ctx->frame_type;
+	ctx->online = task->online;
 
 	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
 	if (ctx->cfg->rc.rc_mode != MPP_ENC_RC_MODE_FIXQP) {

@@ -767,3 +767,9 @@ int mpp_vcodec_run_task(RK_U32 chan_id, RK_S64 pts, RK_S64 dts)
 	return mpp_vcodec_enc_run_task(chan_id, pts, dts);
 }
 EXPORT_SYMBOL(mpp_vcodec_run_task);
+
+int mpp_vcodec_set_online_mode(RK_U32 chan_id, RK_U32 mode)
+{
+	return mpp_vcodec_enc_set_online_mode(chan_id, mode);
+}
+EXPORT_SYMBOL(mpp_vcodec_set_online_mode);

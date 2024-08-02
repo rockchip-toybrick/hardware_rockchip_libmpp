@@ -1561,11 +1561,14 @@ static MPP_RET vepu500_h265_set_dvbm(H265eV500HalContext *ctx, HalEncTask *task)
 	regs->reg_frm.reg0194_enc_id.source_id = 0;
 	regs->reg_frm.reg0194_enc_id.src_id_match = 0;
 
-	regs->reg_ctl.vs_ldly.dvbm_ack_sel = 0;
-	regs->reg_ctl.vs_ldly.dvbm_inf_sel = 0;
+	if (ctx->online == MPP_ENC_ONLINE_MODE_SW) {
+		regs->reg_ctl.vs_ldly.dvbm_ack_soft = 1;
+		regs->reg_ctl.vs_ldly.dvbm_ack_sel  = 1;
+		regs->reg_ctl.vs_ldly.dvbm_inf_sel  = 1;
+		regs->reg_ctl.dvbm_cfg.src_badr_sel = 1;
+	}
 
 	regs->reg_ctl.dvbm_cfg.dvbm_en = 1;
-	regs->reg_ctl.dvbm_cfg.src_badr_sel = 0;
 	/* 1: cur frame 0: next frame */
 	regs->reg_ctl.dvbm_cfg.ptr_gbck = 0;
 	regs->reg_ctl.dvbm_cfg.src_oflw_drop = 1;
@@ -3021,6 +3024,7 @@ MPP_RET hal_h265e_v500_get_task(void *hal, HalEncTask *task)
 
 	hal_h265e_enter();
 
+	ctx->online = task->online;
 	ctx->roi_data = mpp_frame_get_roi(task->frame);
 	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
 

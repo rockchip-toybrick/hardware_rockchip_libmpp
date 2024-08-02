@@ -92,6 +92,7 @@ enum MPP_DEV_COMMAND_TYPE {
 	MPP_CMD_SEND_CODEC_INFO		= MPP_CMD_CONTROL_BASE + 3,
 	MPP_CMD_UNBIND_JPEG_TASK	= MPP_CMD_CONTROL_BASE + 4,
 	MPP_CMD_VEPU_CONNECT_DVBM	= MPP_CMD_CONTROL_BASE + 5,
+	MPP_CMD_VEPU_SET_ONLINE_MODE	= MPP_CMD_CONTROL_BASE + 6,
 	MPP_CMD_CONTROL_BUTT,
 
 	MPP_CMD_BUTT,
@@ -250,6 +251,7 @@ struct mpp_dev {
 	atomic_t suspend_en;
 	/* debug for isp */
 	void __iomem *isp_base;
+	u32 online_mode;
 };
 
 /* slice fifo */
@@ -328,6 +330,13 @@ enum mpp_vcodec_event_type {
 	MPP_VCODEC_EVENT_SLICE,
 	MPP_VCODEC_EVENT_BUTT,
 };
+
+typedef enum MppEncOnlineMode_e {
+	MPP_ENC_ONLINE_MODE_NONE,
+	MPP_ENC_ONLINE_MODE_HW,
+	MPP_ENC_ONLINE_MODE_SW,
+	MPP_ENC_ONLINE_MODE_BUT,
+} MppEncOnlineMode;
 
 /* The context for the a task */
 struct mpp_task {

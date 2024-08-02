@@ -1374,4 +1374,11 @@ typedef struct MppEncFineTuneCfg_t {
 	RK_S32              reserved[8];
 } MppEncFineTuneCfg;
 
+typedef enum MppEncOnlineMode_e {
+	MPP_ENC_ONLINE_MODE_NONE,
+	MPP_ENC_ONLINE_MODE_HW,
+	MPP_ENC_ONLINE_MODE_SW,
+	MPP_ENC_ONLINE_MODE_BUT,
+} MppEncOnlineMode;
+
 #endif /*__RK_VENC_CMD_H__*/

@@ -1264,6 +1264,13 @@ static int mpp_process_request(struct mpp_session *session,
 
 		return ret;
 	} break;
+	case MPP_CMD_VEPU_SET_ONLINE_MODE: {
+		u32 mode = *(u32*)req->data;
+
+		session->online = mode;
+		mpp->online_mode = mode;
+		mpp_err("set online mode %d\n", mode);
+	} break;
 	default: {
 		mpp = session->mpp;
 		if (!mpp) {
@@ -2001,7 +2008,7 @@ static int mpp_chnl_register(struct mpp_session *session, void *fun, u32 chn_id)
 	session->callback = fun;
 	session->chn_id = chn_id & 0xffff;
 	session->online = chn_id >> 16;
-
+	session->mpp->online_mode = session->online;
 	if (session->online) {
 		session->mpp->always_on = 1;
 		mpp_power_on(session->mpp);

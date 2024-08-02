@@ -606,6 +606,7 @@ static MPP_RET hal_h264e_vepu500_get_task(void *hal, HalEncTask *task)
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 
+	ctx->online = task->online;
 	ctx->roi_data = mpp_frame_get_roi(task->frame);
 	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
 
@@ -1820,11 +1821,14 @@ static MPP_RET vepu500_h264e_set_dvbm(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	HalVepu500RegSet *regs = ctx->regs_set;
 	RK_U32 width = ctx->cfg->prep.width;
 
-	regs->reg_ctl.vs_ldly.dvbm_ack_sel = 0;
-	regs->reg_ctl.vs_ldly.dvbm_inf_sel = 0;
+	if (ctx->online == MPP_ENC_ONLINE_MODE_SW) {
+		regs->reg_ctl.vs_ldly.dvbm_ack_soft = 1;
+		regs->reg_ctl.vs_ldly.dvbm_ack_sel  = 1;
+		regs->reg_ctl.vs_ldly.dvbm_inf_sel  = 1;
+		regs->reg_ctl.dvbm_cfg.src_badr_sel = 1;
+	}
 
-	regs->reg_ctl.dvbm_cfg.dvbm_en = ctx->online;
-	regs->reg_ctl.dvbm_cfg.src_badr_sel = 0;
+	regs->reg_ctl.dvbm_cfg.dvbm_en = 1;
 	/* 1: cur frame 0: next frame */
 	regs->reg_ctl.dvbm_cfg.ptr_gbck = 0;
 	regs->reg_ctl.dvbm_cfg.src_oflw_drop = 1;
