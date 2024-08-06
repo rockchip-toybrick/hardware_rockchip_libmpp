@@ -2205,7 +2205,7 @@ static void vepu500_h265_tune_qpmap_normal(H265eV500HalContext *ctx, HalEncTask 
 		RK_U32 coef_move = motion_b32_num * 4 * 100;
 		RK_U8 mv_final_flag;
 		RK_U8 max_mv_final_flag = 0;
-		RK_S32 b32_idx = 0, dqp = 0;
+		RK_S32 b32_seq = 0, dqp = 0;
 
 		if (pic_qp < 32)
 			return;
@@ -2243,9 +2243,9 @@ static void vepu500_h265_tune_qpmap_normal(H265eV500HalContext *ctx, HalEncTask 
 				max_mv_final_flag = MPP_MAX(max_mv_final_flag, mv_final_flag);
 
 				if (((idx + 1) % 4) == 0) { /* block32x32 */
-					roi_blk[b32_idx].qp_adju = (max_mv_final_flag > 0) ? 0x80 - dqp : 0;
+					roi_blk[b32_seq].qp_adju = (max_mv_final_flag > 0) ? 0x80 - dqp : 0;
 					max_mv_final_flag = 0;
-					b32_idx++;
+					b32_seq++;
 				}
 			}
 		}
@@ -2372,6 +2372,7 @@ static void vepu500_h265_tune_qpmap(H265eV500HalContext *ctx, HalEncTask *task)
 	} else {
 		/* one fourth is enough when bmap_mdc_dpth is equal to 0 */
 		memset(mpp_buffer_get_ptr(task->qpmap), 0, w32 * h32 / 16 / 16 * 4);
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 
 		if (ctx->smart_en) {
 			vepu500_h265_tune_qpmap_smart(ctx, task);

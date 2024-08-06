@@ -2307,6 +2307,7 @@ static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	} else {
 		/* one fourth is enough when bmap_mdc_dpth is equal to 0 */
 		memset(mpp_buffer_get_ptr(task->qpmap), 0, w64 * h16 / 16 / 16 * 4);
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 
 		if (ctx->smart_en) {
 			vepu500_h264_tune_qpmap_smart(ctx, task);
