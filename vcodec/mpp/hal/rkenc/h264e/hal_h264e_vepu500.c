@@ -31,6 +31,29 @@
 #define MAX_TASK_CNT        1
 #define VEPU500_MAX_ROI_NUM         8
 
+/* Custom Quant Matrices: Joint Video Team */
+static RK_U8 vepu500_h264_cqm_jvt8i[64] = {
+	6, 10, 13, 16, 18, 23, 25, 27,
+	10, 11, 16, 18, 23, 25, 27, 29,
+	13, 16, 18, 23, 25, 27, 29, 31,
+	16, 18, 23, 25, 27, 29, 31, 33,
+	18, 23, 25, 27, 29, 31, 33, 36,
+	23, 25, 27, 29, 31, 33, 36, 38,
+	25, 27, 29, 31, 33, 36, 38, 40,
+	27, 29, 31, 33, 36, 38, 40, 42
+};
+
+static RK_U8 vepu500_h264_cqm_jvt8p[64] = {
+	9, 13, 15, 17, 19, 21, 22, 24,
+	13, 13, 17, 19, 21, 22, 24, 25,
+	15, 17, 19, 21, 22, 24, 25, 27,
+	17, 19, 21, 22, 24, 25, 27, 28,
+	19, 21, 22, 24, 25, 27, 28, 30,
+	21, 22, 24, 25, 27, 28, 30, 32,
+	22, 24, 25, 27, 28, 30, 32, 33,
+	24, 25, 27, 28, 30, 32, 33, 35
+};
+
 const static RefType ref_type_map[2][2] = {
 	/* ref_lt = 0	ref_lt = 1 */
 	/* cur_lt = 0 */{ST_REF_TO_ST, ST_REF_TO_LT},
@@ -2319,6 +2342,30 @@ static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	hal_h264e_dbg_func("leave\n");
 }
 
+static void setup_vepu500_scaling_list(HalH264eVepu500Ctx *ctx)
+{
+	Vepu500SclCfg *s = &ctx->regs_set->reg_scl_jpgtbl.scl;
+	RK_U8 *p = (RK_U8 *)&s->tu8_intra_y[0];
+	RK_U8 idx;
+
+	hal_h264e_dbg_func("enter\n");
+
+	/* intra4x4 and inter4x4 is not supported on VEPU500.
+	 * valid range: 0x2200 ~ 0x221F
+	 */
+	if (ctx->pps->scaling_list_mode == 1) {
+		for (idx = 0; idx < 64; idx++) {
+			p[idx] = vepu500_h264_cqm_jvt8i[63 - idx]; /* intra8x8 */
+			p[idx + 64] = vepu500_h264_cqm_jvt8p[63 - idx]; /* inter8x8 */
+		}
+	} else if (ctx->pps->scaling_list_mode == 2) {
+		//TODO: Update scaling list for (scaling_list_mode == 2)
+		mpp_log_f("scaling_list_mode 2 is not supported yet\n");
+	}
+
+	hal_h264e_dbg_func("leave\n");
+}
+
 static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 {
 	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *)hal;
@@ -2369,6 +2416,7 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu500_me(regs, sps, slice);
 	setup_vepu500_l2(regs, slice, &cfg->hw);
 	setup_vepu500_ext_line_buf(regs, ctx);
+	setup_vepu500_scaling_list(ctx);
 
 	if (ctx->qpmap_en && (task->mv_info != NULL) &&
 	    !task->rc_task->info.complex_scene &&

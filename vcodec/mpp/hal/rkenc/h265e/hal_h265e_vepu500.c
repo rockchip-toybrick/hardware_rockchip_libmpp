@@ -45,6 +45,28 @@ const static RK_U32 lambda_tbl_pre_inter[52] = {
 	0x000243D3, 0x00028AD4, 0x0002DA89, 0x000333FF,
 };
 
+static RK_U8 vepu500_h265_cqm_intra8[64] = {
+	16, 16, 16, 16, 17, 18, 21, 24,
+	16, 16, 16, 16, 17, 19, 22, 25,
+	16, 16, 17, 18, 20, 22, 25, 29,
+	16, 16, 18, 21, 24, 27, 31, 36,
+	17, 17, 20, 24, 30, 35, 41, 47,
+	18, 19, 22, 27, 35, 44, 54, 65,
+	21, 22, 25, 31, 41, 54, 70, 88,
+	24, 25, 29, 36, 47, 65, 88, 115
+};
+
+static RK_U8 vepu500_h265_cqm_inter8[64] = {
+	16, 16, 16, 16, 17, 18, 20, 24,
+	16, 16, 16, 17, 18, 20, 24, 25,
+	16, 16, 17, 18, 20, 24, 25, 28,
+	16, 17, 18, 20, 24, 25, 28, 33,
+	17, 18, 20, 24, 25, 28, 33, 41,
+	18, 20, 24, 25, 28, 33, 41, 54,
+	20, 24, 25, 28, 33, 41, 54, 71,
+	24, 25, 28, 33, 41, 54, 71, 91
+};
+
 typedef struct vepu500_h265_fbk_t {
 	RK_U32 hw_status;       /* 0:corret, 1:error */
 	RK_U32 frame_type;
@@ -2385,6 +2407,59 @@ static void vepu500_h265_tune_qpmap(H265eV500HalContext *ctx, HalEncTask *task)
 	hal_h265e_leave();
 }
 
+static void vepu500_h265_set_scaling_list(H265eV500HalContext *ctx)
+{
+	H265eV500RegSet *regs = ctx->regs;
+	Vepu500SclCfg *s = &regs->reg_scl_jpgtbl.scl;
+	RK_U8 *p = (RK_U8 *)&s->tu8_intra_y[0];
+	RK_U32 scl_lst_sel = regs->reg_frm.reg0232_rdo_cfg.scl_lst_sel;
+	RK_U8 idx;
+
+	hal_h265e_enter();
+
+	if (scl_lst_sel == 1) {
+		for (idx = 0; idx < 64; idx++) {
+			/* TU8 intra Y/U/V */
+			p[idx + 64 * 0] = vepu500_h265_cqm_intra8[63 - idx];
+			p[idx + 64 * 1] = vepu500_h265_cqm_intra8[63 - idx];
+			p[idx + 64 * 2] = vepu500_h265_cqm_intra8[63 - idx];
+
+			/* TU8 inter Y/U/V */
+			p[idx + 64 * 3] = vepu500_h265_cqm_inter8[63 - idx];
+			p[idx + 64 * 4] = vepu500_h265_cqm_inter8[63 - idx];
+			p[idx + 64 * 5] = vepu500_h265_cqm_inter8[63 - idx];
+
+			/* TU16 intra Y/U/V AC */
+			p[idx + 64 * 6] = vepu500_h265_cqm_intra8[63 - idx];
+			p[idx + 64 * 7] = vepu500_h265_cqm_intra8[63 - idx];
+			p[idx + 64 * 8] = vepu500_h265_cqm_intra8[63 - idx];
+
+			/* TU16 inter Y/U/V AC */
+			p[idx + 64 *  9] = vepu500_h265_cqm_inter8[63 - idx];
+			p[idx + 64 * 10] = vepu500_h265_cqm_inter8[63 - idx];
+			p[idx + 64 * 11] = vepu500_h265_cqm_inter8[63 - idx];
+
+			/* TU32 intra/inter Y AC */
+			p[idx + 64 * 12] = vepu500_h265_cqm_intra8[63 - idx];
+			p[idx + 64 * 13] = vepu500_h265_cqm_inter8[63 - idx];
+		}
+
+		s->tu_dc0.tu16_intra_y_dc = 16;
+		s->tu_dc0.tu16_intra_u_dc = 16;
+		s->tu_dc0.tu16_intra_v_dc = 16;
+		s->tu_dc0.tu16_inter_y_dc = 16;
+		s->tu_dc1.tu16_inter_u_dc = 16;
+		s->tu_dc1.tu16_inter_v_dc = 16;
+		s->tu_dc1.tu32_intra_y_dc = 16;
+		s->tu_dc1.tu32_inter_y_dc = 16;
+	} else if (scl_lst_sel == 2) {
+		//TODO: Update scaling list for (scaling_list_mode == 2)
+		mpp_log_f("scaling_list_mode 2 is not supported yet\n");
+	}
+
+	hal_h265e_leave();
+}
+
 MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 {
 	H265eV500HalContext *ctx = (H265eV500HalContext *)hal;
@@ -2423,6 +2498,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	vepu500_h265_set_anti_stripe_regs(ctx);
 	vepu500_h265_set_atr_regs(ctx);
 	vepu500_h265_set_smear_regs(ctx);
+	vepu500_h265_set_scaling_list(ctx);
 
 	if (ctx->qpmap_en && (task->mv_info != NULL) &&
 	    !task->rc_task->info.complex_scene &&
