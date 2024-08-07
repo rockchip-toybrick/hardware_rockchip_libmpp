@@ -2198,7 +2198,6 @@ static void vepu500_h264_tune_qpmap_normal(HalH264eVepu500Ctx *ctx, HalEncTask *
 				roi_blk[idx].qp_adju = move_flag ? 0x80 - dqp : 0;
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 	}
 
 	hal_h264e_dbg_func("leave\n");
@@ -2277,8 +2276,6 @@ static void vepu500_h264_tune_qpmap_smart(HalH264eVepu500Ctx *ctx, HalEncTask *t
 				}
 			}
 		}
-
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 	}
 
 	hal_h264e_dbg_func("leave\n");
@@ -2307,13 +2304,14 @@ static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	} else {
 		/* one fourth is enough when bmap_mdc_dpth is equal to 0 */
 		memset(mpp_buffer_get_ptr(task->qpmap), 0, w64 * h16 / 16 / 16 * 4);
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 
 		if (ctx->smart_en) {
 			vepu500_h264_tune_qpmap_smart(ctx, task);
 		} else {
 			vepu500_h264_tune_qpmap_normal(ctx, task);
 		}
+
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 	}
 
 	reg_frm->adr_roir = mpp_dev_get_iova_address(ctx->dev, task->qpmap, 186);

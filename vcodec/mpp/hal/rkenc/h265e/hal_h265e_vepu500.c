@@ -2249,7 +2249,6 @@ static void vepu500_h265_tune_qpmap_normal(H265eV500HalContext *ctx, HalEncTask 
 				}
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 	}
 
 	hal_h265e_leave();
@@ -2343,7 +2342,6 @@ static void vepu500_h265_tune_qpmap_smart(H265eV500HalContext *ctx, HalEncTask *
 				}
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 	}
 
 	hal_h265e_leave();
@@ -2372,13 +2370,14 @@ static void vepu500_h265_tune_qpmap(H265eV500HalContext *ctx, HalEncTask *task)
 	} else {
 		/* one fourth is enough when bmap_mdc_dpth is equal to 0 */
 		memset(mpp_buffer_get_ptr(task->qpmap), 0, w32 * h32 / 16 / 16 * 4);
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 
 		if (ctx->smart_en) {
 			vepu500_h265_tune_qpmap_smart(ctx, task);
 		} else {
 			vepu500_h265_tune_qpmap_normal(ctx, task);
 		}
+
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
 	}
 
 	reg_frm->reg0186_adr_roir = mpp_dev_get_iova_address(ctx->dev, task->qpmap, 186);
