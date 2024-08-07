@@ -1639,7 +1639,7 @@ static void setup_vepu500_recn_refr(HalH264eVepu500Ctx *ctx, HalVepu500RegSet *r
 		mpp_assert(ptr);
 		mpp_assert(dma);
 		memset(ptr, 0, len);
-		dma_buf_end_cpu_access_partial(dma, DMA_FROM_DEVICE, 0, len);
+		dma_buf_end_cpu_access_partial(dma, DMA_TO_DEVICE, 0, len);
 		ctx->recn_buf_clear = 0;
 	}
 
@@ -2334,7 +2334,7 @@ static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 			vepu500_h264_tune_qpmap_normal(ctx, task);
 		}
 
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_FROM_DEVICE);
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_TO_DEVICE);
 	}
 
 	reg_frm->adr_roir = mpp_dev_get_iova_address(ctx->dev, task->qpmap, 186);

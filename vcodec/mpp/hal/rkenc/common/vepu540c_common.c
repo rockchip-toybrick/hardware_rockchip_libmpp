@@ -191,7 +191,7 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 				}
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_TO_DEVICE);
 	} else {
 		mdr = (RK_U32 *)mpp_buffer_get_ptr(mv_info);
 		qpmap_hevc = (Vepu540cHevcQpmapCfg *)mpp_buffer_get_ptr(qpmap);
@@ -273,7 +273,7 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 				}
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_TO_DEVICE);
 	}
 
 	return MPP_OK;
@@ -382,7 +382,7 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 					qpmap_avc[i].qp_adju = 0x80 - dqp;
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_TO_DEVICE);
 	} else {
 		mdr = (RK_U32 *)mpp_buffer_get_ptr(mv_info);
 		qpmap_hevc = (Vepu540cHevcQpmapCfg *)mpp_buffer_get_ptr(qpmap);
@@ -480,7 +480,7 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 				}
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_TO_DEVICE);
 	}
 
 	return MPP_OK;
