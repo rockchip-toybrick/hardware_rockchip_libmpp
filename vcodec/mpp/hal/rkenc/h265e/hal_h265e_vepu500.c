@@ -2629,11 +2629,7 @@ static MPP_RET vepu500_h265_set_feedback(H265eV500HalContext *ctx, HalEncTask *e
 		return MPP_NOK;
 	}
 
-	// fb->st_madi += elem->st.madi;
-	//fb->st_madp += elem->st.madp;
 	fb->st_mb_num += elem->st.st_bnum_b16.num_b16;
-	//  fb->st_ctu_num += elem->st.st_bnum_cme.num_ctu;
-
 	fb->st_lvl64_inter_num += elem->st.st_pnum_p64.pnum_p64;
 	fb->st_lvl32_inter_num += elem->st.st_pnum_p32.pnum_p32;
 	fb->st_lvl32_intra_num += elem->st.st_pnum_i32.pnum_i32;
@@ -2649,19 +2645,6 @@ static MPP_RET vepu500_h265_set_feedback(H265eV500HalContext *ctx, HalEncTask *e
 	fb->acc_zero_mv = elem->st.acc_zero_mv;
 	fb->st_ctu_num = elem->st.st_bnum_b16.num_b16;
 
-	fb->frame_type = enc_task->rc_task->frm.is_intra ? INTRA_FRAME : INTER_P_FRAME;
-	hal_rc_ret->bit_real += fb->out_strm_size * 8;
-
-	if (fb->st_mb_num)
-		fb->st_madi = fb->st_madi / fb->st_mb_num;
-	else
-		fb->st_madi = 0;
-
-	if (fb->st_ctu_num)
-		fb->st_madp = fb->st_madp / fb->st_ctu_num;
-	else
-		fb->st_madp = 0;
-
 	if (mb4_num > 0)
 		hal_rc_ret->iblk4_prop =  ((((fb->st_lvl4_intra_num + fb->st_lvl8_intra_num) << 2) +
 					    (fb->st_lvl16_intra_num << 4) +
@@ -2669,14 +2652,109 @@ static MPP_RET vepu500_h265_set_feedback(H265eV500HalContext *ctx, HalEncTask *e
 
 	if (mb64_num > 0) {
 		hal_rc_ret->quality_real = fb->qp_sum / mb8_num;
-		// hal_cfg[k].sse          = fb->sse_sum / mb64_num;
 	}
 
-	hal_rc_ret->madi = fb->st_madi;
-	hal_rc_ret->madp = fb->st_madp;
 	hal_h265e_leave();
 
 	return MPP_OK;
+}
+
+static void vepu500_h265e_update_tune_stat(H265eV500HalContext *ctx, HalEncTask *task)
+{
+	H265eV500RegSet *regs = ctx->regs;
+	HevcVepu500RcRoi *s = &regs->reg_rc_roi;
+	vepu500_h265_fbk *fb = &ctx->feedback;
+	MppEncCfgSet *cfg = ctx->cfg;
+	H265eV500StatusElem *elem = (H265eV500StatusElem *)ctx->reg_out;
+	Vepu500Status *st = &elem->st;
+	EncRcTaskInfo *info = (EncRcTaskInfo *)&task->rc_task->info;
+	RK_U32 b16_num = MPP_ALIGN(cfg->prep.width, 16) * MPP_ALIGN(cfg->prep.height, 16) / 256;
+	RK_U32 madi_cnt = 0, madp_cnt = 0;
+
+	RK_U32 madi_th_cnt0 = st->st_madi_lt_num0.madi_th_lt_cnt0 +
+			      st->st_madi_rt_num0.madi_th_rt_cnt0 +
+			      st->st_madi_lb_num0.madi_th_lb_cnt0 +
+			      st->st_madi_rb_num0.madi_th_rb_cnt0;
+	RK_U32 madi_th_cnt1 = st->st_madi_lt_num0.madi_th_lt_cnt1 +
+			      st->st_madi_rt_num0.madi_th_rt_cnt1 +
+			      st->st_madi_lb_num0.madi_th_lb_cnt1 +
+			      st->st_madi_rb_num0.madi_th_rb_cnt1;
+	RK_U32 madi_th_cnt2 = st->st_madi_lt_num1.madi_th_lt_cnt2 +
+			      st->st_madi_rt_num1.madi_th_rt_cnt2 +
+			      st->st_madi_lb_num1.madi_th_lb_cnt2 +
+			      st->st_madi_rb_num1.madi_th_rb_cnt2;
+	RK_U32 madi_th_cnt3 = st->st_madi_lt_num1.madi_th_lt_cnt3 +
+			      st->st_madi_rt_num1.madi_th_rt_cnt3 +
+			      st->st_madi_lb_num1.madi_th_lb_cnt3 +
+			      st->st_madi_rb_num1.madi_th_rb_cnt3;
+	RK_U32 madp_th_cnt0 = st->st_madp_lt_num0.madp_th_lt_cnt0 +
+			      st->st_madp_rt_num0.madp_th_rt_cnt0 +
+			      st->st_madp_lb_num0.madp_th_lb_cnt0 +
+			      st->st_madp_rb_num0.madp_th_rb_cnt0;
+	RK_U32 madp_th_cnt1 = st->st_madp_lt_num0.madp_th_lt_cnt1 +
+			      st->st_madp_rt_num0.madp_th_rt_cnt1 +
+			      st->st_madp_lb_num0.madp_th_lb_cnt1 +
+			      st->st_madp_rb_num0.madp_th_rb_cnt1;
+	RK_U32 madp_th_cnt2 = st->st_madp_lt_num1.madp_th_lt_cnt2 +
+			      st->st_madp_rt_num1.madp_th_rt_cnt2 +
+			      st->st_madp_lb_num1.madp_th_lb_cnt2 +
+			      st->st_madp_rb_num1.madp_th_rb_cnt2;
+	RK_U32 madp_th_cnt3 = st->st_madp_lt_num1.madp_th_lt_cnt3 +
+			      st->st_madp_rt_num1.madp_th_rt_cnt3 +
+			      st->st_madp_lb_num1.madp_th_lb_cnt3 +
+			      st->st_madp_rb_num1.madp_th_rb_cnt3;
+
+	madi_cnt = (6 * madi_th_cnt3 + 5 * madi_th_cnt2 + 4 * madi_th_cnt1) >> 2;
+	info->complex_level = (madi_cnt * 100 > 30 * b16_num) ? 2 :
+			      (madi_cnt * 100 > 13 * b16_num) ? 1 : 0;
+
+	{
+		RK_U32 md_cnt = 0, motion_level = 0;
+
+		if (ctx->smart_en)
+			md_cnt = (12 * madp_th_cnt3 + 11 * madp_th_cnt2 + 8 * madp_th_cnt1) >> 2;
+		else
+			md_cnt = (24 * madp_th_cnt3 + 22 * madp_th_cnt2 + 17 * madp_th_cnt1) >> 2;
+
+		if (md_cnt * 100 > 15 * b16_num)
+			motion_level = 200;
+		else if (md_cnt * 100 > 5 * b16_num)
+			motion_level = 100;
+		else if (md_cnt * 100 > (b16_num >> 2))
+			motion_level = 1;
+		else
+			motion_level = 0;
+		info->motion_level = motion_level;
+	}
+	hal_h265e_dbg_output("frame %d complex_level %d motion_level %d\n",
+			     ctx->frame_num - 1, info->complex_level, info->motion_level);
+
+	fb->st_madi = madi_th_cnt0 * s->madi_st_thd.madi_th0 +
+		      madi_th_cnt1 * (s->madi_st_thd.madi_th0 + s->madi_st_thd.madi_th1) / 2 +
+		      madi_th_cnt2 * (s->madi_st_thd.madi_th1 + s->madi_st_thd.madi_th2) / 2 +
+		      madi_th_cnt3 * s->madi_st_thd.madi_th2;
+
+	madi_cnt = madi_th_cnt0 + madi_th_cnt1 + madi_th_cnt2 + madi_th_cnt3;
+	if (madi_cnt)
+		fb->st_madi = fb->st_madi / madi_cnt;
+
+	fb->st_madp = madp_th_cnt0 * s->madp_st_thd0.madp_th0 +
+		      madp_th_cnt1 * (s->madp_st_thd0.madp_th0 + s->madp_st_thd0.madp_th1) / 2 +
+		      madp_th_cnt2 * (s->madp_st_thd0.madp_th1 + s->madp_st_thd1.madp_th2) / 2 +
+		      madp_th_cnt3 * s->madp_st_thd1.madp_th2;
+
+	madp_cnt = madp_th_cnt0 + madp_th_cnt1 + madp_th_cnt2 + madp_th_cnt3;
+	if (madp_cnt)
+		fb->st_madp = fb->st_madp / madp_cnt;
+
+	fb->st_mb_num += st->st_bnum_b16.num_b16;
+	fb->frame_type = task->rc_task->frm.is_intra ? INTRA_FRAME : INTER_P_FRAME;
+	info->bit_real = fb->out_strm_size * 8;
+	info->madi = fb->st_madi;
+	info->madp = fb->st_madp;
+
+	hal_h265e_dbg_output("frame %d bit_real %d quality_real %d madi %d madp %d\n",
+			     ctx->frame_num - 1, info->bit_real, info->quality_real, info->madi, info->madp);
 }
 
 //#define DUMP_DATA
@@ -2833,6 +2911,7 @@ MPP_RET hal_h265e_v500_ret_task(void *hal, HalEncTask *task)
 	enc_task->hw_length = fb->out_strm_size;
 	enc_task->length += fb->out_strm_size;
 
+	vepu500_h265e_update_tune_stat(ctx, task);
 	vepu500_h265e_update_bitrate_info(ctx, task);
 
 	hal_h265e_dbg_detail("output stream size %d\n", fb->out_strm_size);
