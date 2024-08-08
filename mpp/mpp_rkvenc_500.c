@@ -267,6 +267,29 @@ struct rkvenc_task {
 	struct rkvenc_pp_info *pp_info;
 };
 
+union st_enc_u {
+	u32 val;
+	struct {
+		u32 st_enc             : 2;
+		u32 st_sclr            : 1;
+		u32 vepu_fbd_err       : 5;
+		u32 isp_src_oflw       : 1;
+		u32 vepu_src_oflw      : 1;
+		u32 vepu_sid_nmch      : 1;
+		u32 vepu_fcnt_nmch     : 1;
+		u32 reserved           : 4;
+		u32 dvbm_finf_wful     : 1;
+		u32 dvbm_linf_wful     : 1;
+		u32 dvbm_fsid_nmch     : 1;
+		u32 dvbm_fcnt_early    : 1;
+		u32 dvbm_fcnt_late     : 1;
+		u32 dvbm_isp_oflw      : 1;
+		u32 dvbm_vepu_oflw     : 1;
+		u32 isp_time_out       : 1;
+		u32 dvbm_vsrc_fcnt     : 8;
+	};
+};
+
 struct rkvenc_debug_info {
 	/* normal info */
 	u32 hw_running;
@@ -277,6 +300,7 @@ struct rkvenc_debug_info {
 	/* record bs buf top/bot/write/read addr */
 	u32 bsbuf_info[4];
 	u32 enc_err_cnt;
+	u32 enc_err_irq;
 	u32 enc_err_status;
 };
 
@@ -1079,6 +1103,7 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 	struct rkvenc_task *task;
 	struct mpp_session *session;
 	struct rkvenc2_session_priv *priv;
+	union st_enc_u enc_st;
 
 	mpp_debug_enter();
 
@@ -1093,6 +1118,7 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 
 	/* get irq status */
 	mpp->irq_status = mpp_read(mpp, hw->int_sta_base);
+	enc_st.val = mpp_read(mpp, RKVENC_STATUS);
 	if (!mpp->irq_status)
 		return IRQ_NONE;
 	/* clear irq regs */
@@ -1108,7 +1134,6 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 
 	mpp_dbg_dvbm("irq_status 0x%08x\n", mpp->irq_status);
 	if (priv->dvbm_cfg) {
-		u32 enc_st = mpp_read(mpp, RKVENC_STATUS);
 		u32 dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
 
 		if (mpp->irq_status & RKVENC_SOURCE_ERR) {
@@ -1124,9 +1149,9 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 			}
 			mpp_err("chan %d task %d pipe %d frame id %d err 0x%08x cfg %#x 0x%08x\n",
 				session->chn_id, mpp_task->task_index, mpp_task->pipe_id,
-				mpp_task->frame_id, enc_st, dvbm_cfg, mpp_read(mpp, 0x516c));
+				mpp_task->frame_id, enc_st.val, dvbm_cfg, mpp_read(mpp, 0x516c));
 		}
-		mpp_dbg_dvbm("st enc 0x%08x\n", enc_st);
+		mpp_dbg_dvbm("st enc 0x%08x\n", enc_st.val);
 
 		if (enc->skip_dvbm_discnct) {
 			if ((mpp->irq_status & RKVENC_SOURCE_ERR)) {
@@ -1180,8 +1205,11 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 		mpp_err("chan %d %s task %d irq_status 0x%08x enc st 0x%08x\n",
 			session->chn_id, is_pp_task(task) ? "pp" : "enc",
 			mpp_task->task_index, task->irq_status,
-			mpp_read(mpp, RKVENC_STATUS));
-		priv->info.enc_err_status = task->irq_status;
+			enc_st.val);
+		priv->info.enc_err_irq = task->irq_status;
+		priv->info.enc_err_status = enc_st.val;
+		if (enc_st.vepu_src_oflw)
+			priv->info.wrap_overflow_cnt++;
 		priv->info.enc_err_cnt++;
 		if (mpp->hw_ops->reset)
 			mpp->hw_ops->reset(mpp);
@@ -1548,6 +1576,7 @@ static int rkvenc_procfs_remove(struct mpp_dev *mpp)
 static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq)
 {
 	struct rkvenc2_session_priv *priv = session->priv;
+	struct rkvenc_debug_info *info = &priv->info;
 
 	down_read(&priv->rw_sem);
 	/* item name */
@@ -1555,26 +1584,26 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 	seq_puts(seq, "------------------------------------------------------\n");
 	seq_printf(seq, "%8s|", "ID");
 	seq_printf(seq, "%8s|", "device");
-	seq_printf(seq, "%15s|%10s|%12s|%10s|%13s|%13s",
+	seq_printf(seq, "%15s|%10s|%12s|%10s|%13s|%13s|%13s",
 		   "hw_running", "online", "wrap_ovfl", "bs_ovfl",
-		   "enc_err_cnt", "enc_err_st");
+		   "enc_err_cnt", "enc_err_irq", "enc_err_st");
 	seq_puts(seq, "\n");
 
 	seq_printf(seq, "%8d|", session->chn_id);
 	seq_printf(seq, "%8s|", mpp_device_name[session->device_type]);
-	seq_printf(seq, "%15d|%10d|%12d|%10d|%13d|%13x",
-		   priv->info.hw_running, priv->dvbm_cfg ? 1 : 0, priv->info.wrap_overflow_cnt,
-		   priv->info.bsbuf_overflow_cnt,
-		   priv->info.enc_err_cnt, priv->info.enc_err_status);
+	seq_printf(seq, "%15d|%10d|%12d|%10d|%13d|%13x|%13x",
+		   info->hw_running, !!priv->dvbm_cfg, info->wrap_overflow_cnt,
+		   info->bsbuf_overflow_cnt,
+		   info->enc_err_cnt, info->enc_err_irq, info->enc_err_status);
 	seq_puts(seq, "\n");
-	if (priv->info.bsbuf_overflow_cnt) {
+	if (info->bsbuf_overflow_cnt) {
 		seq_puts(seq, "\n--------bitstream buffer addr");
 		seq_puts(seq, "------------------------------------------------------\n");
 		seq_printf(seq, "%10s|%10s|%10s|%10s|\n",
 			   "top", "bot", "wr", "rd");
 		seq_printf(seq, "%10x|%10x|%10x|%10x|\n",
-			   priv->info.bsbuf_info[0], priv->info.bsbuf_info[1],
-			   priv->info.bsbuf_info[2], priv->info.bsbuf_info[3]);
+			   info->bsbuf_info[0], info->bsbuf_info[1],
+			   info->bsbuf_info[2], info->bsbuf_info[3]);
 	}
 	up_read(&priv->rw_sem);
 
