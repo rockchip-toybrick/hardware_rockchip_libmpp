@@ -476,12 +476,20 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 
 		for (i = 0; i < 16; i++)
 			thd[i] = aq_thd[i];
+		if (ctx->smart_en) {
+			rc_regs->aq_clip.aq16_rnge = 15;
+			rc_regs->aq_clip.aq32_rnge = 15;
+			rc_regs->aq_clip.aq8_rnge = 31;
+			rc_regs->aq_clip.aq16_dif0 = 31;
+			rc_regs->aq_clip.aq16_dif1 = 31;
+		} else {
+			rc_regs->aq_clip.aq16_rnge = 5;
+			rc_regs->aq_clip.aq32_rnge = 5;
+			rc_regs->aq_clip.aq8_rnge = 10;
+			rc_regs->aq_clip.aq16_dif0 = 12;
+			rc_regs->aq_clip.aq16_dif1 = 12;
+		}
 
-		rc_regs->aq_clip.aq16_rnge = 5;
-		rc_regs->aq_clip.aq32_rnge = 5;
-		rc_regs->aq_clip.aq8_rnge = 10;
-		rc_regs->aq_clip.aq16_dif0 = 12;
-		rc_regs->aq_clip.aq16_dif1 = 12;
 	}
 
 	/* 0x1064 */
@@ -970,7 +978,7 @@ static void vepu500_h265_set_quant_regs(H265eV500HalContext *ctx)
 		if (ctx->frame_type == INTRA_FRAME) {
 			s->qnt0_i_bias_comb.bias_i_val2 = 144;
 		} else {
-			s->qnt0_i_bias_comb.bias_i_val2 = 220;
+			s->qnt0_i_bias_comb.bias_i_val2 = 171;
 		}
 	} else {
 		s->qnt0_i_bias_comb.bias_i_val0 = 171;
