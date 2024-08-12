@@ -489,7 +489,6 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 			rc_regs->aq_clip.aq16_dif0 = 12;
 			rc_regs->aq_clip.aq16_dif1 = 12;
 		}
-
 	}
 
 	/* 0x1064 */
@@ -501,56 +500,6 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 	regs->reg_rc_roi.madp_st_thd0.madp_th1 = 9 << 4;
 	/* 0x106C */
 	regs->reg_rc_roi.madp_st_thd1.madp_th2 = 15 << 4;
-
-	/* CIME */
-	{
-		/* 0x1760 */
-		regs->reg_param.me_sqi_cfg.cime_pmv_num = 1;
-		regs->reg_param.me_sqi_cfg.cime_fuse   = 1;
-		regs->reg_param.me_sqi_cfg.itp_mode    = 1;
-		regs->reg_param.me_sqi_cfg.move_lambda = 2;
-		regs->reg_param.me_sqi_cfg.rime_lvl_mrg     = 1;
-		regs->reg_param.me_sqi_cfg.rime_prelvl_en   = 3;
-		regs->reg_param.me_sqi_cfg.rime_prersu_en   = 0;
-
-		/* 0x1764 */
-		regs->reg_param.cime_mvd_th.cime_mvd_th0 = 8;
-		regs->reg_param.cime_mvd_th.cime_mvd_th1 = 20;
-		regs->reg_param.cime_mvd_th.cime_mvd_th2 = 32;
-
-		/* 0x1768 */
-		regs->reg_param.cime_madp_th.cime_madp_th = 16;
-		regs->reg_param.cime_madp_th.ratio_consi_cfg = 8;
-		regs->reg_param.cime_madp_th.ratio_bmv_dist = 8;
-
-		/* 0x176c */
-		regs->reg_param.cime_multi.cime_multi0 = 8;
-		regs->reg_param.cime_multi.cime_multi1 = 12;
-		regs->reg_param.cime_multi.cime_multi2 = 16;
-		regs->reg_param.cime_multi.cime_multi3 = 20;
-	}
-
-	/* RIME && FME */
-	{
-		/* 0x1770 */
-		regs->reg_param.rime_mvd_th.rime_mvd_th0  = 1;
-		regs->reg_param.rime_mvd_th.rime_mvd_th1  = 2;
-		regs->reg_param.rime_mvd_th.fme_madp_th   = 0;
-
-		/* 0x1774 */
-		regs->reg_param.rime_madp_th.rime_madp_th0 = 8;
-		regs->reg_param.rime_madp_th.rime_madp_th1 = 16;
-
-		/* 0x1778 */
-		regs->reg_param.rime_multi.rime_multi0 = 4;
-		regs->reg_param.rime_multi.rime_multi1 = 8;
-		regs->reg_param.rime_multi.rime_multi2 = 12;
-
-		/* 0x177C */
-		regs->reg_param.cmv_st_th.cmv_th0 = 64;
-		regs->reg_param.cmv_st_th.cmv_th1 = 96;
-		regs->reg_param.cmv_st_th.cmv_th2 = 128;
-	}
 }
 
 MPP_RET hal_h265e_v500_deinit(void *hal)
@@ -1209,34 +1158,90 @@ static void vepu500_h265_set_ref_regs(H265eSyntax_new *syn, HevcVepu500Frame *re
 
 	return;
 }
-static void vepu500_h265_set_me_regs(H265eV500HalContext *ctx, H265eSyntax_new *syn,
-				     HevcVepu500Frame *regs)
+
+static void vepu500_h265_set_me_regs(H265eV500HalContext *ctx, H265eSyntax_new *syn)
 {
+	H265eV500RegSet *regs = ctx->regs;
+	HevcVepu500Param *s = &regs->reg_param;
+	HevcVepu500Frame *reg_frm = &regs->reg_frm;
 
-	regs->reg0220_me_rnge.cime_srch_dwnh = 15;
-	regs->reg0220_me_rnge.cime_srch_uph  = 15;
-	regs->reg0220_me_rnge.cime_srch_rgtw = 12;
-	regs->reg0220_me_rnge.cime_srch_lftw = 12;
-	regs->reg0221_me_cfg.rme_srch_h      = 3;
-	regs->reg0221_me_cfg.rme_srch_v      = 3;
+	reg_frm->reg0220_me_rnge.cime_srch_dwnh = 15;
+	reg_frm->reg0220_me_rnge.cime_srch_uph  = 15;
+	reg_frm->reg0220_me_rnge.cime_srch_rgtw = 12;
+	reg_frm->reg0220_me_rnge.cime_srch_lftw = 12;
+	reg_frm->reg0221_me_cfg.rme_srch_h      = 3;
+	reg_frm->reg0221_me_cfg.rme_srch_v      = 3;
 
-	regs->reg0221_me_cfg.srgn_max_num      = 54;
-	regs->reg0221_me_cfg.cime_dist_thre    = 1024;
-	regs->reg0221_me_cfg.rme_dis           = 0;
-	regs->reg0221_me_cfg.fme_dis           = 0;
-	regs->reg0220_me_rnge.dlt_frm_num      = 0x1;
+	reg_frm->reg0221_me_cfg.srgn_max_num      = 54;
+	reg_frm->reg0221_me_cfg.cime_dist_thre    = 1024;
+	reg_frm->reg0221_me_cfg.rme_dis           = 0;
+	reg_frm->reg0221_me_cfg.fme_dis           = 0;
+	reg_frm->reg0220_me_rnge.dlt_frm_num      = 0x1;
 
 	if (syn->pp.sps_temporal_mvp_enabled_flag && (ctx->frame_type != INTRA_FRAME)) {
 		if (ctx->last_frame_fb.frame_type == INTRA_FRAME)
-			regs->reg0222_me_cach.colmv_load = 0;
+			reg_frm->reg0222_me_cach.colmv_load = 0;
 		else
-			regs->reg0222_me_cach.colmv_load = 1;
+			reg_frm->reg0222_me_cach.colmv_load = 1;
 
-		regs->reg0222_me_cach.colmv_stor = 1;
+		reg_frm->reg0222_me_cach.colmv_stor = 1;
 	}
 
-	regs->reg0222_me_cach.cime_zero_thre = 64;
-	regs->reg0222_me_cach.fme_prefsu_en = 0;
+	reg_frm->reg0222_me_cach.cime_zero_thre = 64;
+	reg_frm->reg0222_me_cach.fme_prefsu_en = 0;
+
+	/* CIME: 0x1760 - 0x176C */
+	s->me_sqi_cfg.cime_pmv_num = 1;
+	s->me_sqi_cfg.cime_fuse   = 1;
+	s->me_sqi_cfg.itp_mode    = 1;
+	s->me_sqi_cfg.move_lambda = 2;
+	s->me_sqi_cfg.rime_lvl_mrg     = 1;
+	s->me_sqi_cfg.rime_prelvl_en   = 3;
+	s->me_sqi_cfg.rime_prersu_en   = 0;
+	s->cime_mvd_th.cime_mvd_th0 = 8;
+	s->cime_mvd_th.cime_mvd_th1 = 20;
+	s->cime_mvd_th.cime_mvd_th2 = 32;
+	s->cime_madp_th.cime_madp_th = 16;
+	s->cime_madp_th.ratio_consi_cfg = 8;
+	s->cime_madp_th.ratio_bmv_dist = 8;
+	s->cime_multi.cime_multi0 = 8;
+	s->cime_multi.cime_multi1 = 12;
+	s->cime_multi.cime_multi2 = 16;
+	s->cime_multi.cime_multi3 = 20;
+
+	/* RFME: 0x1770 - 0x177C */
+	s->rime_mvd_th.rime_mvd_th0  = 1;
+	s->rime_mvd_th.rime_mvd_th1  = 2;
+	s->rime_mvd_th.fme_madp_th   = 0;
+	s->rime_madp_th.rime_madp_th0 = 8;
+	s->rime_madp_th.rime_madp_th1 = 16;
+	s->rime_multi.rime_multi0 = 4;
+	s->rime_multi.rime_multi1 = 8;
+	s->rime_multi.rime_multi2 = 12;
+	s->cmv_st_th.cmv_th0 = 64;
+	s->cmv_st_th.cmv_th1 = 96;
+	s->cmv_st_th.cmv_th2 = 128;
+
+	if (ctx->cfg->tune.scene_mode != MPP_ENC_SCENE_MODE_IPC) {
+		s->cime_madp_th.cime_madp_th = 0;
+		s->rime_madp_th.rime_madp_th0 = 0;
+		s->rime_madp_th.rime_madp_th1 = 0;
+		s->cime_multi.cime_multi0 = 4;
+		s->cime_multi.cime_multi1 = 4;
+		s->cime_multi.cime_multi2 = 4;
+		s->cime_multi.cime_multi3 = 4;
+		s->rime_multi.rime_multi0 = 4;
+		s->rime_multi.rime_multi1 = 4;
+		s->rime_multi.rime_multi2 = 4;
+	} else if (ctx->smart_en) {
+		s->cime_multi.cime_multi0 = 4;
+		s->cime_multi.cime_multi1 = 6;
+		s->cime_multi.cime_multi2 = 8;
+		s->cime_multi.cime_multi3 = 12;
+		s->rime_multi.rime_multi0 = 4;
+		s->rime_multi.rime_multi1 = 6;
+		s->rime_multi.rime_multi2 = 8;
+	}
 }
 
 static void setup_recn_refr_wrap(H265eV500HalContext *ctx, HevcVepu500Frame *regs, HalEncTask *task)
@@ -1688,7 +1693,8 @@ static MPP_RET vepu500_h265_set_prep(void *hal, HalEncTask *task)
 	reg_frm->reg0192_enc_pic.bs_scp        = 1;
 	reg_frm->reg0192_enc_pic.log2_ctu_num_hevc  = mpp_ceil_log2(pic_wd32 * pic_h32);
 
-	reg_klut->klut_ofst.chrm_klut_ofst = (ctx->frame_type == INTRA_FRAME) ? 6 : 9;
+	reg_klut->klut_ofst.chrm_klut_ofst = ((ctx->frame_type == INTRA_FRAME) ||
+					      (ctx->cfg->tune.scene_mode != MPP_ENC_SCENE_MODE_IPC)) ? 6 : 9;
 
 	reg_frm->reg0232_rdo_cfg.chrm_spcl  = 0;
 	reg_frm->reg0232_rdo_cfg.cu_inter_e = 0xdb;
@@ -2490,7 +2496,7 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 
 	vepu500_h265_set_normal(ctx);
 	vepu500_h265_set_prep(ctx, task);
-	vepu500_h265_set_me_regs(ctx, syn, reg_frm);
+	vepu500_h265_set_me_regs(ctx, syn);
 	vepu500_h265_set_split(regs, ctx->cfg);
 	vepu500_h265_set_hw_address(ctx, reg_frm, task);
 	vepu500_h265_set_pp_regs(regs, fmt, &ctx->cfg->prep);
