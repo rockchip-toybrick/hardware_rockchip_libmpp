@@ -332,6 +332,7 @@ struct rkvenc_dev {
 	bool skip_dvbm_discnct;
 	spinlock_t dvbm_lock;
 	atomic_t isp_fcnt;
+	void __iomem *vepu_qos;
 };
 
 static struct rkvenc_hw_info rkvenc_500_hw_info = {
@@ -2065,6 +2066,13 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	if (!mpp->isp_base)
 		dev_err(mpp->dev, "isp base map failed!\n");
 #endif
+	/* config vepu qos to 0x101 */
+	enc->vepu_qos = ioremap(0x20350008, 4);
+	if (enc->vepu_qos)
+		writel(0x101, enc->vepu_qos);
+	else
+		dev_err(enc->mpp.dev, "vepu_qos map failed!\n");
+
 	kthread_init_work(&mpp->work, mpp_rkvenc_worker);
 	ret = devm_request_threaded_irq(dev, mpp->irq,
 					rkvenc_500_irq,
@@ -2114,6 +2122,8 @@ static int rkvenc_remove(struct platform_device *pdev)
 	if (enc->mpp.isp_base)
 		iounmap(enc->mpp.isp_base);
 #endif
+	if (enc->vepu_qos)
+		iounmap(enc->vepu_qos);
 	dev_info(dev, "remove device\n");
 	mpp_dev_remove(&enc->mpp);
 	rkvenc_procfs_remove(&enc->mpp);
