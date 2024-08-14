@@ -1838,11 +1838,6 @@ static int rkvenc_dvbm_setup(struct mpp_dev *mpp, struct dvbm_isp_cfg_t *isp_cfg
 		mpp_write(mpp, 0x78, ybuf_bot);
 		/* c bot addr */
 		mpp_write(mpp, 0x7c, cbuf_bot);
-
-		mpp_write(mpp, 0x270, ybuf_top);
-		mpp_write(mpp, 0x274, cbuf_top);
-		mpp_write(mpp, 0x278, ybuf_bot);
-		mpp_write(mpp, 0x27c, cbuf_bot);
 	}
 
 	mpp_write(mpp, dvbm_stride[isp_id].y_lstrid, isp_cfg->ybuf_lstd);
