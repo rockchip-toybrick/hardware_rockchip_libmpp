@@ -548,7 +548,6 @@ MPP_RET hal_h265e_v500_init(void *hal, MppEncHalCfg *cfg)
 
 	hal_h265e_enter();
 
-
 	ctx->reg_out        = mpp_calloc(H265eV500StatusElem, 1);
 	ctx->regs           = mpp_calloc(H265eV500RegSet, 1);
 	ctx->input_fmt      = mpp_calloc(VepuFmtCfg, 1);
@@ -909,36 +908,57 @@ static MPP_RET vepu500_h265_set_rdo_regs(H265eV500HalContext *ctx, H265eV500RegS
 
 static void vepu500_h265_set_quant_regs(H265eV500HalContext *ctx)
 {
+	MppEncHwCfg *hw = &ctx->cfg->hw;
 	H265eV500RegSet *regs = ctx->regs;
 	HevcVepu500Param *s = &regs->reg_param;
+	RK_U8 th0 = 3, th1 = 6, th2 = 13;
+	RK_U16 bias_i0 = 171, bias_i1 = 171, bias_i2 = 171, bias_i3 = 171;
+	RK_U16 bias_p0 = 85, bias_p1 = 85, bias_p2 = 85, bias_p3 = 85;
+	RK_U32 frm_type = ctx->frame_type;
 
-	s->bias_madi_thd_comb.bias_madi_th0 = 3;
-	s->bias_madi_thd_comb.bias_madi_th1 = 6;
-	s->bias_madi_thd_comb.bias_madi_th2 = 13;
-	s->qnt0_p_bias_comb.bias_p_val0 = 85;
-	s->qnt0_p_bias_comb.bias_p_val1 = 85;
-	s->qnt0_p_bias_comb.bias_p_val2 = 85;
-	s->qnt1_p_bias_comb.bias_p_val3 = 85;
-
-	if (ctx->smart_en) {
-		s->qnt0_i_bias_comb.bias_i_val0 = 144;
-		s->qnt0_i_bias_comb.bias_i_val1 = 144;
-		s->qnt1_i_bias_comb.bias_i_val3 = 144;
-		if (ctx->frame_type == INTRA_FRAME) {
-			s->qnt0_i_bias_comb.bias_i_val2 = 144;
+	if (!hw->qbias_en) {
+		if (ctx->smart_en) {
+			bias_i0 = bias_i1 = bias_i3 = 144;
+			bias_i2 = (frm_type == INTRA_FRAME) ? 144 : 171;
 		} else {
-			s->qnt0_i_bias_comb.bias_i_val2 = 171;
+			bias_i0 = bias_i1 = bias_i3 = 171;
+			bias_i2 = (frm_type == INTRA_FRAME) ? 171 : 220;
 		}
 	} else {
-		s->qnt0_i_bias_comb.bias_i_val0 = 171;
-		s->qnt0_i_bias_comb.bias_i_val1 = 171;
-		s->qnt1_i_bias_comb.bias_i_val3 = 171;
-		if (ctx->frame_type == INTRA_FRAME) {
-			s->qnt0_i_bias_comb.bias_i_val2 = 171;
+		if (frm_type == INTRA_FRAME) {
+			th0 = hw->qbias_arr[IFRAME_THD0];
+			th1 = hw->qbias_arr[IFRAME_THD1];
+			th2 = hw->qbias_arr[IFRAME_THD2];
+			bias_i0 = hw->qbias_arr[IFRAME_BIAS0];
+			bias_i1 = hw->qbias_arr[IFRAME_BIAS1];
+			bias_i2 = hw->qbias_arr[IFRAME_BIAS2];
+			bias_i3 = hw->qbias_arr[IFRAME_BIAS3];
 		} else {
-			s->qnt0_i_bias_comb.bias_i_val2 = 220;
+			th0 = hw->qbias_arr[PFRAME_THD0];
+			th1 = hw->qbias_arr[PFRAME_THD1];
+			th2 = hw->qbias_arr[PFRAME_THD2];
+			bias_i0 = hw->qbias_arr[PFRAME_IBLK_BIAS0];
+			bias_i1 = hw->qbias_arr[PFRAME_IBLK_BIAS1];
+			bias_i2 = hw->qbias_arr[PFRAME_IBLK_BIAS2];
+			bias_i3 = hw->qbias_arr[PFRAME_IBLK_BIAS3];
+			bias_p0 = hw->qbias_arr[PFRAME_PBLK_BIAS0];
+			bias_p1 = hw->qbias_arr[PFRAME_PBLK_BIAS1];
+			bias_p2 = hw->qbias_arr[PFRAME_PBLK_BIAS2];
+			bias_p3 = hw->qbias_arr[PFRAME_PBLK_BIAS3];
 		}
 	}
+
+	s->bias_madi_thd_comb.bias_madi_th0 = th0;
+	s->bias_madi_thd_comb.bias_madi_th1 = th1;
+	s->bias_madi_thd_comb.bias_madi_th2 = th2;
+	s->qnt0_i_bias_comb.bias_i_val0 = bias_i0;
+	s->qnt0_i_bias_comb.bias_i_val1 = bias_i1;
+	s->qnt0_i_bias_comb.bias_i_val2 = bias_i2;
+	s->qnt1_i_bias_comb.bias_i_val3 = bias_i3;
+	s->qnt0_p_bias_comb.bias_p_val0 = bias_p0;
+	s->qnt0_p_bias_comb.bias_p_val1 = bias_p1;
+	s->qnt0_p_bias_comb.bias_p_val2 = bias_p2;
+	s->qnt1_p_bias_comb.bias_p_val3 = bias_p3;
 }
 
 static void vepu500_h265_set_sao_regs(H265eV500HalContext *ctx)

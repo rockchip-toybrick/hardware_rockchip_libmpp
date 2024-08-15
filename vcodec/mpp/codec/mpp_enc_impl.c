@@ -550,6 +550,12 @@ MPP_RET mpp_enc_proc_hw_cfg(MppEncHwCfg *dst, MppEncHwCfg *src)
 			memcpy(dst->aq_step_p, src->aq_step_p,
 			       sizeof(dst->aq_step_p));
 
+		if (change & MPP_ENC_HW_CFG_CHANGE_AQ_RNGE_ARR)
+			memcpy(dst->aq_rnge_arr, src->aq_rnge_arr, sizeof(dst->aq_rnge_arr));
+
+		if (change & MPP_ENC_HW_CFG_CHANGE_QBIAS_ARR)
+			memcpy(dst->qbias_arr, src->qbias_arr, sizeof(dst->qbias_arr));
+
 		if (dst->qp_delta_row < 0 || dst->qp_delta_row_i < 0) {
 			mpp_err("invalid hw qp delta row [%d:%d]\n",
 				dst->qp_delta_row_i, dst->qp_delta_row);
@@ -793,6 +799,14 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 
 		if (dst->atf_str < 0 || dst->atf_str > 3) {
 			mpp_err("invalid anti flick strength not in range [0 : 3]\n");
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_LGT_CHG_LVL)
+			dst->lgt_chg_lvl = src->lgt_chg_lvl;
+
+		if (dst->lgt_chg_lvl < 0 || dst->lgt_chg_lvl > 3) {
+			mpp_err("invalid lgt_chg_lvl %d not in range [0, 3]\n", dst->lgt_chg_lvl);
 			ret = MPP_ERR_VALUE;
 		}
 

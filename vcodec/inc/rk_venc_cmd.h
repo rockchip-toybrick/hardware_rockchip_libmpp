@@ -379,6 +379,8 @@ typedef enum MppEncHwCfgChange_e {
 	MPP_ENC_HW_CFG_CHANGE_QBIAS_EN      = (1 << 8),
 	MPP_ENC_HW_CFG_CHANGE_FLT_STR_I     = (1 << 9),
 	MPP_ENC_HW_CFG_CHANGE_FLT_STR_P     = (1 << 10),
+	MPP_ENC_HW_CFG_CHANGE_QBIAS_ARR     = (1 << 11),
+	MPP_ENC_HW_CFG_CHANGE_AQ_RNGE_ARR   = (1 << 12),
 	MPP_ENC_HW_CFG_CHANGE_ALL           = (0xFFFFFFFF),
 } MppEncHwCfgChange;
 
@@ -403,6 +405,18 @@ typedef struct MppEncHwCfg_t {
 	RK_U32                  aq_thrd_p[16];
 	RK_S32                  aq_step_i[16];
 	RK_S32                  aq_step_p[16];
+
+	/* vepu500
+	 * 0-2: I frame thd; 3-6: I frame bias
+	 * 7-9: P frame thd; 10-13: I block bias of P frame
+	 * 14-17: P block bias of P frame
+	 */
+	RK_S32                  qbias_arr[18];
+	/* vepu500
+	 * 0: aq16_range; 1: aq32_range; 2: aq8_range
+	 * 3: aq16_diff0; 4: aq16_diff1
+	 */
+	RK_S32                  aq_rnge_arr[5];
 } MppEncHwCfg;
 
 /*
@@ -1341,6 +1355,8 @@ typedef enum MppEncFineTuneCfgChange_e {
 	MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_IDX                  = (1 << 5),
 	MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_I_IDX                = (1 << 6),
 	MPP_ENC_TUNE_CFG_CHANGE_ATF_STR                     = (1 << 7),
+	MPP_ENC_TUNE_CFG_CHANGE_LGT_CHG_LVL                 = (1 << 8),
+	MPP_ENC_TUNE_CFG_CHANGE_ALL                         = (0xFFFFFFFF)
 } MppEncFineTuneCfgChange;
 
 typedef struct MppEncFineTuneCfg_t {
@@ -1354,6 +1370,8 @@ typedef struct MppEncFineTuneCfg_t {
 	RK_S32              lambda_idx;
 	RK_S32              lambda_i_idx;
 	RK_S32              atf_str;
+	RK_S32              lgt_chg_lvl; /* vepu500: light change level, [0, 3] */
+	RK_S32              reserved[8];
 } MppEncFineTuneCfg;
 
 #endif /*__RK_VENC_CMD_H__*/

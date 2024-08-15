@@ -1886,22 +1886,51 @@ static void setup_vepu500_aq(HalH264eVepu500Ctx *ctx)
 
 static void setup_vepu500_quant(HalH264eVepu500Ctx *ctx)
 {
+	MppEncHwCfg *hw = &ctx->cfg->hw;
 	HalVepu500RegSet *regs = ctx->regs_set;
 	Vepu500Param *s = &regs->reg_param;
+	RK_U8 th0 = 0, th1 = 0, th2 = 0; /* 5, 13, 27 */
+	RK_U16 bias_i0 = 0, bias_i1 = 0, bias_i2 = 0, bias_i3 = 683; /* 171, 150, 120, 100 */
+	RK_U16 bias_p0 = 0, bias_p1 = 0, bias_p2 = 0, bias_p3 = 341; /* 85, 80, 70, 65 */
+	RK_U32 sli_type = ctx->slice->slice_type;
 
-	s->bias_madi_thd_comb.bias_madi_th0 = 0;//5;
-	s->bias_madi_thd_comb.bias_madi_th1 = 0;//13;
-	s->bias_madi_thd_comb.bias_madi_th2 = 0;//27;
+	if (!hw->qbias_en) {
+		//TODO: set default qp
+	} else {
+		if (sli_type == H264_I_SLICE) {
+			th0 = hw->qbias_arr[IFRAME_THD0];
+			th1 = hw->qbias_arr[IFRAME_THD1];
+			th2 = hw->qbias_arr[IFRAME_THD2];
+			bias_i0 = hw->qbias_arr[IFRAME_BIAS0];
+			bias_i1 = hw->qbias_arr[IFRAME_BIAS1];
+			bias_i2 = hw->qbias_arr[IFRAME_BIAS2];
+			bias_i3 = hw->qbias_arr[IFRAME_BIAS3];
+		} else {
+			th0 = hw->qbias_arr[PFRAME_THD0];
+			th1 = hw->qbias_arr[PFRAME_THD1];
+			th2 = hw->qbias_arr[PFRAME_THD2];
+			bias_i0 = hw->qbias_arr[PFRAME_IBLK_BIAS0];
+			bias_i1 = hw->qbias_arr[PFRAME_IBLK_BIAS1];
+			bias_i2 = hw->qbias_arr[PFRAME_IBLK_BIAS2];
+			bias_i3 = hw->qbias_arr[PFRAME_IBLK_BIAS3];
+			bias_p0 = hw->qbias_arr[PFRAME_PBLK_BIAS0];
+			bias_p1 = hw->qbias_arr[PFRAME_PBLK_BIAS1];
+			bias_p2 = hw->qbias_arr[PFRAME_PBLK_BIAS2];
+			bias_p3 = hw->qbias_arr[PFRAME_PBLK_BIAS3];
+		}
+	}
 
-	s->qnt0_i_bias_comb.bias_i_val0 = 0;//171;
-	s->qnt0_i_bias_comb.bias_i_val1 = 0;//150;
-	s->qnt0_i_bias_comb.bias_i_val2 = 0;//120;
-	s->qnt1_i_bias_comb.bias_i_val3 = 683;//100;
-
-	s->qnt0_p_bias_comb.bias_p_val0 = 0;//85;
-	s->qnt0_p_bias_comb.bias_p_val1 = 0;//80;
-	s->qnt0_p_bias_comb.bias_p_val2 = 0;//70;
-	s->qnt1_p_bias_comb.bias_p_val3 = 341;//65;
+	s->bias_madi_thd_comb.bias_madi_th0 = th0;
+	s->bias_madi_thd_comb.bias_madi_th1 = th1;
+	s->bias_madi_thd_comb.bias_madi_th2 = th2;
+	s->qnt0_i_bias_comb.bias_i_val0 = bias_i0;
+	s->qnt0_i_bias_comb.bias_i_val1 = bias_i1;
+	s->qnt0_i_bias_comb.bias_i_val2 = bias_i2;
+	s->qnt1_i_bias_comb.bias_i_val3 = bias_i3;
+	s->qnt0_p_bias_comb.bias_p_val0 = bias_p0;
+	s->qnt0_p_bias_comb.bias_p_val1 = bias_p1;
+	s->qnt0_p_bias_comb.bias_p_val2 = bias_p2;
+	s->qnt1_p_bias_comb.bias_p_val3 = bias_p3;
 }
 
 static void setup_vepu500_anti_stripe(HalH264eVepu500Ctx *ctx)
