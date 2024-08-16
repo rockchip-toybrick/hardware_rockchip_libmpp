@@ -2187,9 +2187,10 @@ void mpp_enc_impl_slice_info(MppEnc ctx, void *param, MppPacket *packet)
 		if (mpp_packet_ring_buf_put_used((MppPacket *)impl, enc->chan_id, enc->dev))
 			mpp_err_f("ring_buf_put_used fail.\n");
 		*packet = impl;
-		mpp_packet_new_ring_buf(&new_packet, enc->ring_pool, 1, 0, 0, enc->chan_id);
+		mpp_packet_new_ring_buf(&new_packet, enc->ring_pool, 1, 1, 0, enc->chan_id);
 		mpp_assert(new_packet);
 		hal_task->packet = new_packet;
+		enc->packet = hal_task->packet;
 	}
 
 	return;
@@ -2239,14 +2240,15 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 		seq_puts(seq,
 			 "\n--------ring buf status---------------------------------------------------------------------------\n");
 
-		seq_printf(seq, "%8s|%8s|%8s|%8s|%10s|%10s|%10s|%10s\n",
+		seq_printf(seq, "%8s|%8s|%8s|%8s|%10s|%10s|%10s|%10s|%12s\n",
 			   "ID", "w_pos", "r_pos",
 			   "usd_len", "total_len", "min_size",
-			   "l_w_pos", "l_r_pos");
-		seq_printf(seq, "%8d|%8d|%8d|%8d|%10d|%10d|%10d|%10d\n",
+			   "l_w_pos", "l_r_pos", "max_use_len");
+		seq_printf(seq, "%8d|%8d|%8d|%8d|%10d|%10d|%10d|%10d|%12d\n",
 			   chl_id, enc->ring_pool->w_pos, enc->ring_pool->r_pos,
 			   enc->ring_pool->use_len, enc->ring_pool->len, enc->ring_pool->min_buf_size,
-			   enc->ring_pool->l_w_pos, enc->ring_pool->l_r_pos);
+			   enc->ring_pool->l_w_pos, enc->ring_pool->l_r_pos,
+			   enc->ring_pool->max_use_len);
 	}
 
 	seq_puts(seq,

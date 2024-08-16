@@ -48,6 +48,7 @@
 #define RKVENC_DVBM_DISCONNECT		(BIT(15))
 #define RKVENC_JPEG_OVERFLOW		(BIT(13))
 #define RKVENC_VIDEO_OVERFLOW		(BIT(4))
+#define RKVENC_SLICE_DONE_STATUS	(BIT(3))
 #define RKVENC_ENC_DONE_STATUS		(BIT(0))
 #define REC_FBC_DIS_CLASS_OFFSET	(36)
 
@@ -73,10 +74,6 @@
 #define RKVENC_REG_SLI_SPLIT	(60)
 #define RKVENC_BIT_SLI_SPLIT	BIT(0)
 #define RKVENC_BIT_SLI_FLUSH	BIT(15)
-
-#define INT_STA_ENC_DONE_STA	BIT(0)
-#define INT_STA_SCLR_DONE_STA	BIT(2)
-#define INT_STA_SLC_DONE_STA	BIT(3)
 
 #define RKVENC_REG_SLICE_NUM_BASE	(0x4034)
 #define RKVENC_REG_SLICE_LEN_BASE	(0x4038)
@@ -1250,10 +1247,9 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	return 0;
 }
 
-static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
+static void rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 {
 	u32 r_adr, top_adr, bot_adr;
-	int ret = 0;
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	struct mpp_task *task = mpp->cur_task;
 	struct rkvenc2_session_priv *priv = task->session->priv;
@@ -1278,7 +1274,6 @@ static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 			mpp_write(mpp, RKVENC_JPEG_BSBS, enc->jpeg_wr_addr);
 			mpp_write(mpp, RKVENC_JPEG_BSBR, r_adr + 0xc);
 			mpp->overflow_status = mpp->irq_status;
-			ret = 1;
 		}
 		if (mpp->irq_status & RKVENC_VIDEO_OVERFLOW) {
 			r_adr = mpp_read(mpp, RKVENC_VIDEO_BSBR);
@@ -1298,10 +1293,8 @@ static int rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 			mpp_write(mpp, RKVENC_VIDEO_BSBS, enc->video_wr_addr);
 			mpp_write(mpp, RKVENC_VIDEO_BSBR, r_adr + 0xc);
 			mpp->overflow_status = mpp->irq_status;
-			ret = 1;
 		}
 	}
-	return ret;
 }
 
 static void rkvenc_clear_dvbm_info(struct mpp_dev *mpp)
@@ -1324,7 +1317,7 @@ static void rkvenc_read_slice_len(struct mpp_task *mpp_task, struct rkvenc_task 
 	u32 i;
 	u32 last = 0;
 
-	last = mpp->irq_status & INT_STA_ENC_DONE_STA;
+	last = mpp->irq_status & RKVENC_ENC_DONE_STATUS;
 	for (i = 0; i < sli_num; i++) {
 		task->sli_info.val = mpp_read_relaxed(mpp, RKVENC_REG_SLICE_LEN_BASE);
 
@@ -1369,9 +1362,7 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	/* check irq status */
 	if (mpp->irq_status == RKVENC_DVBM_DISCONNECT)
 		return IRQ_HANDLED;
-	if (rkvenc_check_bs_overflow(mpp))
-		return IRQ_HANDLED;
-
+	rkvenc_check_bs_overflow(mpp);
 	if (!mpp_task) {
 		dev_err(mpp->dev, "found null task in irq\n");
 		return IRQ_HANDLED;
@@ -1382,27 +1373,29 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	priv = mpp_task->session->priv;
 
 	/* slice fifo */
-	if (task && task->task_split) {
-		if (mpp->irq_status & INT_STA_SLC_DONE_STA) {
-			rkvenc_read_slice_len(mpp_task, task, mpp, sli_num);
-			if ((mpp->irq_status & INT_STA_ENC_DONE_STA) == 0) {
-				mpp_debug(DEBUG_SLICE,
-					  "mpp->irq_status[0x%08x] slice done return.\n",
-					  mpp->irq_status);
-				return IRQ_HANDLED;
+	if ((mpp->irq_status & enc->hw_info->err_mask) == 0) {
+		if (task && task->task_split) {
+			if (sli_num) {
+				rkvenc_read_slice_len(mpp_task, task, mpp, sli_num);
+				if ((mpp->irq_status & RKVENC_ENC_DONE_STATUS) == 0) {
+					mpp_debug(DEBUG_SLICE,
+						  "mpp->irq_status[0x%08x] slice done return.\n",
+						  mpp->irq_status);
+					return IRQ_HANDLED;
+				}
+			}
+
+			if (task->last_slice_found == 0 &&
+			    (mpp->irq_status & RKVENC_ENC_DONE_STATUS)) {
+				mpp_debug(DEBUG_SLICE, "send empty slice info packet.\n");
+				task->sli_info.last = 1;
+				task->sli_info.length = 0;
+				task->last_slice_found = 1;
+				if (session->callback && mpp_task->clbk_en)
+					session->callback(session->chn_id, MPP_VCODEC_EVENT_SLICE,
+							  &task->sli_info.val);
 			}
 		}
-
-		if (task->last_slice_found == 0 && (mpp->irq_status & INT_STA_ENC_DONE_STA)) {
-			mpp_debug(DEBUG_SLICE, "send empty slice info packet.\n");
-			task->sli_info.last = 1;
-			task->sli_info.length = 0;
-			task->last_slice_found = 1;
-			if (session->callback && mpp_task->clbk_en)
-				session->callback(session->chn_id, MPP_VCODEC_EVENT_SLICE,
-						  &task->sli_info.val);
-		}
-
 	}
 
 	if (test_and_set_bit(TASK_STATE_HANDLE, &mpp_task->state)) {
