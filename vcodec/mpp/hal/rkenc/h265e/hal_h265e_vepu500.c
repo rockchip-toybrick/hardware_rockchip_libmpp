@@ -2900,7 +2900,7 @@ static void vepu500_h265e_update_bitrate_info(H265eV500HalContext *ctx, HalEncTa
 	EncRcTaskInfo *rc_info = &task->rc_task->info;
 	RK_S32 bit_tgt = rc_info->bit_target;
 	RK_S32 bit_real = rc_info->bit_real;
-	RK_S32 real_lvl, i = 0;
+	RK_S32 real_lvl = 0, i = 0;
 
 	memcpy(fb->tgt_sub_real_lvl, ctx->last_frame_fb.tgt_sub_real_lvl, 6 * sizeof(RK_S8));
 	for (i = 3; i >= 0; i--)
