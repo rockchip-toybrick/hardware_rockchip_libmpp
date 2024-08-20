@@ -231,7 +231,7 @@ MPP_RET vepu500_set_jpeg_reg(Vepu500JpegCfg * cfg)
 	RK_U32 width = syn->width;
 	RK_U32 height = syn->height;
 	RK_U32 slice_en = (mpp_frame_get_height(frame) < height) && syn->restart_ri;
-	RK_U32 pkt_len = mpp_packet_get_length(task->packet);
+	RK_U32 pkt_len;
 
 	if (slice_en) {
 		width = mpp_frame_get_width(frame);
@@ -250,6 +250,7 @@ MPP_RET vepu500_set_jpeg_reg(Vepu500JpegCfg * cfg)
 		vepu500_jpeg_set_uv_offset(regs, syn, (VepuFmt)fmt->format, task);
 	}
 
+	pkt_len = mpp_packet_get_length(task->packet);
 	if (!task->output->cir_flag) {
 		if (task->output->buf) {
 			RK_U32 out_addr = mpp_dev_get_iova_address(cfg->dev, task->output->buf, 257);
