@@ -150,7 +150,7 @@ MPP_RET ring_buf_get_free(ring_buf_pool *ctx, ring_buf *buf, RK_U32 align,
 	if (!ctx || !buf)
 		return MPP_NOK;
 	if (min_size < ctx->min_buf_size)
-		min_size = ctx->min_buf_size;
+		min_size = ctx->w_pos == ctx->r_pos ? DEFAULT_MIN_ZISE : ctx->min_buf_size;
 	w_pos = ctx->w_pos;
 	r_pos = ctx->r_pos;
 	buf->mpi_buf_id = ctx->mpi_buf_id;
