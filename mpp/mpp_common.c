@@ -29,6 +29,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/nospec.h>
+#include <linux/clk-provider.h>
 
 #include <soc/rockchip/pm_domains.h>
 
@@ -1830,6 +1831,111 @@ mpp_procfs_create_u32(const char *name, umode_t mode,
 		      struct proc_dir_entry *parent, void *data)
 {
 	return proc_create_data(name, mode, parent, &procfs_fops_u32, data);
+}
+
+static int fops_show_clk(struct seq_file *file, void *v)
+{
+	struct mpp_clk_info *mpp_clk = file->private;
+	u32 clk_rate = clk_get_rate(mpp_clk->clk);
+	struct clk_hw *hw = __clk_get_hw(mpp_clk->clk);
+
+	if (hw) {
+		u32 parent_num = clk_hw_get_num_parents(hw);
+		struct clk *p_clk = clk_get_parent(mpp_clk->clk);
+		u32 i;
+
+		seq_printf(file, "%s %dHz\n",
+			   __clk_get_name(mpp_clk->clk), clk_rate);
+
+		if (p_clk) {
+			seq_printf(file, "------ parents info ------\n");
+			seq_printf(file, "current parent: %s %ldHz\n",
+				   __clk_get_name(p_clk), clk_get_rate(p_clk));
+		}
+
+		for (i = 0; i < parent_num; i++) {
+			struct clk_hw *p_hw = clk_hw_get_parent_by_index(hw, i);
+
+			seq_printf(file, "parent[%d]: %s %ldHz ",
+				   i, clk_hw_get_name(p_hw), clk_hw_get_rate(p_hw));
+
+			do {
+				p_hw = clk_hw_get_parent(p_hw);
+				if (p_hw)
+					seq_printf(file, "-> %s %ldHz ",
+						   clk_hw_get_name(p_hw), clk_hw_get_rate(p_hw));
+			} while (p_hw);
+			seq_printf(file, "\n");
+		}
+	} else
+		seq_printf(file, "%s %dHz\n", __clk_get_name(mpp_clk->clk), clk_rate);
+
+	return 0;
+}
+
+static int fops_open_clk(struct inode *inode, struct file *file)
+{
+	return single_open(file, fops_show_clk, PDE_DATA(inode));
+}
+
+static ssize_t fops_write_clk(struct file *file, const char __user *buf,
+			      size_t count, loff_t *ppos)
+{
+	int i = 0, j = 0;
+	struct seq_file *priv = file->private_data;
+	u32 clk_rate, cur_rate;
+	struct mpp_clk_info *mpp_clk = priv->private;
+	char kbuf[64];
+	char *cur, *token;
+	u32 values[3] = {0};
+
+	if (count >= sizeof(kbuf))
+		return -EINVAL;
+
+	if (copy_from_user(kbuf, buf, count))
+		return -EFAULT;
+
+	kbuf[count] = '\0';
+	cur = kbuf;
+
+	while ((token = strsep(&cur, " ")) != NULL && i < 3) {
+		if (kstrtouint(token, 10, &values[i]) == 0) {
+			values[i] = values[i] < MHZ ? values[i] * MHZ : values[i];
+			i++;
+		}
+	}
+
+	for (j = i - 1; j > 0 ; j--) {
+		u32 p_idx = j;
+		struct clk *p_clk = mpp_clk->clk;
+
+		while (p_idx--)
+			p_clk = clk_get_parent(p_clk);
+
+		if (p_clk)
+			clk_set_rate(p_clk, values[j]);
+	}
+
+	clk_rate = values[0];
+	cur_rate = clk_get_rate(mpp_clk->clk);
+	if (clk_rate != cur_rate)
+		clk_set_rate(mpp_clk->clk, clk_rate);
+
+	return count;
+}
+
+static const struct proc_ops procfs_fops_clk = {
+	.proc_open = fops_open_clk,
+	.proc_read = seq_read,
+	.proc_release = single_release,
+	.proc_write = fops_write_clk,
+};
+
+struct proc_dir_entry *mpp_procfs_create_clk_rw(const char *name, umode_t mode,
+						struct proc_dir_entry *parent,
+						struct mpp_clk_info *mpp_clk)
+{
+	return proc_create_data(name, mode, parent, &procfs_fops_clk, (void*)mpp_clk);
 }
 #endif
 

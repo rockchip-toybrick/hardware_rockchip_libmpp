@@ -708,12 +708,21 @@ mpp_get_task_used_device(const struct mpp_task *task,
 struct proc_dir_entry *
 mpp_procfs_create_u32(const char *name, umode_t mode,
 		      struct proc_dir_entry *parent, void *data);
+struct proc_dir_entry *mpp_procfs_create_clk_rw(const char *name, umode_t mode,
+						struct proc_dir_entry *parent,
+						struct mpp_clk_info *mpp_clk);
 #else
 static inline struct proc_dir_entry *
 mpp_procfs_create_u32(const char *name, umode_t mode,
 		      struct proc_dir_entry *parent, void *data)
 {
 	return 0;
+}
+static inline struct proc_dir_entry *mpp_procfs_create_clk_rw(const char *name, umode_t mode,
+							      struct proc_dir_entry *parent,
+							      struct mpp_clk_info *mpp_clk)
+{
+	return NULL;
 }
 #endif
 

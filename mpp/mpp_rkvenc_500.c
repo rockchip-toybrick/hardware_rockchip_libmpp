@@ -1661,10 +1661,12 @@ static int rkvenc_procfs_init(struct mpp_dev *mpp)
 		return -EIO;
 	}
 	/* for debug */
-	mpp_procfs_create_u32("aclk", 0644,
-			      enc->procfs, &enc->aclk_info.debug_rate_hz);
-	mpp_procfs_create_u32("clk_core", 0644,
-			      enc->procfs, &enc->core_clk_info.debug_rate_hz);
+	mpp_procfs_create_clk_rw("aclk", 0644,
+				 enc->procfs, &enc->aclk_info);
+	mpp_procfs_create_clk_rw("clk_core", 0644,
+				 enc->procfs, &enc->core_clk_info);
+	mpp_procfs_create_clk_rw("hclk", 0644,
+				 enc->procfs, &enc->hclk_info);
 	mpp_procfs_create_u32("dump_regs", 0644,
 			      enc->procfs, &mpp->dump_regs);
 	/* for show session info */
