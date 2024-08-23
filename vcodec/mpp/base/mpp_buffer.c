@@ -23,6 +23,9 @@
 #include "rk_export_func.h"
 #include "mpp_frame.h"
 #include "mpp_mem_pool.h"
+#include "mpp_maths.h"
+
+#define CACHE_LINE_SIZE (64)
 
 static const char *module_name = MODULE_TAG;
 struct MppBufferImpl {
@@ -594,20 +597,25 @@ MPP_RET mpp_buffer_info_get_with_caller(MppBuffer buffer, MppBufferInfo *info,
 MPP_RET mpp_buffer_flush_for_cpu_with_caller(ring_buf *buf, const char *caller)
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buf->buf;
+	RK_U32 offset = MPP_ALIGN_DOWN(buf->start_offset, CACHE_LINE_SIZE);
+	RK_U32 len;
 
 	if (NULL == p) {
 		mpp_err("mpp_buffer_set_offset invalid NULL input from %s\n", caller);
 		return MPP_ERR_UNKNOW;
 	}
 	if ( buf->start_offset + buf->use_len >= p->info.size) {
-		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, buf->start_offset,
-						 p->info.size - buf->start_offset);
+		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, offset,
+						 p->info.size - offset);
 
-		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, 0,
-						 buf->start_offset + buf->use_len - p->info.size);
+		len = MPP_ALIGN(buf->start_offset + buf->use_len - p->info.size, CACHE_LINE_SIZE);
+		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, 0, len);
 
-	} else
-		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, buf->start_offset, buf->use_len);
+	} else {
+		len = buf->start_offset + buf->use_len - offset;
+		len = MPP_ALIGN(len, CACHE_LINE_SIZE);
+		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, offset, len);
+	}
 
 	return MPP_OK;
 }
@@ -615,20 +623,26 @@ MPP_RET mpp_buffer_flush_for_cpu_with_caller(ring_buf *buf, const char *caller)
 MPP_RET mpp_buffer_flush_for_device_with_caller(ring_buf *buf, const char *caller)
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buf->buf;
+	RK_U32 offset = MPP_ALIGN_DOWN(buf->start_offset, CACHE_LINE_SIZE);
+	RK_U32 len;
 
 	if (NULL == p) {
 		mpp_err("mpp_buffer_set_offset invalid NULL input from %s\n", caller);
 		return MPP_ERR_UNKNOW;
 	}
 	if ( buf->start_offset + buf->use_len >= p->info.size) {
-		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, buf->start_offset,
-					       p->info.size - buf->start_offset);
+		len = MPP_ALIGN(buf->use_len, CACHE_LINE_SIZE);
+		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, offset,
+					       p->info.size - offset);
 
-		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, 0,
-					       buf->start_offset + buf->use_len - p->info.size);
+		len = MPP_ALIGN(buf->start_offset + buf->use_len - p->info.size, CACHE_LINE_SIZE);
+		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, 0, len);
 
-	} else
-		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, buf->start_offset, buf->use_len);
+	} else {
+		len = buf->start_offset + buf->use_len - offset;
+		len = MPP_ALIGN(len, CACHE_LINE_SIZE);
+		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, offset, len);
+	}
 
 
 	return MPP_OK;
