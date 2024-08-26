@@ -2189,6 +2189,8 @@ void mpp_enc_impl_slice_info(MppEnc ctx, void *param, MppPacket *packet)
 		*packet = impl;
 		mpp_packet_new_ring_buf(&new_packet, enc->ring_pool, 1, 1, 0, enc->chan_id);
 		mpp_assert(new_packet);
+		mpp_packet_set_pts(new_packet, impl->pts);
+		mpp_packet_set_dts(new_packet, impl->dts);
 		hal_task->packet = new_packet;
 		enc->packet = hal_task->packet;
 	}
