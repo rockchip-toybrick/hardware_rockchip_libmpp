@@ -95,7 +95,7 @@
 #define to_rkvenc_dev(dev)		\
 		container_of(dev, struct rkvenc_dev, mpp)
 
-#define is_pp_task(task)	(task->pp_info != NULL)
+#define task_type_str(task)	(task->pp_info != NULL ? "pp" : "enc")
 
 /* reg define for vepu_pp */
 enum {
@@ -1138,7 +1138,6 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 		return IRQ_HANDLED;
 	}
 
-	mpp_dbg_dvbm("irq_status 0x%08x\n", mpp->irq_status);
 	if (priv->dvbm_cfg) {
 		u32 dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
 
@@ -1153,11 +1152,11 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 				mpp_write(mpp, 0x10, 0x100);
 				return IRQ_HANDLED;
 			}
-			mpp_err("chan %d task %d pipe %d frame id %d err 0x%08x cfg %#x 0x%08x\n",
-				session->chn_id, mpp_task->task_index, mpp_task->pipe_id,
-				mpp_task->frame_id, enc_st.val, dvbm_cfg, mpp_read(mpp, 0x516c));
+			mpp_dbg_warning("chan %d task %d sid %d fid %d err 0x%08x cfg %#x 0x%08x\n",
+					session->chn_id, mpp_task->task_index, mpp_task->pipe_id,
+					mpp_task->frame_id, enc_st.val, dvbm_cfg,
+					mpp_read(mpp, 0x516c));
 		}
-		mpp_dbg_dvbm("st enc 0x%08x\n", enc_st.val);
 
 		if (enc->skip_dvbm_discnct) {
 			if ((mpp->irq_status & RKVENC_SOURCE_ERR)) {
@@ -1194,24 +1193,18 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 		priv->info.bsbuf_overflow_cnt++;
 	task->irq_status = (mpp->irq_status | mpp->overflow_status);
 
-	if (task->pp_info)
-		mpp_debug(DEBUG_IRQ_STATUS, "pp_task %d irq_status 0x%08x\n",
-			  mpp_task->task_index, task->irq_status);
-	else
-		mpp_debug(DEBUG_IRQ_STATUS, "task %d irq_status 0x%08x\n",
-			  mpp_task->task_index, task->irq_status);
+	mpp_debug(DEBUG_IRQ_STATUS, "chan %d %s task %d irq_status 0x%08x st 0x%08x\n",
+		  session->chn_id, task_type_str(task), mpp_task->task_index,
+		  task->irq_status, enc_st.val);
 
 	mpp_time_diff(mpp_task);
-	set_bit(TASK_STATE_DONE, &mpp_task->state);
-	mpp_taskqueue_pop_running(mpp->queue, mpp_task);
 	/* get enc task info */
 	if (mpp->dev_ops->finish)
 		mpp->dev_ops->finish(mpp, mpp_task);
 	if (mpp->irq_status & enc->hw_info->err_mask) {
-		mpp_err("chan %d %s task %d irq_status 0x%08x enc st 0x%08x\n",
-			session->chn_id, is_pp_task(task) ? "pp" : "enc",
-			mpp_task->task_index, task->irq_status,
-			enc_st.val);
+		mpp_dbg_warning("chan %d %s task %d irq_status 0x%08x st 0x%08x\n",
+				session->chn_id, task_type_str(task), mpp_task->task_index,
+				task->irq_status, enc_st.val);
 		priv->info.enc_err_irq = task->irq_status;
 		priv->info.enc_err_status = enc_st.val;
 		if (enc_st.vepu_src_oflw)
@@ -1222,6 +1215,8 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 	}
 	priv->info.hw_running = 0;
 	mpp->overflow_status = 0;
+	set_bit(TASK_STATE_DONE, &mpp_task->state);
+	mpp_taskqueue_pop_running(mpp->queue, mpp_task);
 	wake_up(&mpp_task->wait);
 	mpp_taskqueue_trigger_work(mpp);
 
@@ -1490,7 +1485,7 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	session = task->session;
 
 	mpp_err("chan %d %s task %d state %#lx processing time out!\n",
-		session->chn_id, is_pp_task(to_rkvenc_task(task)) ? "pp" : "enc",
+		session->chn_id, task_type_str(to_rkvenc_task(task)),
 		task->task_index, task->state);
 
 	if (!session->mpp) {
