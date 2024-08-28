@@ -222,6 +222,8 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 			mpp_buffer_put(enc->mv_info);
 		if (enc->qpmap)
 			mpp_buffer_put(enc->qpmap);
+		if (enc->mv_flag_info)
+			mpp_free(enc->mv_flag_info);
 		if (enc->mv_flag)
 			mpp_free(enc->mv_flag);
 	}
@@ -357,8 +359,17 @@ MPP_RET mpp_enc_cfg_reg(MppEnc ctx, MppFrame frame)
 			}
 			if (!enc->mv_info)
 				mpp_buffer_get(NULL, &enc->mv_info, mb_w * mb_h * 4);
-			if (!enc->qpmap)
+			if (!enc->qpmap) {
+#ifdef RKVEPU500_SUPPORT
+				mpp_buffer_get(NULL, &enc->qpmap, mb_w * mb_h * 16);
+#else
 				mpp_buffer_get(NULL, &enc->qpmap, mb_w * mb_h * 4);
+#endif
+			}
+#ifdef RKVEPU500_SUPPORT
+			if (!enc->mv_flag_info)
+				enc->mv_flag_info = (RK_U8 *)mpp_calloc(RK_U8, mb_w * mb_h * 4);
+#endif
 			enc->mv_flag = (RK_U8 *)mpp_calloc(RK_U8, mb_w * mb_h);
 			if (!enc->mv_flag)
 				mpp_log("alloc mv_flag failed!\n");

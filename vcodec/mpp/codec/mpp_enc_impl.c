@@ -1471,6 +1471,7 @@ static MPP_RET mpp_enc_normal_cfg(MppEncImpl *enc, EncTask *task)
 	enc->last_scene_mode = rc_task->info.scene_mode;
 	if (enc->qpmap_en) {
 		hal_task->mv_info = enc->mv_info;
+		hal_task->mv_flag_info = enc->mv_flag_info;
 		hal_task->qpmap = enc->qpmap;
 		hal_task->mv_flag = enc->mv_flag;
 		hal_task->qp_out = enc->qp_out;

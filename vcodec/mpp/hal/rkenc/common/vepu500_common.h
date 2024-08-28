@@ -2214,6 +2214,36 @@ typedef struct Vepu500H265RoiBlkCfg {
 	RK_U32 mdc_adju_intra : 4;
 } Vepu500H265RoiBlkCfg;
 
+typedef struct Vepu500H265RoiDpt1BlkCfg {
+	//W0
+	RK_U32 cu32_qp_adju          : 8;
+	RK_U32 cu16_0_mdc_adju_inter : 4;
+	RK_U32 cu16_0_mdc_adju_skip  : 4;
+	RK_U32 cu16_0_mdc_adju_intra : 4;
+	RK_U32 cu32_mdc_adju_inter   : 4;
+	RK_U32 cu32_mdc_adju_skip    : 4;
+	RK_U32 cu32_mdc_adju_intra   : 4;
+	//W1
+	RK_U32 cu16_1_qp_adju        : 8;
+	RK_U32 cu16_1_mdc_adju_inter : 4;
+	RK_U32 cu16_1_mdc_adju_skip  : 4;
+	RK_U32 cu16_1_mdc_adju_intra : 4;
+	RK_U32 reserved0             : 4;
+	RK_U32 cu16_0_qp_adju        : 8;
+	//W2
+	RK_U32 cu16_2_qp_adju        : 8;
+	RK_U32 cu16_2_mdc_adju_inter : 4;
+	RK_U32 cu16_2_mdc_adju_skip  : 4;
+	RK_U32 cu16_2_mdc_adju_intra : 4;
+	RK_U32 reserved1             : 12;
+	//W3
+	RK_U32 cu16_3_qp_adju        : 8;
+	RK_U32 cu16_3_mdc_adju_inter : 4;
+	RK_U32 cu16_3_mdc_adju_skip  : 4;
+	RK_U32 cu16_3_mdc_adju_intra : 4;
+	RK_U32 reserved2             : 12;
+} Vepu500H265RoiDpt1BlkCfg;
+
 typedef struct Vepu500JpegCfg_t {
 	MppDev dev;
 	void *jpeg_reg_base;

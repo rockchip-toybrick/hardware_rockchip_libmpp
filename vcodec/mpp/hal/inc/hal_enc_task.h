@@ -72,6 +72,7 @@ typedef struct HalEncTask_t {
 	// current mv info output buffer (not used)
 	MppBuffer mv_info;
 	MppBuffer qpmap;
+	RK_U8 *mv_flag_info;
 	RK_U8 *mv_flag;
 	RK_U32 qp_out;
 	HalEncTaskFlag flags;
