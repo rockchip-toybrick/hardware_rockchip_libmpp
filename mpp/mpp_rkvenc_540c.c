@@ -198,6 +198,8 @@ struct rkvenc_task {
 	/* split output / slice mode info */
 	u32 task_split;
 	u32 last_slice_found;
+	/* fix BUG: count slice length in each frame when slice fifo */
+	u32 slice_total_len;
 	MppEncSliceInfo sli_info;
 };
 
@@ -1131,6 +1133,13 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 		u32 dvbm_en = 0;
 		u32 st_ppl = 0;
 
+		if (task->task_split) {
+			/* fix BUG: enc reset when slice fifo */
+			mpp_write(mpp, hw->enc_clr_base, 0x2);
+			udelay(5);
+			mpp_write(mpp, hw->enc_clr_base, 0x0);
+		}
+
 		for (i = 0; i < task->w_req_cnt; i++) {
 			int ret;
 			u32 s, e, off;
@@ -1311,29 +1320,33 @@ static void rkvenc_clear_dvbm_info(struct mpp_dev *mpp)
 }
 
 static void rkvenc_read_slice_len(struct mpp_task *mpp_task, struct rkvenc_task *task,
-				  struct mpp_dev *mpp, u32 sli_num)
+				  struct mpp_dev *mpp)
 {
 	struct mpp_session *session = mpp_task->session;
-	u32 i;
 	u32 last = 0;
+	u32 frame_size;
 
 	last = mpp->irq_status & RKVENC_ENC_DONE_STATUS;
-	for (i = 0; i < sli_num; i++) {
-		task->sli_info.val = mpp_read_relaxed(mpp, RKVENC_REG_SLICE_LEN_BASE);
 
-		if (last && i == sli_num - 1) {
-			task->sli_info.last = 1;
-			task->last_slice_found = 1;
+	if (last) {
+		frame_size = mpp_read_relaxed(mpp, 0x4000);
+		if (frame_size >= task->slice_total_len)
+			task->sli_info.length = frame_size - task->slice_total_len;
+		else {
+			mpp_err("read slice len fail, frame %d slice_total_len[%d]",
+				frame_size, task->slice_total_len);
+			task->sli_info.length = 0;
 		}
-
-		mpp_debug(DEBUG_SLICE, "wr %3d len %d %s\n",
-			  i, task->sli_info.length,
-			  task->sli_info.last ? "last" : "continue");
-
-		if (session->callback && mpp_task->clbk_en)
-			session->callback(session->chn_id, MPP_VCODEC_EVENT_SLICE,
-					  &task->sli_info.val);
+		task->last_slice_found = 1;
+		task->sli_info.last = 1;
+	} else {
+		task->sli_info.val = mpp_read_relaxed(mpp, RKVENC_REG_SLICE_LEN_BASE);
+		task->slice_total_len += task->sli_info.val;
 	}
+
+	if (session->callback && mpp_task->clbk_en)
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_SLICE,
+				  &task->sli_info.val);
 }
 
 irqreturn_t mpp_rkvenc_irq(int irq, void *param)
@@ -1376,24 +1389,25 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	if ((mpp->irq_status & enc->hw_info->err_mask) == 0) {
 		if (task && task->task_split) {
 			if (sli_num) {
-				rkvenc_read_slice_len(mpp_task, task, mpp, sli_num);
+				rkvenc_read_slice_len(mpp_task, task, mpp);
 				if ((mpp->irq_status & RKVENC_ENC_DONE_STATUS) == 0) {
 					mpp_debug(DEBUG_SLICE,
 						  "mpp->irq_status[0x%08x] slice done return.\n",
 						  mpp->irq_status);
 					return IRQ_HANDLED;
 				}
-			}
-
-			if (task->last_slice_found == 0 &&
-			    (mpp->irq_status & RKVENC_ENC_DONE_STATUS)) {
-				mpp_debug(DEBUG_SLICE, "send empty slice info packet.\n");
-				task->sli_info.last = 1;
-				task->sli_info.length = 0;
-				task->last_slice_found = 1;
-				if (session->callback && mpp_task->clbk_en)
-					session->callback(session->chn_id, MPP_VCODEC_EVENT_SLICE,
-							  &task->sli_info.val);
+			} else {
+				if (task->last_slice_found == 0 &&
+				    (mpp->irq_status & RKVENC_ENC_DONE_STATUS)) {
+					mpp_debug(DEBUG_SLICE, "send empty slice info packet.\n");
+					task->sli_info.last = 1;
+					task->sli_info.length = 0;
+					task->last_slice_found = 1;
+					if (session->callback && mpp_task->clbk_en)
+						session->callback(session->chn_id,
+								  MPP_VCODEC_EVENT_SLICE,
+								  &task->sli_info.val);
+				}
 			}
 		}
 	}
@@ -1589,6 +1603,7 @@ static int rkvenc_free_task(struct mpp_session *session, struct mpp_task *mpp_ta
 
 	task->task_split = 0;
 	task->last_slice_found = 0;
+	task->slice_total_len = 0;
 
 	return 0;
 }
