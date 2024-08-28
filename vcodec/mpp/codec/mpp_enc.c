@@ -633,6 +633,13 @@ MPP_RET mpp_enc_control(MppEnc ctx, MpiCmd cmd, void *param)
 			MPP_SWAP(RK_S32, cfg->prep.width, cfg->prep.height);
 			MPP_SWAP(RK_S32, cfg->prep.max_width, cfg->prep.max_height);
 		}
+		/* cleanup change flag to avoid extra change flag bit when user resend the cfg */
+		cfg->rc.change = 0;
+		cfg->prep.change = 0;
+		cfg->hw.change = 0;
+		cfg->codec.change = 0;
+		cfg->split.change = 0;
+		cfg->tune.change = 0;
 	}
 	break;
 	case MPP_ENC_SET_PREP_CFG: {
