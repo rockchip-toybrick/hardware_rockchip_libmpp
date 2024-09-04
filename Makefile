@@ -34,10 +34,12 @@ endif
 
 ifeq ($(CONFIG_CPU_RV1106), y)
 VEPU_CORE := RKVEPU540C
+lib-m += vproc/pp/vepu_pp.s
 endif
 
 ifeq ($(CONFIG_CPU_RV1103B), y)
 VEPU_CORE := RKVEPU500
+lib-m += vproc/pp/vepu500_pp.s
 endif
 
 BUILD_ONE_KO=y
