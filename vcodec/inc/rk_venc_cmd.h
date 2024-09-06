@@ -415,8 +415,9 @@ typedef struct MppEncHwCfg_t {
 	/* vepu500
 	 * 0: aq16_range; 1: aq32_range; 2: aq8_range
 	 * 3: aq16_diff0; 4: aq16_diff1
+	 * 0 ~ 4 for I frame, 5 ~ 9 for P frame
 	 */
-	RK_S32                  aq_rnge_arr[5];
+	RK_S32                  aq_rnge_arr[10];
 } MppEncHwCfg;
 
 /*
@@ -1356,6 +1357,10 @@ typedef enum MppEncFineTuneCfgChange_e {
 	MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_I_IDX                = (1 << 6),
 	MPP_ENC_TUNE_CFG_CHANGE_ATF_STR                     = (1 << 7),
 	MPP_ENC_TUNE_CFG_CHANGE_LGT_CHG_LVL                 = (1 << 8),
+	MPP_ENC_TUNE_CFG_CHANGE_STATIC_FRM_NUM              = (1 << 9),
+	MPP_ENC_TUNE_CFG_CHANGE_MADP16_TH                   = (1 << 10),
+	MPP_ENC_TUNE_CFG_CHANGE_SKIP16_WGT                  = (1 << 11),
+	MPP_ENC_TUNE_CFG_CHANGE_SKIP32_WGT                  = (1 << 12),
 	MPP_ENC_TUNE_CFG_CHANGE_ALL                         = (0xFFFFFFFF)
 } MppEncFineTuneCfgChange;
 
@@ -1370,8 +1375,14 @@ typedef struct MppEncFineTuneCfg_t {
 	RK_S32              lambda_idx;
 	RK_S32              lambda_i_idx;
 	RK_S32              atf_str;
-	RK_S32              lgt_chg_lvl; /* vepu500: light change level, [0, 3] */
-	RK_S32              reserved[8];
+
+	/* vepu500 only */
+	RK_S32              lgt_chg_lvl; /* light change level, [0, 3] */
+	RK_S32              static_frm_num; /* static frame number, [0, 7] */
+	RK_S32              madp16_th; /* madp threshold for static block detection, [0, 63] */
+	RK_S32              skip16_wgt; /* weight for skip16, 0 or [3, 8] */
+	RK_S32              skip32_wgt; /* weight for skip32, 0 or [3, 8] */
+	RK_S32              reserved[4];
 } MppEncFineTuneCfg;
 
 typedef enum MppEncOnlineMode_e {

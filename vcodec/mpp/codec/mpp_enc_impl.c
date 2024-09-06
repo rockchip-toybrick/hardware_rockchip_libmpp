@@ -808,6 +808,38 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			ret = MPP_ERR_VALUE;
 		}
 
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_STATIC_FRM_NUM)
+			dst->static_frm_num = src->static_frm_num;
+
+		if (dst->static_frm_num < 0 || dst->static_frm_num > 7) {
+			mpp_err("invalid static_frm_num %d not in range [0, 7]\n", dst->static_frm_num);
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_MADP16_TH)
+			dst->madp16_th = src->madp16_th;
+
+		if (dst->madp16_th < 0 || dst->madp16_th > 63) {
+			mpp_err("invalid madp16_th %d not in range [0, 255]\n", dst->madp16_th);
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_SKIP16_WGT)
+			dst->skip16_wgt = src->skip16_wgt;
+
+		if (!(dst->skip16_wgt == 0 || (dst->skip16_wgt >= 3 && dst->skip16_wgt <= 8))) {
+			mpp_err("invalid skip16_wgt %d not in range [3, 8] or 0\n", dst->skip16_wgt);
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_SKIP32_WGT)
+			dst->skip32_wgt = src->skip32_wgt;
+
+		if (!(dst->skip32_wgt == 0 || (dst->skip32_wgt >= 3 && dst->skip32_wgt <= 8))) {
+			mpp_err("invalid skip32_wgt %d not in range [3, 8] or 0\n", dst->skip32_wgt);
+			ret = MPP_ERR_VALUE;
+		}
+
 		dst->change |= change;
 
 		if (ret) {

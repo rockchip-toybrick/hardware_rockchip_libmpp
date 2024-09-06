@@ -2225,7 +2225,8 @@ static void vepu500_h265_tune_md_info(H265eV500HalContext *ctx, HalEncTask *task
 	RK_S32 gop = (ctx->cfg->rc.gop > 0) ? ctx->cfg->rc.gop : 1;
 	RK_S32 frame_num = ctx->frame_num;
 	RK_S32 mv_flag_cnt_in_gop = frame_num % gop;
-	RK_S32 mv_flag_loop_frame = 5;
+	RK_S32 mv_flag_loop_frame = ctx->cfg->tune.static_frm_num;
+	RK_S32 madp16_th = ctx->cfg->tune.madp16_th;
 	RK_S32 mv_flag_info_idx = (mv_flag_cnt_in_gop - 1) % mv_flag_loop_frame;
 	RK_S32 b32_idx = 0;
 	RK_S32 b16_idx = 0;
@@ -2238,7 +2239,8 @@ static void vepu500_h265_tune_md_info(H265eV500HalContext *ctx, HalEncTask *task
 			sad16[1] = (md_info[b16_idx + 1] & 0x3F) << 2;
 			sad16[2] = (md_info[b16_idx + 2] & 0x3F) << 2;
 			sad16[3] = (md_info[b16_idx + 3] & 0x3F) << 2;
-			if (sad16[0] > 15 || sad16[1] > 15 || sad16[2] > 15 || sad16[3] > 15)
+			if (sad16[0] > madp16_th || sad16[1] > madp16_th ||
+			    sad16[2] > madp16_th || sad16[3] > madp16_th)
 				mv_flag_info[b32_idx] |= (1 << mv_flag_info_idx);
 			else
 				mv_flag_info[b32_idx] &= ~(1 << mv_flag_info_idx);
@@ -2256,8 +2258,8 @@ static void vepu500_h265_tune_qpmap_mdc(H265eV500HalContext *ctx, HalEncTask *ta
 	H265eV500RegSet *regs = ctx->regs;
 	HevcVepu500RcRoi *r = &regs->reg_rc_roi;
 	RK_U32 bmap_depth = r->bmap_cfg.bmap_mdc_dpth;
-	RK_U32 mdc_skip32_cfg = 6;
-	RK_U32 mdc_skip16_cfg = 6;
+	RK_U32 mdc_skip32_cfg = ctx->cfg->tune.skip32_wgt;
+	RK_U32 mdc_skip16_cfg = ctx->cfg->tune.skip16_wgt;
 
 	if (bmap_depth == 0) {
 		Vepu500H265RoiBlkCfg *roi_blk = (Vepu500H265RoiBlkCfg *)mpp_buffer_get_ptr(task->qpmap);
