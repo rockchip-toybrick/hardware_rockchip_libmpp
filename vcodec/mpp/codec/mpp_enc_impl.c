@@ -2327,6 +2327,21 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 			   hw->aq_step_p[8], hw->aq_step_p[9], hw->aq_step_p[10], hw->aq_step_p[11],
 			   hw->aq_step_p[12], hw->aq_step_p[13], hw->aq_step_p[14], hw->aq_step_p[15]);
 
+#ifdef RKVEPU500_SUPPORT
+		seq_printf(seq, "%8s|%24s\n", "ID", "qbias_arr[0] ~ qbias_arr[17]");
+		seq_printf(seq, "%8u|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d\n",
+			   chl_id, hw->qbias_arr[0], hw->qbias_arr[1], hw->qbias_arr[2], hw->qbias_arr[3],
+			   hw->qbias_arr[4], hw->qbias_arr[5], hw->qbias_arr[6], hw->qbias_arr[7],
+			   hw->qbias_arr[8], hw->qbias_arr[9], hw->qbias_arr[10], hw->qbias_arr[11],
+			   hw->qbias_arr[12], hw->qbias_arr[13], hw->qbias_arr[14], hw->qbias_arr[15],
+			   hw->qbias_arr[16], hw->qbias_arr[17]);
+		seq_printf(seq, "%8s|%24s\n", "ID", "aq_rnge_arr[0] ~ aq_rnge_arr[9]");
+		seq_printf(seq, "%8u|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d\n",
+			   chl_id, hw->aq_rnge_arr[0], hw->aq_rnge_arr[1], hw->aq_rnge_arr[2], hw->aq_rnge_arr[3],
+			   hw->aq_rnge_arr[4], hw->aq_rnge_arr[5], hw->aq_rnge_arr[6], hw->aq_rnge_arr[7],
+			   hw->aq_rnge_arr[8], hw->aq_rnge_arr[9]);
+#endif
+
 		seq_puts(seq,
 			 "\n--------fine tuning param------------------------------------------------------------------------\n");
 		seq_printf(seq, "%8s|%12s|%12s|%12s|%10s|%10s|%12s|%12s|%12s\n", "ID",
@@ -2335,6 +2350,13 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 		seq_printf(seq, "%8u|%12d|%12d|%12d|%10d|%10d|%12d|%12d|%12d\n", chl_id,
 			   tune->scene_mode, tune->motion_static_switch_enable, tune->deblur_str, tune->atr_str,
 			   tune->atl_str, tune->lambda_idx, tune->lambda_i_idx, tune->atf_str);
+
+#ifdef RKVEPU500_SUPPORT
+		seq_printf(seq, "%8s|%14s|%12s|%12s|%12s|%12s\n", "ID",
+			   "static_frm_num", "madp16_th", "skip16_wgt", "skip32_wgt", "lgt_chg_lvl");
+		seq_printf(seq, "%8u|%14d|%12d|%12d|%12d|%12d\n", chl_id,
+			   tune->static_frm_num, tune->madp16_th, tune->skip16_wgt, tune->skip32_wgt, tune->lgt_chg_lvl);
+#endif
 	}
 
 	if (cfg->roi.number > 0) {
