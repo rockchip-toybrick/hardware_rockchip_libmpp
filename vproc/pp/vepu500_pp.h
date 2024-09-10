@@ -254,16 +254,6 @@ struct pp_param_t {
 		u32 thres_sad_od            : 14;
 		u32 reserved                : 3;
 	} thd_od_vpp;
-
-	/* 0x0000108c reg1059 */
-	struct {
-		u32 bmap_en               : 1;
-		u32 bmap_pri              : 5;
-		u32 bmap_qpmin            : 6;
-		u32 bmap_qpmax            : 6;
-		u32 bmap_mdc_dpth         : 1;
-		u32 reserved              : 13;
-	} bmap_cfg;
 };
 
 struct pp_output_t {

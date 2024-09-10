@@ -127,7 +127,6 @@ enum {
 	PP_BASE_CFG	= 0x530,
 	PP_MD_THD	= 0x534,
 	PP_OD_THD	= 0x538,
-	BMAP_CFG	= 0x108c,
 };
 
 struct rkvenc_pp_param {
@@ -159,7 +158,6 @@ struct rkvenc_pp_param {
 	u32 pp_base_cfg;
 	u32 pp_md_thd;
 	u32 pp_od_thd;
-	u32 bmap_cfg;
 };
 
 struct rkvenc_pp_out {
