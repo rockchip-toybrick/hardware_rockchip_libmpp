@@ -1034,6 +1034,11 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	for (off = s; off <= e; off += 4)
 		mpp_write_relaxed(mpp, off, 0);
 
+	s = hw->reg_msg[RKVENC_CLASS_RC].base_s;
+	e = hw->reg_msg[RKVENC_CLASS_RC].base_e;
+	for (off = s; off <= e; off += 4)
+		mpp_write_relaxed(mpp, off, 0);
+
 	mpp_write_relaxed(mpp, INT_EN, param->int_en);
 	mpp_write_relaxed(mpp, INT_MSK, param->int_msk);
 	mpp_write_relaxed(mpp, SRC0_ADDR, param->src0_addr);
@@ -1062,7 +1067,6 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	mpp_write_relaxed(mpp, PP_BASE_CFG, param->pp_base_cfg);
 	mpp_write_relaxed(mpp, PP_MD_THD, param->pp_md_thd);
 	mpp_write_relaxed(mpp, PP_OD_THD, param->pp_od_thd);
-	mpp_write_relaxed(mpp, BMAP_CFG, param->bmap_cfg);
 
 	/* init current task */
 	mpp->cur_task = mpp_task;
