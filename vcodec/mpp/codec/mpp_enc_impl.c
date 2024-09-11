@@ -150,6 +150,16 @@ static void update_hal_info_fps(MppEncImpl *enc)
 	enc->frame_count = 0;
 }
 
+static RK_S32 mpp_enc_get_real_fps(MppEncImpl *enc)
+{
+	RK_S32 time_diff = ((RK_S32)(mpp_time() - enc->time_end) / 1000);
+
+	if (time_diff > 2000)
+		enc->real_fps = 0;
+
+	return enc->real_fps;
+}
+
 static void check_hal_task_pkt_len(HalEncTask *task, const char *reason)
 {
 	RK_U32 task_length = task->length;
@@ -2267,8 +2277,8 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 		   "PixFmt", "RealFps*10", "rotation", "mirror");
 	seq_printf(seq, "%8d|%8s|%8d|%8d|%12x|%12s|%12u|%12s|%10s\n",
 		   chl_id, "y", source_frate, target_frame_rate, (RK_U32)enc->init_time,
-		   strof_pixel_fmt(cfg->prep.format), enc->real_fps, strof_rotation(cfg->prep.rotation),
-		   strof_bool(cfg->prep.mirroring));
+		   strof_pixel_fmt(cfg->prep.format), mpp_enc_get_real_fps(enc),
+		   strof_rotation(cfg->prep.rotation), strof_bool(cfg->prep.mirroring));
 
 	if (enc->ring_pool) {
 		seq_puts(seq,
