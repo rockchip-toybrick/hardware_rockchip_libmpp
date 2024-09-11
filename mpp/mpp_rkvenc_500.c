@@ -1014,6 +1014,7 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	struct rkvenc_pp_param *param = &task->pp_info->param;
 	struct rkvenc_hw_info *hw = &rkvenc_500_hw_info;
 	u32 off, s, e;
+	u32 i;
 
 	mpp_debug_enter();
 
@@ -1022,20 +1023,12 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	mpp_write(mpp, enc->hw_info->enc_clr_base, 0x4);
 
 	/* clear pp config */
-	s = hw->reg_msg[RKVENC_CLASS_PIC].base_s;
-	e = hw->reg_msg[RKVENC_CLASS_PIC].base_e;
-	for (off = s; off <= e; off += 4)
-		mpp_write_relaxed(mpp, off, 0);
-
-	s = hw->reg_msg[RKVENC_CLASS_OSD].base_s;
-	e = hw->reg_msg[RKVENC_CLASS_OSD].base_e;
-	for (off = s; off <= e; off += 4)
-		mpp_write_relaxed(mpp, off, 0);
-
-	s = hw->reg_msg[RKVENC_CLASS_RC].base_s;
-	e = hw->reg_msg[RKVENC_CLASS_RC].base_e;
-	for (off = s; off <= e; off += 4)
-		mpp_write_relaxed(mpp, off, 0);
+	for (i = RKVENC_CLASS_BASE; i <= RKVENC_CLASS_OSD; i++) {
+		s = hw->reg_msg[i].base_s;
+		e = hw->reg_msg[i].base_e;
+		for (off = s; off <= e; off += 4)
+			mpp_write_relaxed(mpp, off, 0);
+	}
 
 	mpp_write_relaxed(mpp, INT_EN, param->int_en);
 	mpp_write_relaxed(mpp, INT_MSK, param->int_msk);
