@@ -170,6 +170,7 @@ static int mpp_enc_module_init(void)
 		curr_entry->coding_type = -1;
 		curr_entry->handle = NULL;
 		spin_lock_init(&curr_entry->chan_lock);
+		mutex_init(&curr_entry->chan_debug_lock);
 	}
 	venc->num_enc = 0;
 	thds = vcodec_thread_create((struct vcodec_module*)venc);

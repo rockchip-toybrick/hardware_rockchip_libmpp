@@ -182,10 +182,12 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 
 		if (chan_entry->cfg.online)
 			mpp_vcodec_chan_unbind(chan_entry);
+		mutex_lock(&chan_entry->chan_debug_lock);
 		mpp_enc_deinit(chan_entry->handle);
 		mpp_vcodec_stream_clear(chan_entry);
 		mpp_vcodec_dec_chan_num(type);
 		mpp_vcodec_chan_entry_deinit(chan_entry);
+		mutex_unlock(&chan_entry->chan_debug_lock);
 		mpp_log("destroy chan %d done\n", chan_id);
 	} break;
 	default: {
@@ -431,6 +433,7 @@ static int mpp_vcodec_chan_change_coding_type(int chan_id, void *arg)
 
 	if (entry->cfg.online)
 		mpp_vcodec_chan_unbind(entry);
+	mutex_lock(&entry->chan_debug_lock);
 	mpp_enc_deinit(entry->handle);
 	mpp_vcodec_stream_clear(entry);
 	mpp_vcodec_dec_chan_num(MPP_CTX_ENC);
@@ -439,6 +442,7 @@ static int mpp_vcodec_chan_change_coding_type(int chan_id, void *arg)
 	entry->reenc = 0;
 	entry->binder_chan_id = -1;
 	entry->master_chan_id = -1;
+	mutex_unlock(&entry->chan_debug_lock);
 	mpp_vcodec_chan_create(attr);
 	entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
 

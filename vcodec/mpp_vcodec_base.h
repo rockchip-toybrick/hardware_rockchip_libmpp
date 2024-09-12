@@ -48,6 +48,8 @@ struct mpp_chan {
 	atomic_t runing;
 	RK_U32 reenc;
 	spinlock_t chan_lock;
+	/* protect debug info when destory channel */
+	struct mutex chan_debug_lock;
 	void *handle;
 	struct mpi_queue *yuv_queue;
 	RK_U32 queue_size;
