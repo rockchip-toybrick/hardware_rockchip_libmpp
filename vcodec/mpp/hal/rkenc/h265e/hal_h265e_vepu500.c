@@ -2190,7 +2190,7 @@ static void vepu500_h265_tune_md_info(H265eV500HalContext *ctx, HalEncTask *task
 	RK_S32 gop = (ctx->cfg->rc.gop > 0) ? ctx->cfg->rc.gop : 1;
 	RK_S32 frame_num = ctx->frame_num;
 	RK_S32 mv_flag_cnt_in_gop = frame_num % gop;
-	RK_S32 mv_flag_loop_frame = ctx->cfg->tune.static_frm_num;
+	RK_S32 mv_flag_loop_frame = MPP_MIN(7, ctx->cfg->tune.static_frm_num);
 	RK_S32 madp16_th = ctx->cfg->tune.madp16_th;
 	RK_S32 mv_flag_info_idx = (mv_flag_cnt_in_gop - 1) % mv_flag_loop_frame;
 	RK_S32 b32_idx = 0;
@@ -2209,6 +2209,12 @@ static void vepu500_h265_tune_md_info(H265eV500HalContext *ctx, HalEncTask *task
 				mv_flag_info[b32_idx] |= (1 << mv_flag_info_idx);
 			else
 				mv_flag_info[b32_idx] &= ~(1 << mv_flag_info_idx);
+
+			if (sad16[0] <= 8 && sad16[1] <= 8 && sad16[2] <= 8 && sad16[3] <= 8)
+				mv_flag_info[b32_idx] &= 0x7f;
+			else
+				mv_flag_info[b32_idx] |= 0x80;
+
 		}
 	}
 }
@@ -2230,11 +2236,15 @@ static void vepu500_h265_tune_qpmap_mdc(H265eV500HalContext *ctx, HalEncTask *ta
 		Vepu500H265RoiBlkCfg *roi_blk = (Vepu500H265RoiBlkCfg *)mpp_buffer_get_ptr(task->qpmap);
 		for (b32_idx = 0; b32_idx < b32_num; b32_idx++) {
 			RK_S32 mv_flag_last_loopfrm = 0;
-			mv_flag_last_loopfrm = mv_flag_info[b32_idx];
+			mv_flag_last_loopfrm = mv_flag_info[b32_idx] & 0x7f;
 			if (mv_flag_last_loopfrm == 0) {
 				roi_blk[b32_idx].mdc_adju_skip = mdc_skip32_cfg;
 			} else {
 				roi_blk[b32_idx].mdc_adju_skip = 0;
+			}
+			if ((mv_flag_info[b32_idx] & 0x80) == 0) {
+				roi_blk[b32_idx].mdc_adju_skip = 4;
+				roi_blk[b32_idx].qp_adju = 166;//0x80 + 38
 			}
 		}
 	} else {
@@ -2244,7 +2254,7 @@ static void vepu500_h265_tune_qpmap_mdc(H265eV500HalContext *ctx, HalEncTask *ta
 		RK_U32 mdc_adju_skip16 = 0;
 
 		for (b32_idx = 0; b32_idx < b32_num; b32_idx++) {
-			mv_flag_last_loopfrm = mv_flag_info[b32_idx];
+			mv_flag_last_loopfrm = mv_flag_info[b32_idx] & 0x7f;
 			if (((prep->width % 32 != 0) && ((b32_idx + 1) % b32_stride == 0)) ||
 			    ((prep->height % 32 != 0) && (b32_idx >= (b32_num - b32_stride)))) {
 				mdc_adju_skip32 = 0;
@@ -2260,6 +2270,15 @@ static void vepu500_h265_tune_qpmap_mdc(H265eV500HalContext *ctx, HalEncTask *ta
 				} else {
 					mdc_adju_skip32 = 0;
 					mdc_adju_skip16 = 0;
+				}
+				if ((mv_flag_info[b32_idx] & 0x80) == 0) {
+					mdc_adju_skip32 = 4;
+					mdc_adju_skip16 = 4;
+					roi_blk[b32_idx].cu32_qp_adju = 166;//0x80 + 38
+					roi_blk[b32_idx].cu16_0_qp_adju = 166;
+					roi_blk[b32_idx].cu16_1_qp_adju = 166;
+					roi_blk[b32_idx].cu16_2_qp_adju = 166;
+					roi_blk[b32_idx].cu16_3_qp_adju = 166;
 				}
 			}
 			roi_blk[b32_idx].cu32_mdc_adju_skip = mdc_adju_skip32;
@@ -2482,7 +2501,6 @@ static void vepu500_h265_tune_qpmap_smart(H265eV500HalContext *ctx, HalEncTask *
 					// mv_flag[3:2] = 0x2 ; mv_flag[3:2] = 0x1
 					mv_final_flag = !!move_flag;
 					max_mv_final_flag = MPP_MAX(max_mv_final_flag, mv_final_flag);
-
 					if (((idx + 1) % 4) == 0) { /* block32x32 */
 						roi_blk[b32_idx].qp_adju = (max_mv_final_flag > 0) ? 0x80 - dqp : 0;
 						max_mv_final_flag = 0;
@@ -2492,7 +2510,6 @@ static void vepu500_h265_tune_qpmap_smart(H265eV500HalContext *ctx, HalEncTask *
 			} else {
 				Vepu500H265RoiDpt1BlkCfg *roi_blk = (Vepu500H265RoiDpt1BlkCfg *)mpp_buffer_get_ptr(task->qpmap);
 				RK_U32 qp_adju = 0;
-
 				for (b32_idx = 0; b32_idx < b32_num; b32_idx++) {
 					mv_final_flag = 0;
 					max_mv_final_flag = 0;
@@ -2547,7 +2564,8 @@ static void vepu500_h265_tune_qpmap(H265eV500HalContext *ctx, HalEncTask *task)
 		}
 		if (task->mv_flag_info) {
 			vepu500_h265_tune_md_info(ctx, task);
-			if (task->qpmap && ctx->frame_num > 5)
+			if (task->qpmap && ctx->frame_num > ctx->cfg->tune.static_frm_num &&
+			    ctx->cfg->tune.static_frm_num >= 2)
 				vepu500_h265_tune_qpmap_mdc(ctx, task);
 		}
 		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_TO_DEVICE);
