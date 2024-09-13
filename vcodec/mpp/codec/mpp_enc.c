@@ -141,7 +141,6 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 		p->ring_pool = mpp_calloc(ring_buf_pool, 1);
 	p->online = cfg->online;
 	p->shared_buf = cfg->shared_buf;
-	p->qpmap_en = cfg->qpmap_en;
 	p->chan_id = cfg->chan_id;
 	p->ref_buf_shared = cfg->ref_buf_shared;
 	*enc = p;
@@ -216,18 +215,6 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 		MPP_FREE(enc->ring_pool);
 	}
 	mpp_enc_unref_osd_buf(&enc->cur_osd);
-
-	if (enc->qpmap_en) {
-		if (enc->mv_info)
-			mpp_buffer_put(enc->mv_info);
-		if (enc->qpmap)
-			mpp_buffer_put(enc->qpmap);
-		if (enc->mv_flag_info)
-			mpp_free(enc->mv_flag_info);
-		if (enc->mv_flag)
-			mpp_free(enc->mv_flag);
-	}
-
 	MPP_FREE(enc->rc_cfg_info);
 	enc->rc_cfg_size = 0;
 	enc->rc_cfg_length = 0;
@@ -329,7 +316,6 @@ MPP_RET mpp_enc_online_task_failed(MppEnc ctx)
 MPP_RET mpp_enc_cfg_reg(MppEnc ctx, MppFrame frame)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
-	MppEncCfgSet *cfg = &enc->cfg;
 	MPP_RET ret = MPP_OK;
 
 	if (NULL == enc) {
@@ -345,36 +331,6 @@ MPP_RET mpp_enc_cfg_reg(MppEnc ctx, MppFrame frame)
 	}
 	mpp_enc_proc_rc_update(enc);
 	enc->enc_status = ENC_STATUS_CFG_IN;
-	if (enc->coding == MPP_VIDEO_CodingAVC || enc->coding == MPP_VIDEO_CodingHEVC) {
-		if (enc->qpmap_en && !enc->mv_info) {
-			RK_U32 mb_w = 0;
-			RK_U32 mb_h = 0;
-
-			if (cfg->codec.coding == MPP_VIDEO_CodingAVC) {
-				mb_w = MPP_ALIGN(cfg->prep.max_width, 64) / 16;
-				mb_h = MPP_ALIGN(cfg->prep.max_height, 64) / 16;
-			} else {
-				mb_w = MPP_ALIGN(cfg->prep.max_width, 32) / 16;
-				mb_h = MPP_ALIGN(cfg->prep.max_height, 32) / 16;
-			}
-			if (!enc->mv_info)
-				mpp_buffer_get(NULL, &enc->mv_info, mb_w * mb_h * 4);
-			if (!enc->qpmap) {
-#ifdef RKVEPU500_SUPPORT
-				mpp_buffer_get(NULL, &enc->qpmap, mb_w * mb_h * 16);
-#else
-				mpp_buffer_get(NULL, &enc->qpmap, mb_w * mb_h * 4);
-#endif
-			}
-#ifdef RKVEPU500_SUPPORT
-			if (!enc->mv_flag_info)
-				enc->mv_flag_info = (RK_U8 *)mpp_calloc(RK_U8, mb_w * mb_h * 4);
-#endif
-			enc->mv_flag = (RK_U8 *)mpp_calloc(RK_U8, mb_w * mb_h);
-			if (!enc->mv_flag)
-				mpp_log("alloc mv_flag failed!\n");
-		}
-	}
 	ret = mpp_enc_impl_reg_cfg(ctx, frame);
 	enc->enc_status = ENC_STATUS_CFG_DONE;
 	up(&enc->enc_sem);

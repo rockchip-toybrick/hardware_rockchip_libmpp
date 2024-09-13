@@ -1509,13 +1509,7 @@ static MPP_RET mpp_enc_normal_cfg(MppEncImpl *enc, EncTask *task)
 	rc_task->info.scene_mode = (RK_S32)enc->cfg.tune.scene_mode;
 	rc_task->info.last_scene_mode = enc->last_scene_mode;
 	enc->last_scene_mode = rc_task->info.scene_mode;
-	if (enc->qpmap_en) {
-		hal_task->mv_info = enc->mv_info;
-		hal_task->mv_flag_info = enc->mv_flag_info;
-		hal_task->qpmap = enc->qpmap;
-		hal_task->mv_flag = enc->mv_flag;
-		hal_task->qp_out = enc->qp_out;
-	}
+
 	if (!enc->online && enc->cfg.rc.debreath_en && !enc->ref_buf_shared) {
 		if (!frm_cfg->force_flag) {
 			ret = mpp_enc_proc_two_pass(enc, task);

@@ -163,6 +163,9 @@ typedef struct HalH264eVepu500Ctx_t {
 	WrapBufInfo		wrap_infos;
 
 	RK_U32                  smear_size;
+	MppBuffer               mv_info;
+	MppBuffer               qpmap;
+	RK_U8                   *mv_flag;
 } HalH264eVepu500Ctx;
 
 #define H264E_LAMBDA_TAB_SIZE       (52 * sizeof(RK_U32))
@@ -273,6 +276,13 @@ static MPP_RET hal_h264e_vepu500_deinit(void *hal)
 		mpp_buffer_put(p->recn_ref_buf);
 		p->recn_ref_buf = NULL;
 	}
+
+	if (p->mv_info)
+		mpp_buffer_put(p->mv_info);
+	if (p->qpmap)
+		mpp_buffer_put(p->qpmap);
+	if (p->mv_flag)
+		mpp_free(p->mv_flag);
 
 	MPP_FREE(p->regs_set);
 
@@ -2217,15 +2227,15 @@ static void setup_vepu500_anti_smear(HalH264eVepu500Ctx *ctx)
 	hal_h264e_dbg_func("leave\n");
 }
 
-static void vepu500_h264_tune_qpmap_normal(HalH264eVepu500Ctx *ctx, HalEncTask *task)
+static void vepu500_h264_tune_qpmap_normal(HalH264eVepu500Ctx *ctx)
 {
 	MppEncPrepCfg *prep = &ctx->cfg->prep;
 	RK_U32 b16_num = MPP_ALIGN(prep->width, 64) * MPP_ALIGN(prep->height, 16) / 256;
 	RK_U32 md_stride = MPP_ALIGN(prep->width, 256) / 16;
 	RK_U32 b16_stride = MPP_ALIGN(prep->width, 64) / 16;
-	MppBuffer md_info_buf = task->mv_info;
+	MppBuffer md_info_buf = ctx->mv_info;
 	RK_U8 *md_info = mpp_buffer_get_ptr(md_info_buf);
-	RK_U8 *mv_flag = task->mv_flag;
+	RK_U8 *mv_flag = ctx->mv_flag;
 	RK_U32 j, k;
 	RK_S32 motion_b16_num = 0;
 	RK_U16 sad_b16 = 0;
@@ -2253,7 +2263,8 @@ static void vepu500_h264_tune_qpmap_normal(HalH264eVepu500Ctx *ctx, HalEncTask *
 
 	{
 		HalVepu500RegSet *regs = ctx->regs_set;
-		Vepu500H264RoiBlkCfg *roi_blk = (Vepu500H264RoiBlkCfg *)mpp_buffer_get_ptr(task->qpmap);
+		Vepu500H264RoiBlkCfg *roi_blk =
+			(Vepu500H264RoiBlkCfg *)mpp_buffer_get_ptr(ctx->qpmap);
 		Vepu500RcRoiCfg *r = &regs->reg_rc_roi;
 		RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
 		RK_S32 pic_qp = regs->reg_frm.enc_pic.pic_qp;
@@ -2298,15 +2309,15 @@ static void vepu500_h264_tune_qpmap_normal(HalH264eVepu500Ctx *ctx, HalEncTask *
 }
 
 
-static void vepu500_h264_tune_qpmap_smart(HalH264eVepu500Ctx *ctx, HalEncTask *task)
+static void vepu500_h264_tune_qpmap_smart(HalH264eVepu500Ctx *ctx)
 {
 	MppEncPrepCfg *prep = &ctx->cfg->prep;
 	RK_U32 b16_num = MPP_ALIGN(prep->width, 64) * MPP_ALIGN(prep->height, 16) / 256;
 	RK_U32 md_stride = MPP_ALIGN(prep->width, 256) / 16;
 	RK_U32 b16_stride = MPP_ALIGN(prep->width, 64) / 16;
-	MppBuffer md_info_buf = task->mv_info;
+	MppBuffer md_info_buf = ctx->mv_info;
 	RK_U8 *md_info = mpp_buffer_get_ptr(md_info_buf);
-	RK_U8 *mv_flag = task->mv_flag;
+	RK_U8 *mv_flag = ctx->mv_flag;
 	RK_U32 j, k;
 	RK_S32 motion_b16_num = 0;
 	RK_U16 sad_b16 = 0;
@@ -2334,7 +2345,8 @@ static void vepu500_h264_tune_qpmap_smart(HalH264eVepu500Ctx *ctx, HalEncTask *t
 
 	{
 		HalVepu500RegSet *regs = ctx->regs_set;
-		Vepu500H264RoiBlkCfg *roi_blk = (Vepu500H264RoiBlkCfg *)mpp_buffer_get_ptr(task->qpmap);
+		Vepu500H264RoiBlkCfg *roi_blk =
+			(Vepu500H264RoiBlkCfg *)mpp_buffer_get_ptr(ctx->qpmap);
 		Vepu500RcRoiCfg *r = &regs->reg_rc_roi;
 		RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
 		RK_S32 pic_qp = regs->reg_frm.enc_pic.pic_qp;
@@ -2375,7 +2387,7 @@ static void vepu500_h264_tune_qpmap_smart(HalH264eVepu500Ctx *ctx, HalEncTask *t
 	hal_h264e_dbg_func("leave\n");
 }
 
-static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx, HalEncTask *task)
+static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx)
 {
 	HalVepu500RegSet *regs = ctx->regs_set;
 	Vepu500RcRoiCfg *r =  &regs->reg_rc_roi;
@@ -2394,21 +2406,21 @@ static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 
 	if (ctx->slice->slice_type == H264_I_SLICE) {
 		/* one byte for each 16x16 block */
-		memset(task->mv_flag, 0, w64 * h16 / 16 / 16);
+		memset(ctx->mv_flag, 0, w64 * h16 / 16 / 16);
 	} else {
 		/* one fourth is enough when bmap_mdc_dpth is equal to 0 */
-		memset(mpp_buffer_get_ptr(task->qpmap), 0, w64 * h16 / 16 / 16 * 4);
+		memset(mpp_buffer_get_ptr(ctx->qpmap), 0, w64 * h16 / 16 / 16 * 4);
 
 		if (ctx->smart_en) {
-			vepu500_h264_tune_qpmap_smart(ctx, task);
+			vepu500_h264_tune_qpmap_smart(ctx);
 		} else {
-			vepu500_h264_tune_qpmap_normal(ctx, task);
+			vepu500_h264_tune_qpmap_normal(ctx);
 		}
 
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(task->qpmap), DMA_TO_DEVICE);
+		dma_buf_end_cpu_access(mpp_buffer_get_dma(ctx->qpmap), DMA_TO_DEVICE);
 	}
 
-	reg_frm->adr_roir = mpp_dev_get_iova_address(ctx->dev, task->qpmap, 186);
+	reg_frm->adr_roir = mpp_dev_get_iova_address(ctx->dev, ctx->qpmap, 186);
 
 	hal_h264e_dbg_func("leave\n");
 }
@@ -2435,6 +2447,30 @@ static void setup_vepu500_scaling_list(HalH264eVepu500Ctx *ctx)
 	}
 
 	hal_h264e_dbg_func("leave\n");
+}
+
+static void hal_h264e_vepu500_init_qpmap_buf(HalH264eVepu500Ctx *ctx)
+{
+	RK_U32 mb_w, mb_h;
+	MppEncCfgSet *cfg = ctx->cfg;
+
+	if (ctx->mv_info && ctx->qpmap && ctx->mv_flag)
+		return;
+
+	mb_w = MPP_ALIGN(cfg->prep.max_width, 64) / 16;
+	mb_h = MPP_ALIGN(cfg->prep.max_height, 64) / 16;
+
+	if (!ctx->mv_info)
+		mpp_buffer_get(NULL, &ctx->mv_info, mb_w * mb_h * 4);
+	mpp_assert(ctx->mv_info);
+
+	if (!ctx->qpmap)
+		mpp_buffer_get(NULL, &ctx->qpmap, mb_w * mb_h * 16);
+	mpp_assert(ctx->qpmap);
+
+	if (!ctx->mv_flag)
+		ctx->mv_flag = (RK_U8 *)mpp_calloc(RK_U8, mb_w * mb_h);
+	mpp_assert(ctx->mv_flag);
 }
 
 static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
@@ -2476,10 +2512,6 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu500_io_buf(ctx, task);
 	setup_vepu500_recn_refr(ctx, regs);
 
-	regs->reg_frm.meiw_addr =
-		task->mv_info ? mpp_dev_get_iova_address(ctx->dev, task->mv_info, 171) : 0;
-	regs->reg_frm.enc_pic.mei_stor = task->mv_info ? 1 : 0;
-
 	regs->reg_frm.pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
 	regs->reg_frm.pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
 
@@ -2488,11 +2520,17 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu500_ext_line_buf(regs, ctx);
 	setup_vepu500_scaling_list(ctx);
 
-	if (ctx->qpmap_en && (task->mv_info != NULL) &&
-	    !task->rc_task->info.complex_scene &&
-	    (ctx->cfg->tune.deblur_str <= 3) &&
-	    (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC))
-		vepu500_h264_tune_qpmap(ctx, task);
+	if (ctx->qpmap_en) {
+		hal_h264e_vepu500_init_qpmap_buf(ctx);
+
+		regs->reg_frm.meiw_addr = mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
+		regs->reg_frm.enc_pic.mei_stor = 1;
+
+		if (!task->rc_task->info.complex_scene &&
+		    (cfg->tune.deblur_str <= 3) &&
+		    (cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC))
+			vepu500_h264_tune_qpmap(ctx);
+	}
 
 	if (ctx->osd_cfg.osd_data3)
 		vepu500_set_osd(&ctx->osd_cfg);

@@ -110,7 +110,6 @@ typedef struct MppEncImpl_t {
 	RK_U32   enc_status;
 	RK_U32   online;
 	RK_U32   ref_buf_shared;
-	RK_U32   qpmap_en;
 	struct semaphore enc_sem;
 	struct mpi_buf_pool *strm_pool;
 	MppEncROICfg cur_roi;
@@ -125,10 +124,6 @@ typedef struct MppEncImpl_t {
 	RK_U32 start_fail_cnt;
 	RK_U32 pkt_full_cnt;
 	struct hal_shared_buf *shared_buf;
-	MppBuffer mv_info;
-	MppBuffer qpmap;
-	RK_U8 *mv_flag_info;
-	RK_U8 *mv_flag;
 	RK_U32 qp_out;
 	RK_U32 chan_id;
 	RK_S32 last_scene_mode;

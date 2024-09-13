@@ -131,6 +131,9 @@ typedef struct HalH264eVepu540cCtx_t {
 	RK_S32	smart_en;
 	RK_U32  is_gray;
 	RK_U32  only_smartp;
+	MppBuffer mv_info;
+	MppBuffer qpmap;
+	RK_U8 *mv_flag;
 } HalH264eVepu540cCtx;
 
 static RK_U32 dump_l1_reg = 0;
@@ -206,6 +209,13 @@ static MPP_RET hal_h264e_vepu540c_deinit(void *hal)
 		mpp_buffer_put(p->recn_ref_buf);
 		p->recn_ref_buf = NULL;
 	}
+
+	if (p->mv_info)
+		mpp_buffer_put(p->mv_info);
+	if (p->qpmap)
+		mpp_buffer_put(p->qpmap);
+	if (p->mv_flag)
+		mpp_free(p->mv_flag);
 
 	MPP_FREE(p->regs_set);
 
@@ -2352,6 +2362,30 @@ static MPP_RET setup_vepu540c_dvbm(HalVepu540cRegSet *regs, HalH264eVepu540cCtx 
 }
 #endif
 
+static void hal_h264e_vepu540c_init_qpmap_buf(HalH264eVepu540cCtx *ctx)
+{
+	RK_U32 mb_w, mb_h;
+	MppEncCfgSet *cfg = ctx->cfg;
+
+	if (ctx->mv_info && ctx->qpmap && ctx->mv_flag)
+		return;
+
+	mb_w = MPP_ALIGN(cfg->prep.max_width, 64) / 16;
+	mb_h = MPP_ALIGN(cfg->prep.max_height, 64) / 16;
+
+	if (!ctx->mv_info)
+		mpp_buffer_get(NULL, &ctx->mv_info, mb_w * mb_h * 4);
+	mpp_assert(ctx->mv_info);
+
+	if (!ctx->qpmap)
+		mpp_buffer_get(NULL, &ctx->qpmap, mb_w * mb_h * 4);
+	mpp_assert(ctx->qpmap);
+
+	if (!ctx->mv_flag)
+		ctx->mv_flag = (RK_U8 *)mpp_calloc(RK_U8, mb_w * mb_h);
+	mpp_assert(ctx->mv_flag);
+}
+
 static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 {
 	HalH264eVepu540cCtx *ctx = (HalH264eVepu540cCtx *) hal;
@@ -2390,10 +2424,6 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 	}
 	setup_vepu540c_recn_refr(ctx, regs, task);
 
-	regs->reg_base.meiw_addr =
-		task->mv_info ? mpp_dev_get_iova_address(ctx->dev, task->mv_info, 171) : 0;
-	regs->reg_base.enc_pic.mei_stor = task->mv_info ? 1 : 0;
-
 	regs->reg_base.pic_ofst.pic_ofst_y =
 		mpp_frame_get_offset_y(task->frame);
 	regs->reg_base.pic_ofst.pic_ofst_x =
@@ -2407,23 +2437,36 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 	if (ctx->osd_cfg.osd_data3)
 		vepu540c_set_osd(&ctx->osd_cfg);
 
-	if (!task->rc_task->info.complex_scene && ctx->qpmap_en &&
-	    ctx->cfg->tune.deblur_str <= 3 &&
-	    ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
-		MPP_RET ret;
-		if (ctx->smart_en)
-			ret = vepu540c_set_qpmap_smart(&ctx->regs_set->reg_rc_roi.roi_cfg,
-						       task->mv_info, task->qpmap, task->mv_flag,
-						       regs->reg_base.enc_pic.pic_qp, prep->width, prep->height,
-						       0, slice->idr_flag, frm->reencode, ctx->cfg->tune.deblur_str);
-		else
-			ret = vepu540c_set_qpmap_normal(&ctx->regs_set->reg_rc_roi.roi_cfg,
-							task->mv_info, task->qpmap, task->mv_flag,
-							regs->reg_base.enc_pic.pic_qp, prep->width, prep->height,
-							0, slice->idr_flag, frm->reencode, ctx->cfg->tune.deblur_str);
-		if (ret == MPP_OK)
-			regs->reg_base.adr_roir =
-				mpp_dev_get_iova_address(ctx->dev, task->qpmap, 186);
+	if (ctx->qpmap_en) {
+		hal_h264e_vepu540c_init_qpmap_buf(ctx);
+
+		regs->reg_base.meiw_addr = mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
+		regs->reg_base.enc_pic.mei_stor = 1;
+
+		if (!task->rc_task->info.complex_scene &&
+		    cfg->tune.deblur_str <= 3 &&
+		    cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC) {
+			MPP_RET ret;
+			if (ctx->smart_en)
+				ret = vepu540c_set_qpmap_smart(&ctx->regs_set->reg_rc_roi.roi_cfg,
+							       ctx->mv_info, ctx->qpmap,
+							       ctx->mv_flag,
+							       regs->reg_base.enc_pic.pic_qp,
+							       prep->width, prep->height, 0,
+							       slice->idr_flag, frm->reencode,
+							       cfg->tune.deblur_str);
+			else
+				ret = vepu540c_set_qpmap_normal(&ctx->regs_set->reg_rc_roi.roi_cfg,
+								ctx->mv_info, ctx->qpmap,
+								ctx->mv_flag,
+								regs->reg_base.enc_pic.pic_qp,
+								prep->width, prep->height, 0,
+								slice->idr_flag, frm->reencode,
+								cfg->tune.deblur_str);
+			if (ret == MPP_OK)
+				regs->reg_base.adr_roir =
+					mpp_dev_get_iova_address(ctx->dev, ctx->qpmap, 186);
+		}
 	}
 
 	if (ctx->roi_data)
