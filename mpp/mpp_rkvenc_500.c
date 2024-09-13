@@ -1578,6 +1578,7 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 					     struct mpp_task,
 					     timeout_work);
 	u32 clbk_en = task->clbk_en;
+	struct rkvenc2_session_priv *priv;
 
 	if (test_and_set_bit(TASK_STATE_HANDLE, &task->state)) {
 		mpp_err("task has been handled\n");
@@ -1605,6 +1606,8 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	rkvenc_reg_dump(mpp);
 	set_bit(TASK_STATE_TIMEOUT, &task->state);
 
+	priv = session->priv;
+	priv->info.hw_running = 0;
 	mpp_time_diff(task);
 	set_bit(TASK_STATE_DONE, &task->state);
 	mpp_taskqueue_pop_running(mpp->queue, task);
@@ -1615,6 +1618,8 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 		mpp->hw_ops->reset(mpp);
 	if (session->online == MPP_ENC_ONLINE_MODE_SW)
 		rkvenc_clear_dvbm_info(mpp);
+	else
+		rkvenc_disconnect_dvbm(mpp, 0);
 	mpp_taskqueue_trigger_work(mpp);
 	up_read(&mpp->work_sem);
 	enable_irq(mpp->irq);
@@ -1701,7 +1706,7 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 	seq_printf(seq, "%8d|", session->chn_id);
 	seq_printf(seq, "%8s|", mpp_device_name[session->device_type]);
 	seq_printf(seq, "%15d|%10d|%12d|%10d|%13d|%13x|%13x",
-		   info->hw_running, !!priv->dvbm_cfg, info->wrap_overflow_cnt,
+		   info->hw_running, session->online, info->wrap_overflow_cnt,
 		   info->bsbuf_overflow_cnt,
 		   info->enc_err_cnt, info->enc_err_irq, info->enc_err_status);
 	seq_puts(seq, "\n");
