@@ -70,6 +70,7 @@ typedef struct RcModelV2Ctx_t {
 	RK_S32 watl_base;
 
 	RK_S32 next_i_ratio;	// scale 64
+	RK_S32 pre_i_ratio;	// scale 64
 	RK_S32 next_ratio;	// scale 64
 	RK_S32 pre_i_qp;
 	RK_S32 pre_p_qp;

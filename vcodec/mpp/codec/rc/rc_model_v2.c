@@ -491,11 +491,11 @@ MPP_RET calc_next_i_ratio(RcModelV2Ctx * ctx)
 	} else
 		bits_alloc = (RK_U32)div_s64(ctx->gop_total_bits * max_i_prop, max_i_prop);
 
-	if (ctx->pre_real_bits > bits_alloc || ctx->next_i_ratio) {
+	if (ctx->pre_real_bits > bits_alloc || ctx->pre_i_ratio) {
 		RK_S32 ratio = ((ctx->pre_real_bits - bits_alloc) << 8) / bits_alloc;
 
 		ratio = mpp_clip(ratio, -256, 256);
-		ratio = ctx->next_i_ratio + ratio;
+		ratio = ctx->pre_i_ratio + ratio;
 		if (ratio >= 0) {
 			if (ratio > max_i_delta_qp[pre_qp])
 				ratio = max_i_delta_qp[pre_qp];
@@ -1497,7 +1497,7 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 				 (info->quality_max << 6));
 
 	} else {
-		RK_S32 qp_scale = p->cur_scale_qp + p->next_ratio;
+		RK_S32 qp_scale = p->scale_qp + p->next_ratio;
 		RK_S32 start_qp = 0;
 		RK_S32 cplx = mpp_data_sum_v2(p->complex_level);
 		RK_S32 md = mpp_data_sum_v2(p->motion_level);
@@ -1545,7 +1545,7 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 			else
 				start_qp = (p->pre_i_qp + qp_scale_t) >> 1;
 
-			if (i_quality_delta) {
+			if (i_quality_delta && p->last_frame_type != INTRA_FRAME) {
 				RK_U32 index =
 					mpp_clip(mpp_data_mean_v2(p->madi) / 4, 0,
 						 7);
@@ -1614,15 +1614,9 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 MPP_RET rc_model_v2_hal_end(void *ctx, EncRcTask * task)
 {
 	RcModelV2Ctx *p = (RcModelV2Ctx *) ctx;
-	EncFrmStatus *frm = &task->frm;
 
 	rc_dbg_func("enter ctx %p task %p\n", ctx, task);
-
-	if (frm->is_intra)
-		p->pre_i_qp = p->cur_scale_qp >> 6;
-	else
-		p->pre_p_qp = p->cur_scale_qp >> 6;
-
+	p->last_frame_type = p->frame_type;
 	rc_dbg_func("leave %p\n", ctx);
 
 	return MPP_OK;
@@ -1710,6 +1704,7 @@ MPP_RET rc_model_v2_end(void *ctx, EncRcTask * task)
 	RcModelV2Ctx *p = (RcModelV2Ctx *) ctx;
 	EncRcTaskInfo *cfg = (EncRcTaskInfo *) & task->info;
 	RcCfg *usr_cfg = &p->usr_cfg;
+	EncFrmStatus *frm = &task->frm;
 
 	rc_dbg_func("enter ctx %p cfg %p\n", ctx, cfg);
 
@@ -1736,7 +1731,6 @@ MPP_RET rc_model_v2_end(void *ctx, EncRcTask * task)
 
 	p->gop_frm_cnt++;
 	p->gop_qp_sum += p->start_qp;
-
 	p->last_frame_type = p->frame_type;
 	p->pre_mean_qp = cfg->quality_real;
 	p->pre_iblk4_prop = cfg->iblk4_prop;
@@ -1744,7 +1738,11 @@ MPP_RET rc_model_v2_end(void *ctx, EncRcTask * task)
 	p->prev_md_prop = 0;
 	p->pre_target_bits = cfg->bit_target;
 	p->pre_real_bits = cfg->bit_real;
-
+	p->pre_i_ratio = p->next_i_ratio;
+	if (frm->is_intra)
+		p->pre_i_qp = p->cur_scale_qp >> 6;
+	else
+		p->pre_p_qp = p->cur_scale_qp >> 6;
 	p->on_drop = 0;
 	p->on_pskip = 0;
 
@@ -1780,11 +1778,12 @@ void rc_model_v2_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denorm,
 			   strof_rc_mode(usr_cfg->mode), "N/A", usr_cfg->init_quality, usr_cfg->init_quality);
 	} else {
-		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%10u|%5s|%5s \n",
+		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%10u|%5u|%5u \n",
 			   chl_id, usr_cfg->igop, usr_cfg->stats_time,
 			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denorm,
 			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denorm,
-			   strof_rc_mode(usr_cfg->mode), target_bps / 1000, "N/A", "N/A");
+			   strof_rc_mode(usr_cfg->mode), target_bps / 1000,
+			   usr_cfg->init_quality, usr_cfg->init_quality);
 	}
 
 	seq_puts(seq,
@@ -1822,9 +1821,9 @@ void rc_model_v2_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 			   chl_id, strof_gop_mode(usr_cfg->gop_mode), usr_cfg->i_quality_delta,
 			   usr_cfg->vgop, usr_cfg->i_quality_delta);
 	} else {
-		seq_printf(seq, "%7d|%10s|%10d|%12s|%10s\n",
+		seq_printf(seq, "%7d|%10s|%10d|%12s|%10d\n",
 			   chl_id, strof_gop_mode(usr_cfg->gop_mode), usr_cfg->i_quality_delta,
-			   "N/A", "N/A");
+			   "N/A", usr_cfg->i_quality_delta);
 	}
 
 	switch (usr_cfg->mode) {
@@ -1910,5 +1909,5 @@ void rc_model_v2_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 		   "RealBt(kb)", "IPRatio", "StartQp", "MinQp", "MaxQp");
 	seq_printf(seq, "%7d|%14d|%8u|%8d|%12u|%12u|%10d|%10u|%8u|%8u\n",
 		   chl_id, p->ins_bps / 1000, 0, p->stat_watl, target_bps / 1000,
-		   p->last_inst_bps / 1000, usr_cfg->init_ip_ratio, usr_cfg->init_quality, p->min_qp, p->max_qp);
+		   p->last_inst_bps / 1000, usr_cfg->init_ip_ratio, p->start_qp, p->min_qp, p->max_qp);
 }
