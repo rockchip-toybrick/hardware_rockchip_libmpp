@@ -1022,8 +1022,8 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	udelay(5);
 	mpp_write(mpp, enc->hw_info->enc_clr_base, 0x4);
 
-	/* clear pp config */
-	for (i = RKVENC_CLASS_BASE; i <= RKVENC_CLASS_OSD; i++) {
+	/* clear some reg before pp task */
+	for (i = RKVENC_CLASS_PIC; i <= RKVENC_CLASS_OSD; i++) {
 		s = hw->reg_msg[i].base_s;
 		e = hw->reg_msg[i].base_e;
 		for (off = s; off <= e; off += 4)
