@@ -333,15 +333,18 @@ struct rkvenc_dev {
 	spinlock_t dvbm_lock;
 	atomic_t isp_fcnt;
 	void __iomem *vepu_qos;
+	/* dump reg */
+	u32 dump_reg_s;
+	u32 dump_reg_e;
 };
 
 static struct rkvenc_hw_info rkvenc_500_hw_info = {
 	.hw = {
 		.reg_num = 254,
 		.reg_id = 0,
-		.reg_en = 4,
-		.reg_start = 160,
-		.reg_end = 253,
+		.reg_en = 0x10,
+		.reg_start = 0,
+		.reg_end = 0x5230,
 	},
 	.reg_class = RKVENC_CLASS_BUTT,
 	.reg_msg[RKVENC_CLASS_BASE] = {
@@ -799,27 +802,43 @@ static void rkvenc_dump_simple_dbg(struct mpp_dev *mpp)
 
 static void rkvenc_reg_dump(struct mpp_dev *mpp)
 {
-	struct rkvenc_hw_info *hw = &rkvenc_500_hw_info;
-	u32 i, off;
-	u32 s, e;
+	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 
-	rkvenc_dump_simple_dbg(mpp);
+	if (unlikely(enc->dump_reg_s || enc->dump_reg_e)) {
+		struct rkvenc_hw_info *hw = &rkvenc_500_hw_info;
+		u32 i, off;
+		u32 s, e;
+		u32 dump_s, dump_e;
 
-	if (!unlikely(mpp_dev_debug & DEBUG_DUMP_ERR_REG))
-		return;
+		dump_s = ALIGN(enc->dump_reg_s, 4);
+		dump_e = ALIGN(enc->dump_reg_e, 4);
+		for (i = 0; i < RKVENC_CLASS_BUTT; i++) {
+			s = hw->reg_msg[i].base_s;
+			e = hw->reg_msg[i].base_e;
 
-	for (i = 0; i < RKVENC_CLASS_BUTT; i++) {
-		s = hw->reg_msg[i].base_s;
-		e = hw->reg_msg[i].base_e;
-		for (off = s; off <= e; off += 4) {
-			u32 val = mpp_read(mpp, off);
+			if (s < dump_s && e < dump_e)
+				continue;
+			if (s > dump_s && e > dump_e)
+				return;
 
-			if (val)
-				mpp_err("reg[%#x] 0x%08x\n", off, val);
+			s = s < dump_s ? dump_s : s;
+			e = e > dump_e ? dump_e : e;
+			for (off = s; off <= e; off += 4) {
+				u32 val = mpp_read(mpp, off);
 
-			udelay(100);
+				if (val)
+					mpp_err("reg[%#x] 0x%08x\n", off, val);
+			}
 		}
 	}
+}
+
+static void rkvenc_info_dump(struct mpp_dev *mpp)
+{
+	rkvenc_dump_simple_dbg(mpp);
+
+	if (unlikely(mpp_dev_debug & DEBUG_DUMP_ERR_REG))
+		rkvenc_reg_dump(mpp);
 }
 
 static void rkvenc_dvbm_show_info(struct mpp_dev *mpp)
@@ -989,6 +1008,8 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	/* Flush the register before the start the device */
 	wmb();
 	preempt_disable();
+	if (unlikely(mpp_dev_debug & DEBUG_REG_DUMP))
+		rkvenc_reg_dump(mpp);
 	INIT_DELAYED_WORK(&mpp_task->timeout_work, rkvenc_task_timeout);
 	schedule_delayed_work(&mpp_task->timeout_work, msecs_to_jiffies(RKVENC_WORK_TIMEOUT_DELAY));
 	set_bit(TASK_STATE_RUNNING, &mpp_task->state);
@@ -1596,7 +1617,7 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	mpp = session->mpp;
 
 	disable_irq(mpp->irq);
-	rkvenc_reg_dump(mpp);
+	rkvenc_info_dump(mpp);
 	set_bit(TASK_STATE_TIMEOUT, &task->state);
 
 	priv = session->priv;
@@ -1772,6 +1793,10 @@ static int rkvenc_procfs_init(struct mpp_dev *mpp)
 				 enc->procfs, &enc->hclk_info);
 	mpp_procfs_create_u32("dump_regs", 0644,
 			      enc->procfs, &mpp->dump_regs);
+	mpp_procfs_create_u32("dump_reg_s", 0644,
+			      enc->procfs, &enc->dump_reg_s);
+	mpp_procfs_create_u32("dump_reg_e", 0644,
+			      enc->procfs, &enc->dump_reg_e);
 	/* for show session info */
 	proc_create_single_data("sessions-info", 0444,
 				enc->procfs, rkvenc_show_session_info, mpp);
@@ -2187,7 +2212,6 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 		writel(0x101, enc->vepu_qos);
 	else
 		dev_err(enc->mpp.dev, "vepu_qos map failed!\n");
-
 	kthread_init_work(&mpp->work, mpp_rkvenc_worker);
 	ret = devm_request_threaded_irq(dev, mpp->irq,
 					rkvenc_500_irq,
@@ -2202,6 +2226,8 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	rkvenc_dvbm_init(mpp);
 
 	enc->hw_info = to_rkvenc_info(mpp->var->hw_info);
+	enc->dump_reg_s = enc->hw_info->hw.reg_start;
+	enc->dump_reg_s = enc->hw_info->hw.reg_end;
 	spin_lock_init(&enc->dvbm_lock);
 	rkvenc_procfs_init(mpp);
 	mpp_dev_register_srv(mpp, mpp->srv);

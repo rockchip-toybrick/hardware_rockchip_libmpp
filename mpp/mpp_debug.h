@@ -60,6 +60,7 @@
 /* reuse debug flag */
 #define DEBUG_DVBM_INFO				0x00000008
 #define DEBUG_ISP_INFO				0x00000040
+#define DEBUG_REG_DUMP				0x00004000
 #define DEBUG_WARNING				0x00040000
 
 extern unsigned int mpp_dev_debug;
