@@ -1693,16 +1693,16 @@ static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq
 	seq_puts(seq, "------------------------------------------------------\n");
 	seq_printf(seq, "%8s|", "ID");
 	seq_printf(seq, "%8s|", "device");
-	seq_printf(seq, "%15s|%10s|%12s|%10s|%13s|%13s|%13s",
-		   "hw_running", "online", "wrap_ovfl", "bs_ovfl",
+	seq_printf(seq, "%15s|%10s|%12s|%10s|%15s|%13s|%13s|%13s",
+		   "hw_running", "online", "wrap_ovfl", "bs_ovfl", "wrap_src_mis",
 		   "enc_err_cnt", "enc_err_irq", "enc_err_st");
 	seq_puts(seq, "\n");
 
 	seq_printf(seq, "%8d|", session->chn_id);
 	seq_printf(seq, "%8s|", mpp_device_name[session->device_type]);
-	seq_printf(seq, "%15d|%10d|%12d|%10d|%13d|%13x|%13x",
+	seq_printf(seq, "%15d|%10d|%12d|%10d|%15d|%13d|%13x|%13x",
 		   info->hw_running, session->online, info->wrap_overflow_cnt,
-		   info->bsbuf_overflow_cnt,
+		   info->bsbuf_overflow_cnt, info->wrap_source_mis_cnt,
 		   info->enc_err_cnt, info->enc_err_irq, info->enc_err_status);
 	seq_puts(seq, "\n");
 	if (info->bsbuf_overflow_cnt) {
