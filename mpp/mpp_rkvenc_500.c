@@ -1605,6 +1605,8 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	set_bit(TASK_STATE_DONE, &task->state);
 	mpp_taskqueue_pop_running(mpp->queue, task);
 
+	if (mpp->dev_ops->finish)
+		mpp->dev_ops->finish(mpp, task);
 	if (session->callback && clbk_en)
 		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 	if (mpp->hw_ops->reset)
