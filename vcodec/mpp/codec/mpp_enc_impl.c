@@ -2271,8 +2271,13 @@ TASK_DONE:
 				mpidev_fn->notify(enc->chan_id, NOTIFY_ENC_SOURCE_ID_MISMATCH, &dts);
 		}
 
-		if (mpidev_fn && mpidev_fn->set_intra_info)
-			mpidev_fn->set_intra_info(enc->chan_id, dts, pts, is_intra);
+		if (ret) {
+			if (mpidev_fn && mpidev_fn->notify_drop_frm)
+				mpidev_fn->notify_drop_frm(enc->chan_id);
+		} else {
+			if (mpidev_fn && mpidev_fn->set_intra_info)
+				mpidev_fn->set_intra_info(enc->chan_id, dts, pts, is_intra);
+		}
 	}
 
 	if (enc->frame)
