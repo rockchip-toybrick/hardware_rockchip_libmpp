@@ -1710,7 +1710,8 @@ static void setup_vepu500_split(HalVepu500RegSet *regs, MppEncCfgSet *enc_cfg)
 		regs->reg_frm.sli_cnum.sli_splt_cnum_m1 = 0;
 
 		regs->reg_frm.sli_byte.sli_splt_byte = cfg->split_arg;
-		regs->reg_frm.enc_pic.slen_fifo = 0;
+		regs->reg_frm.enc_pic.slen_fifo = cfg->split_out ? 1 : 0;
+		regs->reg_ctl.int_en.vslc_done_en = cfg->split_out ? 1 : 0;
 	} break;
 	case MPP_ENC_SPLIT_BY_CTU : {
 		regs->reg_frm.sli_splt.sli_splt = 1;
@@ -1721,7 +1722,8 @@ static void setup_vepu500_split(HalVepu500RegSet *regs, MppEncCfgSet *enc_cfg)
 		regs->reg_frm.sli_cnum.sli_splt_cnum_m1 = cfg->split_arg - 1;
 
 		regs->reg_frm.sli_byte.sli_splt_byte = 0;
-		regs->reg_frm.enc_pic.slen_fifo = 0;
+		regs->reg_frm.enc_pic.slen_fifo = cfg->split_out ? 1 : 0;
+		regs->reg_ctl.int_en.vslc_done_en = cfg->split_out ? 1 : 0;
 	} break;
 	default : {
 		mpp_log_f("invalide slice split mode %d\n", cfg->split_mode);
