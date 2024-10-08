@@ -2440,8 +2440,12 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 	if (ctx->qpmap_en) {
 		hal_h264e_vepu540c_init_qpmap_buf(ctx);
 
-		regs->reg_base.meiw_addr = mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
-		regs->reg_base.enc_pic.mei_stor = 1;
+		if (ctx->mv_info) {
+			regs->reg_base.meiw_addr =
+				mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
+			regs->reg_base.enc_pic.mei_stor = 1;
+		}
+
 
 		if (!task->rc_task->info.complex_scene &&
 		    cfg->tune.deblur_str <= 3 &&

@@ -2398,6 +2398,9 @@ static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx)
 
 	hal_h264e_dbg_func("enter\n");
 
+	if (!ctx->mv_info || !ctx->qpmap || !ctx->mv_flag)
+		return;
+
 	r->bmap_cfg.bmap_en = (ctx->slice->slice_type != H264_I_SLICE);
 	r->bmap_cfg.bmap_pri = 17;
 	r->bmap_cfg.bmap_qpmin = 10;
@@ -2523,8 +2526,12 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	if (ctx->qpmap_en) {
 		hal_h264e_vepu500_init_qpmap_buf(ctx);
 
-		regs->reg_frm.meiw_addr = mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
-		regs->reg_frm.enc_pic.mei_stor = 1;
+		if (ctx->mv_info) {
+			regs->reg_frm.meiw_addr =
+				mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
+			regs->reg_frm.enc_pic.mei_stor = 1;
+		}
+
 
 		if (!task->rc_task->info.complex_scene &&
 		    (cfg->tune.deblur_str <= 3) &&

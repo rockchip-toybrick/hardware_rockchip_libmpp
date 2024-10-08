@@ -2291,8 +2291,11 @@ static MPP_RET hal_h265e_v540c_gen_regs(void *hal, HalEncTask *task)
 	if (ctx->qpmap_en) {
 		hal_h265e_vepu540c_init_qpmap_buf(ctx);
 
-		reg_base->reg0192_enc_pic.mei_stor = 1;
-		reg_base->reg0171_meiw_addr = mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
+		if (ctx->mv_info) {
+			reg_base->reg0192_enc_pic.mei_stor = 1;
+			reg_base->reg0171_meiw_addr =
+				mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
+		}
 
 		if (!task->rc_task->info.complex_scene &&
 		    ctx->cfg->tune.deblur_str <= 3 &&

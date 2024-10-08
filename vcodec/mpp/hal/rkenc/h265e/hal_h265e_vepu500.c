@@ -2554,6 +2554,8 @@ static void vepu500_h265_tune_qpmap(H265eV500HalContext *ctx)
 	RK_S32 h32 = MPP_ALIGN(prep->height, 32);
 
 	hal_h265e_enter();
+	if (!ctx->mv_info || !ctx->qpmap || !ctx->mv_flag || !ctx->mv_flag_info)
+		return;
 
 	r->bmap_cfg.bmap_en = (ctx->frame_type != INTRA_FRAME);
 	r->bmap_cfg.bmap_pri = 17;
@@ -2763,8 +2765,11 @@ MPP_RET hal_h265e_v500_gen_regs(void *hal, HalEncTask *task)
 	if (ctx->qpmap_en) {
 		hal_h265e_vepu500_init_qpmap_buf(ctx);
 
-		reg_frm->reg0192_enc_pic.mei_stor = 1;
-		reg_frm->reg0171_meiw_addr = mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
+		if (ctx->mv_info) {
+			reg_frm->reg0192_enc_pic.mei_stor = 1;
+			reg_frm->reg0171_meiw_addr =
+				mpp_dev_get_iova_address(ctx->dev, ctx->mv_info, 171);
+		}
 
 		if (!task->rc_task->info.complex_scene &&
 		    (ctx->cfg->tune.deblur_str <= 3) &&
