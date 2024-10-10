@@ -102,22 +102,18 @@ static int mpp_vcodec_msg_handle(struct mpi_obj *obj, int event, void *args)
 		return -1;
 	}
 
-	spin_lock(&entry->chan_lock);
 	entry = mpp_vcodec_get_chn_handle(obj);
-	if (entry) {
-		switch (entry->type) {
-		case MPP_CTX_ENC: {
-			thd = g_vcodec_entry.venc.thd;
-		}
-		break;
-		default: {
-			mpp_err("MppCtxType error %d", entry->type);
-		}
-		break;
-		}
-	} else {
-		spin_unlock(&entry->chan_lock);
+	if (!entry)
 		return -1;
+
+	spin_lock(&entry->chan_lock);
+	switch (entry->type) {
+	case MPP_CTX_ENC: {
+		thd = g_vcodec_entry.venc.thd;
+	} break;
+	default: {
+		mpp_err("MppCtxType error %d", entry->type);
+	} break;
 	}
 
 	if (mpidev_fn->handle_message)
