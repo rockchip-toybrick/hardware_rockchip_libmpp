@@ -525,6 +525,7 @@ int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 {
 	unsigned long lock_flag;
 	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
+	struct mpi_queue *queue = NULL;
 
 	if (!mpibuf_fn) {
 		mpp_err_f("mpibuf_ops get fail");
@@ -537,11 +538,11 @@ int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 	entry->reenc = 0;
 	entry->binder_chan_id = -1;
 	entry->master_chan_id = -1;
-	if (mpibuf_fn->buf_queue_destroy) {
-		mpibuf_fn->buf_queue_destroy(entry->yuv_queue);
-		entry->yuv_queue = NULL;
-	}
 	spin_unlock_irqrestore(&entry->chan_lock, lock_flag);
+
+	queue = cmpxchg(&entry->yuv_queue, entry->yuv_queue, NULL);
+	if (queue && mpibuf_fn->buf_queue_destroy)
+		mpibuf_fn->buf_queue_destroy(queue);
 
 	atomic_set(&entry->runing, 0);
 
