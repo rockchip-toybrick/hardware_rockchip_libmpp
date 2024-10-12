@@ -95,7 +95,14 @@ MPP_RET h264e_pps_update(H264ePps *pps, MppEncCfgSet *cfg)
 		pps->second_chroma_qp_index_offset_present = 0;
 		if (pps->transform_8x8_mode) {
 			pps->transform_8x8_mode = 0;
+			codec->transform8x8_mode = 0;
 			h264e_dbg_pps("warning: for profile %d transform_8x8_mode should be 0\n",
+				      codec->profile);
+		}
+		if (pps->scaling_list_mode) {
+			pps->scaling_list_mode = 0;
+			codec->scaling_list_mode = 0;
+			h264e_dbg_pps("warning: for profile %d scaling_list_mode should be 0\n",
 				      codec->profile);
 		}
 	} else {
@@ -106,6 +113,7 @@ MPP_RET h264e_pps_update(H264ePps *pps, MppEncCfgSet *cfg)
 	if (codec->profile == H264_PROFILE_BASELINE && pps->entropy_coding_mode) {
 		h264e_dbg_pps("warning: for baseline profile entropy_coding_mode should be 0\n");
 		pps->entropy_coding_mode = 0;
+		codec->entropy_coding_mode = 0;
 	}
 
 	return MPP_OK;
