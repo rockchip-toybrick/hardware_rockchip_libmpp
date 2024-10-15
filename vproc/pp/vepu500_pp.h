@@ -268,11 +268,20 @@ struct pp_chn_info_t {
 	u32 max_height;
 	int md_en;
 	int od_en;
+	int flycatkin_en;
 	int frm_accum_interval;
 	int frm_accum_gop;
+	int frm_num;
+	int mdw_len;
 
 	struct pp_buffer_t *buf_rfpw;
 	struct pp_buffer_t *buf_rfpr;
+
+	u8 *buf_rfmwr; /* for fly-catkin filtering */
+	u8 *buf_rfmwr0;
+	u8 *buf_rfmwr1;
+	u8 *buf_rfmwr2; /* md output without fly-catkin filtering */
+	struct mpi_buf *mdw_buf;
 
 	struct pp_param_t param;
 	struct pp_output_t output;

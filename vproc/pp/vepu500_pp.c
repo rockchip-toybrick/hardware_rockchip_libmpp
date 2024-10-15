@@ -7,6 +7,8 @@
 
 #include <linux/module.h>
 #include <linux/vmalloc.h>
+#include <linux/mm.h>
+#include <linux/dma-buf.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
 
@@ -14,6 +16,8 @@
 #include "vepu_pp_api.h"
 #include "vepu_pp_service_api.h"
 
+#define MDW_STRIDE  (64) /* 64 bytes, 512(64 * 8) blk8x8 */
+#define pp_info(fmt, arg...)   //pr_info("PP: " fmt, ##arg)
 
 static struct vepu_pp_ctx_t g_pp_ctx;
 static struct vcodec_mpibuf_fn *g_mpi_buf_fn = NULL;
@@ -177,6 +181,11 @@ int vepu_pp_destroy_chn(int chn)
 		info->dev_srv = NULL;
 	}
 
+	if (info->buf_rfmwr) {
+		kvfree(info->buf_rfmwr);
+		info->buf_rfmwr = NULL;
+	}
+
 	return VEPU_PP_OK;
 }
 EXPORT_SYMBOL(vepu_pp_destroy_chn);
@@ -248,6 +257,7 @@ static void pp_set_common_cfg(struct pp_chn_info_t *info, struct pp_com_cfg *cfg
 	int interval = cfg->md_interval ? cfg->md_interval : 1;
 	int md_od_switch = (info->frm_accum_interval == 0);
 
+	info->frm_num = frm_cnt;
 	p->int_en.enc_done_en = 1;
 	p->int_msk = 0;
 	p->enc_pic.enc_stnd = 2;
@@ -339,6 +349,9 @@ static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void 
 		p->vpp_base_cfg.sto_stride_md = 4;
 		if (func->buf_get_paddr)
 			p->adr_md_vpp = func->buf_get_paddr(cfg->mdw_buf);
+
+		info->flycatkin_en = cfg->filter_switch || cfg->night_mode;
+		info->mdw_buf = cfg->mdw_buf;
 	} break;
 	case PP_CMD_SET_OD_CFG: {
 		struct pp_od_cfg *cfg = (struct pp_od_cfg *)param;
@@ -353,6 +366,224 @@ static void vepu_pp_set_param(struct pp_chn_info_t *info, enum pp_cmd cmd, void 
 	} break;
 	default: {
 	}
+	}
+}
+
+static int vepu_pp_flycatkin_filter_init_buf(struct pp_chn_info_t *info)
+{
+	int buf_len = PP_ALIGN(info->max_height, 32) / 32 * MDW_STRIDE * 3;
+
+	info->buf_rfmwr = kvmalloc(buf_len, GFP_KERNEL);
+	if (info->buf_rfmwr == NULL) {
+		pp_err("vepu pp kvmalloc failed\n");
+		return VEPU_PP_NOK;
+	}
+
+	info->buf_rfmwr0 = info->buf_rfmwr;
+	info->buf_rfmwr1 = info->buf_rfmwr + buf_len / 3;
+	info->buf_rfmwr2 = info->buf_rfmwr + buf_len / 3 * 2;
+	info->mdw_len = buf_len / 3;
+
+	return VEPU_PP_OK;
+}
+
+/* x,y: blk8x8 pos */
+static int vepu_pp_get_blk8_move_flag(u8 *src, int x, int y)
+{
+	u8 *mdw_ptr = src + MDW_STRIDE * y + x / 8;
+
+	return (*mdw_ptr >> (x % 8)) & 1;
+}
+
+static int vepu_pp_get_blk8_vld_flag(struct pp_chn_info_t *info, int x, int y)
+{
+	int b8_col = PP_ALIGN(info->width, 32) / 32;
+	int b8_row = PP_ALIGN(info->height, 32) / 32;
+
+	if (x < 0 || x >= b8_col || y < 0 || y >= b8_row)
+		return 0;
+
+	return 1;
+}
+
+static int vepu_pp_get_blk8_move_cnt(struct pp_chn_info_t *info, int x, int y, int *vld_cnt)
+{
+	struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
+	u8 *mdw_buf = func->buf_map(info->mdw_buf);
+	int mv_cnt = 0, vld_num = 0;
+
+	if (vepu_pp_get_blk8_vld_flag(info, x - 1, y - 1)) {
+		vld_num++;
+		mv_cnt += vepu_pp_get_blk8_move_flag(mdw_buf, x - 1, y - 1);
+	}
+
+	if (vepu_pp_get_blk8_vld_flag(info, x, y - 1)) {
+		vld_num++;
+		mv_cnt += vepu_pp_get_blk8_move_flag(mdw_buf, x, y - 1);
+	}
+
+	if (vepu_pp_get_blk8_vld_flag(info, x + 1, y - 1)) {
+		vld_num++;
+		mv_cnt += vepu_pp_get_blk8_move_flag(mdw_buf, x + 1, y - 1);
+	}
+
+	if (vepu_pp_get_blk8_vld_flag(info, x - 1, y)) {
+		vld_num++;
+		mv_cnt += vepu_pp_get_blk8_move_flag(mdw_buf, x - 1, y);
+	}
+
+	if (vepu_pp_get_blk8_vld_flag(info, x + 1, y)) {
+		vld_num++;
+		mv_cnt += vepu_pp_get_blk8_move_flag(mdw_buf, x + 1, y);
+	}
+
+	if (vepu_pp_get_blk8_vld_flag(info, x - 1, y + 1)) {
+		vld_num++;
+		mv_cnt += vepu_pp_get_blk8_move_flag(mdw_buf, x - 1, y + 1);
+	}
+
+	if (vepu_pp_get_blk8_vld_flag(info, x, y + 1)) {
+		vld_num++;
+		mv_cnt += vepu_pp_get_blk8_move_flag(mdw_buf, x, y + 1);
+	}
+
+	if (vepu_pp_get_blk8_vld_flag(info, x + 1, y + 1)) {
+		vld_num++;
+		mv_cnt += vepu_pp_get_blk8_move_flag(mdw_buf, x + 1, y + 1);
+	}
+
+	*vld_cnt = vld_num;
+
+	return mv_cnt;
+}
+
+/* src: downscaled 8x8 block
+ * stride: height of blk8x8
+ * x,y: blk8x8 pos
+ * avg: average value of blk4x4
+ */
+static void vepu_pp_get_blk4_average(u8 *src, int stride, int x, int y, u8 *avg)
+{
+	u8 *src_b8 = src + stride * x * 8 + y * 64;
+	u8 *src_b4 = NULL;
+	u32 sum;
+	int idx;
+
+	for (idx = 0; idx < 4; idx++) {
+		src_b4 = src_b8 + (idx % 2) * 4 + (idx / 2) * 4 * 8;
+		sum = src_b4[0 + 0 * 8] + src_b4[1 + 0 * 8] + src_b4[2 + 0 * 8] + src_b4[3 + 0 * 8] +
+		      src_b4[0 + 1 * 8] + src_b4[1 + 1 * 8] + src_b4[2 + 1 * 8] + src_b4[3 + 1 * 8] +
+		      src_b4[0 + 2 * 8] + src_b4[1 + 2 * 8] + src_b4[2 + 2 * 8] + src_b4[3 + 2 * 8] +
+		      src_b4[0 + 3 * 8] + src_b4[1 + 3 * 8] + src_b4[2 + 3 * 8] + src_b4[3 + 3 * 8];
+		avg[idx] = (u8)(sum >> 4);
+	}
+}
+
+static u8 vepu_pp_update_dust_flag(struct pp_chn_info_t *info, int x, int y)
+{
+	struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
+	u8 sum_luma_chg = 0;
+	u8 cur_ave[4];
+	u8 ref_ave[4];
+	u8 idx;
+	u8 *src, *ref;
+	u8 *pre_move;
+	int stride = PP_ALIGN(info->height, 32) / 4;
+
+	if (info->frm_num % 2 == 0) {
+		src = func->buf_map(info->buf_rfpw->buf);
+		ref = func->buf_map(info->buf_rfpr->buf);
+		pre_move = info->buf_rfmwr1;
+	} else {
+		src = func->buf_map(info->buf_rfpr->buf);
+		ref = func->buf_map(info->buf_rfpw->buf);
+		pre_move = info->buf_rfmwr0;
+	}
+
+	vepu_pp_get_blk4_average(src, stride, x, y, cur_ave);
+	vepu_pp_get_blk4_average(ref, stride, x, y, ref_ave);
+
+	pp_info("frame %d pos(%d, %d) cur_ave %d %d %d %d ref_ave %d %d %d %d\n",
+		info->frm_num, x * 32, y * 32, cur_ave[0], cur_ave[1], cur_ave[2], cur_ave[3],
+		ref_ave[0], ref_ave[1], ref_ave[2], ref_ave[3]);
+
+	if (vepu_pp_get_blk8_move_flag(pre_move, x, y)) {
+		for (idx = 0; idx < 4; idx++) {
+			if (ref_ave[idx] > cur_ave[idx] &&
+			    ref_ave[idx] < cur_ave[idx] + info->param.thd_md_vpp.thres_dust_chng_md)
+				sum_luma_chg++;
+		}
+	} else {
+		for (idx = 0; idx < 4; idx++) {
+			if (cur_ave[idx] > ref_ave[idx] &&
+			    (cur_ave[idx] < ref_ave[idx] + info->param.thd_md_vpp.thres_dust_chng_md))
+				sum_luma_chg++;
+		}
+	}
+
+	pp_info("frame %d pos(%d, %d) sum_luma_chg %d luma_chg %d\n",
+		info->frm_num, x * 32, y * 32, sum_luma_chg, info->param.thd_md_vpp.thres_dust_chng_md);
+
+	return (sum_luma_chg >= info->param.thd_md_vpp.thres_dust_blk_md);
+}
+
+static void vepu_pp_flycatkin_filter(struct pp_chn_info_t *info)
+{
+	if (!info->buf_rfmwr)
+		vepu_pp_flycatkin_filter_init_buf(info);
+
+	if (info->buf_rfmwr) {
+		int b8_col = PP_ALIGN(info->width, 32) / 32;
+		int b8_row = PP_ALIGN(info->height, 32) / 32;
+		int c, r, k;
+		int vld_cnt, dust_flg, move_sum;
+		struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
+		u8 *mdw_buf = func->buf_map(info->mdw_buf);
+		u8 *mdw_ptr = NULL, *mdw_flt;
+
+		if (info->frm_num % 2 == 0)
+			dma_buf_begin_cpu_access(info->buf_rfpw->buf_dma, DMA_FROM_DEVICE);
+		else
+			dma_buf_begin_cpu_access(info->buf_rfpr->buf_dma, DMA_FROM_DEVICE);
+
+		dma_buf_begin_cpu_access(func->buf_get_dmabuf(info->mdw_buf), DMA_FROM_DEVICE);
+		memcpy(info->buf_rfmwr2, mdw_buf, info->mdw_len);
+
+		for (r = 0; r < b8_row; r++) {
+			mdw_ptr = mdw_buf + MDW_STRIDE * r;
+			mdw_flt = info->buf_rfmwr2 + MDW_STRIDE * r;
+
+			for (c = 0; c < b8_col; c += 8) {
+				for (k = 0; k < 8; k++) {
+					dust_flg = 0;
+
+					if (((c + k) * 32 < info->width) && (r * 32 < info->height) &&
+					    (*mdw_ptr >> k) & 1) {
+						if (vepu_pp_get_blk8_move_flag(info->buf_rfmwr0, c + k, r) &&
+						    vepu_pp_get_blk8_move_flag(info->buf_rfmwr1, c + k, r))
+							dust_flg = 0;
+						else {
+							move_sum = vepu_pp_get_blk8_move_cnt(info, c + k, r, &vld_cnt);
+
+							if (move_sum <= info->param.thd_md_vpp.thres_dust_move_md * vld_cnt / 8)
+								dust_flg = vepu_pp_update_dust_flag(info, c + k, r);
+						}
+
+						if (dust_flg) {
+							*mdw_flt = *mdw_flt & (~(1 << k));
+							pp_info("frame %d pos(%d, %d) fly-catkin block\n",
+								info->frm_num, (c + k) * 32, r * 32);
+						}
+					}
+				}
+				mdw_ptr++;
+				mdw_flt++;
+			}
+		}
+
+		memcpy((info->frm_num % 2 == 0) ? info->buf_rfmwr0 : info->buf_rfmwr1,
+		       mdw_buf, info->mdw_len);
+		memcpy(mdw_buf, info->buf_rfmwr2, info->mdw_len);
 	}
 }
 
@@ -394,6 +625,9 @@ int vepu_pp_control(int chn, enum pp_cmd cmd, void *param)
 			info->api->cmd_send(info->dev_srv);
 		if (info->api->cmd_poll)
 			info->api->cmd_poll(info->dev_srv);
+
+		if (info->md_en && info->flycatkin_en && info->mdw_buf)
+			vepu_pp_flycatkin_filter(info);
 	}
 
 	if (cmd == PP_CMD_GET_OD_OUTPUT) {
@@ -468,7 +702,7 @@ static void vepu_pp_show_md_cfg(struct seq_file *seq)
 		seq_printf(seq, "%8d|%10d|%10d|%10d|%10d|%10d|%15d|%15d|%15d\n",
 			   info->chn, p->vpp_base_cfg.switch_sad_md, p->thd_md_vpp.thres_sad_md,
 			   p->thd_md_vpp.thres_move_md, p->vpp_base_cfg.night_mode_en_md,
-			   p->vpp_base_cfg.flycatkin_flt_en_md, p->thd_md_vpp.thres_dust_move_md,
+			   info->flycatkin_en, p->thd_md_vpp.thres_dust_move_md,
 			   p->thd_md_vpp.thres_dust_blk_md, p->thd_md_vpp.thres_dust_chng_md);
 	}
 }
