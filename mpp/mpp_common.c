@@ -867,9 +867,10 @@ static int mpp_wait_result_default(struct mpp_session *session,
 		return -EIO;
 	}
 	mpp = mpp_get_task_used_device(task, session);
-	ret = wait_event_timeout(task->wait,
-				 test_bit(TASK_STATE_DONE, &task->state),
-				 msecs_to_jiffies(MPP_WAIT_TIMEOUT_DELAY));
+	ret = test_bit(TASK_STATE_DONE, &task->state);
+	if (!ret)
+		ret = wait_event_timeout(task->wait, test_bit(TASK_STATE_DONE, &task->state),
+					 msecs_to_jiffies(MPP_WAIT_TIMEOUT_DELAY));
 
 	if (ret > 0) {
 		if (mpp->dev_ops->result)
