@@ -1440,14 +1440,12 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 	RK_S32 bit_min = info->bit_min;
 	RK_S32 bit_max = info->bit_max;
 	RK_S32 bit_target = info->bit_target;
-	RK_S32 quality_min = info->quality_min;
-	RK_S32 quality_max = info->quality_max;
-	RK_S32 quality_target = info->quality_target;
-	RK_S32 qpmin = info->quality_min;
 	RK_S32 min_i_frame_qp = usr_cfg->fm_lv_min_i_quality;
 	RK_S32 min_p_frame_qp = usr_cfg->fm_lv_min_quality;
 	RK_S32 max_i_frame_qp = usr_cfg->fm_lv_max_i_quality;
 	RK_S32 max_p_frame_qp = usr_cfg->fm_lv_max_quality;
+	RK_S32 qp_min = frm->is_intra ? min_i_frame_qp : min_p_frame_qp;
+	RK_S32 qp_max = frm->is_intra ? max_i_frame_qp : max_p_frame_qp;
 
 	rc_dbg_func("enter p %p task %p\n", p, task);
 
@@ -1470,9 +1468,7 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 
 		if (info->quality_target < 0) {
 			if (info->bit_target) {
-				info->quality_target =
-					cal_first_i_start_qp(info->bit_target,
-							     mb_w * mb_h);
+				info->quality_target = cal_first_i_start_qp(info->bit_target, mb_w * mb_h);
 			} else {
 				mpp_log("init qp not set on fix qp mode, use default qp\n");
 				info->quality_target = 26;
@@ -1484,60 +1480,53 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 			p->start_qp = (p->cur_scale_qp >> 6) - i_quality_delta;
 		} else {
 			p->start_qp = info->quality_target;
-			p->cur_scale_qp =
-				(info->quality_target + i_quality_delta) << 6;
+			p->cur_scale_qp = (info->quality_target + i_quality_delta) << 6;
 		}
 
 		rc_dbg_rc("qp: start %2d cur_scale %d next_ratio %d reenc %d\n",
-			  p->start_qp, p->cur_scale_qp, p->next_ratio,
-			  p->reenc_cnt);
+			  p->start_qp, p->cur_scale_qp, p->next_ratio, p->reenc_cnt);
 
-		p->cur_scale_qp =
-			mpp_clip(p->cur_scale_qp, (info->quality_min << 6),
-				 (info->quality_max << 6));
+		p->cur_scale_qp = mpp_clip(p->cur_scale_qp, (min_i_frame_qp << 6), (max_i_frame_qp << 6));
 
 	} else {
 		RK_S32 qp_scale = p->scale_qp + p->next_ratio;
 		RK_S32 start_qp = 0;
 		RK_S32 cplx = mpp_data_sum_v2(p->complex_level);
 		RK_S32 md = mpp_data_sum_v2(p->motion_level);
-		RK_S32 md3 = mpp_data_get_pre_val_v2(p->motion_level, 0) + mpp_data_get_pre_val_v2(p->motion_level,
-												   1) + mpp_data_get_pre_val_v2(p->motion_level, 2);
+		RK_S32 md3 = mpp_data_get_pre_val_v2(p->motion_level, 0) +
+			     mpp_data_get_pre_val_v2(p->motion_level, 1) +
+			     mpp_data_get_pre_val_v2(p->motion_level, 2);
+
 		if (RC_AVBR == usr_cfg->mode || RC_VBR == usr_cfg->mode || RC_CBR == usr_cfg->mode) {
 			if (md >= 700) {
 				if (md >= 1400)
-					qpmin = (frm->is_intra ? min_i_frame_qp : min_p_frame_qp) + (md3 > 300 ? 3 : 2);
+					qp_min += (md3 > 300 ? 3 : 2);
 				else
-					qpmin = (frm->is_intra ? min_i_frame_qp : min_p_frame_qp) + (md3 > 300 ? 2 : 1);
+					qp_min += (md3 > 300 ? 2 : 1);
 
 				if (cplx >= 15)
-					qpmin ++;
+					qp_min ++;
 			} else if (RC_CBR != usr_cfg->mode) {
 				if (md > 100) {
 					if (cplx >= 16)
-						qpmin =  (frm->is_intra ? min_i_frame_qp : min_p_frame_qp) + 1;
-					else if (cplx >= 10)
-						qpmin =  (frm->is_intra ? min_i_frame_qp : min_p_frame_qp) + 0;
+						qp_min += 1;
 				} else {
-					qpmin =  (frm->is_intra ? min_i_frame_qp : min_p_frame_qp);
 					if (cplx >= 15)
-						qpmin += 3;
+						qp_min += 3;
 					else if (cplx >= 10)
-						qpmin += 2;
+						qp_min += 2;
 					else if (cplx >= 5)
-						qpmin += 1;
+						qp_min += 1;
 				}
 			}
-			if (qpmin > info->quality_max)
-				qpmin = info->quality_max;
-			if (qpmin < info->quality_min)
-				qpmin = info->quality_min;
+			if (qp_min > qp_max)
+				qp_min = qp_max;
 		}
 
 		if (frm->is_intra) {
 			RK_S32 i_quality_delta = usr_cfg->i_quality_delta;
-			RK_S32 qp_scale_t = qp_scale =
-						    mpp_clip(qp_scale, (info->quality_min << 6), (info->quality_max << 6));
+			RK_S32 qp_scale_t = mpp_clip(qp_scale, (qp_min << 6), (qp_max << 6));
+			RK_S32 qp_scale = qp_scale_t;
 
 			qp_scale_t = (qp_scale + p->next_i_ratio) >> 6;
 			if (qp_scale_t >= 35 && p->pre_i_qp <= 33)
@@ -1546,9 +1535,7 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 				start_qp = (p->pre_i_qp + qp_scale_t) >> 1;
 
 			if (i_quality_delta && p->last_frame_type != INTRA_FRAME) {
-				RK_U32 index =
-					mpp_clip(mpp_data_mean_v2(p->madi) / 4, 0,
-						 7);
+				RK_U32 index = mpp_clip(mpp_data_mean_v2(p->madi) / 4, 0, 7);
 				RK_S32 max_ip_delta = max_ip_qp_dealt[index];
 
 				if (i_quality_delta > max_ip_delta)
@@ -1561,8 +1548,7 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 
 				start_qp -= i_quality_delta;
 			}
-			start_qp = mpp_clip(start_qp, qpmin, info->quality_max);
-			start_qp = mpp_clip(start_qp, qpmin, max_i_frame_qp);
+			start_qp = mpp_clip(start_qp, qp_min, qp_max);
 			p->start_qp = start_qp;
 
 			if (!p->reenc_cnt) {
@@ -1573,17 +1559,16 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 			p->gop_frm_cnt = 0;
 			p->gop_qp_sum = 0;
 		} else {
-			qp_scale = mpp_clip(qp_scale, (qpmin << 6), (info->quality_max << 6));
+			qp_scale = mpp_clip(qp_scale, (qp_min << 6), (qp_max << 6));
 			p->cur_scale_qp = qp_scale;
 			rc_dbg_rc("qp %d -> %d\n", p->start_qp, qp_scale >> 6);
-			p->start_qp = qp_scale >> 6;
+			start_qp = qp_scale >> 6;
 
 			if (frm->ref_mode == REF_TO_PREV_INTRA && usr_cfg->vi_quality_delta) {
-				rc_dbg_rc("qp %d -> %d (vi)\n",
-					  p->start_qp, p->start_qp - usr_cfg->vi_quality_delta);
-				p->start_qp -= usr_cfg->vi_quality_delta;
+				rc_dbg_rc("qp %d -> %d (vi)\n", p->start_qp, p->start_qp - usr_cfg->vi_quality_delta);
+				start_qp -= usr_cfg->vi_quality_delta;
 			}
-			p->start_qp = mpp_clip(p->start_qp, qpmin, max_p_frame_qp);
+			p->start_qp = mpp_clip(start_qp, qp_min, qp_max);
 		}
 	}
 
@@ -1597,15 +1582,13 @@ MPP_RET rc_model_v2_hal_start(void *ctx, EncRcTask * task)
 		}
 	}
 	p->start_qp += p->qp_add;
-	p->start_qp = mpp_clip(p->start_qp, qpmin, info->quality_max);
+	p->start_qp = mpp_clip(p->start_qp, qp_min, qp_max);
 	info->quality_target = p->start_qp;
 	p->on_drop = 0;
 
 	rc_dbg_rc("bitrate [%d : %d : %d] -> [%d : %d : %d]\n",
 		  bit_min, bit_target, bit_max, info->bit_min, info->bit_target, info->bit_max);
-	rc_dbg_rc("quality [%d : %d : %d] -> [%d : %d : %d]\n",
-		  quality_min, quality_target, quality_max,
-		  info->quality_min, info->quality_target, info->quality_max);
+	rc_dbg_rc("quality [%d : %d : %d]\n", qp_min, info->quality_target, qp_max);
 	rc_dbg_func("leave %p\n", p);
 
 	return MPP_OK;
