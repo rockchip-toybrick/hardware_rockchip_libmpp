@@ -292,6 +292,9 @@ int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
 	list_move_tail(&packet->list, &chan_entry->stream_remove);
 	spin_unlock_irqrestore(&chan_entry->stream_list_lock, flags);
 
+	/* flush cache before get packet*/
+	if (packet->buf.buf)
+		mpp_buffer_flush_for_cpu(&packet->buf);
 	atomic_dec(&chan_entry->stream_count);
 
 	enc_packet->flag = mpp_packet_get_flag(packet);

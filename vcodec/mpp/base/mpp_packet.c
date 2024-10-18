@@ -238,9 +238,6 @@ MPP_RET mpp_packet_ring_buf_put_used(MppPacket packet, RK_S32 chan_id, MppDev de
 		mpp_packet_vsm_buf_free(p, chan_id);
 	}
 
-	if (p->buf.buf)
-		mpp_buffer_flush_for_cpu(&p->buf);
-
 	return MPP_OK;
 }
 
