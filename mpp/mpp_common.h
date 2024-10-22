@@ -247,7 +247,7 @@ struct mpp_dev {
 	atomic_t power_enabled;
 	u32 always_on;
 
-	struct rw_semaphore work_sem;
+	struct semaphore work_sem;
 	atomic_t suspend_en;
 	/* debug for isp */
 	void __iomem *isp_base;

@@ -1473,12 +1473,12 @@ irqreturn_t mpp_rkvenc_irq(int irq, void *param)
 	priv->info.hw_running = 0;
 	mpp->overflow_status = 0;
 	wake_up(&mpp_task->wait);
+	up(&mpp->work_sem);
 	mpp_taskqueue_trigger_work(mpp);
 
 	if (session->callback && mpp_task->clbk_en)
 		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 
-	up_read(&mpp->work_sem);
 	mpp_debug_leave();
 
 	return IRQ_HANDLED;
@@ -1773,14 +1773,13 @@ static void rkvenc_task_timeout(struct work_struct *work_s)
 	mpp_time_diff(task);
 	set_bit(TASK_STATE_DONE, &task->state);
 	mpp_taskqueue_pop_running(mpp->queue, task);
-
-	if (session->callback && clbk_en)
-		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 	if (mpp->hw_ops->reset)
 		mpp->hw_ops->reset(mpp);
-	mpp_taskqueue_trigger_work(mpp);
-	up_read(&mpp->work_sem);
+	up(&mpp->work_sem);
 	enable_irq(mpp->irq);
+	mpp_taskqueue_trigger_work(mpp);
+	if (session->callback && clbk_en)
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
 }
 
 static void mpp_rkvenc_worker(struct kthread_work *work_s)
@@ -1806,14 +1805,14 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 	spin_lock_irqsave(&queue->dev_lock, flags);
 	if (!list_empty(&queue->running_list))
 		goto done;
-	if (atomic_read(&mpp->suspend_en))
-		goto done;
 	/* 2. check and process pending mpp_task */
 	mpp_task = mpp_taskqueue_get_pending_task(queue);
 	if (!mpp_task)
 		goto done;
 
-	down_read(&mpp->work_sem);
+	if (atomic_read(&mpp->suspend_en))
+		goto done;
+	down(&mpp->work_sem);
 	spin_lock(&queue->pending_lock);
 	list_move_tail(&mpp_task->queue_link, &queue->running_list);
 	spin_unlock(&queue->pending_lock);
@@ -2371,7 +2370,7 @@ static int __maybe_unused rkvenc_runtime_suspend(struct device *dev)
 
 	mpp_debug(DEBUG_POWER, "%s suspend device ++\n", dev_name(dev));
 	if (!atomic_xchg(&mpp->suspend_en, 1))
-		down_write(&mpp->work_sem);
+		down(&mpp->work_sem);
 
 	mpp_debug(DEBUG_POWER, "%s suspend device --\n", dev_name(dev));
 
@@ -2385,7 +2384,7 @@ static int __maybe_unused rkvenc_runtime_resume(struct device *dev)
 
 	mpp_debug(DEBUG_POWER, "%s resume device ++\n", dev_name(dev));
 	if (atomic_xchg(&mpp->suspend_en, 0))
-		up_write(&mpp->work_sem);
+		up(&mpp->work_sem);
 	mpp_taskqueue_trigger_work(mpp);
 	mpp_debug(DEBUG_POWER, "%s resume device --\n", dev_name(dev));
 

@@ -784,9 +784,6 @@ again:
 		goto done;
 	}
 
-	if (atomic_read(&mpp->suspend_en))
-		goto done;
-
 	/* when resolution switch case,
 	 * need drop task if resolution mismatch.
 	 */
@@ -836,11 +833,14 @@ again:
 		task->frame_id = info->frame_id;
 	}
 
+	if (atomic_read(&mpp->suspend_en))
+		goto done;
+	down(&mpp->work_sem);
+
 	/* run task */
 	mpp = mpp_get_task_used_device(task, task->session);
 	mpp_taskqueue_pending_to_run(queue, task);
 	mpp_reset_down_read(mpp->reset_group);
-	down_read(&mpp->work_sem);
 	mpp_time_record(task);
 	if (mpp->dev_ops->run)
 		mpp->dev_ops->run(mpp, task);
@@ -1455,7 +1455,7 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 	atomic_set(&mpp->power_enabled, 0);
 	mpp->always_on = 0;
 	atomic_set(&mpp->suspend_en, 0);
-	init_rwsem(&mpp->work_sem);
+	sema_init(&mpp->work_sem, 1);
 
 	/* Get and attach to service */
 	ret = mpp_attach_service(mpp, dev);
