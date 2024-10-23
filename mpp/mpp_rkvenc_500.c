@@ -2143,7 +2143,7 @@ static int rkvenc_dvbm_init(struct mpp_dev *mpp)
 	if (!IS_ENABLED(CONFIG_ROCKCHIP_DVBM))
 		return 0;
 
-	np_dvbm = of_parse_phandle(dev_of_node(dev), "dvbm", 0);
+	np_dvbm = of_parse_phandle(mpp_dev_of_node(dev), "dvbm", 0);
 	if (!np_dvbm || !of_device_is_available(np_dvbm))
 		mpp_err("failed to get device node\n");
 	else {
