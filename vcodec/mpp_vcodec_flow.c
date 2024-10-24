@@ -198,7 +198,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		} else {
 			ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
 
-			if (mpp_frame_get_pskip_num(frame) > 0) {
+			if (frame && mpp_frame_get_pskip_num(frame) > 0) {
 				mpp_frame_init(&chan_entry->pskip_frame);
 				mpp_frame_copy(chan_entry->pskip_frame, frame);
 			}
