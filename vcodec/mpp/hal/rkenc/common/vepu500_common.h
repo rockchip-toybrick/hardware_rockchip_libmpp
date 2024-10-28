@@ -395,7 +395,13 @@ typedef struct Vepu500ControlCfg_t {
 		RK_U32 jbsf_oflw_sta         : 1;
 		RK_U32 jbuf_lens_sta         : 1;
 		RK_U32 dvbm_err_sta          : 1;
-		RK_U32 reserved              : 16;
+		/*
+		 * The status is customize for identify
+		 * the source id mismatch for wrap enc.
+		 * The status is from mcu when it update line cnt to 0x3ffe
+		 */
+		RK_U32 wrap_sid_mis_sta	     : 1;
+		RK_U32 reserved              : 15;
 	} int_sta;
 
 	/* 0x00000030 reg12 */

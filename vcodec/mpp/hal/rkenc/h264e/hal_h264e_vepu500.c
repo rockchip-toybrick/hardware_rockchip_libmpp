@@ -2661,6 +2661,11 @@ static MPP_RET hal_h264e_vepu500_status_check(HalVepu500RegSet *regs)
 		ret = MPP_NOK;
 	}
 
+	if (regs->reg_ctl.int_sta.wrap_sid_mis_sta) {
+		hal_h264e_dbg_warning("source id mismatch");
+		ret = MPP_ERR_INT_SOURCE_MIS;
+	}
+
 	return ret;
 }
 

@@ -2902,6 +2902,11 @@ static MPP_RET vepu500_h265_set_feedback(H265eV500HalContext *ctx, HalEncTask *e
 		return MPP_NOK;
 	}
 
+	if (hw_status & BIT(16)) {
+		hal_h265e_dbg_warning("MPP_ERR_INT_SOURCE_MIS");
+		return MPP_ERR_INT_SOURCE_MIS;
+	}
+
 	fb->st_mb_num += elem->st.st_bnum_b16.num_b16;
 	fb->st_lvl64_inter_num += elem->st.st_pnum_p64.pnum_p64;
 	fb->st_lvl32_inter_num += elem->st.st_pnum_p32.pnum_p32;
