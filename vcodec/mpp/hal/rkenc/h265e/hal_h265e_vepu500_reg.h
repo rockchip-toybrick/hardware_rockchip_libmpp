@@ -1732,9 +1732,4 @@ typedef struct H265eV500RegSet_t {
 	Vepu500Dbg              reg_dbg;
 } H265eV500RegSet;
 
-typedef struct H265eV500StatusElem_t {
-	RK_U32 hw_status;
-	Vepu500Status st;
-} H265eV500StatusElem;
-
 #endif
