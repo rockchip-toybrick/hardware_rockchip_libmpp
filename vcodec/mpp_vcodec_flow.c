@@ -229,7 +229,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 					atomic_dec(&chan_entry->cfg.comb_runing);
 					wake_up(&comb_chan->stop_wait);
 					if (mpidev_fn && mpidev_fn->notify_drop_frm && comb_chan)
-						mpidev_fn->notify_drop_frm(comb_chan->chan_id);
+						mpidev_fn->notify_drop_frm(comb_chan->chan_id, mpp_frame_get_dts(comb_frame), VENC_DROP_CFG_FAILED);
 					if (comb_frame)
 						mpp_frame_deinit(&comb_frame);
 					ret = mpp_enc_hw_start( (MppEnc)chan_entry->handle, NULL);
@@ -247,12 +247,12 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			wake_up(&chan_entry->stop_wait);
 			if (frame) {
 				if (mpidev_fn && mpidev_fn->notify_drop_frm && chan_entry)
-					mpidev_fn->notify_drop_frm(chan_entry->chan_id);
+					mpidev_fn->notify_drop_frm(chan_entry->chan_id, mpp_frame_get_dts(frame), VENC_DROP_CFG_FAILED);
 				mpp_frame_deinit(&frame);
 			}
 			if (comb_frame) {
 				if (mpidev_fn && mpidev_fn->notify_drop_frm && comb_chan)
-					mpidev_fn->notify_drop_frm(comb_chan->chan_id);
+					mpidev_fn->notify_drop_frm(comb_chan->chan_id, mpp_frame_get_dts(comb_frame), VENC_DROP_CFG_FAILED);
 				mpp_frame_deinit(&comb_frame);
 			}
 			if (chan_entry->cfg.online)
@@ -312,16 +312,12 @@ static void mpp_vcodec_event_frame(int chan_id)
 		comb_entry = mpp_vcodec_get_chan_entry(
 				     chan_entry->binder_chan_id, MPP_CTX_ENC);
 		if (comb_entry && comb_entry->handle) {
-			struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
-
 			chan_entry->last_jeg_combo_end = mpp_time();
 			ret = mpp_enc_int_process((MppEnc)chan_entry->handle,
 						  comb_entry->handle, &packet,
 						  &jpeg_packet);
 			if (jpeg_packet)
 				mpp_vcodec_enc_add_packet_list(comb_entry, jpeg_packet);
-			else if (mpidev_fn && mpidev_fn->notify_drop_frm)
-				mpidev_fn->notify_drop_frm(comb_entry->chan_id);
 		}
 		atomic_dec(&chan_entry->cfg.comb_runing);
 		atomic_dec(&comb_entry->runing);

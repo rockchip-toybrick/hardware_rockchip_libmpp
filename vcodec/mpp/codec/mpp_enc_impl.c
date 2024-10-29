@@ -2113,6 +2113,8 @@ TASK_DONE:
 		mpp_packet_set_length(enc->packet, 0);
 		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
 		mpp_packet_deinit(&enc->packet);
+		if (mpidev_fn && mpidev_fn->notify_drop_frm)
+			mpidev_fn->notify_drop_frm(enc->chan_id, mpp_frame_get_dts(hal_task->frame), VENC_DROP_ENC_FAILED);
 	} else {
 		mpp_packet_set_length(enc->packet, hal_task->length);
 		if (frm->is_intra)
@@ -2273,7 +2275,7 @@ TASK_DONE:
 
 		if (ret) {
 			if (mpidev_fn && mpidev_fn->notify_drop_frm)
-				mpidev_fn->notify_drop_frm(enc->chan_id);
+				mpidev_fn->notify_drop_frm(enc->chan_id, dts, VENC_DROP_ENC_FAILED);
 		} else {
 			if (mpidev_fn && mpidev_fn->set_intra_info)
 				mpidev_fn->set_intra_info(enc->chan_id, dts, pts, is_intra);
