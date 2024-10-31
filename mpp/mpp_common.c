@@ -2174,7 +2174,7 @@ struct vcodec_mppdev_svr_fn {
 };
 
 struct vcodec_mppdev_svr_fn g_mpp_svr_fn_ops    = {
-	.chnl_open			= mpp_chnl_open,
+	.chnl_open				= mpp_chnl_open,
 	.chnl_register			= mpp_chnl_register,
 	.chnl_release			= mpp_chnl_release,
 	.chnl_add_req			= mpp_chnl_add_req,

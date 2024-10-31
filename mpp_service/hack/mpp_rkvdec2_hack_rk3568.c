@@ -6,7 +6,11 @@
  *	Herman Chen <herman.chen@rock-chips.com>
  */
 
-#include <linux/printk.h>
+#include <linux/delay.h>
+
+#include "mpp_debug.h"
+#include "mpp_common.h"
+#include "mpp_iommu.h"
 
 #define FIX_RK3568_BUF_SIZE	(2 * PAGE_SIZE)
 #define RKDEC_HACK_DATA_RPS_OFFSET (128 * 1)

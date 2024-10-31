@@ -3,6 +3,7 @@ INCLUDE_DIRECTORIES(${KMPP_TOP}/include)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/osal/inc)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_osal)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service/hack)
 
 SET(KMPP_SRC
     mpp_av1dec.c
@@ -24,7 +25,10 @@ SET(KMPP_SRC
     mpp_service.c
     mpp_common.c
     ../mpp_osal/mpp_osal.c
+    hack/mpp_hack_px30.c
+    hack/mpp_hack_rk3576.c
+    hack/mpp_rkvdec2_hack_rk3568.c
+    hack/mpp_rkvdec2_link_hack_rk3568.c
 )
 
-ADD_KBUILD(kmpp
-           SRC ${KMPP_SRC})
+ADD_KBUILD(kmpp SRC ${KMPP_SRC})

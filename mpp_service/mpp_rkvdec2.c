@@ -15,7 +15,6 @@
 
 #include "mpp_rkvdec2_link.h"
 
-#include "hack/mpp_rkvdec2_hack_rk3568.c"
 #include "hack/mpp_hack_rk3576.h"
 
 #include <soc/rockchip/rockchip_dmc.h>
@@ -24,8 +23,13 @@
 #include <soc/rockchip/rockchip_iommu.h>
 
 #ifdef CONFIG_PM_DEVFREQ
-#include "../drivers/devfreq/governor.h"
+#include "drivers/devfreq/governor.h"
 #endif
+
+#define FIX_RK3568_BUF_SIZE	(2 * PAGE_SIZE)
+
+extern void rkvdec2_3568_hack_fix(struct mpp_dev *mpp);
+extern void rkvdec2_3568_hack_data_setup(struct mpp_dma_buffer *fix);
 
 /*
  * hardware information

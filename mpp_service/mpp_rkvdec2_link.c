@@ -16,7 +16,8 @@
 
 #include "mpp_rkvdec2_link.h"
 
-#include "hack/mpp_rkvdec2_link_hack_rk3568.c"
+extern void rkvdec2_link_hack_data_setup(struct mpp_dma_buffer *fix);
+extern void rkvdec2_3568_hack_fix_link(void *buf);
 
 #define RKVDEC2_LINK_HACK_TASK_FLAG	(0xff)
 

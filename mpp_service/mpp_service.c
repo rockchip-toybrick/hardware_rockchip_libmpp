@@ -20,6 +20,7 @@
 #include <linux/nospec.h>
 #include <linux/mfd/syscon.h>
 
+#include "version.h"
 #include "mpp_debug.h"
 #include "mpp_common.h"
 #include "mpp_iommu.h"
@@ -27,23 +28,22 @@
 #define MPP_CLASS_NAME		"mpp_class"
 #define MPP_SERVICE_NAME	"mpp_service"
 
-#define HAS_RKVDEC	IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVDEC)
-#define HAS_RKVENC	IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVENC)
-#define HAS_VDPU1	IS_ENABLED(CONFIG_ROCKCHIP_MPP_VDPU1)
-#define HAS_VEPU1	IS_ENABLED(CONFIG_ROCKCHIP_MPP_VEPU1)
-#define HAS_VDPU2	IS_ENABLED(CONFIG_ROCKCHIP_MPP_VDPU2)
-#define HAS_VEPU2	IS_ENABLED(CONFIG_ROCKCHIP_MPP_VEPU2)
-#define HAS_VEPU22	IS_ENABLED(CONFIG_ROCKCHIP_MPP_VEPU22)
-#define HAS_IEP2	IS_ENABLED(CONFIG_ROCKCHIP_MPP_IEP2)
-#define HAS_JPGDEC	IS_ENABLED(CONFIG_ROCKCHIP_MPP_JPGDEC)
-#define HAS_JPGENC	IS_ENABLED(CONFIG_ROCKCHIP_MPP_JPGENC)
-#define HAS_RKVDEC2	IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVDEC2)
-#define HAS_RKVENC2	IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVENC2)
-#define HAS_AV1DEC	IS_ENABLED(CONFIG_ROCKCHIP_MPP_AV1DEC)
-#define HAS_VDPP	IS_ENABLED(CONFIG_ROCKCHIP_MPP_VDPP)
+#define HAS_RKVDEC			IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVDEC)
+#define HAS_RKVENC			IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVENC)
+#define HAS_VDPU1			IS_ENABLED(CONFIG_ROCKCHIP_MPP_VDPU1)
+#define HAS_VEPU1			IS_ENABLED(CONFIG_ROCKCHIP_MPP_VEPU1)
+#define HAS_VDPU2			IS_ENABLED(CONFIG_ROCKCHIP_MPP_VDPU2)
+#define HAS_VEPU2			IS_ENABLED(CONFIG_ROCKCHIP_MPP_VEPU2)
+#define HAS_IEP2			IS_ENABLED(CONFIG_ROCKCHIP_MPP_IEP2)
+#define HAS_JPGDEC			IS_ENABLED(CONFIG_ROCKCHIP_MPP_JPGDEC)
+#define HAS_JPGENC			IS_ENABLED(CONFIG_ROCKCHIP_MPP_JPGENC)
+#define HAS_RKVDEC2			IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVDEC2)
+#define HAS_RKVENC2			IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVENC2)
+#define HAS_AV1DEC			IS_ENABLED(CONFIG_ROCKCHIP_MPP_AV1DEC)
+#define HAS_VDPP			IS_ENABLED(CONFIG_ROCKCHIP_MPP_VDPP)
 
 #define MPP_REGISTER_DRIVER(srv, flag, X, x) {\
-	if (flag)\
+	if (1)\
 		mpp_add_driver(srv, MPP_DRIVER_##X, &rockchip_##x##_driver, "grf_"#x);\
 	}
 
@@ -51,7 +51,7 @@ unsigned int mpp_dev_debug;
 module_param(mpp_dev_debug, uint, 0644);
 MODULE_PARM_DESC(mpp_dev_debug, "bit switch for mpp debug information");
 
-static const char mpp_version[] = MPP_VERSION;
+static const char mpp_version[] = KMPP_VERSION;
 
 static int mpp_init_grf(struct device_node *np,
 			struct mpp_grf_info *grf_info,
@@ -460,7 +460,6 @@ static int mpp_service_probe(struct platform_device *pdev)
 	MPP_REGISTER_DRIVER(srv, HAS_VEPU1, VEPU1, vepu1);
 	MPP_REGISTER_DRIVER(srv, HAS_VDPU2, VDPU2, vdpu2);
 	MPP_REGISTER_DRIVER(srv, HAS_VEPU2, VEPU2, vepu2);
-	MPP_REGISTER_DRIVER(srv, HAS_VEPU22, VEPU22, vepu22);
 	MPP_REGISTER_DRIVER(srv, HAS_IEP2, IEP2, iep2);
 	MPP_REGISTER_DRIVER(srv, HAS_JPGDEC, JPGDEC, jpgdec);
 	MPP_REGISTER_DRIVER(srv, HAS_JPGENC, JPGENC, jpgenc);
@@ -528,6 +527,6 @@ module_platform_driver(mpp_service_driver);
 
 MODULE_IMPORT_NS(DMA_BUF);
 MODULE_LICENSE("Dual MIT/GPL");
-MODULE_VERSION(MPP_VERSION);
+MODULE_VERSION(KMPP_VERSION);
 MODULE_AUTHOR("Ding Wei leo.ding@rock-chips.com");
 MODULE_DESCRIPTION("Rockchip mpp service driver");

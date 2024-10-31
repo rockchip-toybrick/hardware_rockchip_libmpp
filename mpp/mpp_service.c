@@ -38,7 +38,7 @@ unsigned int mpp_dev_debug = 0x0;
 module_param(mpp_dev_debug, uint, 0644);
 MODULE_PARM_DESC(mpp_dev_debug, "bit switch for mpp debug information");
 
-static const char mpp_version[] = MPP_VERSION;
+static const char mpp_version[] = KMPP_VERSION;
 
 static int mpp_add_driver(struct mpp_service *srv,
 			  enum MPP_DRIVER_TYPE type,
@@ -387,7 +387,7 @@ static struct platform_driver mpp_service_driver = {
 module_platform_driver(mpp_service_driver);
 
 MODULE_LICENSE("Dual MIT/GPL");
-MODULE_VERSION(MPP_VERSION);
+MODULE_VERSION(KMPP_VERSION);
 MODULE_AUTHOR("Ding Wei leo.ding@rock-chips.com");
 MODULE_DESCRIPTION("Rockchip mpp service driver");
 #else
