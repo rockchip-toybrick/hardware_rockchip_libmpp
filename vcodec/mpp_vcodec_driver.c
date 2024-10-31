@@ -339,7 +339,7 @@ struct vcodec_dev {
 
 #define MPP_VCODEC_NAME	"vcodec"
 #define MPP_ENC_NAME	"enc"
-#define MPP_PP_NAME	"pp"
+#define MPP_PP_NAME	"ivs"
 #define MPP_DEC_NAME	"dec"
 
 #ifdef CONFIG_PROC_FS
@@ -454,7 +454,7 @@ static int vcodec_procfs_init(struct vcodec_dev *vdev)
 	}
 
 	/* for show pp chnl info */
-	proc_create_single_data("pp_info", 0444,
+	proc_create_single_data("ivs_info", 0444,
 				vdev->pp_procfs, rkvenc_show_pp_info, NULL);
 
 	return 0;

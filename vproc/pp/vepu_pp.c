@@ -494,7 +494,7 @@ static void vepu_pp_show_chn_attr(struct seq_file *seq)
 	int i;
 
 	seq_puts(seq,
-		 "\n-----------------------------------pp channel attr---------------------------------------------\n");
+		 "\n-----------------------------------ivs channel attr---------------------------------------------\n");
 	seq_printf(seq, "%8s|%8s|%8s|%10s|%10s|%12s|%12s|%8s|%8s|%15s\n",
 		   "ID", "width", "height", "smear_en", "weightp_en", "max_width", "max_height", "md_en", "od_en",
 		   "down_scale_en");
@@ -517,7 +517,7 @@ static void vepu_pp_show_com_cfg(struct seq_file *seq)
 	int i;
 
 	seq_puts(seq,
-		 "\n-----------------------------------pp common cfg-----------------------------------------------\n");
+		 "\n-----------------------------------ivs common cfg-----------------------------------------------\n");
 	seq_printf(seq, "%8s|%8s|%15s|%15s\n",
 		   "ID", "fmt", "frm_acc_intval", "frm_acc_gop");
 	for (i = 0; i < MAX_CHN_NUM; i++) {
@@ -538,7 +538,7 @@ static void vepu_pp_show_md_cfg(struct seq_file *seq)
 	int i;
 
 	seq_puts(seq,
-		 "\n-----------------------------------pp md cfg---------------------------------------------------\n");
+		 "\n-----------------------------------ivs md cfg---------------------------------------------------\n");
 	seq_printf(seq, "%8s|%10s|%10s|%10s|%10s|%10s|%15s|%15s|%15s\n",
 		   "ID", "switch_sad", "thres_sad", "thres_move", "night_mode",
 		   "filter_sw", "thres_dust_mv", "thres_dust_blk", "thres_dust_chng");
@@ -562,7 +562,7 @@ static void vepu_pp_show_od_cfg(struct seq_file *seq)
 	int i;
 
 	seq_puts(seq,
-		 "\n-----------------------------------pp od cfg---------------------------------------------------\n");
+		 "\n-----------------------------------ivs od cfg---------------------------------------------------\n");
 	seq_printf(seq, "%8s|%15s|%18s|%10s\n",
 		   "ID", "thres_complex", "thres_area_complex", "thres_sad");
 	for (i = 0; i < MAX_CHN_NUM; i++) {
