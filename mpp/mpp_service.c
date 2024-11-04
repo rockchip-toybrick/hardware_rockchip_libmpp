@@ -25,6 +25,7 @@
 #include "mpp_debug.h"
 #include "mpp_common.h"
 #include "mpp_iommu.h"
+#include "version.h"
 
 #define MPP_CLASS_NAME		"mpp_class"
 #define MPP_SERVICE_NAME	"mpp_service"
@@ -40,6 +41,7 @@ MODULE_PARM_DESC(mpp_dev_debug, "bit switch for mpp debug information");
 
 static const char mpp_version[] = KMPP_VERSION;
 
+#if 0
 static int mpp_add_driver(struct mpp_service *srv,
 			  enum MPP_DRIVER_TYPE type,
 			  struct platform_driver *driver)
@@ -54,6 +56,7 @@ static int mpp_add_driver(struct mpp_service *srv,
 
 	return 0;
 }
+#endif
 
 static int mpp_remove_driver(struct mpp_service *srv, int i)
 {

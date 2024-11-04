@@ -193,10 +193,10 @@ EXPORT_SYMBOL(vepu_pp_destroy_chn);
 static void pp_set_src_addr(struct pp_chn_info_t *info, struct pp_com_cfg *cfg)
 {
 	struct pp_param_t *p = &info->param;
-	u32 adr_src0, adr_src1, adr_src2;
+	u32 adr_src0 = 0, adr_src1 = 0, adr_src2 = 0;
 	u32 width = info->width, height = info->height;
 	struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
-	u32 stride_y, stride_c;
+	u32 stride_y = 0, stride_c = 0;
 
 	if (func->buf_get_paddr)
 		adr_src0 = func->buf_get_paddr(cfg->src_buf);

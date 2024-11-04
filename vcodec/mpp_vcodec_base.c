@@ -9,6 +9,8 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#define MODULE_TAG "mpp_vcodec"
+
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/of_platform.h>
@@ -187,7 +189,7 @@ static int mpp_enc_module_init(void)
 
 int mpp_vcodec_get_free_chan(MppCtxType type)
 {
-	RK_S32 i;
+	RK_S32 i = -1;
 
 	switch (type) {
 	case MPP_CTX_ENC: {
@@ -690,9 +692,7 @@ void enc_chan_get_high_prior_chan(void)
 int mpp_vcodec_init(void)
 {
 
-#ifdef SUPPORT_ENC
 	mpp_enc_module_init();
-#endif
 
 	return 0;
 }

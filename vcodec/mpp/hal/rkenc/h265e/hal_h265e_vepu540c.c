@@ -303,15 +303,15 @@ static void setup_recn_refr_wrap(H265eV540cHalContext *ctx, hevc_vepu540c_base *
 	WrapInfo *hdr_lt = &ctx->wrap_infos.hdr_lt;
 	WrapInfo *bdy = &ctx->wrap_infos.body;
 	WrapInfo *hdr = &ctx->wrap_infos.hdr;
-	RK_U32 ref_iova;
-	RK_U32 rfpw_h_off;
-	RK_U32 rfpw_b_off;
-	RK_U32 rfpr_h_off;
-	RK_U32 rfpr_b_off;
-	RK_U32 rfp_h_bot;
-	RK_U32 rfp_b_bot;
-	RK_U32 rfp_h_top;
-	RK_U32 rfp_b_top;
+	RK_U32 ref_iova = 0;
+	RK_U32 rfpw_h_off = 0;
+	RK_U32 rfpw_b_off = 0;
+	RK_U32 rfpr_h_off = 0;
+	RK_U32 rfpr_b_off = 0;
+	RK_U32 rfp_h_bot = 0;
+	RK_U32 rfp_b_bot = 0;
+	RK_U32 rfp_h_top = 0;
+	RK_U32 rfp_b_top = 0;
 
 	if (recn_ref_wrap)
 		ref_iova = mpp_dev_get_iova_address(dev, ctx->recn_ref_buf, 163);

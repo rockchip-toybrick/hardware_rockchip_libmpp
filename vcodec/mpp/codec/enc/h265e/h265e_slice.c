@@ -9,6 +9,7 @@
 #define MODULE_TAG "h265e_slice"
 
 #include <linux/string.h>
+#include <linux/kernel.h>
 
 #include "mpp_log.h"
 #include "mpp_mem.h"

@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/uaccess.h>
 
+#include "version.h"
 #include "mpp_mem.h"
 #include "mpp_maths.h"
 #include "mpp_packet.h"
@@ -103,7 +104,7 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 	p->enc_hal = enc_hal;
 	p->dev = enc_hal_cfg.dev;
 	p->sei_mode = MPP_ENC_SEI_MODE_DISABLE;
-	p->version_info = VCODEC_VERSION;
+	p->version_info = KMPP_VERSION;
 	p->version_length = strlen(p->version_info);
 	p->rc_cfg_size = SZ_1K;
 	p->rc_cfg_info = mpp_calloc_size(char, p->rc_cfg_size);

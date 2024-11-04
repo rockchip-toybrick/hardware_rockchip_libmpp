@@ -9,8 +9,8 @@
 
 #ifndef __MPP_LOG_H__
 #define __MPP_LOG_H__
+
 #include <linux/types.h>
-#include <linux/kernel.h>
 #include <linux/bug.h>
 #include "rk_type.h"
 

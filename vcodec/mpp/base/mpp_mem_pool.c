@@ -22,19 +22,19 @@ typedef struct MppMemPoolNode_t {
 	struct list_head    list;
 	void                *ptr;
 	size_t              size;
-	RK_U32		    id;
+	RK_U32		    	id;
 } MppMemPoolNode;
 
 typedef struct MppMemPoolImpl_t {
 	void                *check;
 	const char    	    *name;
-	size_t              size;
-	spinlock_t	    lock;
+	RK_S32            	size;
+	spinlock_t	    	lock;
 	struct list_head    used;
 	struct list_head    unused;
 	RK_S32              used_count;
 	RK_S32              unused_count;
-	RK_U32		    max_cnt;
+	RK_U32		    	max_cnt;
 	RK_U32	    	    node_id;
 } MppMemPoolImpl;
 

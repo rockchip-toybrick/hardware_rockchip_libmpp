@@ -1757,13 +1757,13 @@ void rc_model_v2_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 			   chl_id, usr_cfg->igop, usr_cfg->stats_time,
 			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denorm,
 			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denorm,
-			   strof_rc_mode(usr_cfg->mode), "N/A", usr_cfg->init_quality, usr_cfg->init_quality);
+			   strof_rc_mode((MppEncRcMode)usr_cfg->mode), "N/A", usr_cfg->init_quality, usr_cfg->init_quality);
 	} else {
 		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%10u|%5u|%5u \n",
 			   chl_id, usr_cfg->igop, usr_cfg->stats_time,
 			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denorm,
 			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denorm,
-			   strof_rc_mode(usr_cfg->mode), target_bps / 1000,
+			   strof_rc_mode((MppEncRcMode)usr_cfg->mode), target_bps / 1000,
 			   usr_cfg->init_quality, usr_cfg->init_quality);
 	}
 
@@ -1799,11 +1799,11 @@ void rc_model_v2_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 		   "BgInterval", "ViQpDelta");
 	if (usr_cfg->gop_mode == SMART_P) {
 		seq_printf(seq, "%7d|%10s|%10d|%12u|%10d\n",
-			   chl_id, strof_gop_mode(usr_cfg->gop_mode), usr_cfg->i_quality_delta,
+			   chl_id, strof_gop_mode((MppEncRcGopMode)usr_cfg->gop_mode), usr_cfg->i_quality_delta,
 			   usr_cfg->vgop, usr_cfg->i_quality_delta);
 	} else {
 		seq_printf(seq, "%7d|%10s|%10d|%12s|%10d\n",
-			   chl_id, strof_gop_mode(usr_cfg->gop_mode), usr_cfg->i_quality_delta,
+			   chl_id, strof_gop_mode((MppEncRcGopMode)usr_cfg->gop_mode), usr_cfg->i_quality_delta,
 			   "N/A", usr_cfg->i_quality_delta);
 	}
 

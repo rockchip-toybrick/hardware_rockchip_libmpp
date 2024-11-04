@@ -5,8 +5,6 @@ FUNCTION(ADD_KBUILD MODULE_NAME)
     SET(add_src 0)
     SET(add_dep 0)
 
-    cmake_print_variables(CMAKE_CURRENT_SOURCE_DIR)
-
     SET(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
     SET(MODULE_KO "${MODULE_NAME}.ko")

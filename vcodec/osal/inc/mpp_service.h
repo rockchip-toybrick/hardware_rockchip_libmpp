@@ -11,6 +11,8 @@
 #define __MPP_SERVICE_H__
 
 #include "rk_type.h"
+#include "legacy_rockit.h"
+
 #include <asm/ioctl.h>
 
 /* Use 'v' as magic number */

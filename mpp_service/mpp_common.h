@@ -26,7 +26,9 @@
 #include <soc/rockchip/pm_domains.h>
 #include <uapi/linux/rk-mpp.h>
 
+#ifndef CONFIG_ROCKCHIP_MPP_PROC_FS
 #define CONFIG_ROCKCHIP_MPP_PROC_FS
+#endif
 
 #define MHZ				(1000 * 1000)
 #define MPP_WORK_TIMEOUT_DELAY		(500)

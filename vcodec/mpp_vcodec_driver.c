@@ -647,4 +647,5 @@ static void __exit vcodec_exit(void)
 } MODULE_LICENSE("GPL");
 
 module_init(vcodec_init);
+MODULE_IMPORT_NS(DMA_BUF); 
 module_exit(vcodec_exit);

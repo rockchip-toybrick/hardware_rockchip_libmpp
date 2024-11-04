@@ -22,6 +22,11 @@ typedef enum {
     MPP_ERR_TIMEOUT             = -8,
     MPP_ERR_PERM                = -9,
 
+    /* the err for intterupt from hw */
+    MPP_ERR_INT_BASE            = -100,
+    MPP_ERR_INT_BS_OVFL         = MPP_ERR_INT_BASE - 1,
+    MPP_ERR_INT_SOURCE_MIS      = MPP_ERR_INT_BASE - 2,
+
     MPP_ERR_BASE                = -1000,
 
     /* The error in stream processing */

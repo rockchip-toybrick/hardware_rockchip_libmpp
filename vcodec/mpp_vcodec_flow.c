@@ -9,6 +9,8 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#define MODULE_TAG "mpp_vcodec"
+
 #include <linux/module.h>
 #include <linux/wait.h>
 #include <linux/sched.h>

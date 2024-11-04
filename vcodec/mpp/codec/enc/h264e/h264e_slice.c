@@ -9,6 +9,7 @@
 #define MODULE_TAG "h264e_slice"
 
 #include <linux/string.h>
+#include <linux/kernel.h>
 
 #include "mpp_mem.h"
 #include "mpp_bitwrite.h"
@@ -494,12 +495,13 @@ RK_S32 h264e_slice_read(H264eSlice *slice, void *p, RK_S32 size)
 		RK_S32 pos = 0;
 		RK_S32 i;
 		char log[256];
+		RK_S32 size = sizeof(log) - 1;
 		RK_U8 *tmp = (RK_U8 *)p;
 
-		pos = sprintf(log + pos, "hw stream: ");
+		pos = snprintf(log + pos, size - pos, "hw stream: ");
 		for (i = 0; i < 16; i++)
-			pos += sprintf(log + pos, "%02x ", tmp[i]);
-		pos += sprintf(log + pos, "\n");
+			pos += snprintf(log + pos, size - pos, "%02x ", tmp[i]);
+		pos += snprintf(log + pos, size - pos, "\n");
 		//   h264e_dbg_slice(log);
 	}
 
@@ -722,11 +724,12 @@ RK_S32 h264e_slice_write(H264eSlice *slice, void *p, RK_U32 size)
 		RK_U8 *tmp = p;
 		RK_S32 pos = 0;
 		char log[256];
+		RK_S32 size = sizeof(log) - 1;
 
-		pos = sprintf(log + pos, "sw stream: ");
+		pos = snprintf(log + pos, size - pos, "sw stream: ");
 		for (i = 0; i < 16; i ++)
-			pos += sprintf(log + pos, "%02x ", tmp[i]);
-		pos += sprintf(log + pos, "\n");
+			pos += snprintf(log + pos, size - pos, "%02x ", tmp[i]);
+		pos += snprintf(log + pos, size - pos, "\n");
 		//  h264e_dbg_slice(log);
 	}
 

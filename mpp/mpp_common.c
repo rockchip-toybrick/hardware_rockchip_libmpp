@@ -30,6 +30,7 @@
 #include <linux/uaccess.h>
 #include <linux/nospec.h>
 #include <linux/clk-provider.h>
+#include <linux/version.h>
 
 #include <soc/rockchip/pm_domains.h>
 
@@ -1269,6 +1270,7 @@ static int mpp_process_request(struct mpp_session *session,
 		u32 mode = *(u32*)req->data;
 
 		session->online = mode;
+		mpp = session->mpp;
 		mpp->online_mode = mode;
 		mpp_err("set online mode %d\n", mode);
 	} break;
@@ -1798,6 +1800,14 @@ int mpp_clk_set_rate(struct mpp_clk_info *clk_info,
 
 	return 0;
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+#define PDE_DATA(inode)         pde_data(inode)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+/* already has the Macro definition */
+#else /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)) */
+#define PDE_DATA(inode)         NULL
+#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)) */
 
 #ifdef CONFIG_PROC_FS
 static int fops_show_u32(struct seq_file *file, void *v)

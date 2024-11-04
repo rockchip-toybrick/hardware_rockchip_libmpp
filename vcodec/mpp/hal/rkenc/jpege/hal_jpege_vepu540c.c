@@ -75,7 +75,7 @@ typedef struct jpegeV540cHalContext_t {
 	Vepu540cJpegCfg jpeg_cfg;
 } jpegeV540cHalContext;
 
-MPP_RET hal_jpege_vepu_rc(jpegeV540cHalContext *ctx, HalEncTask *task)
+static MPP_RET hal_jpege_vepu_rc(jpegeV540cHalContext *ctx, HalEncTask *task)
 {
 	HalJpegeRc *hal_rc = &ctx->hal_rc;
 	EncRcTaskInfo *rc_info = (EncRcTaskInfo *)&task->rc_task->info;
@@ -107,7 +107,7 @@ MPP_RET hal_jpege_vepu_rc(jpegeV540cHalContext *ctx, HalEncTask *task)
 	return MPP_OK;
 }
 
-MPP_RET hal_jpege_vepu_init_rc(HalJpegeRc *hal_rc)
+static MPP_RET hal_jpege_vepu_init_rc(HalJpegeRc *hal_rc)
 {
 	memset(hal_rc, 0, sizeof(HalJpegeRc));
 	hal_rc->qtable_y = mpp_malloc(RK_U8, QUANTIZE_TABLE_SIZE);
@@ -121,7 +121,7 @@ MPP_RET hal_jpege_vepu_init_rc(HalJpegeRc *hal_rc)
 	return MPP_OK;
 }
 
-MPP_RET hal_jpege_vepu_deinit_rc(HalJpegeRc *hal_rc)
+static MPP_RET hal_jpege_vepu_deinit_rc(HalJpegeRc *hal_rc)
 {
 	MPP_FREE(hal_rc->qtable_y);
 	MPP_FREE(hal_rc->qtable_c);

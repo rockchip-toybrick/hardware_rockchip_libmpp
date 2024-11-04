@@ -270,7 +270,7 @@ static RK_S32 node_len = 10 * 1024;
 
 static MppTrie gCfgApi;
 
-void mpp_enc_cfg_api_init()
+void mpp_enc_cfg_api_init(void)
 {
 	MPP_RET ret;
 	RK_S32 i;
@@ -298,7 +298,7 @@ void mpp_enc_cfg_api_init()
 			  api_cnt, node_len, mpp_trie_get_node_count(gCfgApi));
 }
 
-void mpp_enc_cfg_api_deinit()
+void mpp_enc_cfg_api_deinit(void)
 {
 	if (gCfgApi) {
 		mpp_trie_deinit(gCfgApi);
