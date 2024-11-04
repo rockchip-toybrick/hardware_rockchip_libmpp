@@ -44,7 +44,7 @@ SET(KMPP_TOP ${PROJECT_SOURCE_DIR})
 
 option(BUILD_KMPP_OSAL "Build kernel osal modules" ON)
 IF(${BUILD_KMPP_OSAL})
-    add_subdirectory("mpp_osal")
+    add_subdirectory("osal")
 ENDIF(${BUILD_KMPP_OSAL})
 
 option(BUILD_KMPP "Build kernel mpp libraries" ON)
