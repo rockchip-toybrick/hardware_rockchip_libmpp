@@ -90,6 +90,8 @@ enum MPP_DRIVER_TYPE {
 	MPP_DRIVER_AV1DEC,
 	MPP_DRIVER_VDPP,
 	MPP_DRIVER_JPGENC,
+	MPP_DRIVER_RKVENC_DVBM,
+	MPP_DRIVER_RKVENC_PP,
 	MPP_DRIVER_BUTT,
 };
 
@@ -871,7 +873,12 @@ extern struct platform_driver rockchip_rkvenc2_driver;
 extern struct platform_driver rockchip_av1dec_driver;
 extern struct platform_driver rockchip_jpgenc_driver;
 extern struct platform_driver rockchip_vdpp_driver;
+extern struct platform_driver rockchip_rkvenc540c_driver;
+extern struct platform_driver rockchip_rkvenc500_driver;
+extern struct platform_driver rockchip_vepu_pp_driver;
 
 extern const struct dev_pm_ops mpp_common_pm_ops;
+
+extern struct mpp_service *g_srv;
 
 #endif

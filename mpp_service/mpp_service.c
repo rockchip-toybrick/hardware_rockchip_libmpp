@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/nospec.h>
 #include <linux/mfd/syscon.h>
+#include <uapi/linux/sched/types.h>
 
 #include "version.h"
 #include "mpp_debug.h"
@@ -28,6 +29,7 @@
 #define MPP_CLASS_NAME		"mpp_class"
 #define MPP_SERVICE_NAME	"mpp_service"
 
+/* mpp_service */
 #define HAS_RKVDEC			IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVDEC)
 #define HAS_RKVENC			IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVENC)
 #define HAS_VDPU1			IS_ENABLED(CONFIG_ROCKCHIP_MPP_VDPU1)
@@ -41,6 +43,12 @@
 #define HAS_RKVENC2			IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVENC2)
 #define HAS_AV1DEC			IS_ENABLED(CONFIG_ROCKCHIP_MPP_AV1DEC)
 #define HAS_VDPP			IS_ENABLED(CONFIG_ROCKCHIP_MPP_VDPP)
+
+/* kmpp */
+#define HAS_RKVENC580		IS_ENABLED(RKVEPU580_ENABLE)
+#define HAS_RKVENC540C		IS_ENABLED(RKVEPU540C_ENABLE)
+#define HAS_RKVENC540C_PP	IS_ENABLED(RKVEPU540C_PP_ENABLE)
+#define HAS_RKVENC500		IS_ENABLED(RKVEPU500_ENABLE)
 
 #define MPP_REGISTER_DRIVER(srv, flag, X, x) {\
 	if (1)\
@@ -388,6 +396,8 @@ static int mpp_service_probe(struct platform_device *pdev)
 	struct mpp_taskqueue *queue;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 5 };
+	const char *soc_name = NULL;
 
 	dev_info(dev, "%s\n", mpp_version);
 	dev_info(dev, "probe start\n");
@@ -419,6 +429,9 @@ static int mpp_service_probe(struct platform_device *pdev)
 		kthread_init_worker(&queue->worker);
 		queue->kworker_task = kthread_run(kthread_worker_fn, &queue->worker,
 						  "mpp_worker_%d", i);
+
+		sched_setscheduler(queue->kworker_task, SCHED_FIFO, &param);
+
 		srv->task_queues[i] = queue;
 	}
 
@@ -467,6 +480,22 @@ static int mpp_service_probe(struct platform_device *pdev)
 	MPP_REGISTER_DRIVER(srv, HAS_RKVENC2, RKVENC2, rkvenc2);
 	MPP_REGISTER_DRIVER(srv, HAS_AV1DEC, AV1DEC, av1dec);
 	MPP_REGISTER_DRIVER(srv, HAS_VDPP, VDPP, vdpp);
+
+	ret = of_property_read_string(of_root, "compatible", &soc_name);
+	if (!ret) {
+		dev_info(dev, "compatible: %s\n", soc_name);
+		if (soc_name) {
+			if (strstr(soc_name, "rv1103b")) {
+				MPP_REGISTER_DRIVER(srv, HAS_RKVENC500, RKVENC_DVBM, rkvenc500);
+				MPP_REGISTER_DRIVER(srv, HAS_RKVENC500, RKVENC_PP, vepu_pp);
+			} else if (strstr(soc_name, "rv1106") ||
+					   strstr(soc_name, "rv1103")) {
+				MPP_REGISTER_DRIVER(srv, HAS_RKVENC540C, RKVENC_DVBM, rkvenc540c);
+				MPP_REGISTER_DRIVER(srv, HAS_RKVENC540C_PP, RKVENC_PP, vepu_pp);
+			}
+		}
+	}
+
 
 	dev_info(dev, "probe success\n");
 
