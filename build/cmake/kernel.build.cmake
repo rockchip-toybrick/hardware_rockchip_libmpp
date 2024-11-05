@@ -55,17 +55,20 @@ FUNCTION(ADD_KBUILD MODULE_NAME)
         ENDIF()
 
         GET_FILENAME_COMPONENT(name ${src} NAME)
-        SET(dst "${MODULE_DIR}/${name}")
-        SET(result "")
-        STRING(COMPARE EQUAL "${name}" "${MODULE_NAME}.c" result)
-        IF (${result})
-            SET(dst "${MODULE_DIR}/__${name}")
+
+        FILE(RELATIVE_PATH dst_rel_path ${SOURCE_DIR} ${src})
+        GET_FILENAME_COMPONENT(rel_dir ${dst_rel_path} DIRECTORY)
+
+        IF(NOT EXISTS "${rel_dir}")
+            FILE(MAKE_DIRECTORY ${MODULE_DIR}/${rel_dir})
         ENDIF()
+
+        SET(dst "${MODULE_DIR}/${dst_rel_path}")
 
         EXECUTE_PROCESS(COMMAND bash -c "ln -sf ${src} ${dst}")
 
         GET_FILENAME_COMPONENT(name_we ${dst} NAME_WE)
-        SET(obj "${name_we}.o")
+        SET(obj "${rel_dir}/${name_we}.o")
 
         STRING(APPEND MODULE_OBJS "${obj} ")
 
