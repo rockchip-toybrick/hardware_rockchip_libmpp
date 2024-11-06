@@ -302,6 +302,7 @@ MPP_RET hal_jpege_vepu500_set_osd(JpegeV500HalContext *ctx)
 		reg->cfg8.osd_qp_prj = tmp->qp_cfg.qp_prj;
 		if (tmp->osd_buf.buf)
 			reg->osd_st_addr = mpp_dev_get_mpi_ioaddress(jpeg_cfg->dev, tmp->osd_buf.buf, 0);
+		memcpy(reg->lut, tmp->lut, sizeof(tmp->lut));
 	}
 
 	regs->osd_whi_cfg0.osd_csc_yr = 77;
