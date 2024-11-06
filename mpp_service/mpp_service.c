@@ -25,6 +25,7 @@
 #include "mpp_debug.h"
 #include "mpp_common.h"
 #include "mpp_iommu.h"
+#include "rk-dvbm.h"
 
 #define MPP_CLASS_NAME		"mpp_class"
 #define MPP_SERVICE_NAME	"mpp_service"
@@ -466,6 +467,8 @@ static int mpp_service_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&srv->session_list);
 	mpp_procfs_init(srv);
 
+	rk_dvbm_init();
+
 	/* register sub drivers */
 	MPP_REGISTER_DRIVER(srv, HAS_RKVDEC, RKVDEC, rkvdec);
 	MPP_REGISTER_DRIVER(srv, HAS_RKVENC, RKVENC, rkvenc);
@@ -478,7 +481,7 @@ static int mpp_service_probe(struct platform_device *pdev)
 	MPP_REGISTER_DRIVER(srv, HAS_JPGENC, JPGENC, jpgenc);
 	MPP_REGISTER_DRIVER(srv, HAS_RKVDEC2, RKVDEC2, rkvdec2);
 	MPP_REGISTER_DRIVER(srv, HAS_RKVENC2, RKVENC2, rkvenc2);
-	MPP_REGISTER_DRIVER(srv, HAS_AV1DEC, AV1DEC, av1dec);
+	//MPP_REGISTER_DRIVER(srv, HAS_AV1DEC, AV1DEC, av1dec);
 	MPP_REGISTER_DRIVER(srv, HAS_VDPP, VDPP, vdpp);
 
 	ret = of_property_read_string(of_root, "compatible", &soc_name);
@@ -488,14 +491,15 @@ static int mpp_service_probe(struct platform_device *pdev)
 			if (strstr(soc_name, "rv1103b")) {
 				MPP_REGISTER_DRIVER(srv, HAS_RKVENC500, RKVENC_DVBM, rkvenc500);
 				MPP_REGISTER_DRIVER(srv, HAS_RKVENC500, RKVENC_PP, vepu_pp);
+#if 0
 			} else if (strstr(soc_name, "rv1106") ||
 					   strstr(soc_name, "rv1103")) {
 				MPP_REGISTER_DRIVER(srv, HAS_RKVENC540C, RKVENC_DVBM, rkvenc540c);
 				MPP_REGISTER_DRIVER(srv, HAS_RKVENC540C_PP, RKVENC_PP, vepu_pp);
+#endif
 			}
 		}
 	}
-
 
 	dev_info(dev, "probe success\n");
 
@@ -533,6 +537,8 @@ static int mpp_service_remove(struct platform_device *pdev)
 	class_destroy(srv->cls);
 	mpp_procfs_remove(srv);
 
+	rk_dvbm_exit();
+
 	return 0;
 }
 
@@ -543,7 +549,7 @@ static const struct of_device_id mpp_dt_ids[] = {
 	{ },
 };
 
-static struct platform_driver mpp_service_driver = {
+struct platform_driver mpp_service_driver = {
 	.probe = mpp_service_probe,
 	.remove = mpp_service_remove,
 	.driver = {
@@ -552,6 +558,7 @@ static struct platform_driver mpp_service_driver = {
 	},
 };
 
+#if 0
 module_platform_driver(mpp_service_driver);
 
 MODULE_IMPORT_NS(DMA_BUF);
@@ -559,3 +566,4 @@ MODULE_LICENSE("Dual MIT/GPL");
 MODULE_VERSION(KMPP_VERSION);
 MODULE_AUTHOR("Ding Wei leo.ding@rock-chips.com");
 MODULE_DESCRIPTION("Rockchip mpp service driver");
+#endif

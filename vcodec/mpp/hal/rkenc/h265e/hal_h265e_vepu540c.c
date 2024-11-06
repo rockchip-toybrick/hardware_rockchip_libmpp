@@ -24,9 +24,7 @@
 #include "vepu540c_common.h"
 #include "hal_h265e_vepu540c.h"
 #include "hal_h265e_vepu540c_reg.h"
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-#include <soc/rockchip/rockchip_dvbm.h>
-#endif
+#include "rk-dvbm.h"
 
 #define  MAX_TITLE_NUM 2
 #define hal_h265e_err(fmt, ...) \

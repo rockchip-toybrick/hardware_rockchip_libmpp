@@ -23,9 +23,7 @@
 #include "hal_enc_task.h"
 #include "mpp_frame_impl.h"
 #include "mpp_packet.h"
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-#include <soc/rockchip/rockchip_dvbm.h>
-#endif
+#include "rk-dvbm.h"
 
 MPP_RET vepu540c_set_roi(void *roi_reg_base, MppEncROICfg * roi,
 			 RK_S32 w, RK_S32 h)

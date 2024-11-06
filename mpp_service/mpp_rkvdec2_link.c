@@ -1227,8 +1227,8 @@ irqreturn_t rkvdec2_link_irq_proc(int irq, void *param)
 	return IRQ_HANDLED;
 }
 
-static struct mpp_task *
-mpp_session_get_pending_task(struct mpp_session *session)
+struct mpp_task *
+rkvdec2_get_pending_task(struct mpp_session *session)
 {
 	struct mpp_task *task = NULL;
 
@@ -1245,7 +1245,7 @@ static int task_is_done(struct mpp_task *task)
 	return test_bit(TASK_STATE_PROC_DONE, &task->state);
 }
 
-static int mpp_session_pop_pending(struct mpp_session *session,
+int rkvdec2_pop_pending(struct mpp_session *session,
 				   struct mpp_task *task)
 {
 	mutex_lock(&session->pending_lock);
@@ -1326,7 +1326,7 @@ int rkvdec2_link_wait_result(struct mpp_session *session,
 	struct mpp_task *mpp_task;
 	int ret;
 
-	mpp_task = mpp_session_get_pending_task(session);
+	mpp_task = rkvdec2_get_pending_task(session);
 	if (!mpp_task) {
 		mpp_err("session %p pending list is empty!\n", session);
 		return -EIO;
@@ -1343,7 +1343,7 @@ int rkvdec2_link_wait_result(struct mpp_session *session,
 		       session->device_type, session->index, atomic_read(&session->task_count),
 		       mpp_task->task_index, mpp_task->state);
 
-	mpp_session_pop_pending(session, mpp_task);
+	rkvdec2_pop_pending(session, mpp_task);
 	return ret;
 }
 

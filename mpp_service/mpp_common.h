@@ -30,43 +30,48 @@
 #define CONFIG_ROCKCHIP_MPP_PROC_FS
 #endif
 
-#define MHZ				(1000 * 1000)
+#define MHZ							(1000 * 1000)
 #define MPP_WORK_TIMEOUT_DELAY		(500)
 
-#define MPP_MAX_MSG_NUM			(16)
+#define MPP_MAX_MSG_NUM				(16)
 #define MPP_MAX_REG_TRANS_NUM		(80)
 #define MPP_MAX_TASK_CAPACITY		(16)
 
 /* grf mask for get value */
-#define MPP_GRF_VAL_MASK		(0xFFFF)
+#define MPP_GRF_VAL_MASK			(0xFFFF)
 
 /* max 4 cores supported */
-#define MPP_MAX_CORE_NUM		(4)
+#define MPP_MAX_CORE_NUM			(4)
+
+/* from kmpp */
+#define MAX_TASK_CNT				(2)
 
 /**
  * Device type: classified by hardware feature
  */
 enum MPP_DEVICE_TYPE {
-	MPP_DEVICE_VDPU1	= 0, /* 0x00000001 */
-	MPP_DEVICE_VDPU2	= 1, /* 0x00000002 */
-	MPP_DEVICE_VDPU1_PP	= 2, /* 0x00000004 */
-	MPP_DEVICE_VDPU2_PP	= 3, /* 0x00000008 */
-	MPP_DEVICE_AV1DEC	= 4, /* 0x00000010 */
+	MPP_DEVICE_VDPU1		= 0, /* 0x00000001 */
+	MPP_DEVICE_VDPU2		= 1, /* 0x00000002 */
+	MPP_DEVICE_VDPU1_PP		= 2, /* 0x00000004 */
+	MPP_DEVICE_VDPU2_PP		= 3, /* 0x00000008 */
+	MPP_DEVICE_AV1DEC		= 4, /* 0x00000010 */
 
-	MPP_DEVICE_HEVC_DEC	= 8, /* 0x00000100 */
-	MPP_DEVICE_RKVDEC	= 9, /* 0x00000200 */
+	MPP_DEVICE_HEVC_DEC		= 8, /* 0x00000100 */
+	MPP_DEVICE_RKVDEC		= 9, /* 0x00000200 */
 	MPP_DEVICE_AVSPLUS_DEC	= 12, /* 0x00001000 */
-	MPP_DEVICE_RKJPEGD	= 13, /* 0x00002000 */
+	MPP_DEVICE_RKJPEGD		= 13, /* 0x00002000 */
 
-	MPP_DEVICE_RKVENC	= 16, /* 0x00010000 */
-	MPP_DEVICE_VEPU1	= 17, /* 0x00020000 */
-	MPP_DEVICE_VEPU2	= 18, /* 0x00040000 */
+	MPP_DEVICE_RKVENC		= 16, /* 0x00010000 */
+	MPP_DEVICE_VEPU1		= 17, /* 0x00020000 */
+	MPP_DEVICE_VEPU2		= 18, /* 0x00040000 */
 	MPP_DEVICE_VEPU2_JPEG	= 19, /* 0x00080000 */
-	MPP_DEVICE_RKJPEGE	= 20, /* 0x00100000 */
-	MPP_DEVICE_VEPU22	= 24, /* 0x01000000 */
+	MPP_DEVICE_RKJPEGE		= 20, /* 0x00100000 */
+	MPP_DEVICE_RKVENC_DVBM	= 21, /* 0x02000000 */
+	MPP_DEVICE_RKVENC_PP	= 22, /* 0x04000000 */
+	MPP_DEVICE_VEPU22		= 24, /* 0x01000000 */
 
-	MPP_DEVICE_IEP2		= 28, /* 0x10000000 */
-	MPP_DEVICE_VDPP		= 29, /* 0x20000000 */
+	MPP_DEVICE_IEP2			= 28, /* 0x10000000 */
+	MPP_DEVICE_VDPP			= 29, /* 0x20000000 */
 	MPP_DEVICE_BUTT,
 };
 
@@ -309,6 +314,8 @@ struct mpp_dev {
 	int irq;
 	bool is_irq_startup;
 	u32 irq_status;
+	/* from kmpp */
+	u32 overflow_status;
 
 	void __iomem *reg_base;
 	struct mpp_grf_info *grf_info;
@@ -339,7 +346,28 @@ struct mpp_dev {
 	u32 timing_check;
 	u32 load_en;
 	struct mpp_load_info load_info;
+
+	/* from kmpp */
+	u32 dump_regs;
+
+	/* power info */
+	atomic_t power_enabled;
+	u32 always_on;
+
+	struct semaphore work_sem;
+	atomic_t suspend_en;
+	/* debug for isp */
+	void __iomem *isp_base;
+	u32 online_mode;
 };
+
+typedef union MppEncSliceInfo_u {
+	u32 val;
+	struct {
+		u32 length  : 31;
+		u32 last    : 1;
+	};
+} MppEncSliceInfo;
 
 struct mpp_session {
 	enum MPP_DEVICE_TYPE device_type;
@@ -385,6 +413,14 @@ struct mpp_session {
 	struct list_head list_msgs;
 	struct list_head list_msgs_idle;
 	spinlock_t lock_msgs;
+
+	/* from kmpp */
+	void *task[MAX_TASK_CNT];
+	u32 chn_id;
+	u32 k_space;
+	u32 online;
+	bool pp_session;
+	void (*callback)(u32 chn_id, u32 event, void *param);
 };
 
 /* task state in work thread */
@@ -403,6 +439,10 @@ enum mpp_task_state {
 	TASK_STATE_ABORT_READY	= 10,
 	TASK_STATE_PROC_DONE	= 11,
 
+	/* from kmpp */
+	TASK_STATE_LINK_FILLED	= 12,
+	TASK_STATE_LINK_CONFIG	= 13,
+
 	/* timing debug state */
 	TASK_TIMING_CREATE	= 16,
 	TASK_TIMING_CREATE_END	= 17,
@@ -414,6 +454,19 @@ enum mpp_task_state {
 	TASK_TIMING_TO_CANCEL	= 23,
 	TASK_TIMING_FINISH	= 24,
 };
+
+enum mpp_vcodec_event_type {
+	MPP_VCODEC_EVENT_FRAME,
+	MPP_VCODEC_EVENT_SLICE,
+	MPP_VCODEC_EVENT_BUTT,
+};
+
+typedef enum MppEncOnlineMode_e {
+	MPP_ENC_ONLINE_MODE_NONE,
+	MPP_ENC_ONLINE_MODE_HW,
+	MPP_ENC_ONLINE_MODE_SW,
+	MPP_ENC_ONLINE_MODE_BUT,
+} MppEncOnlineMode;
 
 /* The context for the a task */
 struct mpp_task {
@@ -468,6 +521,18 @@ struct mpp_task {
 	/* hw cycles */
 	u32 hw_cycles;
 	u32 hw_time;
+
+	/* from kmpp */
+	u32 dvbm_en;
+	u32 task_no;
+	u32 clbk_en;
+	u32 disable_jpeg;
+	/* indentify the id of isp pipe */
+	u32 pipe_id;
+	/* indentify the frame id */
+	u32 frame_id;
+	u32 width;
+	u32 height;
 };
 
 struct mpp_taskqueue {
@@ -553,6 +618,15 @@ struct mpp_service {
 	/* global timing record flag */
 	u32 timing_en;
 	u32 load_interval;
+};
+
+struct mpp_task_info {
+	/* indentify the id of isp pipe */
+	u32 pipe_id;
+	/* indentify the frame id */
+	u32 frame_id;
+	u32 width;
+	u32 height;
 };
 
 /*
@@ -660,6 +734,16 @@ void mpp_task_dump_timing(struct mpp_task *task, s64 time_diff);
 void mpp_reg_show(struct mpp_dev *mpp, u32 offset);
 void mpp_reg_show_range(struct mpp_dev *mpp, u32 start, u32 end);
 void mpp_free_task(struct kref *ref);
+
+/* from kmpp start */
+void mpp_taskqueue_trigger_work(struct mpp_dev *mpp);
+struct mpp_task *mpp_taskqueue_get_pending_task(struct mpp_taskqueue *queue);
+struct mpp_task *mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue);
+int mpp_taskqueue_pop_running(struct mpp_taskqueue *queue, struct mpp_task *task);
+struct mpp_task *mpp_session_get_pending_task(struct mpp_session *session);
+int mpp_session_pop_pending(struct mpp_session *session, struct mpp_task *task);
+void mpp_session_clean_detach(struct mpp_taskqueue *queue);
+/* from kmpp end */
 
 void mpp_session_deinit(struct mpp_session *session);
 void mpp_session_cleanup_detach(struct mpp_taskqueue *queue,
@@ -840,6 +924,9 @@ struct proc_dir_entry *
 mpp_procfs_create_u32(const char *name, umode_t mode,
 		      struct proc_dir_entry *parent, void *data);
 void mpp_procfs_create_common(struct proc_dir_entry *parent, struct mpp_dev *mpp);
+struct proc_dir_entry *mpp_procfs_create_clk_rw(const char *name, umode_t mode,
+						struct proc_dir_entry *parent,
+						struct mpp_clk_info *mpp_clk);
 #else
 static inline struct proc_dir_entry *
 mpp_procfs_create_u32(const char *name, umode_t mode,
@@ -873,7 +960,6 @@ extern struct platform_driver rockchip_rkvenc2_driver;
 extern struct platform_driver rockchip_av1dec_driver;
 extern struct platform_driver rockchip_jpgenc_driver;
 extern struct platform_driver rockchip_vdpp_driver;
-extern struct platform_driver rockchip_rkvenc540c_driver;
 extern struct platform_driver rockchip_rkvenc500_driver;
 extern struct platform_driver rockchip_vepu_pp_driver;
 

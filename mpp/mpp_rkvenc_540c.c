@@ -29,18 +29,25 @@
 #include <linux/pm_runtime.h>
 #include <linux/nospec.h>
 #include <linux/workqueue.h>
-#include <linux/dma-iommu.h>
+#ifdef CONFIG_ARM_DMA_USE_IOMMU
+#include <asm/dma-iommu.h>
+#endif
 #include <soc/rockchip/pm_domains.h>
 #include <soc/rockchip/rockchip_ipa.h>
 #include <soc/rockchip/rockchip_opp_select.h>
 #include <soc/rockchip/rockchip_system_monitor.h>
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-#include <soc/rockchip/rockchip_dvbm.h>
-#endif
+
+#include "rk-mpp.h"
+#include "rk-dvbm.h"
+
+#include "mpp_osal.h"
 #include "mpp_debug.h"
 #include "mpp_iommu.h"
 #include "mpp_common.h"
+
 #define RKVENC_DRIVER_NAME			"mpp_rkvenc_540c"
+
+#define ROCKCHIP_DVBM_ENABLE	1
 
 #define	RKVENC_SESSION_MAX_BUFFERS		40
 
@@ -303,7 +310,7 @@ struct rkvenc_dev {
 	struct reset_control *rst_core;
 	atomic_t on_work;
 
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
+#if ROCKCHIP_DVBM_ENABLE
 	struct dvbm_port *port;
 	u32 dvbm_overflow;
 #endif
@@ -689,7 +696,8 @@ int rkvenc_dump_dbg(struct mpp_dev *mpp)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
+//#if ROCKCHIP_DVBM_ENABLE
+#if 1
 #define VEPU_LINE_CNT_UNMARK	(~GENMASK(13, 0))
 #define VEPU_LINE_CNT		GENMASK(13, 0)
 #define VEPU_FRAME_CNT		GENMASK(21, 14)
@@ -1191,7 +1199,8 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 		if (st_ppl & BIT(10))
 			mpp_err("enc started status %08x\n", st_ppl);
 
-		if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
+		//if (IS_ENABLED(ROCKCHIP_DVBM_ENABLE)) {
+		if (1) {
 			if (dvbm_en) {
 				enc->dvbm_overflow = 0;
 				update_online_info(mpp, mpp_task->pipe_id);
@@ -1201,6 +1210,7 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 				mpp->always_on = 1;
 			}
 		}
+
 		priv->dvbm_en = dvbm_en;
 		priv->info.hw_running = 1;
 		/* Flush the register before the start the device */
@@ -1613,10 +1623,9 @@ static int rkvenc_unbind_jpeg_task(struct mpp_session *session)
 	struct mpp_dev *mpp = session->mpp;
 	struct mpp_taskqueue *queue = mpp->queue;
 	struct mpp_task *task, *n;
-	unsigned long flags, flags1;
 
-	spin_lock_irqsave(&queue->dev_lock, flags1);
-	spin_lock_irqsave(&session->pending_lock, flags);
+	mutex_lock(&queue->dev_lock);
+	mutex_lock(&session->pending_lock);
 
 	list_for_each_entry_safe(task, n, &session->pending_list, pending_link) {
 		if (test_bit(TASK_STATE_RUNNING, &task->state))
@@ -1626,8 +1635,8 @@ static int rkvenc_unbind_jpeg_task(struct mpp_session *session)
 		task->disable_jpeg = 1;
 	}
 
-	spin_unlock_irqrestore(&session->pending_lock, flags);
-	spin_unlock_irqrestore(&queue->dev_lock, flags1);
+	mutex_unlock(&session->pending_lock);
+	mutex_unlock(&queue->dev_lock);
 
 	return 0;
 }
@@ -1660,13 +1669,15 @@ static int rkvenc_free_session(struct mpp_session *session)
 			}
 		}
 
-		if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
+#if 0
+		if (IS_ENABLED(ROCKCHIP_DVBM_ENABLE)) {
 			struct rkvenc2_session_priv *priv =
 				(struct rkvenc2_session_priv *)session->priv;
 
 			if (priv->dvbm_en)
 				session->mpp->always_on = 0;
 		}
+#endif
 	}
 	if (session && session->priv) {
 		kfree(session->priv);
@@ -1787,10 +1798,9 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 	struct mpp_task *mpp_task;
 	struct mpp_dev *mpp = container_of(work_s, struct mpp_dev, work);
 	struct mpp_taskqueue *queue = mpp->queue;
-	unsigned long flags;
 
 	mpp_debug_enter();
-	spin_lock_irqsave(&queue->dev_lock, flags);
+	mutex_lock(&queue->dev_lock);
 
 	/* 1. check reset process */
 	if (atomic_read(&mpp->reset_request) && !list_empty(&queue->running_list)) {
@@ -1798,11 +1808,11 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 		mpp_dev_reset(mpp);
 		enable_irq(mpp->irq);
 	}
-	spin_unlock_irqrestore(&queue->dev_lock, flags);
+	mutex_unlock(&queue->dev_lock);
 
 	mpp_power_on(mpp);
 
-	spin_lock_irqsave(&queue->dev_lock, flags);
+	mutex_lock(&queue->dev_lock);
 	if (!list_empty(&queue->running_list))
 		goto done;
 	/* 2. check and process pending mpp_task */
@@ -1813,16 +1823,16 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 	if (atomic_read(&mpp->suspend_en))
 		goto done;
 	down(&mpp->work_sem);
-	spin_lock(&queue->pending_lock);
+	mutex_lock(&queue->pending_lock);
 	list_move_tail(&mpp_task->queue_link, &queue->running_list);
-	spin_unlock(&queue->pending_lock);
+	mutex_unlock(&queue->pending_lock);
 
 	mpp_time_record(mpp_task);
 	set_bit(TASK_STATE_START, &mpp_task->state);
 	rkvenc_run(mpp, mpp_task);
 
 done:
-	spin_unlock_irqrestore(&queue->dev_lock, flags);
+	mutex_unlock(&queue->dev_lock);
 	if (list_empty(&queue->running_list))
 		mpp_power_off(mpp);
 	mpp_session_clean_detach(queue);
@@ -2275,7 +2285,7 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	rkvenc_procfs_init(mpp);
 	mpp_dev_register_srv(mpp, mpp->srv);
 
-	if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
+	if (IS_ENABLED(ROCKCHIP_DVBM_ENABLE)) {
 		struct device_node *np_dvbm = NULL;
 		struct platform_device *pdev_dvbm = NULL;
 
@@ -2330,7 +2340,7 @@ static int rkvenc_remove(struct platform_device *pdev)
 	struct rkvenc_dev *enc = platform_get_drvdata(pdev);
 
 	dev_info(dev, "remove device\n");
-	if (IS_ENABLED(CONFIG_ROCKCHIP_DVBM)) {
+	if (IS_ENABLED(ROCKCHIP_DVBM_ENABLE)) {
 		if (enc->port) {
 			rk_dvbm_put(enc->port);
 			enc->port = NULL;

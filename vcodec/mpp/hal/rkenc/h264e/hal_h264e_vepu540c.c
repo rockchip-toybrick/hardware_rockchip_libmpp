@@ -27,9 +27,7 @@
 #include "vepu540c_common.h"
 
 #include "hal_h264e_vepu540c_reg.h"
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-#include <soc/rockchip/rockchip_dvbm.h>
-#endif
+#include "rk-dvbm.h"
 
 #define DUMP_REG 0
 #define MAX_CORE_NUM 2

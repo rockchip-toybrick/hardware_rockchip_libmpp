@@ -23,9 +23,7 @@
 #include "hal_jpege_vepu500_reg.h"
 #include "hal_jpege_hdr.h"
 #include "mpp_packet.h"
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-#include <soc/rockchip/rockchip_dvbm.h>
-#endif
+#include "rk-dvbm.h"
 
 typedef struct HalJpegeRc_t {
 	/* For quantization table */

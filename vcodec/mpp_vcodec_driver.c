@@ -342,6 +342,8 @@ struct vcodec_dev {
 #define MPP_PP_NAME	"ivs"
 #define MPP_DEC_NAME	"dec"
 
+#if 1
+
 #ifdef CONFIG_PROC_FS
 static int vcodec_procfs_remove(struct vcodec_dev *vdev)
 {
@@ -537,6 +539,7 @@ static struct platform_driver vcodec_driver = {
 		.of_match_table = of_match_ptr(vcodec_dt_ids),
 	},
 };
+#endif
 
 static struct vcodec_mpidev_fn *mpidev_ops = NULL;
 static struct vcodec_mpibuf_fn *mpibuf_ops = NULL;
@@ -606,23 +609,20 @@ struct vcodec_vsm_buf_fn *get_vsm_ops(void)
 	return vsm_buf_ops ? vsm_buf_ops : NULL;
 }
 
-
-#ifdef BUILD_ONE_KO
 extern struct platform_driver mpp_service_driver;
-#endif
 
 static int __init vcodec_init(void)
 {
 	int ret;
 
 	pr_info("init new\n");
-#ifdef BUILD_ONE_KO
+
 	ret = platform_driver_register(&mpp_service_driver);
 	if (ret != 0) {
 		printk(KERN_ERR "mpp_service_driver device register failed (%d).\n", ret);
 		return ret;
 	}
-#endif
+
 	ret = platform_driver_register(&vcodec_driver);
 	if (ret != 0) {
 		printk(KERN_ERR "Platform device register failed (%d).\n", ret);
@@ -638,14 +638,11 @@ static void __exit vcodec_exit(void)
 
 	mpp_vcodec_deinit();
 	platform_driver_unregister(&vcodec_driver);
-
-#ifdef BUILD_ONE_KO
 	platform_driver_unregister(&mpp_service_driver);
-#endif
 
 	pr_info("exit\n");
 } MODULE_LICENSE("GPL");
 
 module_init(vcodec_init);
-MODULE_IMPORT_NS(DMA_BUF); 
+MODULE_IMPORT_NS(DMA_BUF);
 module_exit(vcodec_exit);

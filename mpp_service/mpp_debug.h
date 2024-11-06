@@ -57,8 +57,14 @@
 #define PRINT_LINE				0x40000000
 
 /* reuse old debug bit flag */
+#define DEBUG_RUN                   0x00000080
+#define DEBUG_DVBM_DUMP             0x00010000
 #define DEBUG_PART_TIMING			0x00000080
 #define DEBUG_SLICE				0x00000002
+#define DEBUG_DVBM_INFO				0x00000008
+#define DEBUG_ISP_INFO				0x00000040
+#define DEBUG_REG_DUMP				0x00004000
+#define DEBUG_WARNING				0x00040000
 
 extern unsigned int mpp_dev_debug;
 
@@ -131,6 +137,20 @@ extern unsigned int mpp_dev_debug;
 #define mpp_dbg_slice(fmt, args...)				\
 	do {							\
 		if (unlikely(mpp_dev_debug & DEBUG_SLICE)) {	\
+			pr_info(fmt, ##args);			\
+		}						\
+	} while (0)
+
+#define mpp_dbg_dvbm(fmt, args...)				\
+	do {							\
+		if (unlikely(mpp_dev_debug & DEBUG_DVBM_INFO)) {	\
+			pr_info("%s: " fmt, __func__, ##args);			\
+		}						\
+	} while (0)
+
+#define mpp_dbg_warning(fmt, args...)				\
+	do {							\
+		if (unlikely(mpp_dev_debug & DEBUG_WARNING)) {	\
 			pr_info(fmt, ##args);			\
 		}						\
 	} while (0)

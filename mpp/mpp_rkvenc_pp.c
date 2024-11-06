@@ -21,6 +21,7 @@
 #include <soc/rockchip/pm_domains.h>
 
 #include "mpp_debug.h"
+#include "mpp_osal.h"
 #include "mpp_common.h"
 #include "mpp_iommu.h"
 
@@ -645,7 +646,7 @@ static int vepu_pp_probe(struct platform_device *pdev)
 
 	ret = devm_request_threaded_irq(dev, mpp->irq,
 					mpp_dev_irq,
-					mpp_dev_isr_sched,
+					NULL,
 					IRQF_SHARED,
 					dev_name(dev), mpp);
 	if (ret) {

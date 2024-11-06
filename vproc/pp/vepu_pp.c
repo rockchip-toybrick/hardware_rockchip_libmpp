@@ -230,7 +230,7 @@ EXPORT_SYMBOL(vepu_pp_destroy_chn);
 static void pp_set_src_addr(struct pp_chn_info_t *info, struct pp_com_cfg *cfg)
 {
 	struct pp_param_t *p = &info->param;
-	u32 adr_src0, adr_src1, adr_src2;
+	u32 adr_src0 = 0, adr_src1 = 0, adr_src2 = 0;
 	u32 width = info->width, height = info->height;
 	struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
 
@@ -584,6 +584,7 @@ void vepu_show_pp_info(struct seq_file *seq)
 	vepu_pp_show_od_cfg(seq);
 }
 
+#if 0
 #ifndef BUILD_ONE_KO
 static int __init vepu_pp_init(void)
 {
@@ -600,4 +601,5 @@ module_init(vepu_pp_init);
 module_exit(vepu_pp_exit);
 
 MODULE_LICENSE("GPL");
+#endif
 #endif

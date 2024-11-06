@@ -112,6 +112,8 @@ struct mpp_dma_buffer *
 mpp_dma_alloc(struct device *dev, size_t size);
 int mpp_dma_free(struct mpp_dma_buffer *buffer);
 
+int mpp_dma_get_iova(struct dma_buf *dmabuf, struct device *dev);
+
 struct mpp_dma_buffer *
 mpp_dma_import_fd(struct mpp_iommu_info *iommu_info,
 		  struct mpp_dma_session *dma, int fd, int static_use);

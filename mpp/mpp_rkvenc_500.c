@@ -27,21 +27,27 @@
 #include <linux/pm_runtime.h>
 #include <linux/nospec.h>
 #include <linux/workqueue.h>
-#include <linux/dma-iommu.h>
+#ifdef CONFIG_ARM_DMA_USE_IOMMU
+#include <asm/dma-iommu.h>
+#endif
 #include <soc/rockchip/pm_domains.h>
 #include <soc/rockchip/rockchip_ipa.h>
 #include <soc/rockchip/rockchip_opp_select.h>
 #include <soc/rockchip/rockchip_system_monitor.h>
-#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
-#include <soc/rockchip/rockchip_dvbm.h>
-#endif
+
+#include "rk-mpp.h"
+#include "rk-dvbm.h"
+
+#include "mpp_osal.h"
 #include "mpp_debug.h"
 #include "mpp_iommu.h"
 #include "mpp_common.h"
+
 #define RKVENC_DRIVER_NAME			"mpp_rkvenc_500"
 #define RKVENC_WORK_TIMEOUT_DELAY 	(200)
 
-#define ROCKCHIP_DVBM_ENABLE	IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
+//#define ROCKCHIP_DVBM_ENABLE	IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
+#define ROCKCHIP_DVBM_ENABLE	1
 #define ISP_DEBUG 0
 
 /* irq status definition */
@@ -913,7 +919,11 @@ static int rkvenc_connect_dvbm(struct mpp_dev *mpp, u32 dvbm_cfg)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	unsigned long flag;
+#if ROCKCHIP_DVBM_ENABLE
 	bool dual_wrap = (enc->dvbm_setup & 0x3) == 0x3;
+#else
+	bool dual_wrap = false;
+#endif
 
 	dvbm_cfg = dvbm_cfg ? dvbm_cfg : mpp_read(mpp, RKVENC_DVBM_CFG);
 	spin_lock_irqsave(&enc->dvbm_lock, flag);
@@ -1026,7 +1036,9 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 		if (session->online == MPP_ENC_ONLINE_MODE_SW) {
 			wmb();
 			mpp_write_relaxed(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
+#if ROCKCHIP_DVBM_ENABLE
 			enc->dvbm_overflow = 0;
+#endif
 			mpp->always_on = 1;
 		}
 	} else {
@@ -1153,7 +1165,9 @@ static void rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 
 			mpp_dbg_warning("task %d jpeg bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
 					task->task_index, top_adr, bot_adr, w_adr, r_adr);
+#if ROCKCHIP_DVBM_ENABLE
 			mpp->overflow_status = mpp->irq_status;
+#endif
 		}
 		if (mpp->irq_status & RKVENC_VIDEO_OVERFLOW) {
 			r_adr = mpp_read(mpp, RKVENC_VIDEO_BSBR);
@@ -1171,11 +1185,14 @@ static void rkvenc_check_bs_overflow(struct mpp_dev *mpp)
 
 			mpp_dbg_warning("task %d video bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
 					task->task_index, top_adr, bot_adr, w_adr, r_adr);
+#if ROCKCHIP_DVBM_ENABLE
 			mpp->overflow_status = mpp->irq_status;
+#endif
 		}
 	}
 }
 
+#if ROCKCHIP_DVBM_ENABLE
 static void rkvenc_clear_dvbm_info(struct mpp_dev *mpp)
 {
 	u32 dvbm_info, dvbm_en;
@@ -1188,6 +1205,11 @@ static void rkvenc_clear_dvbm_info(struct mpp_dev *mpp)
 		pr_err("clear dvbm info failed 0x%08x 0x%08x\n",
 		       dvbm_info, dvbm_en);
 }
+#else
+static void rkvenc_clear_dvbm_info(struct mpp_dev *mpp)
+{
+}
+#endif
 
 int rkvenc_500_hw_dvbm_handle(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 {
@@ -1253,7 +1275,9 @@ int rkvenc_500_soft_dvbm_handle(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	* the cur frame has overflow.
 	*/
 	if (line_cnt == 0x3fff) {
+#if ROCKCHIP_DVBM_ENABLE
 		enc->dvbm_overflow = 1;
+#endif
 		mpp_dbg_warning("current task %d has overflow\n", mpp_task->task_index);
 	}
 	/*
@@ -1266,11 +1290,13 @@ int rkvenc_500_soft_dvbm_handle(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 		mpp->irq_status |= BIT(16);
 		priv->info.wrap_source_mis_cnt++;
 	}
+#if ROCKCHIP_DVBM_ENABLE
 	if (enc->dvbm_overflow) {
 		mpp->irq_status |= BIT(6);
 		enc->dvbm_overflow = 0;
 		priv->info.wrap_overflow_cnt++;
 	}
+#endif
 
 	return 0;
 }
@@ -1511,10 +1537,9 @@ static int rkvenc_unbind_jpeg_task(struct mpp_session *session)
 	struct mpp_dev *mpp = session->mpp;
 	struct mpp_taskqueue *queue = mpp->queue;
 	struct mpp_task *task, *n;
-	unsigned long flags, flags1;
 
-	spin_lock_irqsave(&queue->dev_lock, flags1);
-	spin_lock_irqsave(&session->pending_lock, flags);
+	mutex_lock(&queue->dev_lock);
+	mutex_lock(&session->pending_lock);
 
 	list_for_each_entry_safe(task, n, &session->pending_list, pending_link) {
 		if (test_bit(TASK_STATE_RUNNING, &task->state))
@@ -1524,8 +1549,8 @@ static int rkvenc_unbind_jpeg_task(struct mpp_session *session)
 		task->disable_jpeg = 1;
 	}
 
-	spin_unlock_irqrestore(&session->pending_lock, flags);
-	spin_unlock_irqrestore(&queue->dev_lock, flags1);
+	mutex_unlock(&session->pending_lock);
+	mutex_unlock(&queue->dev_lock);
 
 	return 0;
 }
@@ -1724,10 +1749,9 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 	struct mpp_task *mpp_task;
 	struct mpp_dev *mpp = container_of(work_s, struct mpp_dev, work);
 	struct mpp_taskqueue *queue = mpp->queue;
-	unsigned long flags;
 
 	mpp_debug_enter();
-	spin_lock_irqsave(&queue->dev_lock, flags);
+	mutex_lock(&queue->dev_lock);
 
 	/* 1. check reset process */
 	if (atomic_read(&mpp->reset_request) && !list_empty(&queue->running_list)) {
@@ -1735,11 +1759,11 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 		mpp_dev_reset(mpp);
 		enable_irq(mpp->irq);
 	}
-	spin_unlock_irqrestore(&queue->dev_lock, flags);
+	mutex_unlock(&queue->dev_lock);
 
 	mpp_power_on(mpp);
 
-	spin_lock_irqsave(&queue->dev_lock, flags);
+	mutex_lock(&queue->dev_lock);
 	if (!list_empty(&queue->running_list))
 		goto done;
 
@@ -1751,9 +1775,9 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 	if (atomic_read(&mpp->suspend_en))
 		goto done;
 	down(&mpp->work_sem);
-	spin_lock(&queue->pending_lock);
+	mutex_lock(&queue->pending_lock);
 	list_move_tail(&mpp_task->queue_link, &queue->running_list);
-	spin_unlock(&queue->pending_lock);
+	mutex_unlock(&queue->pending_lock);
 
 	mpp_time_record(mpp_task);
 	set_bit(TASK_STATE_START, &mpp_task->state);
@@ -1763,7 +1787,7 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 		rkvenc_run(mpp, mpp_task);
 
 done:
-	spin_unlock_irqrestore(&queue->dev_lock, flags);
+	mutex_unlock(&queue->dev_lock);
 	if (list_empty(&queue->running_list))
 		mpp_power_off(mpp);
 	mpp_session_clean_detach(queue);

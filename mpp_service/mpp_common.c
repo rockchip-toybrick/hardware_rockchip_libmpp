@@ -35,6 +35,7 @@
 #include "mpp_debug.h"
 #include "mpp_common.h"
 #include "mpp_iommu.h"
+#include "mpp_osal.h"
 
 /* input parmater structure for version 1 */
 struct mpp_msg_v1 {
@@ -64,6 +65,8 @@ const char *mpp_device_name[MPP_DEVICE_BUTT] = {
 	[MPP_DEVICE_VEPU22]		= "VEPU22",
 	[MPP_DEVICE_IEP2]		= "IEP2",
 	[MPP_DEVICE_VDPP]		= "VDPP",
+	[MPP_DEVICE_RKVENC_DVBM]	= "RKVENC_DVBM",
+	[MPP_DEVICE_RKVENC_PP]		= "RKVENC_PP",
 };
 
 const char *enc_info_item_name[ENC_INFO_BUTT] = {
@@ -100,7 +103,7 @@ mpp_taskqueue_pop_pending(struct mpp_taskqueue *queue,
 	return 0;
 }
 
-static struct mpp_task *
+struct mpp_task *
 mpp_taskqueue_get_pending_task(struct mpp_taskqueue *queue)
 {
 	struct mpp_task *task = NULL;
@@ -141,8 +144,7 @@ int mpp_taskqueue_pending_to_run(struct mpp_taskqueue *queue, struct mpp_task *t
 	return 0;
 }
 
-static struct mpp_task *
-mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue)
+struct mpp_task *mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue)
 {
 	unsigned long flags;
 	struct mpp_task *task = NULL;
@@ -156,9 +158,7 @@ mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue)
 	return task;
 }
 
-static int
-mpp_taskqueue_pop_running(struct mpp_taskqueue *queue,
-			  struct mpp_task *task)
+int mpp_taskqueue_pop_running(struct mpp_taskqueue *queue, struct mpp_task *task)
 {
 	unsigned long flags;
 
@@ -173,35 +173,43 @@ mpp_taskqueue_pop_running(struct mpp_taskqueue *queue,
 	return 0;
 }
 
-static void
-mpp_taskqueue_trigger_work(struct mpp_dev *mpp)
+void mpp_taskqueue_trigger_work(struct mpp_dev *mpp)
 {
 	kthread_queue_work(&mpp->queue->worker, &mpp->work);
 }
 
 int mpp_power_on(struct mpp_dev *mpp)
 {
-	pm_runtime_get_sync(mpp->dev);
-	pm_stay_awake(mpp->dev);
+	if (!atomic_xchg(&mpp->power_enabled, 1)) {
+		pm_runtime_get_sync(mpp->dev);
+		mpp_pm_stay_awake(mpp->dev);
 
-	if (mpp->hw_ops->clk_on)
-		mpp->hw_ops->clk_on(mpp);
+		if (mpp->hw_ops->clk_on)
+			mpp->hw_ops->clk_on(mpp);
+	}
 
 	return 0;
 }
 
 int mpp_power_off(struct mpp_dev *mpp)
 {
+	if (mpp->always_on)
+		return 0;
+
 	if (mpp->hw_ops->clk_off)
 		mpp->hw_ops->clk_off(mpp);
 
-	pm_relax(mpp->dev);
-	if (mpp_taskqueue_get_pending_task(mpp->queue) ||
-	    mpp_taskqueue_get_running_task(mpp->queue)) {
-		pm_runtime_mark_last_busy(mpp->dev);
-		pm_runtime_put_autosuspend(mpp->dev);
-	} else {
-		pm_runtime_put_sync_suspend(mpp->dev);
+	if (atomic_xchg(&mpp->power_enabled, 0)) {
+		if (mpp->hw_ops->clk_off)
+			mpp->hw_ops->clk_off(mpp);
+
+		mpp_pm_relax(mpp->dev);
+		if (mpp_taskqueue_get_pending_task(mpp->queue) ||
+		    mpp_taskqueue_get_running_task(mpp->queue)) {
+			pm_runtime_mark_last_busy(mpp->dev);
+			pm_runtime_put_autosuspend(mpp->dev);
+		} else
+			pm_runtime_put_sync_suspend(mpp->dev);
 	}
 
 	return 0;
@@ -479,9 +487,7 @@ mpp_session_push_pending(struct mpp_session *session,
 	return 0;
 }
 
-static int
-mpp_session_pop_pending(struct mpp_session *session,
-			struct mpp_task *task)
+int mpp_session_pop_pending(struct mpp_session *session, struct mpp_task *task)
 {
 	mutex_lock(&session->pending_lock);
 	list_del_init(&task->pending_link);
@@ -491,7 +497,7 @@ mpp_session_pop_pending(struct mpp_session *session,
 	return 0;
 }
 
-static struct mpp_task *
+struct mpp_task *
 mpp_session_get_pending_task(struct mpp_session *session)
 {
 	struct mpp_task *task = NULL;
@@ -644,9 +650,10 @@ mpp_reset_control_get(struct mpp_dev *mpp, enum MPP_RESET_TYPE type, const char 
 	struct reset_control *rst = NULL;
 	char shared_name[32] = "shared_";
 	struct mpp_reset_group *group;
+	void *of_node = mpp_dev_of_node(mpp->dev);
 
 	/* check reset whether belone to device alone */
-	index = of_property_match_string(mpp->dev->of_node, "reset-names", name);
+	index = of_property_match_string(of_node, "reset-names", name);
 	if (index >= 0) {
 		rst = devm_reset_control_get(mpp->dev, name);
 		mpp_safe_unreset(rst);
@@ -657,7 +664,7 @@ mpp_reset_control_get(struct mpp_dev *mpp, enum MPP_RESET_TYPE type, const char 
 	/* check reset whether is shared */
 	strncat(shared_name, name,
 		sizeof(shared_name) - strlen(shared_name) - 1);
-	index = of_property_match_string(mpp->dev->of_node,
+	index = of_property_match_string(of_node,
 					 "reset-names", shared_name);
 	if (index < 0) {
 		dev_err(mpp->dev, "%s is not found!\n", shared_name);
@@ -678,6 +685,10 @@ mpp_reset_control_get(struct mpp_dev *mpp, enum MPP_RESET_TYPE type, const char 
 		group->resets[type] = rst;
 		group->queue = mpp->queue;
 	}
+	/* if reset not in the same queue, it means different device
+	 * may reset in the same time, then rw_sem_on should set true.
+	 */
+	group->rw_sem_on |= (group->queue != mpp->queue) ? true : false;
 	dev_info(mpp->dev, "reset_group->rw_sem_on=%d\n", group->rw_sem_on);
 	up_write(&group->rw_sem);
 
@@ -2019,6 +2030,7 @@ int mpp_task_finish(struct mpp_session *session,
 		    struct mpp_task *task)
 {
 	struct mpp_dev *mpp = mpp_get_task_used_device(task, session);
+	u32 clbk_en = task->clbk_en;
 
 	if (mpp->dev_ops->finish)
 		mpp->dev_ops->finish(mpp, task);
@@ -2047,6 +2059,10 @@ int mpp_task_finish(struct mpp_session *session,
 	wake_up(&task->wait);
 	mpp_taskqueue_pop_running(mpp->queue, task);
 
+	/* from kmpp */
+	if (session->callback && clbk_en)
+		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
+
 	return 0;
 }
 
@@ -2067,6 +2083,9 @@ int mpp_task_finalize(struct mpp_session *session,
 		}
 		list_del_init(&mem_region->reg_link);
 	}
+
+	/* from kmpp */
+	task->state = 0;
 
 	return 0;
 }
@@ -2181,6 +2200,12 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 	mpp->hw_ops = mpp->var->hw_ops;
 	mpp->dev_ops = mpp->var->dev_ops;
 
+	/* from kmpp*/
+	atomic_set(&mpp->power_enabled, 0);
+	mpp->always_on = 0;
+	atomic_set(&mpp->suspend_en, 0);
+	sema_init(&mpp->work_sem, 1);
+
 	/* Get and attach to service */
 	ret = mpp_attach_service(mpp, dev);
 	if (ret) {
@@ -2199,7 +2224,7 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 	atomic_set(&mpp->task_count, 0);
 	atomic_set(&mpp->task_index, 0);
 
-	device_init_wakeup(dev, true);
+	mpp_device_init_wakeup(dev, true);
 	pm_runtime_enable(dev);
 	mpp->irq = platform_get_irq(pdev, 0);
 	if (mpp->irq < 0) {
@@ -2229,6 +2254,10 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 	}
 	mpp->io_base = res->start;
 
+	pm_runtime_get_sync(dev);
+	if (mpp->hw_ops->clk_on)
+		mpp->hw_ops->clk_on(mpp);
+
 	/*
 	 * TODO: here or at the device itself, some device does not
 	 * have the iommu, maybe in the device is better.
@@ -2246,20 +2275,17 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 
 	/* read hardware id */
 	if (hw_info->reg_id >= 0) {
-		pm_runtime_get_sync(dev);
-		if (mpp->hw_ops->clk_on)
-			mpp->hw_ops->clk_on(mpp);
-
 		hw_info->hw_id = mpp_read(mpp, hw_info->reg_id * sizeof(u32));
-		if (mpp->hw_ops->clk_off)
-			mpp->hw_ops->clk_off(mpp);
-		pm_runtime_put_sync(dev);
 	}
+
+	if (mpp->hw_ops->clk_off)
+		mpp->hw_ops->clk_off(mpp);
+	pm_runtime_put_sync(dev);
 
 	return ret;
 failed:
 	mpp_detach_workqueue(mpp);
-	device_init_wakeup(dev, false);
+	mpp_device_init_wakeup(dev, false);
 	pm_runtime_disable(dev);
 
 	return ret;
@@ -2272,7 +2298,7 @@ int mpp_dev_remove(struct mpp_dev *mpp)
 
 	mpp_iommu_remove(mpp->iommu_info);
 	mpp_detach_workqueue(mpp);
-	device_init_wakeup(mpp->dev, false);
+	mpp_device_init_wakeup(mpp->dev, false);
 	pm_runtime_disable(mpp->dev);
 
 	return 0;

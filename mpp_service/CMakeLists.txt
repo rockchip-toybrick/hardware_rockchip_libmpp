@@ -1,12 +1,124 @@
 # vim: syntax=cmake
+INCLUDE_DIRECTORIES(.)
+
 INCLUDE_DIRECTORIES(${KMPP_TOP}/include)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/osal/inc)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_osal)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service/hack)
 
+# kmpp header
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/inc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/osal/inc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/inc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/base/inc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/inc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/rc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/h264e)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/h265e)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/jpeg)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/common)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/inc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/common)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/common/h264)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/common/h265)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/common/jpeg)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/rkenc/common)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/rkenc/h264e)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/rkenc/h265e)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/rkenc/jpege)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vproc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vproc/pp)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp)
+
 SET(KMPP_SRC
-    mpp_av1dec.c
+    ../dvbm/rockchip_dvbm.c
+    ../vproc/pp/vepu500_pp.c
+    #../vproc/pp/vepu_pp.c
+    ../vproc/pp/vepu_pp_service.c
+    #../mpp/mpp_iommu.c
+    #../mpp/mpp_service.c
+    ../mpp/mpp_common.c
+    #../mpp/mpp_rkvenc_540c.c
+    ../mpp/mpp_rkvenc_500.c
+    ../mpp/mpp_rkvenc_pp.c
+    ../vcodec/mpp/hal/mpp_enc_hal.c
+    ../vcodec/mpp/hal/rkenc/h264e/hal_h264e_scaling_list.c
+    #../vcodec/mpp/hal/rkenc/h264e/hal_h264e_vepu580.c
+    ../vcodec/mpp/hal/rkenc/h264e/hal_h264e_vepu500.c
+    ../vcodec/mpp/hal/rkenc/h264e/hal_h264e_vepu540c.c
+    ../vcodec/mpp/hal/rkenc/common/vepu541_common.c
+    ../vcodec/mpp/hal/rkenc/common/vepu5xx_common.c
+    ../vcodec/mpp/hal/rkenc/common/vepu540c_common.c
+    ../vcodec/mpp/hal/rkenc/common/vepu500_common.c
+    #../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu580.c
+    #../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu500.c
+    #../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu541.c
+    ../vcodec/mpp/hal/rkenc/h265e/hal_h265e_scaling_list.c
+    ../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu540c.c
+    ../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vepu540c.c
+    ../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vepu500.c
+    ../vcodec/mpp/hal/common/h264/hal_h264e_api_v2.c
+    ../vcodec/mpp/hal/common/h265/hal_h265e_api_v2.c
+    ../vcodec/mpp/hal/common/hal_bufs.c
+    ../vcodec/mpp/hal/common/jpeg/hal_jpege_api_v2.c
+    ../vcodec/mpp/hal/common/jpeg/hal_jpege_hdr.c
+    ../vcodec/mpp/base/mpp_enc_refs.c
+    ../vcodec/mpp/base/mpp_frame.c
+    ../vcodec/mpp/base/mpp_trie.c
+    ../vcodec/mpp/base/mpp_enc_cfg.c
+    ../vcodec/mpp/base/mpp_packet.c
+    ../vcodec/mpp/base/mpp_bitwrite.c
+    ../vcodec/mpp/base/mpp_enc_ref.c
+    ../vcodec/mpp/base/mpp_enc_refs_setup.c
+    ../vcodec/mpp/base/mpp_buffer.c
+    ../vcodec/mpp/base/mpp_stream_ring_buf.c
+    ../vcodec/mpp/base/mpp_bitread.c
+    ../vcodec/mpp/base/mpp_mem_pool.c
+    ../vcodec/mpp/base/mpp_cfg.c
+    ../vcodec/mpp/base/mpp_2str.c
+    ../vcodec/mpp/codec/enc_impl.c
+    ../vcodec/mpp/codec/mpp_enc.c
+    ../vcodec/mpp/codec/rc/mpp_rc.c
+    ../vcodec/mpp/codec/rc/h265e_rc.c
+    ../vcodec/mpp/codec/rc/rc.c
+    ../vcodec/mpp/codec/rc/h264e_rc.c
+    ../vcodec/mpp/codec/rc/jpege_rc.c
+    ../vcodec/mpp/codec/rc/rc_model_v2.c
+    ../vcodec/mpp/codec/rc/rc_model_v2_smt.c
+    ../vcodec/mpp/codec/rc/rc_base.c
+    ../vcodec/mpp/codec/enc/h264e/h264e_pps.c
+    ../vcodec/mpp/codec/enc/h264e/h264e_api_v2.c
+    ../vcodec/mpp/codec/enc/h264e/h264e_dpb.c
+    ../vcodec/mpp/codec/enc/h264e/h264e_sps.c
+    ../vcodec/mpp/codec/enc/h264e/h264e_sei.c
+    ../vcodec/mpp/codec/enc/h264e/h264e_slice.c
+    ../vcodec/mpp/codec/enc/jpeg/jpege_api_v2.c
+    ../vcodec/mpp/codec/enc/h265e/h265e_ps.c
+    ../vcodec/mpp/codec/enc/h265e/h265e_api.c
+    ../vcodec/mpp/codec/enc/h265e/h265e_dpb.c
+    ../vcodec/mpp/codec/enc/h265e/h265e_header_gen.c
+    ../vcodec/mpp/codec/enc/h265e/h265e_enctropy.c
+    ../vcodec/mpp/codec/enc/h265e/h265e_stream.c
+    ../vcodec/mpp/codec/enc/h265e/h265e_syntax.c
+    ../vcodec/mpp/codec/enc/h265e/h265e_slice.c
+    ../vcodec/mpp/codec/mpp_enc_impl.c
+    ../vcodec/mpp_vcodec_event.c
+    ../vcodec/mpp_vcodec_chan.c
+    ../vcodec/mpp_vcodec_flow.c
+    ../vcodec/mpp_vcodec_driver.c
+    ../vcodec/mpp_vcodec_base.c
+    ../vcodec/osal/mpp_log.c
+    ../vcodec/osal/mpp_time.c
+    ../vcodec/osal/osal_mpp_service.c
+    ../vcodec/osal/mpp_device.c
+    ../vcodec/osal/mpp_maths.c
+    ../vcodec/osal/mpp_mem.c
+    ../vcodec/mpp_vcodec_thread.c
+    ../vcodec/mpp_vcodec_test.c
+    #mpp_av1dec.c
     mpp_iep2.c
     mpp_jpgdec.c
     mpp_jpgenc.c
@@ -15,7 +127,6 @@ SET(KMPP_SRC
     mpp_rkvdec.c
     mpp_rkvenc2.c
     mpp_rkvenc.c
-    mpp_service.c
     mpp_vdpp.c
     mpp_vdpu1.c
     mpp_vdpu2.c

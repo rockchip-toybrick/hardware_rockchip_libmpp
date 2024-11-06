@@ -736,6 +736,7 @@ void vepu_show_pp_info(struct seq_file *seq)
 	vepu_pp_show_od_cfg(seq);
 }
 
+#if 0
 #ifndef BUILD_ONE_KO
 static int __init vepu_pp_init(void)
 {
@@ -752,4 +753,5 @@ module_init(vepu_pp_init);
 module_exit(vepu_pp_exit);
 
 MODULE_LICENSE("GPL");
+#endif
 #endif
