@@ -3,7 +3,6 @@
  * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
  */
 
-#include <linux/align.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>
 #include <linux/printk.h>

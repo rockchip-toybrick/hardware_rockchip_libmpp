@@ -8,6 +8,7 @@
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/version.h>
 
 #include "rk_list.h"
 
@@ -99,9 +100,17 @@ static int env_fops_show(struct seq_file *file, void *v)
     return 0;
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+#define PDE_DATA(inode)         pde_data(inode)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+/* already has the Macro definition */
+#else /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)) */
+#define PDE_DATA(inode)         NULL
+#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)) */
+
 static int env_fops_open(struct inode *inode, struct file *file)
 {
-    KmppEnvNodeImpl *node = (KmppEnvNodeImpl *)(pde_data(inode));
+    KmppEnvNodeImpl *node = (KmppEnvNodeImpl *)(PDE_DATA(inode));
     int ret;
 
     ret = single_open(file, env_fops_show, node);

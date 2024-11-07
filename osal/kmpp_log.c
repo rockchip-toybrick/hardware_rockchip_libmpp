@@ -8,7 +8,7 @@
 
 #include "kmpp_log.h"
 
-#define LINE_SZ 1024
+#define LINE_SZ 512
 
 static rk_s32 mpp_log_level = RK_LOG_INFO;
 

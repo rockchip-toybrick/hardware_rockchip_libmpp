@@ -5,6 +5,8 @@
 
 #define MODULE_TAG "kmpp_trie"
 
+#include <linux/math64.h>
+
 #include "kmpp_osal.h"
 #include "kmpp_trie.h"
 
@@ -773,5 +775,5 @@ void kmpp_trie_timing_test(KmppTrie trie)
     } while (info);
 
     kmpp_logi("trie access %d info %lld us averga %lld us\n",
-              loop, sum, (rk_u64)(sum / loop));
+              loop, sum, div64_s64(sum, loop));
 }
