@@ -689,7 +689,7 @@ mpp_reset_control_get(struct mpp_dev *mpp, enum MPP_RESET_TYPE type, const char 
 	 * may reset in the same time, then rw_sem_on should set true.
 	 */
 	group->rw_sem_on |= (group->queue != mpp->queue) ? true : false;
-	dev_info(mpp->dev, "reset_group->rw_sem_on=%d\n", group->rw_sem_on);
+	dev_info(mpp->dev, "reset %s rw_sem_on=%d\n", shared_name, group->rw_sem_on);
 	up_write(&group->rw_sem);
 
 	return rst;
@@ -2254,10 +2254,6 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 	}
 	mpp->io_base = res->start;
 
-	pm_runtime_get_sync(dev);
-	if (mpp->hw_ops->clk_on)
-		mpp->hw_ops->clk_on(mpp);
-
 	/*
 	 * TODO: here or at the device itself, some device does not
 	 * have the iommu, maybe in the device is better.
@@ -2267,6 +2263,7 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 		dev_err(dev, "failed to attach iommu\n");
 		mpp->iommu_info = NULL;
 	}
+
 	if (mpp->hw_ops->init) {
 		ret = mpp->hw_ops->init(mpp);
 		if (ret)
@@ -2275,12 +2272,16 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 
 	/* read hardware id */
 	if (hw_info->reg_id >= 0) {
-		hw_info->hw_id = mpp_read(mpp, hw_info->reg_id * sizeof(u32));
-	}
+		pm_runtime_get_sync(dev);
+		if (mpp->hw_ops->clk_on)
+			mpp->hw_ops->clk_on(mpp);
 
-	if (mpp->hw_ops->clk_off)
-		mpp->hw_ops->clk_off(mpp);
-	pm_runtime_put_sync(dev);
+		hw_info->hw_id = mpp_read(mpp, hw_info->reg_id * sizeof(u32));
+
+		if (mpp->hw_ops->clk_off)
+			mpp->hw_ops->clk_off(mpp);
+		pm_runtime_put_sync(dev);
+	}
 
 	return ret;
 failed:
