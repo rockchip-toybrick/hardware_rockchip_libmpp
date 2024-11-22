@@ -351,11 +351,7 @@ static int vcodec_procfs_remove(struct vcodec_dev *vdev)
 		proc_remove(vdev->procfs);
 		vdev->procfs = NULL;
 	}
-
-	if (vdev->venc_procfs) {
-		proc_remove(vdev->venc_procfs);
-		vdev->venc_procfs = NULL;
-	}
+	vdev->venc_procfs = NULL;
 
 	return 0;
 }
