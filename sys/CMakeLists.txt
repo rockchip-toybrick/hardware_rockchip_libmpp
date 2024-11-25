@@ -10,6 +10,7 @@ SET(KMPP_SYS_SRC
     kmpp_dq.c
     kmpp_obj.c
     kmpp_shm.c
+    kmpp_frame.c
 )
 
 ADD_KBUILD(sys SRC ${KMPP_SYS_SRC} DEPS osal)

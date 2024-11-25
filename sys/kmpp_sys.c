@@ -13,6 +13,7 @@
 #include "kmpp_osal.h"
 
 #include "kmpp_shm.h"
+#include "kmpp_frame.h"
 
 KmppEnvGrp kmpp_env_sys;
 EXPORT_SYMBOL(kmpp_env_sys);
@@ -89,6 +90,7 @@ int sys_init(void)
     sys_env_version_init();
 
     kmpp_shm_init();
+    kmpp_frame_init();
 
     return 0;
 }
@@ -97,6 +99,7 @@ void sys_exit(void)
 {
     kmpp_logi("sys exit\n");
 
+    kmpp_frame_deinit();
     kmpp_shm_deinit();
 
     sys_env_deinit();
