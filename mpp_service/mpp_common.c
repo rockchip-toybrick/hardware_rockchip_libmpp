@@ -196,9 +196,6 @@ int mpp_power_off(struct mpp_dev *mpp)
 	if (mpp->always_on)
 		return 0;
 
-	if (mpp->hw_ops->clk_off)
-		mpp->hw_ops->clk_off(mpp);
-
 	if (atomic_xchg(&mpp->power_enabled, 0)) {
 		if (mpp->hw_ops->clk_off)
 			mpp->hw_ops->clk_off(mpp);
