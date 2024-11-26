@@ -24,31 +24,45 @@ typedef void* KmppTrie;
  * +----------------+
  * |  KmppTrieInfo  |
  * +----------------+
- * |  User context  |
- * +----------------+
  * |  name string   |
+ * +----------------+
+ * |  User context  |
  * +----------------+
  */
 typedef struct KmppTrieInfo_t {
-    const rk_u8 *name;
-    void        *ctx;
-    RK_S16      index;
-    RK_S16      str_len;
+    rk_u32      index       : 12;
+    rk_u32      ctx_len     : 12;
+    rk_u32      str_len     : 8;
 } KmppTrieInfo;
 
-rk_s32 kmpp_trie_init(KmppTrie *trie, rk_s32 info_size);
+rk_s32 kmpp_trie_init(KmppTrie *trie, const rk_u8 *name);
 rk_s32 kmpp_trie_deinit(KmppTrie trie);
 
-rk_s32 kmpp_trie_add_info(KmppTrie trie, const rk_u8 *name, void *ctx);
+rk_s32 kmpp_trie_add_info(KmppTrie trie, const rk_u8 *name, void *ctx, rk_u32 ctx_len);
+rk_s32 kmpp_trie_import(KmppTrie trie, void *root);
 
 rk_s32 kmpp_trie_get_node_count(KmppTrie trie);
 rk_s32 kmpp_trie_get_info_count(KmppTrie trie);
 rk_s32 kmpp_trie_get_buf_size(KmppTrie trie);
+void *kmpp_trie_get_node_root(KmppTrie trie);
+
+/* trie info handle to other elements */
+static inline const rk_u8 *kmpp_trie_info_name(KmppTrieInfo *info)
+{
+    return (info) ? (const rk_u8 *)(info + 1) : NULL;
+}
+
+static inline void *kmpp_trie_info_ctx(KmppTrieInfo *info)
+{
+    return (info) ? (void *)((rk_u8 *)(info + 1) + info->str_len) : NULL;
+}
 
 /* trie lookup function */
 KmppTrieInfo *kmpp_trie_get_info(KmppTrie trie, const rk_u8 *name);
 KmppTrieInfo *kmpp_trie_get_info_first(KmppTrie trie);
 KmppTrieInfo *kmpp_trie_get_info_next(KmppTrie trie, KmppTrieInfo *info);
+/* root base lookup function */
+KmppTrieInfo *kmpp_trie_get_info_from_root(void *root, const rk_u8 *name);
 
 void kmpp_trie_dump(KmppTrie trie, const rk_u8 *func);
 #define kmpp_trie_dump_f(tire)  kmpp_trie_dump(tire, __FUNCTION__)

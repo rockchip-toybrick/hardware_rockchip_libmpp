@@ -50,6 +50,11 @@ IF(${BUILD_KMPP_OSAL})
     add_subdirectory("osal")
 ENDIF(${BUILD_KMPP_OSAL})
 
+option(BUILD_KMPP_SYS "Build kernel system modules" ON)
+IF(${BUILD_KMPP_SYS})
+    add_subdirectory("sys")
+ENDIF(${BUILD_KMPP_SYS})
+
 option(BUILD_KMPP "Build kernel mpp libraries" ON)
 IF(${BUILD_KMPP})
     add_subdirectory("mpp_service")

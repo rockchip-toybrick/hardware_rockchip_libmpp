@@ -108,6 +108,9 @@ struct osal_fs_dev_mgr_t {
     struct cdev *cdev;
     struct device *dev;
 
+    /* device vm property */
+    struct vm_operations_struct *vm_ops;
+
     rk_u32 need_free;
 };
 

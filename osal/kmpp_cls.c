@@ -5,13 +5,20 @@
 
 #define MODULE_TAG "kmpp_class"
 
+#include <linux/mm.h>
+#include <linux/mman.h>
 #include <linux/cdev.h>
 #include <linux/of_platform.h>
 
+#include "rk-mpp-kobj.h"
+
 #include "kmpp_macro.h"
+#include "kmpp_atomic.h"
 #include "kmpp_env.h"
 #include "kmpp_mem.h"
 #include "kmpp_log.h"
+#include "kmpp_bitops.h"
+#include "kmpp_mutex.h"
 #include "kmpp_dev_impl.h"
 #include "kmpp_cls.h"
 #include "kmpp_string.h"
@@ -19,7 +26,8 @@
 #define KMPP_CLS_DBG_FLOW               (0x00000001)
 #define KMPP_CLS_DBG_FOPS               (0x00000002)
 #define KMPP_CLS_DBG_DEV                (0x00000004)
-#define KMPP_CLS_DBG_DETAIL             (0x00000008)
+#define KMPP_CLS_DBG_VM                 (0x00000008)
+#define KMPP_CLS_DBG_DETAIL             (0x00000010)
 
 #define kmpp_cls_dbg(flag, fmt, ...)    kmpp_dbg(osal_cls_debug, flag, fmt, ## __VA_ARGS__)
 #define kmpp_cls_dbg_f(flag, fmt, ...)  kmpp_dbg_f(osal_cls_debug, flag, fmt, ## __VA_ARGS__)
@@ -27,10 +35,36 @@
 #define kmpp_cls_dbg_flow(fmt, ...)     kmpp_cls_dbg_f(KMPP_CLS_DBG_FLOW, fmt, ## __VA_ARGS__)
 #define kmpp_cls_dbg_fops(fmt, ...)     kmpp_cls_dbg_f(KMPP_CLS_DBG_FOPS, fmt, ## __VA_ARGS__)
 #define kmpp_cls_dbg_dev(fmt, ...)      kmpp_cls_dbg_f(KMPP_CLS_DBG_DEV, fmt, ## __VA_ARGS__)
+#define kmpp_cls_dbg_vm(fmt, ...)       kmpp_cls_dbg_f(KMPP_CLS_DBG_VM, fmt, ## __VA_ARGS__)
 #define kmpp_cls_dbg_detail(fmt, ...)   kmpp_cls_dbg_f(KMPP_CLS_DBG_DETAIL, fmt, ## __VA_ARGS__)
+
+#define vm_to_node(x)                   container_of(x, osal_vm_node, vm)
+#define fsdev_to_impl(x)                container_of(x, osal_fs_dev_impl, dev)
 
 //static rk_u32 osal_cls_debug = KMPP_CLS_DBG_FOPS | KMPP_CLS_DBG_FLOW;
 static rk_u32 osal_cls_debug = 0;
+
+typedef struct osal_fs_dev_impl_t {
+    /* export to external user */
+    osal_fs_dev             dev;
+
+    /* vm management */
+    rk_ul                   vm_id_bitmap;
+    osal_mutex              *lock;
+    osal_list_head          list_idle;
+    osal_list_head          list_pending;
+    osal_list_head          list_mapped;
+    osal_list_head          list_failed;
+} osal_fs_dev_impl;
+
+typedef struct osal_vm_node_t {
+    osal_fs_vm              vm;
+    osal_list_head          list;
+    osal_atomic             *refcnt;
+
+    rk_s32                  size_aligned;
+    rk_s32                  pending_id;
+} osal_vm_node;
 
 rk_s32 osal_env_class_init(void)
 {
@@ -156,20 +190,30 @@ EXPORT_SYMBOL(osal_class_deinit);
 static int osal_fs_open(struct inode *inode, struct file *file)
 {
     osal_fs_dev_mgr *mgr = ((void *)inode->i_cdev) - sizeof(*mgr);
+    osal_fs_dev_impl *impl = NULL;
     osal_fs_dev *dev = NULL;
+    rk_s32 lock_size = osal_mutex_size();
     rk_s32 ret = rk_nok;
 
-    dev = kmpp_calloc(sizeof(osal_fs_dev) + mgr->priv_size);
-    if (!dev) {
+    impl = kmpp_calloc(sizeof(osal_fs_dev_impl) + lock_size + mgr->priv_size);
+    if (!impl) {
         kmpp_loge_f("failed to create private_data size %d\n", mgr->priv_size);
         return rk_nok;
     }
+
+    dev = &impl->dev;
+    impl->vm_id_bitmap = -1;
+    osal_mutex_assign(&impl->lock, (void *)(impl + 1), lock_size);
+    OSAL_INIT_LIST_HEAD(&impl->list_idle);
+    OSAL_INIT_LIST_HEAD(&impl->list_pending);
+    OSAL_INIT_LIST_HEAD(&impl->list_mapped);
 
     dev->name = mgr->name;
     dev->mgr = mgr;
     dev->drv_data = mgr->drv_data;
     dev->file_data = file;
-    dev->priv_data = (void *)(dev + 1);
+    dev->priv_data = (void *)((RK_U8 *)impl->lock + lock_size);
+    dev->priv_size = mgr->priv_size;
 
     kmpp_cls_dbg_fops("%s mgr %px drv_data %px priv %px\n",
                       dev->name, dev->drv_data, dev->priv_data);
@@ -177,19 +221,20 @@ static int osal_fs_open(struct inode *inode, struct file *file)
     if (mgr->fops.open) {
         ret = mgr->fops.open(dev);
         if (ret) {
-            kmpp_free(dev);
+            kmpp_free(impl);
             return ret;
         }
     }
 
-    file->private_data = dev;
+    file->private_data = impl;
 
     return nonseekable_open(inode, file);
 }
 
 static int osal_fs_release(struct inode *inode, struct file *file)
 {
-    osal_fs_dev *dev = file->private_data;
+    osal_fs_dev_impl *impl = file->private_data;
+    osal_fs_dev *dev = &impl->dev;
     osal_fs_dev_mgr *mgr = dev->mgr;
     rk_s32 ret = rk_nok;
 
@@ -201,14 +246,38 @@ static int osal_fs_release(struct inode *inode, struct file *file)
     if (mgr->fops.release)
         ret = mgr->fops.release(dev);
 
-    kmpp_free(dev);
+    {
+        osal_vm_node *node, *tmp;
+        OSAL_LIST_HEAD(list);
+
+        osal_mutex_lock(impl->lock);
+        osal_list_for_each_entry_safe(node, tmp, &impl->list_idle, osal_vm_node, list) {
+            osal_list_move_tail(&node->list, &list);
+        }
+        osal_list_for_each_entry_safe(node, tmp, &impl->list_pending, osal_vm_node, list) {
+            osal_list_move_tail(&node->list, &list);
+        }
+        osal_list_for_each_entry_safe(node, tmp, &impl->list_mapped, osal_vm_node, list) {
+            osal_list_move_tail(&node->list, &list);
+        }
+        osal_mutex_unlock(impl->lock);
+
+        osal_list_for_each_entry_safe(node, tmp, &list, osal_vm_node, list) {
+            osal_fs_vm_munmap(&node->vm);
+        }
+    }
+
+    osal_mutex_deinit(&impl->lock);
+
+    kmpp_free(impl);
 
     return ret;
 }
 
 static long osal_fs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-    osal_fs_dev *dev = file->private_data;
+    osal_fs_dev_impl *impl = file->private_data;
+    osal_fs_dev *dev = &impl->dev;
     osal_fs_dev_mgr *mgr = dev->mgr;
     rk_s32 ret = rk_nok;
 
@@ -221,17 +290,117 @@ static long osal_fs_ioctl(struct file *file, unsigned int cmd, unsigned long arg
     return ret;
 }
 
+#define vm_node_unref_f(node) vm_node_unref(node, __func__)
+static rk_s32 vm_node_unref(osal_vm_node *node, const rk_u8 *func)
+{
+    if (!osal_atomic_dec_return(node->refcnt)) {
+        kmpp_cls_dbg_vm("free node at %s\n", func);
+        kmpp_free(node);
+        return 1;
+    }
+
+    kmpp_cls_dbg_vm("after dec return refcnt %d at %s\n",
+                    osal_atomic_read(node->refcnt), func);
+
+    return 0;
+}
+
+static void osal_fs_vm_open(struct vm_area_struct *vma)
+{
+    kmpp_logi_f("dev %px\n", vma->vm_private_data);
+}
+
+static void osal_fs_vm_close(struct vm_area_struct *vma)
+{
+    osal_vm_node *node = KMPP_FETCH_AND(&vma->vm_private_data, NULL);
+
+    if (node && node->vm.dev) {
+        osal_fs_dev_impl *dev = fsdev_to_impl(node->vm.dev);
+
+        osal_mutex_lock(dev->lock);
+        osal_list_del_init(&node->list);
+        osal_mutex_unlock(dev->lock);
+
+        kmpp_cls_dbg_vm("vma %px kaddr %px uaddr %#lx refcnt %d\n",
+                        vma, node->vm.kaddr, node->vm.uaddr,
+                        osal_atomic_read(node->refcnt));
+
+        vm_node_unref_f(node);
+    } else {
+        kmpp_loge_f("invalid node %px dev %px\n", node, node ? node->vm.dev : NULL);
+    }
+}
+
+static const struct vm_operations_struct osal_fs_vm_ops = {
+    .open   = osal_fs_vm_open,
+    .close  = osal_fs_vm_close,
+};
+
 static int osal_fs_mmap(struct file *file, struct vm_area_struct *vma)
 {
-    osal_fs_dev *dev = file->private_data;
+    osal_fs_dev_impl *impl = file->private_data;
+    osal_fs_dev *dev = &impl->dev;
     osal_fs_dev_mgr *mgr = dev->mgr;
+    osal_vm_node *node = NULL;
+    osal_vm_node *tmp = NULL;
+    rk_s32 pending_id = -1;
     rk_s32 ret = rk_nok;
 
-    kmpp_cls_dbg_fops("%s priv %px start %lx end %lx\n",
-                      dev->name, dev->priv_data, vma->vm_start, vma->vm_end);
+    kmpp_cls_dbg_fops("%s priv %px vma [%#lx:%#lx] pgoff %#x\n", dev->name,
+                      dev->priv_data, vma->vm_start, vma->vm_end, vma->vm_pgoff);
 
-    if (mgr->fops.mmap)
-        ret = mgr->fops.mmap(dev, vma->vm_start, vma->vm_end);
+    /* setup vm_open and vm_close */
+    vma->vm_ops = &osal_fs_vm_ops;
+
+    if (vma->vm_pgoff < PGOFF_PENDING_NODE_BASE ||
+        vma->vm_pgoff >= PGOFF_PENDING_NODE_END) {
+        kmpp_loge_f("invalid pgoff %d not in range [%d:%d]\n", vma->vm_pgoff,
+                    PGOFF_PENDING_NODE_BASE, PGOFF_PENDING_NODE_END);
+        return rk_nok;
+	}
+
+    pending_id = vma->vm_pgoff - PGOFF_PENDING_NODE_BASE;
+
+    kmpp_cls_dbg_vm("pending_id %d\n", pending_id);
+
+    /* NOTE: clear pgoff */
+    vma->vm_pgoff = 0;
+    vma->vm_private_data = NULL;
+    vm_flags_set(vma, VM_DONTCOPY | VM_ACCOUNT);
+
+    osal_mutex_lock(impl->lock);
+
+    osal_list_for_each_entry_safe(node, tmp, &impl->list_pending, osal_vm_node, list) {
+        if (node->pending_id == pending_id) {
+            ret = remap_vmalloc_range(vma, node->vm.kaddr, 0);
+            if (ret < 0) {
+                kmpp_loge_f("remap_vmalloc_range %px failed ret %d\n",
+                            node->vm.kaddr, ret);
+                break;
+            }
+
+            node->vm.uaddr = vma->vm_start;
+            vma->vm_private_data = node;
+            osal_atomic_inc_return(node->refcnt);
+            osal_list_move_tail(&node->list, &impl->list_mapped);
+
+            kmpp_cls_dbg_vm("%s mmap - kaddr %px -> %#lx refcnt %d\n",
+                            mgr->name, node->vm.kaddr, vma->vm_start,
+                            osal_atomic_read(node->refcnt));
+
+            ret = rk_ok;
+            break;
+        }
+    }
+
+    osal_set_bit(pending_id, &impl->vm_id_bitmap);
+    if (ret)
+        osal_list_del_init(&node->list);
+
+    osal_mutex_unlock(impl->lock);
+
+    kmpp_cls_dbg_fops("%s kaddr %px -> vma [%#lx:%#lx] ret %d\n", dev->name,
+                      node->vm.kaddr, vma->vm_start, vma->vm_end, ret);
 
     return ret;
 }
@@ -352,3 +521,105 @@ rk_s32 osal_fs_dev_mgr_deinit(osal_fs_dev_mgr *mgr)
     return rk_ok;
 }
 EXPORT_SYMBOL(osal_fs_dev_mgr_deinit);
+
+rk_s32 osal_fs_vm_mmap(osal_fs_vm **vm, osal_fs_dev *dev, void *kaddr, rk_s32 size, rk_ul prot)
+{
+    osal_fs_dev_impl *impl = (osal_fs_dev_impl *)dev;
+    osal_vm_node *node = NULL;
+    rk_s32 pending_id;
+    rk_ul uaddr = 0;
+    rk_s32 ret = rk_nok;
+
+    if (!vm || !dev || !kaddr || !size) {
+        kmpp_loge_f("invalid param vm %px dev %px kaddr %px, size %d\n",
+                    vm, dev, kaddr, size);
+        return rk_nok;
+    }
+
+    osal_mutex_lock(impl->lock);
+
+    pending_id = osal_find_first_bit(&impl->vm_id_bitmap, BITS_PER_LONG);
+    if (pending_id >= BITS_PER_LONG) {
+        kmpp_loge_f("no pending id\n");
+        osal_mutex_unlock(impl->lock);
+        goto done;
+    }
+
+    node = osal_list_first_entry_or_null(&impl->list_idle, osal_vm_node, list);
+    if (!node) {
+        node = kmpp_calloc(sizeof(osal_vm_node) + osal_atomic_size());
+        if (node) {
+            OSAL_INIT_LIST_HEAD(&node->list);
+            osal_atomic_assign(&node->refcnt, (void *)(node + 1), osal_atomic_size());
+        }
+    }
+
+    if (!node) {
+        kmpp_loge_f("alloc vm node failed\n");
+        osal_mutex_unlock(impl->lock);
+        goto done;
+    }
+
+    osal_atomic_fetch_inc(node->refcnt);
+    node->vm.dev = &impl->dev;
+    node->vm.priv_data = NULL;
+    node->vm.kaddr = kaddr;
+    node->vm.size = size;
+    node->vm.prot = prot;
+    node->vm.uaddr = 0;
+    node->size_aligned = PAGE_ALIGN(size);
+    node->pending_id = pending_id;
+
+    osal_clear_bit(pending_id, &impl->vm_id_bitmap);
+    osal_list_move_tail(&node->list, &impl->list_pending);
+
+    osal_mutex_unlock(impl->lock);
+
+    uaddr = vm_mmap(dev->file_data, 0, node->size_aligned,
+                    (prot == KMPP_VM_PROT_RO) ? PROT_READ : PROT_READ | PROT_WRITE,
+                    MAP_SHARED, TO_PENDING_NODE_IDX(pending_id));
+
+    if (IS_ERR_VALUE(uaddr)) {
+        kmpp_loge_f("vm_mmap %d %s fail ret %ld\n", node->size_aligned,
+                    node->vm.prot ? "rw" : "ro", uaddr);
+        vm_node_unref_f(node);
+
+        uaddr = 0;
+        goto done;
+    }
+
+    node->vm.uaddr = uaddr;
+    ret = rk_ok;
+
+done:
+
+    *vm = node ? &node->vm : NULL;
+
+    return ret;
+}
+EXPORT_SYMBOL(osal_fs_vm_mmap);
+
+rk_s32 osal_fs_vm_munmap(osal_fs_vm *vm)
+{
+    osal_vm_node *node = vm_to_node(vm);
+    rk_s32 ret = rk_nok;
+
+    if (!vm || !vm->dev || !vm->kaddr || !vm->uaddr) {
+        kmpp_loge_f("invalid param vm %px dev %px kaddr %px uaddr %#lx\n",
+                    vm, vm ? vm->dev : NULL, vm ? vm->kaddr : NULL,
+                    vm ? vm->uaddr : 0);
+        return rk_nok;
+    }
+
+    node = vm_to_node(vm);
+
+    if (!vm_node_unref_f(node)) {
+        ret = vm_munmap(vm->uaddr, PAGE_ALIGN(vm->size));
+        if (ret)
+            kmpp_loge_f("vm_munmap fail [%#lx:%d] ret %ld\n",
+                        vm->uaddr, vm->size, ret);
+    }
+
+    return ret;
+}
+EXPORT_SYMBOL(osal_fs_vm_munmap);

@@ -8,8 +8,6 @@
 
 #include "kmpp_obj.h"
 
-const rk_u8 *strof_cfgtype(CfgType type);
-
 rk_s32 kmpp_obj_impl_set_s32(KmppLocTbl *tbl, void *cfg, rk_s32 val);
 rk_s32 kmpp_obj_impl_get_s32(KmppLocTbl *tbl, void *cfg, rk_s32 *val);
 rk_s32 kmpp_obj_impl_set_u32(KmppLocTbl *tbl, void *cfg, rk_u32 val);
