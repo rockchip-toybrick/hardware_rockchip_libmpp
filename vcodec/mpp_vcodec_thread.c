@@ -174,17 +174,14 @@ int vcodec_thread_destroy(struct vcodec_threads *thds)
 	if (check_vcodec_threads(thds, "destroy"))
 		return -EINVAL;
 
-
 	spin_lock_irqsave(&thds->lock, lock_flags);
-
 	thds->status = VCODEC_THREADS_INVALID;
+	spin_unlock_irqrestore(&thds->lock, lock_flags);
 
 	vcodec_thread_reset(thds);
 
 	thds->check = NULL;
 	thds->module = NULL;
-
-	spin_unlock_irqrestore(&thds->lock, lock_flags);
 
 	kfree(thds);
 
