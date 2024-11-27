@@ -145,22 +145,6 @@ void *osal_krealloc_f(const char *func, void *ptr, rk_u32 oldsize, rk_u32 newsiz
 }
 EXPORT_SYMBOL(osal_krealloc_f);
 
-void *osal_kcalloc_share_f(const char *func, rk_u32 size)
-{
-    void *p;
-
-    if (!kmem_debug) {
-        p = vmalloc_user(size);
-    } else {
-        p = vmalloc_user(size + kmem_node_size);
-        if (!IS_ERR_OR_NULL(p))
-            p = kmem_add(p, func, size);
-    }
-
-    return p;
-}
-EXPORT_SYMBOL(osal_kcalloc_share_f);
-
 void osal_kfree_f(const char *func, void *ptr)
 {
     if (!IS_ERR_OR_NULL(ptr)) {
@@ -173,3 +157,19 @@ void osal_kfree_f(const char *func, void *ptr)
     }
 }
 EXPORT_SYMBOL(osal_kfree_f);
+
+void *osal_malloc_share_f(const char *func, rk_u32 size)
+{
+    return vmalloc_user(size);
+}
+EXPORT_SYMBOL(osal_malloc_share_f);
+
+void osal_kfree_share_f(const char *func, void *ptr)
+{
+    if (!IS_ERR_OR_NULL(ptr)) {
+        vfree(ptr);
+    } else {
+        kmpp_loge("can not kfree %px from %s\n", ptr, func);
+    }
+}
+EXPORT_SYMBOL(osal_kfree_share_f);
