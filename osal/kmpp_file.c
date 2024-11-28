@@ -7,7 +7,7 @@
 
 #include "kmpp_mem.h"
 #include "kmpp_atomic.h"
-#include "kmpp_fs.h"
+#include "kmpp_file.h"
 
 osal_file *osal_fopen(const char *filename, int flags, int mode)
 {

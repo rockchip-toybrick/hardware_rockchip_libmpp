@@ -17,7 +17,7 @@
 #include "kmpp_cls.h"
 #include "kmpp_dev.h"
 #include "kmpp_env.h"
-#include "kmpp_fs.h"
+#include "kmpp_file.h"
 #include "kmpp_mem.h"
 #include "kmpp_log.h"
 #include "kmpp_mutex.h"

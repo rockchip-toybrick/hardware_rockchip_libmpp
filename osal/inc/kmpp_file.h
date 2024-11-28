@@ -3,8 +3,8 @@
  * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
  */
 
-#ifndef __KMPP_FS_H__
-#define __KMPP_FS_H__
+#ifndef __KMPP_FILE_H__
+#define __KMPP_FILE_H__
 
 #include "rk_type.h"
 
@@ -34,4 +34,4 @@ rk_s32 osal_fread(osal_file *file, char *buf, unsigned int len);
 rk_s32 osal_fwrite(osal_file *file, const char *buf, int len);
 rk_s32 osal_fseek(osal_file *file, rk_s32 offset, int whence);
 
-#endif /* __KMPP_FS_H__ */
+#endif /* __KMPP_FILE_H__ */
