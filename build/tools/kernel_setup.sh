@@ -137,10 +137,7 @@ else
     exit 1
 fi
 
-KERNEL_MAKE_OPT=
 if [ $KERN_VERSION -ge 6 ]; then
-    echo "use llvm for kernel later than 6.1"
-    KERNEL_MAKE_OPT+="LLVM=1;LLVM_IAS=1"
     FOUND_KERNEL=1
 elif [ $KERN_VERSION -ge 3 ]; then
     FOUND_KERNEL=1
@@ -258,7 +255,26 @@ case ${TOOLCHAIN_COUNT} in
         fi
 esac
 
+CROSS_COMPILER_PREFIX=
+KERNEL_MAKE_OPT=
 if [ $FOUND_TOOLCHAIN -eq 0 ]; then
     echo "can not found any valid toolchain"
     exit 1
+else
+    echo "toolchain     : $TOOLCHAIN_DIR"
+
+    CLANG_PATH=$(find "$TOOLCHAIN_DIR" -type f -name "clang" -print -quit)
+    if [ -n "$CLANG_PATH" ]; then
+        KERNEL_MAKE_OPT+="LLVM=1;LLVM_IAS=1"
+        CROSS_COMPILER_PREFIX="aarch64-linux-gnu-"
+        echo "cross_compile : $CROSS_COMPILER_PREFIX $KERNEL_MAKE_OPT"
+    else
+        GCC_PATH=$(find "$TOOLCHAIN_DIR" -type f -name "*-gcc" -print -quit)
+        if [ -n "$GCC_PATH" ]; then
+            CROSS_COMPILER_PREFIX=$(basename "$GCC_PATH" gcc)
+            echo "cross_compile : $CROSS_COMPILER_PREFIX"
+        else
+            echo "cannot find any compiler in $TOOLCHAIN_DIR"
+        fi
+    fi
 fi

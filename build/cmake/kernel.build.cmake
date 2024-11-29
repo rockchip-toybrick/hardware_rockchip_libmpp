@@ -104,7 +104,7 @@ FUNCTION(ADD_KBUILD MODULE_NAME)
         modules
         V=1
         -C ${KERNEL_DIR}
-        ARCH=arm64
+        ARCH=${ARCH_TYPE}
         CROSS_COMPILE=${CROSS_COMPILER_PREFIX}
         ${KERNEL_MAKE_OPT}
         M=${MODULE_DIR}
