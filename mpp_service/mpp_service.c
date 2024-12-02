@@ -397,8 +397,11 @@ static int mpp_service_probe(struct platform_device *pdev)
 	struct mpp_taskqueue *queue;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 5 };
 	const char *soc_name = NULL;
+	struct sched_attr attr = {
+		.sched_policy   = SCHED_FIFO,
+		.sched_priority = MAX_RT_PRIO - 1,
+	};
 
 	dev_info(dev, "%s\n", mpp_version);
 	dev_info(dev, "probe start\n");
@@ -430,8 +433,8 @@ static int mpp_service_probe(struct platform_device *pdev)
 		kthread_init_worker(&queue->worker);
 		queue->kworker_task = kthread_run(kthread_worker_fn, &queue->worker,
 						  "mpp_worker_%d", i);
-
-		sched_setscheduler(queue->kworker_task, SCHED_FIFO, &param);
+		attr.sched_nice = PRIO_TO_NICE(queue->kworker_task->static_prio);
+		sched_setattr_nocheck(queue->kworker_task, &attr);
 
 		srv->task_queues[i] = queue;
 	}

@@ -92,8 +92,11 @@ static int vcodec_thread_prepare(struct vcodec_threads *thds)
 {
 	int count = thds->cfg.count;
 	vcodec_work_func_t callback = thds->cfg.callback;
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 10 };
 	int i;
+	struct sched_attr attr = {
+		.sched_policy   = SCHED_FIFO,
+		.sched_priority = MAX_RT_PRIO - 1,
+	};
 
 	if (!count || count > VCODEC_MAX_WORK_THREAD || !callback) {
 		pr_err("invalid count %d callback %p", count, callback);
@@ -119,7 +122,8 @@ static int vcodec_thread_prepare(struct vcodec_threads *thds)
 		thd->kworker_task = kthread_run(kthread_worker_fn, &thd->worker,
 						"vcodec_thread_%d", i);
 		kthread_init_work(&thd->work, vcodec_thread_worker);
-		sched_setscheduler(thd->kworker_task, SCHED_FIFO, &param);
+		attr.sched_nice = PRIO_TO_NICE(thd->kworker_task->static_prio);
+		sched_setattr_nocheck(thd->kworker_task, &attr);
 		thread_dbg_flow("prepare thread %d done\n", i);
 	}
 	thread_dbg_flow("leave prepare\n");
