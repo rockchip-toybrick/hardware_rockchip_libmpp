@@ -42,9 +42,9 @@ rk_u64 osal_strtoull(const rk_u8 *cp, rk_u8 **endp, rk_u32 base);
 rk_ulong osal_strtoul(const rk_u8 *cp, rk_u8 **endp, rk_u32 base);
 rk_long osal_strtol(const rk_u8 *cp, rk_u8 **endp, rk_u32 base);
 rk_s64 osal_strtoll(const rk_u8 *cp, rk_u8 **endp, rk_u32 base);
-rk_s32 osal_snprintf(rk_u8 *buf, rk_s32 size, const rk_u8 *fmt, ...) __attribute__((format(printf, 3, 4)));
-rk_s32 osal_scnprintf(rk_u8 *buf, rk_s32 size, const rk_u8 *fmt, ...) __attribute__((format(printf, 3, 4)));
-rk_s32 osal_sprintf(rk_u8 *buf, const rk_u8 *fmt, ...) __attribute__((format(printf, 2, 3)));
+rk_s32 osal_snprintf(rk_u8 *buf, rk_s32 size, const rk_u8 *fmt, ...);
+rk_s32 osal_scnprintf(rk_u8 *buf, rk_s32 size, const rk_u8 *fmt, ...);
+rk_s32 osal_sprintf(rk_u8 *buf, const rk_u8 *fmt, ...);
 rk_s32 osal_sscanf(const rk_u8 *buf, const rk_u8 *fmt, ...);
 
 #endif /* __KMPP_STRING_H__ */
