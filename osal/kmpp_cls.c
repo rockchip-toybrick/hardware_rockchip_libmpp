@@ -9,6 +9,7 @@
 #include <linux/mman.h>
 #include <linux/cdev.h>
 #include <linux/of_platform.h>
+#include <linux/version_compat_defs.h>
 
 #include "rk-mpp-kobj.h"
 
