@@ -633,7 +633,6 @@ osal_dev *osal_dev_get(const char *name)
     osal_list_for_each_entry_safe(p, n, &srv->list_dev, osal_dev_impl, list_srv) {
         if (osal_strstr(p->dev.name, name)) {
             ret = &p->dev;
-            osal_mutex_unlock(srv->lock);
             break;
         }
     }
