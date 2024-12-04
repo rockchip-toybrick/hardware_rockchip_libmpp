@@ -94,7 +94,7 @@ typedef struct KmppShmGrpImpl_t {
 } KmppShmGrpImpl;
 
 typedef struct KmppShmImpl_t {
-    kmpp_obj_ref    uref;
+    KmppObjShm      uref;
 
     osal_fs_vm      *vm_shm;
 
@@ -211,7 +211,7 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
 
     switch (cmd) {
     case KMPP_SHM_IOC_QUERY_INFO : {
-        kmpp_obj_sinfo info;
+        rk_u64 uaddr;
 
         if (!grp->vm_trie) {
             ret = osal_fs_vm_mmap(&grp->vm_trie, file, grp->trie_buf,
@@ -222,15 +222,11 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
             }
         }
 
-        info.kobj_type_id = mgr->bn_mgr_id;
-        info.shdr_size = sizeof(kmpp_obj_shdr);
-        info.batch_count = 1;
-        info.kobj_size = grp->vm_trie->size;
-        info.trie_root = (__u64)grp->vm_trie->uaddr;
+        uaddr = (rk_u64)grp->vm_trie->uaddr;
 
-        kmpp_shm_dbg_ioctl("query info root %#llx\n", info.trie_root);
+        kmpp_shm_dbg_ioctl("query obj trie root %#llx\n", uaddr);
 
-        ret = copy_to_user(arg, &info, sizeof(info));
+        ret = copy_to_user(arg, &uaddr, sizeof(uaddr));
         if (ret)
             kmpp_loge_f("KMPP_SHM_IOC_QUERY_INFO copy_to_user fail ret %d\n", ret);
     } break;
@@ -264,7 +260,7 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
         }
     } break;
     case KMPP_SHM_IOC_PUT_SHM : {
-        kmpp_obj_ref ref;
+        KmppObjShm ref;
 
         ret = copy_from_user(&ref, arg, sizeof(ref));
         if (ret) {

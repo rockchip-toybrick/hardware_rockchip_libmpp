@@ -39,6 +39,16 @@
 #define kmpp_cls_dbg_vm(fmt, ...)       kmpp_cls_dbg_f(KMPP_CLS_DBG_VM, fmt, ## __VA_ARGS__)
 #define kmpp_cls_dbg_detail(fmt, ...)   kmpp_cls_dbg_f(KMPP_CLS_DBG_DETAIL, fmt, ## __VA_ARGS__)
 
+#define PENDING_NODE_ID_MIN         0
+#define PENDING_NODE_ID_MAX         (BITS_PER_LONG)
+#define PGOFF_PENDING_NODE_BASE     (64ul)
+#define PGOFF_PENDING_NODE_END      (PGOFF_PENDING_NODE_BASE + PENDING_NODE_ID_MAX)
+
+#define PENDING_NODE_START          ((PGOFF_PENDING_NODE_BASE) << PAGE_SHIFT)
+#define TO_PENDING_NODE_IDX(x)      ((PENDING_NODE_START) + ((x) << PAGE_SHIFT))
+#define TO_VM_MMAP_ID(x)            ((x - (PENDING_NODE_START)) >> PAGE_SHIFT)
+#define PENDING_NODE_END            TO_PENDING_NODE_IDX(BITS_PER_LONG)
+
 #define vm_to_node(x)                   container_of(x, osal_vm_node, vm)
 #define fsdev_to_impl(x)                container_of(x, osal_fs_dev_impl, dev)
 
