@@ -27,6 +27,7 @@ SET(KMPP_OSAL_SRC
     kmpp_sthd.c
     kmpp_thread.c
     kmpp_wait.c
+    kmpp_uaccess.c
 )
 
 ADD_KBUILD(osal SRC ${KMPP_OSAL_SRC})
