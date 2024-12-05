@@ -169,7 +169,8 @@ typedef struct MppBufferInfo_t {
 	size_t          size;
 	void            *ptr;
 	void            *hnd;
-	int             fd;
+	RK_S32          fd;
+	struct dma_buf  *dma_buf;
 	int             index;
 	RK_U32          phy_flg;
 	RK_U32          phy_addr;

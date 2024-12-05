@@ -20,6 +20,7 @@ INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/h264e)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/h265e)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/jpeg)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/common)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/osal/allocator)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/inc)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/common)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/common/h264)
@@ -116,6 +117,10 @@ SET(KMPP_SRC
     ../vcodec/osal/mpp_device.c
     ../vcodec/osal/mpp_maths.c
     ../vcodec/osal/mpp_mem.c
+    ../vcodec/osal/mpp_allocator.c
+    ../vcodec/osal/allocator/allocator_dmaheap.c
+    ../vcodec/osal/allocator/allocator_rkdmaheap.c
+    ../vcodec/osal/allocator/allocator_mpibuf.c
     ../vcodec/mpp_vcodec_thread.c
     ../vcodec/mpp_vcodec_test.c
     #mpp_av1dec.c
