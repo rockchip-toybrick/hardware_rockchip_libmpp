@@ -219,8 +219,8 @@ static int vdpp_extract_task_msg(struct vdpp_task *task,
 				return ret;
 
 			dst += req->offset - req_base;
-			if (copy_from_user(dst, req->data, req->size)) {
-				mpp_err("copy_from_user reg failed\n");
+			if (osal_copy_from_user(dst, req->data, req->size)) {
+				mpp_err("osal_copy_from_user reg failed\n");
 				return -EIO;
 			}
 			memcpy(&task->w_reqs[task->w_req_cnt++], req, sizeof(*req));
@@ -449,17 +449,13 @@ static int vdpp_result(struct mpp_dev *mpp,
 
 			if (!vdpp->zme_base)
 				continue;
-			if (copy_to_user(req->data,
-					 (u8 *)task->zme_reg + off,
-					 req->size)) {
-				mpp_err("copy_to_user reg_l2 fail\n");
+			if (osal_copy_to_user(req->data, (u8 *)task->zme_reg + off, req->size)) {
+				mpp_err("osal_copy_to_user reg_l2 fail\n");
 				return -EIO;
 			}
 		} else {
-			if (copy_to_user(req->data,
-					 (u8 *)task->reg + req->offset,
-					 req->size)) {
-				mpp_err("copy_to_user reg fail\n");
+			if (osal_copy_to_user(req->data, (u8 *)task->reg + req->offset, req->size)) {
+				mpp_err("osal_copy_to_user reg fail\n");
 				return -EIO;
 			}
 		}

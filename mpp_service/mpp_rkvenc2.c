@@ -803,8 +803,8 @@ static int rkvenc2_extract_rcb_info(struct rkvenc2_rcb_info *rcb_inf,
 		mpp_err("count %d,max_size %d\n", cnt, max_size);
 		return -EINVAL;
 	}
-	if (copy_from_user(rcb_inf->elem, req->data, req->size)) {
-		mpp_err("copy_from_user failed\n");
+	if (osal_copy_from_user(rcb_inf->elem, req->data, req->size)) {
+		mpp_err("osal_copy_from_user failed\n");
 		return -EINVAL;
 	}
 	rcb_inf->cnt = cnt;
@@ -850,8 +850,8 @@ static int rkvenc_extract_task_msg(struct mpp_session *session,
 					ret = -EINVAL;
 					goto fail;
 				}
-				if (copy_from_user(data, wreq->data, wreq->size)) {
-					mpp_err("copy_from_user fail, offset %08x\n", wreq->offset);
+				if (osal_copy_from_user(data, wreq->data, wreq->size)) {
+					mpp_err("osal_copy_from_user fail, offset %08x\n", wreq->offset);
 					ret = -EIO;
 					goto fail;
 				}
@@ -1789,8 +1789,8 @@ static int rkvenc_result(struct mpp_dev *mpp,
 
 		if (!reg)
 			return -EINVAL;
-		if (copy_to_user(req->data, reg, req->size)) {
-			mpp_err("copy_to_user reg fail\n");
+		if (osal_copy_to_user(req->data, reg, req->size)) {
+			mpp_err("osal_copy_to_user reg fail\n");
 			return -EIO;
 		}
 	}
@@ -1831,8 +1831,8 @@ static int rkvenc_control(struct mpp_session *session, struct mpp_request *req)
 		cnt = (cnt > ENC_INFO_BUTT) ? ENC_INFO_BUTT : cnt;
 		mpp_debug(DEBUG_IOCTL, "codec info count %d\n", cnt);
 		for (i = 0; i < cnt; i++) {
-			if (copy_from_user(&elem, req->data + i * sizeof(elem), sizeof(elem))) {
-				mpp_err("copy_from_user failed\n");
+			if (osal_copy_from_user(&elem, req->data + i * sizeof(elem), sizeof(elem))) {
+				mpp_err("osal_copy_from_user failed\n");
 				continue;
 			}
 			if (elem.type > ENC_INFO_BASE && elem.type < ENC_INFO_BUTT &&
@@ -2377,8 +2377,8 @@ task_done_ret:
 		} while (1);
 	}
 
-	if (copy_from_user(&cfg, req->data, sizeof(cfg))) {
-		mpp_err("copy_from_user failed\n");
+	if (osal_copy_from_user(&cfg, req->data, sizeof(cfg))) {
+		mpp_err("osal_copy_from_user failed\n");
 		return -EINVAL;
 	}
 

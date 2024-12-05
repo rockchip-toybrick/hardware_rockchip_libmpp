@@ -204,8 +204,8 @@ static int mpp_extract_rcb_info(struct rkvdec2_rcb_info *rcb_inf,
 		mpp_err("count %d,max_size %d\n", cnt, max_size);
 		return -EINVAL;
 	}
-	if (copy_from_user(rcb_inf->elem, req->data, req->size)) {
-		mpp_err("copy_from_user failed\n");
+	if (osal_copy_from_user(rcb_inf->elem, req->data, req->size)) {
+		mpp_err("osal_copy_from_user failed\n");
 		return -EINVAL;
 	}
 	rcb_inf->cnt = cnt;
@@ -236,9 +236,9 @@ static int rkvdec2_extract_task_msg(struct mpp_session *session,
 			ret = mpp_check_req(req, 0, sizeof(task->reg), off_s, off_e);
 			if (ret)
 				continue;
-			if (copy_from_user((u8 *)task->reg + req->offset,
-					   req->data, req->size)) {
-				mpp_err("copy_from_user reg failed\n");
+			if (osal_copy_from_user((u8 *)task->reg + req->offset,
+					   	req->data, req->size)) {
+				mpp_err("osal_copy_from_user reg failed\n");
 				return -EIO;
 			}
 			memcpy(&task->w_reqs[task->w_req_cnt++], req, sizeof(*req));
@@ -755,17 +755,13 @@ int rkvdec2_result(struct mpp_dev *mpp, struct mpp_task *mpp_task,
 		if (req->offset >= RKVDEC_PERF_SEL_OFFSET) {
 			u32 off = req->offset - RKVDEC_PERF_SEL_OFFSET;
 
-			if (copy_to_user(req->data,
-					 (u8 *)task->reg_sel + off,
-					 req->size)) {
-				mpp_err("copy_to_user perf_sel fail\n");
+			if (osal_copy_to_user(req->data, (u8 *)task->reg_sel + off, req->size)) {
+				mpp_err("osal_copy_to_user perf_sel fail\n");
 				return -EIO;
 			}
 		} else {
-			if (copy_to_user(req->data,
-					 (u8 *)task->reg + req->offset,
-					 req->size)) {
-				mpp_err("copy_to_user reg fail\n");
+			if (osal_copy_to_user(req->data, (u8 *)task->reg + req->offset, req->size)) {
+				mpp_err("osal_copy_to_user reg fail\n");
 				return -EIO;
 			}
 		}
@@ -803,8 +799,8 @@ static int rkvdec2_control(struct mpp_session *session, struct mpp_request *req)
 		cnt = (cnt > DEC_INFO_BUTT) ? DEC_INFO_BUTT : cnt;
 		mpp_debug(DEBUG_IOCTL, "codec info count %d\n", cnt);
 		for (i = 0; i < cnt; i++) {
-			if (copy_from_user(&elem, req->data + i * sizeof(elem), sizeof(elem))) {
-				mpp_err("copy_from_user failed\n");
+			if (osal_copy_from_user(&elem, req->data + i * sizeof(elem), sizeof(elem))) {
+				mpp_err("osal_copy_from_user failed\n");
 				continue;
 			}
 			if (elem.type > DEC_INFO_BASE && elem.type < DEC_INFO_BUTT &&

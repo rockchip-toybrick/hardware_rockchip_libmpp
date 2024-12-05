@@ -329,9 +329,8 @@ static int iep2_extract_task_msg(struct iep_task *task,
 
 		switch (req->cmd) {
 		case MPP_CMD_SET_REG_WRITE: {
-			if (copy_from_user(&task->params,
-					   req->data, req->size)) {
-				mpp_err("copy_from_user params failed\n");
+			if (osal_copy_from_user(&task->params, req->data, req->size)) {
+				mpp_err("osal_copy_from_user params failed\n");
 				return -EIO;
 			}
 		} break;
@@ -784,8 +783,8 @@ static int iep2_result(struct mpp_dev *mpp,
 	for (i = 0; i < task->r_req_cnt; i++) {
 		req = &task->r_reqs[i];
 
-		if (copy_to_user(req->data, (u8 *)&task->output, req->size)) {
-			mpp_err("copy_to_user reg fail\n");
+		if (osal_copy_to_user(req->data, (u8 *)&task->output, req->size)) {
+			mpp_err("osal_copy_to_user reg fail\n");
 			return -EIO;
 		}
 	}

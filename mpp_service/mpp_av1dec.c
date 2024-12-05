@@ -338,8 +338,8 @@ static int av1dec_extract_task_msg(struct av1dec_task *task,
 				base = task->reg_class[class].base;
 				regs = (u32 *)task->reg_class[class].data;
 				regs += MPP_BASE_TO_IDX(req->offset - base);
-				if (copy_from_user(regs, wreq->data, wreq->size)) {
-					mpp_err("copy_from_user fail, offset %08x\n", wreq->offset);
+				if (osal_copy_from_user(regs, wreq->data, wreq->size)) {
+					mpp_err("osal_copy_from_user fail, offset %08x\n", wreq->offset);
 					ret = -EIO;
 					goto fail;
 				}
@@ -757,8 +757,8 @@ static int av1dec_result(struct mpp_dev *mpp,
 			regs = (u32 *)task->reg_class[class].data;
 			regs += MPP_BASE_TO_IDX(req->offset - base);
 
-			if (copy_to_user(req->data, regs, req->size)) {
-				mpp_err("copy_to_user reg fail\n");
+			if (osal_copy_to_user(req->data, regs, req->size)) {
+				mpp_err("osal_copy_to_user reg fail\n");
 				return -EIO;
 			}
 		}

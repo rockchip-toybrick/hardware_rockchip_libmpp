@@ -26,6 +26,8 @@
 #include <soc/rockchip/pm_domains.h>
 #include <uapi/linux/rk-mpp.h>
 
+#include "kmpp_uaccess.h"
+
 #ifndef CONFIG_ROCKCHIP_MPP_PROC_FS
 #define CONFIG_ROCKCHIP_MPP_PROC_FS
 #endif

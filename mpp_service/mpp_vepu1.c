@@ -185,9 +185,9 @@ static int vepu_extract_task_msg(struct vepu_task *task,
 					    off_s, off_e);
 			if (ret)
 				continue;
-			if (copy_from_user((u8 *)task->reg + req->offset,
-					   req->data, req->size)) {
-				mpp_err("copy_from_user reg failed\n");
+			if (osal_copy_from_user((u8 *)task->reg + req->offset,
+					   	req->data, req->size)) {
+				mpp_err("osal_copy_from_user reg failed\n");
 				return -EIO;
 			}
 			memcpy(&task->w_reqs[task->w_req_cnt++],
@@ -383,10 +383,8 @@ static int vepu_result(struct mpp_dev *mpp,
 	for (i = 0; i < task->r_req_cnt; i++) {
 		req = &task->r_reqs[i];
 
-		if (copy_to_user(req->data,
-				 (u8 *)task->reg + req->offset,
-				 req->size)) {
-			mpp_err("copy_to_user reg fail\n");
+		if (osal_copy_to_user(req->data, (u8 *)task->reg + req->offset, req->size)) {
+			mpp_err("osal_copy_to_user reg fail\n");
 			return -EIO;
 		}
 	}
@@ -424,8 +422,8 @@ static int vepu_control(struct mpp_session *session, struct mpp_request *req)
 		mpp_debug(DEBUG_IOCTL, "codec info count %d\n", cnt);
 		down_write(&priv->rw_sem);
 		for (i = 0; i < cnt; i++) {
-			if (copy_from_user(&elem, req->data + i * sizeof(elem), sizeof(elem))) {
-				mpp_err("copy_from_user failed\n");
+			if (osal_copy_from_user(&elem, req->data + i * sizeof(elem), sizeof(elem))) {
+				mpp_err("osal_copy_from_user failed\n");
 				continue;
 			}
 			if (elem.type > ENC_INFO_BASE && elem.type < ENC_INFO_BUTT &&

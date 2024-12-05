@@ -189,8 +189,8 @@ static int jpgenc_extract_task_msg(struct jpgenc_task *task, struct mpp_task_msg
 			if (ret)
 				continue;
 
-			if (copy_from_user((u8 *)task->reg + req->offset, req->data, req->size)) {
-				mpp_err("copy_from_user reg failed\n");
+			if (osal_copy_from_user((u8 *)task->reg + req->offset, req->data, req->size)) {
+				mpp_err("osal_copy_from_user reg failed\n");
 				return -EIO;
 			}
 
@@ -335,10 +335,8 @@ static int jpgenc_result(struct mpp_dev *mpp, struct mpp_task *mpp_task, struct 
 
 	for (i = 0; i < task->r_req_cnt; i++) {
 		req = &task->r_reqs[i];
-		if (copy_to_user(req->data,
-				(u8 *)task->reg + req->offset,
-				req->size)) {
-			mpp_err("copy_to_user reg fail\n");
+		if (osal_copy_to_user(req->data, (u8 *)task->reg + req->offset, req->size)) {
+			mpp_err("osal_copy_to_user reg fail\n");
 			mpp_debug_leave();
 			return -EIO;
 		}

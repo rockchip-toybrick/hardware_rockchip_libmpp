@@ -1353,9 +1353,9 @@ static int mpp_process_request(struct mpp_session *session,
 				return -ENOMEM;
 			}
 
-			if (copy_from_user(session->trans_table,
-					   req->data, req->size)) {
-				mpp_err("copy_from_user failed\n");
+			if (osal_copy_from_user(session->trans_table,
+					   	req->data, req->size)) {
+				mpp_err("osal_copy_from_user failed\n");
 				return -EINVAL;
 			}
 			session->trans_count =
@@ -1423,8 +1423,8 @@ static int mpp_process_request(struct mpp_session *session,
 			return -EINVAL;
 
 		memset(data, 0, sizeof(data));
-		if (copy_from_user(data, req->data, req->size)) {
-			mpp_err("copy_from_user failed.\n");
+		if (osal_copy_from_user(data, req->data, req->size)) {
+			mpp_err("osal_copy_from_user failed.\n");
 			return -EINVAL;
 		}
 		count = req->size / sizeof(u32);
@@ -1444,8 +1444,8 @@ static int mpp_process_request(struct mpp_session *session,
 			mpp_debug(DEBUG_IOMMU, "fd %d => iova %08x\n",
 				  fd, data[i]);
 		}
-		if (copy_to_user(req->data, data, req->size)) {
-			mpp_err("copy_to_user failed.\n");
+		if (osal_copy_to_user(req->data, data, req->size)) {
+			mpp_err("osal_copy_to_user failed.\n");
 			return -EINVAL;
 		}
 	} break;
@@ -1460,8 +1460,8 @@ static int mpp_process_request(struct mpp_session *session,
 			return -EINVAL;
 
 		memset(data, 0, sizeof(data));
-		if (copy_from_user(data, req->data, req->size)) {
-			mpp_err("copy_from_user failed.\n");
+		if (osal_copy_from_user(data, req->data, req->size)) {
+			mpp_err("osal_copy_from_user failed.\n");
 			return -EINVAL;
 		}
 		count = req->size / sizeof(u32);
@@ -1526,7 +1526,7 @@ static int mpp_collect_msgs(struct list_head *head, struct mpp_session *session,
 
 next:
 	/* first, parse to fixed struct */
-	if (copy_from_user(&msg_v1, msg, sizeof(msg_v1)))
+	if (osal_copy_from_user(&msg_v1, msg, sizeof(msg_v1)))
 		return -EFAULT;
 
 	msg += sizeof(msg_v1);
@@ -1553,7 +1553,7 @@ next:
 		/* try session switch here */
 		usr_cmd = (struct mpp_bat_msg __user *)(unsigned long)msg_v1.data_ptr;
 
-		if (copy_from_user(&bat_msg, usr_cmd, sizeof(bat_msg)))
+		if (osal_copy_from_user(&bat_msg, usr_cmd, sizeof(bat_msg)))
 			return -EFAULT;
 
 		/* skip finished message */
@@ -1566,8 +1566,8 @@ next:
 
 			mpp_err("fd %d get session failed\n", bat_msg.fd);
 
-			if (copy_to_user(&usr_cmd->ret, &ret, sizeof(usr_cmd->ret)))
-				mpp_err("copy_to_user failed.\n");
+			if (osal_copy_to_user(&usr_cmd->ret, &ret, sizeof(usr_cmd->ret)))
+				mpp_err("osal_copy_to_user failed.\n");
 			goto session_switch_done;
 		}
 
@@ -1963,9 +1963,9 @@ int mpp_extract_reg_offset_info(struct reg_offset_info *off_inf,
 			cnt, off_inf->cnt, max_size);
 		return -EINVAL;
 	}
-	if (copy_from_user(&off_inf->elem[off_inf->cnt],
-			   req->data, req->size)) {
-		mpp_err("copy_from_user failed\n");
+	if (osal_copy_from_user(&off_inf->elem[off_inf->cnt],
+			   	req->data, req->size)) {
+		mpp_err("osal_copy_from_user failed\n");
 		return -EINVAL;
 	}
 	off_inf->cnt += cnt;
