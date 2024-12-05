@@ -594,56 +594,70 @@ MPP_RET mpp_buffer_info_get_with_caller(MppBuffer buffer, MppBufferInfo *info,
 	return MPP_OK;
 }
 
-MPP_RET mpp_buffer_flush_for_cpu_with_caller(ring_buf *buf, const char *caller)
+MPP_RET mpp_buffer_flush_for_cpu_with_caller(MppBuffer buffer, const char *caller)
 {
-	struct MppBufferImpl *p = (struct MppBufferImpl *)buf->buf;
-	RK_U32 offset = MPP_ALIGN_DOWN(buf->start_offset, CACHE_LINE_SIZE);
-	RK_U32 len;
+	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
 
-	if (NULL == p) {
-		mpp_err("mpp_buffer_set_offset invalid NULL input from %s\n", caller);
+	if (!p || !p->dmabuf) {
+		mpp_err_f("invalid NULL input from %s\n", caller);
 		return MPP_ERR_UNKNOW;
 	}
-	if ( buf->start_offset + buf->use_len >= p->info.size) {
-		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, offset,
-						 p->info.size - offset);
 
-		len = MPP_ALIGN(buf->start_offset + buf->use_len - p->info.size, CACHE_LINE_SIZE);
-		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, 0, len);
-
-	} else {
-		len = buf->start_offset + buf->use_len - offset;
-		len = MPP_ALIGN(len, CACHE_LINE_SIZE);
-		dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, offset, len);
-	}
+	dma_buf_begin_cpu_access(p->dmabuf, DMA_FROM_DEVICE);
 
 	return MPP_OK;
 }
 
-MPP_RET mpp_buffer_flush_for_device_with_caller(ring_buf *buf, const char *caller)
+MPP_RET mpp_buffer_flush_for_device_with_caller(MppBuffer buffer, const char *caller)
 {
-	struct MppBufferImpl *p = (struct MppBufferImpl *)buf->buf;
-	RK_U32 offset = MPP_ALIGN_DOWN(buf->start_offset, CACHE_LINE_SIZE);
-	RK_U32 len;
+	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
 
-	if (NULL == p) {
-		mpp_err("mpp_buffer_set_offset invalid NULL input from %s\n", caller);
+	if (!p || !p->dmabuf) {
+		mpp_err_f("invalid NULL input from %s\n", caller);
 		return MPP_ERR_UNKNOW;
 	}
-	if ( buf->start_offset + buf->use_len >= p->info.size) {
-		len = MPP_ALIGN(buf->use_len, CACHE_LINE_SIZE);
-		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, offset,
-					       p->info.size - offset);
 
-		len = MPP_ALIGN(buf->start_offset + buf->use_len - p->info.size, CACHE_LINE_SIZE);
-		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, 0, len);
+	dma_buf_end_cpu_access(p->dmabuf, DMA_TO_DEVICE);
 
-	} else {
-		len = buf->start_offset + buf->use_len - offset;
-		len = MPP_ALIGN(len, CACHE_LINE_SIZE);
-		dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, offset, len);
+	return MPP_OK;
+}
+
+MPP_RET mpp_buffer_flush_for_cpu_partial_with_caller(MppBuffer buffer, RK_U32 offset, RK_U32 len,
+						     const char *caller)
+{
+	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
+	RK_U32 _offset = 0;
+	RK_U32 _len = 0;
+
+	if (!p) {
+		mpp_err_f("invalid NULL input from %s\n", caller);
+		return MPP_ERR_UNKNOW;
 	}
 
+	_offset = MPP_ALIGN_DOWN(offset, CACHE_LINE_SIZE);
+	_len = MPP_ALIGN(len + offset - _offset, CACHE_LINE_SIZE);
+
+	dma_buf_begin_cpu_access_partial(p->dmabuf, DMA_FROM_DEVICE, _offset, _len);
+
+	return MPP_OK;
+}
+
+MPP_RET mpp_buffer_flush_for_device_partial_with_caller(MppBuffer buffer, RK_U32 offset, RK_U32 len,
+							const char *caller)
+{
+	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
+	RK_U32 _offset = 0;
+	RK_U32 _len = 0;
+
+	if (!p) {
+		mpp_err_f("invalid NULL input from %s\n", caller);
+		return MPP_ERR_UNKNOW;
+	}
+
+	_offset = MPP_ALIGN_DOWN(offset, CACHE_LINE_SIZE);
+	_len = MPP_ALIGN(len + offset - _offset, CACHE_LINE_SIZE);
+
+	dma_buf_end_cpu_access_partial(p->dmabuf, DMA_TO_DEVICE, _offset, _len);
 
 	return MPP_OK;
 }

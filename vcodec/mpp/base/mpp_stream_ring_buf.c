@@ -206,3 +206,35 @@ MPP_RET ring_buf_update_min_size(ring_buf_pool *ctx, RK_U32 min_size)
 
 	return MPP_OK;
 }
+
+MPP_RET mpp_ring_buf_flush(ring_buf *buf, RK_U8 for_cpu)
+{
+	MppBuffer buffer = buf->buf;
+	RK_U32 offset = buf->start_offset;
+	RK_U32 len, size;
+	MPP_RET ret = MPP_OK;
+
+	if (!buffer) {
+		mpp_err_f("invalid NULL input\n");
+		return MPP_ERR_UNKNOW;
+	}
+	size = mpp_buffer_get_size(buffer);
+	if (buf->start_offset + buf->use_len >= size) {
+		len = buf->start_offset + buf->use_len - size;
+		if (for_cpu) {
+			ret = mpp_buffer_flush_for_cpu_partial(buffer, offset, size - offset);
+			ret |= mpp_buffer_flush_for_cpu_partial(buffer, 0, len);
+		} else {
+			ret = mpp_buffer_flush_for_device_partial(buffer, offset, size - offset);
+			ret |= mpp_buffer_flush_for_device_partial(buffer, 0, len);
+		}
+	} else {
+		len = buf->use_len;
+		if (for_cpu)
+			ret = mpp_buffer_flush_for_cpu_partial(buffer, offset, len);
+		else
+			ret = mpp_buffer_flush_for_device_partial(buffer, offset, len);
+	}
+
+	return ret;
+}

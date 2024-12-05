@@ -294,7 +294,7 @@ int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
 
 	/* flush cache before get packet*/
 	if (packet->buf.buf)
-		mpp_buffer_flush_for_cpu(&packet->buf);
+		mpp_ring_buf_flush(&packet->buf, 1);
 	atomic_dec(&chan_entry->stream_count);
 
 	enc_packet->flag = mpp_packet_get_flag(packet);

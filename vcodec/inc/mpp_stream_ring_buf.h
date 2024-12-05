@@ -52,4 +52,6 @@ MPP_RET ring_buf_get_free(ring_buf_pool *ctx, ring_buf *buf, RK_U32 align,
 			  RK_U32 min_size, RK_U32 stream_num);
 MPP_RET ring_buf_update_min_size(ring_buf_pool *ctx, RK_U32 min_zie);
 
+MPP_RET mpp_ring_buf_flush(ring_buf *buf, RK_U8 for_cpu);
+
 #endif /*__MPP_STREAM_RING_BUF_H__*/

@@ -1468,7 +1468,7 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 
 	if (len && task->output->buf) {
 		task->output->use_len = len;
-		mpp_buffer_flush_for_device(task->output);
+		mpp_ring_buf_flush(task->output, 0);
 	} else if (len && task->output->mpi_buf_id) {
 		struct device *dev = mpp_get_dev(ctx->dev);
 

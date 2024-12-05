@@ -1375,7 +1375,7 @@ static void setup_vepu500_io_buf(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 
 	if (off_out && task->output->buf) {
 		task->output->use_len = off_out;
-		mpp_buffer_flush_for_device(task->output);
+		mpp_ring_buf_flush(task->output, 0);
 	} else if (off_out && task->output->mpi_buf_id) {
 		struct device *dev = mpp_get_dev(ctx->dev);
 		dma_sync_single_for_device(dev, task->output->mpi_buf_id, off_out, DMA_TO_DEVICE);
