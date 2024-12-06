@@ -182,27 +182,6 @@ static void mpp_session_clear_online_task(struct mpp_dev *mpp, struct mpp_sessio
 	}
 }
 
-static struct mpp_session *mpp_session_init(void)
-{
-	struct mpp_session *session = kzalloc(sizeof(*session), GFP_KERNEL);
-
-	if (!session)
-		return NULL;
-
-	session->pid = current->pid;
-
-	mutex_init(&session->pending_lock);
-	INIT_LIST_HEAD(&session->pending_list);
-	INIT_LIST_HEAD(&session->service_link);
-	INIT_LIST_HEAD(&session->session_link);
-
-	atomic_set(&session->task_count, 0);
-	atomic_set(&session->release_request, 0);
-
-	mpp_dbg_session("session %p init\n", session);
-	return session;
-}
-
 static void mpp_session_deinit_default(struct mpp_session *session)
 {
 	if (session->mpp) {
@@ -1714,6 +1693,9 @@ static int fops_show_clk(struct seq_file *file, void *v)
 
 		for (i = 0; i < parent_num; i++) {
 			struct clk_hw *p_hw = clk_hw_get_parent_by_index(hw, i);
+
+			if (!p_hw)
+				continue;
 
 			seq_printf(file, "parent[%d]: %s %ldHz ",
 				   i, clk_hw_get_name(p_hw), clk_hw_get_rate(p_hw));

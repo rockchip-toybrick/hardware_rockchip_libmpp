@@ -503,7 +503,7 @@ static int mpp_service_probe(struct platform_device *pdev)
 			}
 		}
 	}
-
+	g_srv = srv;
 	dev_info(dev, "probe success\n");
 
 	return 0;

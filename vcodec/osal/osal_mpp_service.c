@@ -24,7 +24,6 @@ typedef struct MppDevMppService_t {
 	struct mpp_session *chnl;
 
 	RK_S32 req_cnt;
-	RK_S32 reg_offset_count;
 	MppReqV1 reqs[MAX_REQ_NUM];
 	RK_S32 info_count;
 
@@ -125,11 +124,10 @@ MPP_RET mpp_service_cmd_send(void *ctx)
 		for (i = 0; i < p->req_cnt; i++)
 			p->reqs[i].flag |= MPP_FLAGS_MULTI_MSG;
 	}
-	p->reqs[p->req_cnt - 1].flag |= MPP_FLAGS_LAST_MSG;
+	p->reqs[p->req_cnt - 1].flag |= MPP_FLAGS_LAST_MSG | MPP_FLAGS_REG_FD_NO_TRANS;
 	if (p->mppdev_ops->chnl_add_req)
 		ret = p->mppdev_ops->chnl_add_req(p->chnl, &p->reqs[0]);
 	p->req_cnt = 0;
-	p->reg_offset_count = 0;
 
 	return ret;
 }

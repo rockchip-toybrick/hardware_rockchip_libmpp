@@ -369,7 +369,7 @@ void mpp_session_cleanup_detach(struct mpp_taskqueue *queue, struct kthread_work
 	}
 }
 
-static struct mpp_session *mpp_session_init(void)
+struct mpp_session *mpp_session_init(void)
 {
 	struct mpp_session *session = kzalloc(sizeof(*session), GFP_KERNEL);
 

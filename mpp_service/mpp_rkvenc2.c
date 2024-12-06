@@ -1051,6 +1051,7 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 	mpp_task = &task->mpp_task;
 	mpp_task_init(session, mpp_task);
 	mpp_task->hw_info = mpp->var->hw_info;
+	mpp_task->clbk_en = 1;
 	task->hw_info = to_rkvenc_info(mpp_task->hw_info);
 	/* extract reqs for current task */
 	ret = rkvenc_extract_task_msg(session, task, msgs);

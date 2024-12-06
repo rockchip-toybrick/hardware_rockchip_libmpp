@@ -29,6 +29,9 @@
 /* define flags for mpp_request */
 #define MPP_FLAGS_MULTI_MSG         (0x00000001)
 #define MPP_FLAGS_LAST_MSG          (0x00000002)
+#define MPP_FLAGS_REG_FD_NO_TRANS   (0x00000004)
+#define MPP_FLAGS_SCL_FD_NO_TRANS   (0x00000008)
+#define MPP_FLAGS_REG_OFFSET_ALONE  (0x00000010)
 
 typedef enum MppServiceCmdType_e {
 	MPP_CMD_QUERY_BASE        	= 0,

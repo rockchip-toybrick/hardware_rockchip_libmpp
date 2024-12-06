@@ -745,6 +745,7 @@ int mpp_taskqueue_pop_running(struct mpp_taskqueue *queue, struct mpp_task *task
 struct mpp_task *mpp_session_get_pending_task(struct mpp_session *session);
 int mpp_session_pop_pending(struct mpp_session *session, struct mpp_task *task);
 void mpp_session_clean_detach(struct mpp_taskqueue *queue);
+struct mpp_session *mpp_session_init(void);
 /* from kmpp end */
 
 void mpp_session_deinit(struct mpp_session *session);
