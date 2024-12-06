@@ -34,7 +34,7 @@ INCLUDE(${PROJECT_SOURCE_DIR}/build/cmake/kernel.build.cmake)
 # ----------------------------------------------------------------------------
 include_directories(include)
 include_directories(mpp_osal)
-include_directories(mpp_servicd)
+include_directories(mpp_service)
 include_directories(dvbm)
 include_directories(legacy/inc)
 include_directories(${KERNEL_DIR})

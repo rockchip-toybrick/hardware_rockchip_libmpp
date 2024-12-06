@@ -350,6 +350,10 @@ RK_U32  mpp_frame_get_pskip_request(const MppFrame frame);
 void    mpp_frame_set_pskip_request(MppFrame frame, RK_U32 pskip_request);
 RK_U32  mpp_frame_get_pskip_num(const MppFrame frame);
 void    mpp_frame_set_pskip_num(MppFrame frame, RK_U32 pskip_num);
+RK_U32  mpp_frame_get_chan_id(const MppFrame frame);
+void    mpp_frame_set_chan_id(MppFrame frame, RK_U32 chan_id);
+MppFrame  mpp_frame_get_combo_frame(const MppFrame frame);
+void    mpp_frame_set_combo_frame(MppFrame frame, MppFrame combo_frame);
 
 /*
  * flow control parmeter

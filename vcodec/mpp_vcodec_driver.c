@@ -417,7 +417,7 @@ extern void vepu_show_pp_info(struct seq_file *seq);
 
 static int rkvenc_show_pp_info(struct seq_file *seq, void *offset)
 {
-	vepu_show_pp_info(seq);
+	// vepu_show_pp_info(seq);
 
 	return 0;
 }
@@ -573,7 +573,7 @@ EXPORT_SYMBOL(vsm_buf_register_fn2vcocdec);
 struct vcodec_mpidev_fn *get_mpidev_ops(void)
 {
 	if (!mpidev_ops)
-		mpp_err("should call vmpi_register_fn2vcocdec \n");
+		return NULL;
 
 	if (mpidev_ops->get_struct_size) {
 		if (sizeof(struct vcodec_mpidev_fn) != mpidev_ops->get_struct_size()) {
@@ -588,7 +588,7 @@ struct vcodec_mpidev_fn *get_mpidev_ops(void)
 struct vcodec_mpibuf_fn *get_mpibuf_ops(void)
 {
 	if (!mpibuf_ops)
-		mpp_err("should call vmpi_register_fn2vcocdec \n");
+		return NULL;
 
 	if (mpibuf_ops->get_struct_size) {
 		if (sizeof(struct vcodec_mpibuf_fn) != mpibuf_ops->get_struct_size()) {

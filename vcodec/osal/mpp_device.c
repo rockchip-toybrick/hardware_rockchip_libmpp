@@ -165,7 +165,8 @@ RK_U32 mpp_dev_get_mpi_ioaddress(MppDev ctx, MpiBuf mpi_buf, RK_U32 offset)
 	if (mpibuf_fn && mpibuf_fn->buf_get_paddr)
 		phy_addr = mpibuf_fn->buf_get_paddr(mpi_buf);
 	if (phy_addr == -1) {
-		dma_buf = mpi_buf_get_dma(mpi_buf);
+		if (mpibuf_fn && mpibuf_fn->buf_get_dmabuf)
+			dma_buf = mpibuf_fn->buf_get_dmabuf(mpi_buf);
 		mpp_assert(dma_buf);
 		if (api->get_address)
 			return api->get_address(impl_ctx, dma_buf, offset);

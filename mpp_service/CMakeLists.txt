@@ -117,6 +117,7 @@ SET(KMPP_SRC
     ../vcodec/mpp_vcodec_flow.c
     ../vcodec/mpp_vcodec_driver.c
     ../vcodec/mpp_vcodec_base.c
+    ../vcodec/mpp_vcodec_rockit.c
     ../vcodec/osal/mpp_log.c
     ../vcodec/osal/mpp_time.c
     ../vcodec/osal/osal_mpp_service.c

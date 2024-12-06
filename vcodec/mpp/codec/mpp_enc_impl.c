@@ -27,6 +27,7 @@
 #include "mpp_packet.h"
 #include "mpp_2str.h"
 #include "rk_export_func.h"
+#include "mpp_vcodec_rockit.h"
 
 typedef union EncTaskWait_u {
 	RK_U32 val;
@@ -1299,21 +1300,19 @@ MPP_RET mpp_enc_alloc_output_from_bufpool(MppEncImpl *enc)
 		RK_U32 size = (enc->coding == MPP_VIDEO_CodingMJPEG) ?
 			      (width * height * 3 / 2) :
 			      (width * height);
-
 		MppPacketImpl *pkt = (MppPacketImpl *)enc->packet;
 		MppBuffer buffer = NULL;
 		struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
+
 		mpp_assert(size);
 		if (mpibuf_fn) {
 			if (!enc->strm_pool && mpibuf_fn->buf_pool_create) {
-				enc->strm_pool =
-					mpibuf_fn->buf_pool_create(size, 2);
+				enc->strm_pool = mpibuf_fn->buf_pool_create(size, 2);
 			}
 			if (enc->strm_pool && mpibuf_fn->buf_pool_request_buf) {
 				MppBufferInfo info;
-				struct mpi_buf *buf =
-					mpibuf_fn->buf_pool_request_buf(
-						enc->strm_pool);
+				struct mpi_buf *buf = mpibuf_fn->buf_pool_request_buf(enc->strm_pool);
+
 				memset(&info, 0, sizeof(info));
 				if (buf) {
 					info.hnd = buf;
@@ -1388,6 +1387,8 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 				mpp_err("ring buf get mpp_buf fail \n");
 				return MPP_NOK;
 			}
+			mpp_buffer_attach_dev(buffer, enc->dev, __func__);
+			mpp_buffer_map_ring_buffer(buffer);
 		}
 		ret = ring_buf_init(enc->ring_pool, buffer, enc->max_strm_cnt);
 		if (ret) {
@@ -1410,8 +1411,6 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 	ret = mpp_enc_check_frm_pkt(enc);
 	return ret;
 }
-
-//#define USE_RING_BUF
 
 static MPP_RET mpp_enc_alloc_output(MppEncImpl *enc)
 {
@@ -2076,7 +2075,6 @@ static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, MppPacket *packet)
 	HalEncTask *hal_task = &task->info.enc;
 	EncFrmStatus *frm = &rc_task->frm;
 	MppEncHal hal = enc->enc_hal;
-	struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
 
 	hal_task->length -= hal_task->hw_length;
 	ret = mpp_enc_hal_ret_task(hal, hal_task, NULL);
@@ -2091,10 +2089,11 @@ static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, MppPacket *packet)
 	enc->time_end = mpp_time();
 	enc->frame_count++;
 
-	if (mpidev_fn && mpidev_fn->set_intra_info) {
+	{
 		RK_U64 dts = mpp_frame_get_dts(hal_task->frame);
 		RK_U64 pts = mpp_frame_get_pts(hal_task->frame);
-		mpidev_fn->set_intra_info(enc->chan_id, dts, pts, 1);
+
+		vcodec_rockit_set_intra_info(enc->chan_id, dts, pts, 1);
 	}
 
 	if (enc->dev && enc->time_base && enc->time_end &&
@@ -2113,8 +2112,8 @@ TASK_DONE:
 		mpp_packet_set_length(enc->packet, 0);
 		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
 		mpp_packet_deinit(&enc->packet);
-		if (mpidev_fn && mpidev_fn->notify_drop_frm)
-			mpidev_fn->notify_drop_frm(enc->chan_id, mpp_frame_get_dts(hal_task->frame), VENC_DROP_ENC_FAILED);
+		vcodec_rockit_notify_drop_frm(enc->chan_id, mpp_frame_get_dts(hal_task->frame),
+					      VENC_DROP_ENC_FAILED);
 	} else {
 		mpp_packet_set_length(enc->packet, hal_task->length);
 		if (frm->is_intra)
@@ -2262,24 +2261,18 @@ TASK_DONE:
 		       enc->task_pts);
 
 	{
-		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
 		MppEncCfgSet *cfg = &enc->cfg;
 		RK_U32 is_intra = (cfg->codec.coding == MPP_VIDEO_CodingMJPEG || frm->is_intra);
 		RK_U64 dts = mpp_frame_get_dts(hal_task->frame);
 		RK_U64 pts = mpp_frame_get_pts(hal_task->frame);
 
-		if (ret == MPP_ERR_INT_SOURCE_MIS) {
-			if (mpidev_fn && mpidev_fn->notify)
-				mpidev_fn->notify(enc->chan_id, NOTIFY_ENC_SOURCE_ID_MISMATCH, &dts);
-		}
+		if (ret == MPP_ERR_INT_SOURCE_MIS)
+			vcodec_rockit_notify(enc->chan_id, NOTIFY_ENC_SOURCE_ID_MISMATCH, &dts);
 
-		if (ret) {
-			if (mpidev_fn && mpidev_fn->notify_drop_frm)
-				mpidev_fn->notify_drop_frm(enc->chan_id, dts, VENC_DROP_ENC_FAILED);
-		} else {
-			if (mpidev_fn && mpidev_fn->set_intra_info)
-				mpidev_fn->set_intra_info(enc->chan_id, dts, pts, is_intra);
-		}
+		if (ret)
+			vcodec_rockit_notify_drop_frm(enc->chan_id, dts, VENC_DROP_ENC_FAILED);
+		else
+			vcodec_rockit_set_intra_info(enc->chan_id, dts, pts, is_intra);
 	}
 
 	if (enc->frame)
@@ -2361,7 +2354,7 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 
 	seq_printf(seq, "%8d|%8u|%8u|%6s|%9s|%10u|%10s|%6d|%10d|%11d|%8d|%10d\n",
 		   chl_id, cfg->prep.width, cfg->prep.height, strof_coding_type(cfg->codec.coding), "y",
-		   task->seq_idx, strof_gop_mode((MppEncRcGopMode)enc->gop_mode), 0, 
+		   task->seq_idx, strof_gop_mode((MppEncRcGopMode)enc->gop_mode), 0,
 		   cfg->prep.max_width, cfg->prep.max_height, enc->online, enc->ref_buf_shared);
 
 	source_frate = cfg->rc.fps_in_num / cfg->rc.fps_in_denorm;

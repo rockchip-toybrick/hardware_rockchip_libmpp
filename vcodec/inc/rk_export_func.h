@@ -9,6 +9,8 @@
 #ifndef __RK_EXPORT_FUNC_H__
 #define __RK_EXPORT_FUNC_H__
 
+#include <rk_type.h>
+
 struct dma_buf;
 struct mpi_obj;
 
@@ -161,7 +163,7 @@ extern void vmpi_register_fn2vcocdec (struct vcodec_mpidev_fn *mpidev_fn,
 				      struct vcodec_mpibuf_fn *mpibuf_f);
 extern void vmpi_unregister_fn2vcocdec(void);
 extern struct vcodec_mppdev_svr_fn *get_mppdev_svr_ops(void);
-extern u32 mpp_srv_get_phy(struct dma_buf *buf);
+extern RK_U32 mpp_srv_get_phy(struct dma_buf *buf);
 
 extern int mpp_vcodec_clear_buf_resource(void);
 extern int mpp_vcodec_run_task(RK_U32 chan_id, RK_S64 pts, RK_S64 dts);

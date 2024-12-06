@@ -23,6 +23,7 @@
 #include "mpp_enc.h"
 #include "rk_export_func.h"
 #include "mpp_service.h"
+#include "mpp_vcodec_rockit.h"
 
 RK_U32 mpp_enc_debug = 0;
 module_param(mpp_enc_debug, uint, 0644);
@@ -169,7 +170,6 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
 
 	down(&enc->enc_sem);
 	if (NULL == enc) {
@@ -222,7 +222,7 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 	up(&enc->enc_sem);
 	if (enc->strm_pool) {
 		mpp_log("buf_pool_destroy in");
-		mpibuf_fn->buf_pool_destroy(enc->strm_pool);
+		vcodec_rockit_buf_pool_destroy(enc->strm_pool);
 		mpp_log("buf_pool_destroy out");
 		enc->strm_pool = NULL;
 	}
@@ -266,11 +266,10 @@ MPP_RET mpp_enc_stop(MppEnc ctx)
 RK_S32 mpp_enc_check_pkt_pool(MppEnc ctx)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
-	RK_S32 num = 0;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
+	RK_S32 num = 1;
 
-	if (mpibuf_fn && mpibuf_fn->buf_pool_get_free_num)
-		num = mpibuf_fn->buf_pool_get_free_num(enc->strm_pool);
+	if (enc->strm_pool)
+		return vcodec_rockit_buf_pool_get_free_num(enc->strm_pool);
 
 	return num;
 }
@@ -390,13 +389,10 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 		jpeg_enc->enc_status = ENC_STATUS_START_DONE;
 
 	if (MPP_OK == ret) {
-		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
-
-		if (mpidev_fn && mpidev_fn->notify) {
+		if (enc->online) {
 			RK_U64 dts = mpp_frame_get_dts(enc->frame);
 
-			if (enc->online)
-				mpidev_fn->notify(enc->chan_id, NOTIFY_ENC_TASK_READY, &dts);
+			vcodec_rockit_notify(enc->chan_id, NOTIFY_ENC_TASK_READY, &dts);
 		}
 		atomic_set(&enc->hw_run, 1);
 	}
@@ -441,13 +437,10 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 	}
 
 	{
-		struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
 		RK_U32 chan_id = enc->chan_id;
 
-		if (mpidev_fn && mpidev_fn->notify) {
-			mpidev_fn->notify(chan_id, NOTIFY_ENC_GET_TASK_PIPE_ID, &info.pipe_id);
-			mpidev_fn->notify(chan_id, NOTIFY_ENC_GET_TASK_FRAME_ID, &info.frame_id);
-		}
+		vcodec_rockit_notify(chan_id, NOTIFY_ENC_GET_TASK_PIPE_ID, &info.pipe_id);
+		vcodec_rockit_notify(chan_id, NOTIFY_ENC_GET_TASK_FRAME_ID, &info.frame_id);
 	}
 
 	info.width = MPP_ALIGN(enc->cfg.prep.width, align);

@@ -8,6 +8,8 @@
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+#define MODULE_TAG "mpp_vcodec_chan"
+
 #include <linux/dma-buf.h>
 #include <linux/uaccess.h>
 #include <linux/wait.h>
@@ -24,6 +26,7 @@
 #include "mpp_time.h"
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_mem.h"
+#include "mpp_vcodec_rockit.h"
 
 int mpp_vcodec_schedule(void)
 {
@@ -304,6 +307,12 @@ int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
 	enc_packet->u64dts = mpp_packet_get_dts(packet);
 	enc_packet->data_num = 1;
 	enc_packet->u64priv_data = packet->buf.mpi_buf_id;
+	if (1 || packet->buf.mpi_buf_id == -1) {
+		struct dma_buf *dmabuf = mpp_buffer_get_dma(packet->buf.buf);
+		get_dma_buf(dmabuf);
+		enc_packet->u64priv_data = dma_buf_fd(dmabuf, 0);
+		enc_packet->u64priv_data |= (RK_U64)((RK_U64)1 << 32);
+	}
 	enc_packet->offset = packet->buf.start_offset;
 	enc_packet->u64packet_addr = (uintptr_t )packet;
 	enc_packet->buf_size = mpp_buffer_get_size(packet->buf.buf);
@@ -356,45 +365,38 @@ int mpp_vcodec_chan_put_stream(int chan_id, MppCtxType type,
 int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 {
 	struct mpp_frame_infos *info = param;
-	struct dma_buf *dmabuf = NULL;
 	struct venc_module *venc = NULL;
 	struct vcodec_threads *thd;
 	struct mpp_chan *chan_entry = NULL;
-	struct mpi_buf *buf = NULL;
-	int ret = 0;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
-
-	if (!mpibuf_fn) {
-		mpp_err_f("mpibuf_ops get fail");
-		return -1;
-	}
+	MppBufferInfo buf_info;
+	MppBuffer buffer = NULL;
+	MppFrame frame = NULL;
 
 	chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
 	venc = mpp_vcodec_get_enc_module_entry();
 	thd = venc->thd;
 
-	if (mpibuf_fn->dma_buf_import) {
-		/* add one ref will be free in mpi_buf */
-		dmabuf = dma_buf_get(info->fd);
-		dma_buf_end_cpu_access(dmabuf, DMA_TO_DEVICE);
-		if (IS_ERR(dmabuf)) {
-			mpp_err("dma_buf_get fd %d failed\n", info->fd);
-			return -1;
-		}
-		buf = mpibuf_fn->dma_buf_import(dmabuf, info, chan_id);
-		dma_buf_put(dmabuf);
-	}
+	memset(&buf_info, 0, sizeof(buf_info));
+	buf_info.fd = info->fd;
+	mpp_buffer_import(&buffer, &buf_info);
+	mpp_err_f("import buffer %d buffer %px\n", info->fd, buffer);
+	mpp_frame_init_with_frameinfo(&frame, info);
+	if (info->jpeg_chan_id > 0) {
+		MppFrame comb_frame = NULL;
 
-	if (NULL != buf) {
-		if (mpibuf_fn->buf_queue_push)
-			ret = mpibuf_fn->buf_queue_push(chan_entry->yuv_queue, buf);
-		if (ret)
-			vcodec_thread_trigger(thd);
-	} else {
-		if (dmabuf)
-			dma_buf_put(dmabuf);
-		mpp_err("import dma buf to mpi buf fail \n");
+		mpp_frame_init(&comb_frame);
+		mpp_frame_copy(comb_frame, frame);
+		if (info->jpg_combo_osd_buf)
+			frame_add_osd(comb_frame, (MppEncOSDData3 *)info->jpg_combo_osd_buf);
+		mpp_frame_set_buffer(comb_frame, buffer);
+		mpp_frame_set_chan_id(comb_frame, info->jpeg_chan_id);
+		mpp_frame_set_combo_frame(frame, comb_frame);
 	}
+	mpp_frame_set_buffer(frame, buffer);
+	mpp_buffer_put(buffer);
+	chan_entry->frame = frame;
+
+	vcodec_thread_trigger(thd);
 
 	return 0;
 }
