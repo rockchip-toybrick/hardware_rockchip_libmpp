@@ -13,6 +13,8 @@
 #include "rk_type.h"
 #include "mpp_err.h"
 #include "mpp_stream_ring_buf.h"
+#include "mpp_device.h"
+#include "rk_export_func.h"
 
 /*
  * MppBuffer module has several functions:
@@ -174,6 +176,9 @@ typedef struct MppBufferInfo_t {
 	int             index;
 	RK_U32          phy_flg;
 	RK_U32          phy_addr;
+        RK_U32          iova;
+        struct sg_table *sgt;
+        struct dma_buf_attachment *attach;
 } MppBufferInfo;
 
 #define BUFFER_GROUP_SIZE_DEFAULT           (SZ_1M*80)
@@ -260,21 +265,14 @@ typedef struct MppBufferInfo_t {
 #define mpp_buffer_group_get_external(group, type, ...) \
         mpp_buffer_group_get(group, type, MPP_BUFFER_EXTERNAL, MODULE_TAG, __FUNCTION__)
 
-#define mpi_buf_alloc(size) \
-        mpi_buf_alloc_with_tag(size, MODULE_TAG, __FUNCTION__)
-
 #define mpi_buf_ref(buffer) \
         mpi_buf_ref_with_tag(buffer,  MODULE_TAG, __FUNCTION__)
 
 #define mpi_buf_unref(buffer) \
         mpi_buf_unref_with_tag(buffer,  MODULE_TAG, __FUNCTION__)
 
-
 #define mpp_buffer_get_dma(buffer) \
         mpp_buffer_get_dma_with_caller(buffer, __FUNCTION__)
-
-#define mpi_buf_get_dma(buffer) \
-        mpi_buf_get_dma_with_caller(buffer, __FUNCTION__)
 
 #define mpp_buffer_flush_for_cpu(buffer) \
         mpp_buffer_flush_for_cpu_with_caller(buffer, __FUNCTION__)
@@ -300,6 +298,8 @@ typedef struct MppBufferInfo_t {
 #define mpp_buffer_get_phy(buffer) \
         mpp_buffer_get_phy_caller(buffer, __FUNCTION__)
 
+#define mpp_buffer_get_iova(buffer, dev) \
+        mpp_buffer_get_iova_f(buffer, dev, __FUNCTION__)
 
 #ifdef __cplusplus
 extern "C" {
@@ -346,23 +346,25 @@ RK_S32  mpp_buffer_group_unused(MppBufferGroup group);
 size_t  mpp_buffer_group_usage(MppBufferGroup group);
 MppBufferMode mpp_buffer_group_mode(MppBufferGroup group);
 MppBufferType mpp_buffer_group_type(MppBufferGroup group);
-struct mpi_buf *mpi_buf_alloc_with_tag(size_t size, const char *tag, const char *caller);
 struct dma_buf *mpp_buffer_get_dma_with_caller(MppBuffer buffer, const char *caller);
-struct dma_buf *mpi_buf_get_dma_with_caller(MpiBuf buffer, const char *caller);
 MPP_RET mpp_buffer_flush_for_cpu_with_caller(MppBuffer buffer, const char *caller);
 MPP_RET mpp_buffer_flush_for_device_with_caller(MppBuffer buffer, const char *caller);
 MPP_RET mpp_buffer_flush_for_cpu_partial_with_caller(MppBuffer buffer, RK_U32 offset, RK_U32 len,
 						     const char *caller);
 MPP_RET mpp_buffer_flush_for_device_partial_with_caller(MppBuffer buffer, RK_U32 offset, RK_U32 len,
 							const char *caller);
-RK_S32 mpp_buffer_get_mpi_buf_id_with_caller(MppBuffer buffer, const char *caller);
+RK_U32 mpp_buffer_get_iova_f(MppBuffer buffe, MppDev dev, const char *caller);
+RK_S32 mpp_buffer_attach_dev(MppBuffer buffer, MppDev dev, const char *caller);
+RK_S32 mpp_buffer_dettach_dev(MppBuffer buffer, const char *caller);
 
+RK_S32 mpp_buffer_get_mpi_buf_id_with_caller(MppBuffer buffer, const char *caller);
 
 MPP_RET mpi_buf_ref_with_tag(struct mpi_buf *buf, const char *tag, const char *caller);
 MPP_RET mpi_buf_unref_with_tag(struct mpi_buf *buf, const char *tag, const char *caller);
 
 void mpp_buffer_set_phy_caller(MppBuffer buffer, RK_U32 phy_addr, const char *caller);
 RK_S32 mpp_buffer_get_phy_caller(MppBuffer buffer, const char *caller);
+void *mpp_buffer_map_ring_buffer(MppBuffer buffer);
 
 /* mpp buffer pool */
 MPP_RET mpp_buffer_pool_init(RK_U32 max_cnt);
@@ -374,6 +376,14 @@ void mpp_buf_pool_info_show(void *seq_file);
  * count : 0 - no limit, other - max buffer count
  */
 MPP_RET mpp_buffer_group_limit_config(MppBufferGroup group, size_t size, RK_S32 count);
+
+#ifndef CONFIG_DMABUF_PARTIAL
+#define dma_buf_begin_cpu_access_partial(dma_buf, dir, offset, size) \
+	dma_buf_begin_cpu_access(dma_buf, dir)
+
+#define dma_buf_end_cpu_access_partial(dma_buf, dir, offset, size) \
+	dma_buf_end_cpu_access(dma_buf, dir)
+#endif
 
 #ifdef __cplusplus
 }
