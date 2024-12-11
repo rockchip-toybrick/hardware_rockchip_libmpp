@@ -32,6 +32,9 @@
 #include "kmpp_wait.h"
 #include "kmpp_delay.h"
 
+int osal_init(void);
+void osal_exit(void);
+
 rk_s32 mpp_func_arg_init(void **mpp_args, const char *name);
 rk_s32 mpp_func_arg_deinit(void *mpp_args);
 rk_s32 mpp_func_arg_run(void *mpp_args);

@@ -4,37 +4,45 @@ OSAL_DIR := $(TOP)/vcodec/osal
 
 VCODEC_TEST_ENABLE = n
 
+EXTRA_CFLAGS += -I$(TOP)/osal
 include $(TOP)/vcodec/mpp/base/base_make.cfg
 include $(TOP)/vcodec/mpp/codec/codec_make.cfg
 include $(TOP)/vcodec/mpp/hal/hal_make.cfg
 include $(TOP)/vcodec/mpp/codec/rc/rc_make.cfg
 
 
-mpp_vcodec-objs := vcodec/mpp_vcodec_base.o \
+${KMPP_SRC}-objs += vcodec/mpp_vcodec_base.o \
 		   vcodec/mpp_vcodec_chan.o \
 		   vcodec/mpp_vcodec_flow.o \
 		   vcodec/mpp_vcodec_thread.o \
-		   vcodec/mpp_vcodec_driver.o
+		   vcodec/mpp_vcodec_driver.o \
+		   vcodec/mpp_vcodec_rockit.o
 
-mpp_vcodec-$(VCODEC_TEST_ENABLE) += vcodec/mpp/base/mpp_trie.o \
+${KMPP_SRC}-$(VCODEC_TEST_ENABLE) += vcodec/mpp/base/mpp_trie.o \
 				    vcodec/mpp/base/mpp_enc_cfg.o \
 				    vcodec/mpp/base/mpp_cfg.o \
 				    vcodec/mpp_vcodec_test.o
 
-
-mpp_vcodec-objs += vcodec/osal/mpp_log.o \
+${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_mpibuf.o
+${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_dmaheap.o
+${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_rkdmaheap.o
+${KMPP_SRC}-objs += vcodec/osal/mpp_log.o \
 		   vcodec/osal/mpp_mem.o \
 		   vcodec/osal/mpp_maths.o \
 		   vcodec/osal/mpp_device.o \
 		   vcodec/osal/osal_mpp_service.o \
-		   vcodec/osal/mpp_time.o
+		   vcodec/osal/mpp_time.o \
+		   vcodec/osal/mpp_allocator.o
 
 
-mpp_vcodec-objs += $(BASE_CFILES)
-mpp_vcodec-objs += $(CODEC_CFILES)
-mpp_vcodec-objs += $(HAL_CFILES)
-mpp_vcodec-objs += $(RC_CFILES)
+${KMPP_SRC}-objs += $(BASE_CFILES)
+${KMPP_SRC}-objs += $(CODEC_CFILES)
+${KMPP_SRC}-objs += $(HAL_CFILES)
+${KMPP_SRC}-objs += $(RC_CFILES)
+EXTRA_CFLAGS += -I$(TOP)/include
+EXTRA_CFLAGS += -I$(TOP)/legacy/inc
 EXTRA_CFLAGS += -I$(TOP)/vcodec/osal/inc
+EXTRA_CFLAGS += -I$(TOP)/vcodec/osal/allocator
 EXTRA_CFLAGS += -I$(TOP)/vcodec/inc
 EXTRA_CFLAGS += -I$(TOP)/vcodec/mpp/common
 EXTRA_CFLAGS += -I$(TOP)/vcodec/mpp/inc

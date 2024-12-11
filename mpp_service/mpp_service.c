@@ -52,7 +52,7 @@
 #define HAS_RKVENC500		IS_ENABLED(RKVEPU500_ENABLE)
 
 #define MPP_REGISTER_DRIVER(srv, flag, X, x) {\
-	if (1)\
+	if (flag)\
 		mpp_add_driver(srv, MPP_DRIVER_##X, &rockchip_##x##_driver, "grf_"#x);\
 	}
 
@@ -470,7 +470,7 @@ static int mpp_service_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&srv->session_list);
 	mpp_procfs_init(srv);
 
-	rk_dvbm_init();
+	// rk_dvbm_init();
 
 	/* register sub drivers */
 	MPP_REGISTER_DRIVER(srv, HAS_RKVDEC, RKVDEC, rkvdec);
@@ -540,7 +540,7 @@ static int mpp_service_remove(struct platform_device *pdev)
 	class_destroy(srv->cls);
 	mpp_procfs_remove(srv);
 
-	rk_dvbm_exit();
+	// rk_dvbm_exit();
 
 	return 0;
 }

@@ -25,4 +25,7 @@ typedef void* KmppShmGrp;
 /* KmppShm - share memory for address access and read / write */
 typedef void* KmppShm;
 
+int sys_init(void);
+void sys_exit(void);
+
 #endif /* __KMPP_SYS_DEFS_H__ */

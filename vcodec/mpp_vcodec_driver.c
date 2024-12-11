@@ -29,6 +29,8 @@
 #include "mpp_vcodec_thread.h"
 #include "rk_venc_cfg.h"
 #include "rk_export_func.h"
+#include "kmpp_osal.h"
+#include "kmpp_sys_defs.h"
 
 struct vcodec_msg {
 	__u32 cmd;
@@ -612,7 +614,10 @@ static int __init vcodec_init(void)
 	int ret;
 
 	pr_info("init new\n");
-
+#ifdef BUILD_ONE_KO
+	osal_init();
+	sys_init();
+#endif
 	ret = platform_driver_register(&mpp_service_driver);
 	if (ret != 0) {
 		printk(KERN_ERR "mpp_service_driver device register failed (%d).\n", ret);
@@ -635,10 +640,14 @@ static void __exit vcodec_exit(void)
 	mpp_vcodec_deinit();
 	platform_driver_unregister(&vcodec_driver);
 	platform_driver_unregister(&mpp_service_driver);
-
+#ifdef BUILD_ONE_KO
+	sys_exit();
+	osal_exit();
+#endif
 	pr_info("exit\n");
-} MODULE_LICENSE("GPL");
+}
 
+MODULE_LICENSE("GPL");
 module_init(vcodec_init);
 MODULE_IMPORT_NS(DMA_BUF);
 module_exit(vcodec_exit);

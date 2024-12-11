@@ -61,7 +61,7 @@ static void osal_env_version_init(void)
     kmpp_env_add(kmpp_env_osal, NULL, &info);
 }
 
-static int osal_init(void)
+int osal_init(void)
 {
     kmpp_logi("osal init\n");
 
@@ -74,7 +74,7 @@ static int osal_init(void)
     return 0;
 }
 
-static void osal_exit(void)
+void osal_exit(void)
 {
     osal_dev_deinit();
     osal_env_deinit();
@@ -83,9 +83,11 @@ static void osal_exit(void)
     kmpp_logi("osal exit\n");
 }
 
+#ifndef BUILD_ONE_KO
 module_init(osal_init);
 module_exit(osal_exit);
 
 MODULE_AUTHOR("rockchip");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
+#endif

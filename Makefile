@@ -7,6 +7,7 @@ KERNEL_ROOT=$(KERNEL_DIR)
 KERNEL_VERSION=5.10
 CPU_TYPE=$(ARCH)
 OSTYPE=linux
+KMPP_SRC := kmpp
 
 EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/inc
 EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/base/inc
@@ -42,6 +43,10 @@ VEPU_CORE := RKVEPU500
 lib-m += vproc/pp/vepu500_pp.s
 endif
 
+ifeq ($(CONFIG_CPU_RK3576), y)
+VEPU_CORE := RKVEPU510
+endif
+
 BUILD_ONE_KO=y
 
 ifeq ($(CPU_TYPE), arm64)
@@ -66,21 +71,18 @@ $(shell [ -d "$(TOP)/.git/" ] && [ -d "$(TOP)/tools/hooks" ] && cp -rf $(TOP)/to
 ifeq ($(BUILD_ONE_KO), y)
 	EXTRA_CFLAGS += -DBUILD_ONE_KO
 endif
--include $(TOP)/mpp/Makefile
--include $(TOP)/vcodec/Makefile
+-include $(TOP)/mpp_osal/Makefile
+-include $(TOP)/osal/Makefile
+-include $(TOP)/sys/Makefile
 -include $(TOP)/vproc/Makefile
-
-ifeq ($(BUILD_ONE_KO), y)
+-include $(TOP)/mpp_service/Makefile
+-include $(TOP)/vcodec/Makefile
 
 ifeq ($(RK_ENABLE_FASTBOOT), y)
-obj-y += mpp_vcodec.o
-lib-m += $(mpp_vcodec-objs:%.o=%.s) $(rk_vcodec-objs:%.o=%.s) $(vepu_pp-objs:%.o=%.s) $(rk_vcodec-y:%.o=%.s)
+obj-y += ${KMPP_SRC}.o
+lib-m += $(${KMPP_SRC}-objs:%.o=%.s)
 else
-obj-m += mpp_vcodec.o
-endif
-
-mpp_vcodec-objs += rk_vcodec.o
-mpp_vcodec-objs += vepu_pp.o
+obj-m += ${KMPP_SRC}.o
 endif
 
 ifneq ($(SYSDRV_KERNEL_OBJS_OUTPUT_DIR),)
@@ -107,13 +109,13 @@ linux_build: linux_clean
 	@echo ---- CPU_TYPE=$(CPU_TYPE)
 	@$(MAKE) CROSS_COMPILE=${CROSS_COMPILE} ARCH=$(CPU_TYPE) -C $(KERNEL_ROOT) M=$(PWD) modules O=$(KMPP_BUILD_KERNEL_OBJ_DIR)
 	@mkdir -p $(PREB_KO)
-	@cp mpp_vcodec.ko $(PREB_KO)
+	@cp ${KMPP_SRC}.ko $(PREB_KO)
 ifneq ($(BUILD_ONE_KO), y)
 	@cp rk_vcodec.ko  $(PREB_KO)
 	@cp vepu_pp.ko  $(PREB_KO)
 endif
 	@mkdir -p $(REL_KO)
-	@cp mpp_vcodec.ko $(REL_KO)
+	@cp ${KMPP_SRC}.ko $(REL_KO)
 ifneq ($(BUILD_ONE_KO), y)
 	@cp rk_vcodec.ko  $(REL_KO)
 	@cp vepu_pp.ko  $(REL_KO)

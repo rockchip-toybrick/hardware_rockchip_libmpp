@@ -81,7 +81,7 @@ static void sys_env_deinit(void)
     kmpp_env_sys = NULL;
 }
 
-static int sys_init(void)
+int sys_init(void)
 {
     kmpp_logi("sys init\n");
 
@@ -93,7 +93,7 @@ static int sys_init(void)
     return 0;
 }
 
-static void sys_exit(void)
+void sys_exit(void)
 {
     kmpp_logi("sys exit\n");
 
@@ -101,10 +101,11 @@ static void sys_exit(void)
 
     sys_env_deinit();
 }
-
+#ifndef BUILD_ONE_KO
 module_init(sys_init);
 module_exit(sys_exit);
 
 MODULE_AUTHOR("rockchip");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
+#endif
