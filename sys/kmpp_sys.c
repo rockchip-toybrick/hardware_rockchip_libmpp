@@ -12,11 +12,14 @@
 
 #include "kmpp_osal.h"
 
+#include "kmpp_sym.h"
 #include "kmpp_shm.h"
 #include "kmpp_frame.h"
 
 KmppEnvGrp kmpp_env_sys;
 EXPORT_SYMBOL(kmpp_env_sys);
+
+static KmppSym sys_sym = NULL;
 
 static void sys_version_show(KmppEnvNode node, void *data)
 {
@@ -82,12 +85,26 @@ static void sys_env_deinit(void)
     kmpp_env_sys = NULL;
 }
 
+static rk_s32 sys_func_sample(void *in, void *out, const rk_u8 *caller)
+{
+    kmpp_logi("sys func sample called in %px out %px at %s\n", in, out, caller);
+    return rk_ok;
+}
+
 int sys_init(void)
 {
     kmpp_logi("sys init\n");
 
     sys_env_init();
     sys_env_version_init();
+
+    kmpp_sym_init();
+    kmpp_symdef_get(&sys_sym, "sys");
+    /* Add sys export funciton here */
+    if (sys_sym) {
+        kmpp_symdef_add(sys_sym, "sample", sys_func_sample);
+        kmpp_symdef_install(sys_sym);
+    }
 
     kmpp_shm_init();
     kmpp_frame_init();
@@ -101,6 +118,13 @@ void sys_exit(void)
 
     kmpp_frame_deinit();
     kmpp_shm_deinit();
+
+    if (sys_sym) {
+        kmpp_symdef_uninstall(sys_sym);
+        kmpp_symdef_put(sys_sym);
+        sys_sym = NULL;
+    }
+    kmpp_sym_deinit();
 
     sys_env_deinit();
 }

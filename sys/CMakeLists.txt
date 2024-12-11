@@ -10,6 +10,7 @@ SET(KMPP_SYS_SRC
     kmpp_dq.c
     kmpp_obj.c
     kmpp_shm.c
+    kmpp_sym.c
     kmpp_frame.c
 )
 
