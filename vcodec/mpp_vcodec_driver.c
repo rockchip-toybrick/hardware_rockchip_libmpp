@@ -30,7 +30,6 @@
 #include "rk_venc_cfg.h"
 #include "rk_export_func.h"
 #include "kmpp_osal.h"
-#include "kmpp_sys_defs.h"
 
 struct vcodec_msg {
 	__u32 cmd;
