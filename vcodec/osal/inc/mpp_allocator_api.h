@@ -17,6 +17,7 @@ typedef enum {
 typedef struct mpp_allocator_api_s {
 	mpp_allocator_type type;
 	MPP_RET (*init)(const char *caller);
+	void 	(*deinit)(const char *caller);
 	MPP_RET (*alloc)(MppBufferInfo *info, const char* caller);
 	MPP_RET (*free)(MppBufferInfo *info, const char* caller);
 	MPP_RET (*import)(MppBufferInfo *info, const char* caller);

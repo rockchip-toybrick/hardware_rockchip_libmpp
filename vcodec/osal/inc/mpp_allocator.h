@@ -15,6 +15,7 @@ enum mpp_allocator_type {
 };
 
 MPP_RET mpp_allocator_init(enum mpp_allocator_type type, const char* caller);
+void    mpp_allocator_deinit(const char *caller);
 MPP_RET mpp_allocator_alloc(MppBufferInfo *info, const char *caller);
 MPP_RET mpp_allocator_free(MppBufferInfo *info, const char* caller);
 MPP_RET mpp_allocator_import(MppBufferInfo *info, const char* caller);

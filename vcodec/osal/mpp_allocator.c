@@ -37,6 +37,15 @@ MPP_RET mpp_allocator_init(enum mpp_allocator_type type, const char* caller)
 	return MPP_NOK;
 }
 
+void mpp_allocator_deinit(const char *caller)
+{
+	if (!g_allocator || !g_allocator->deinit)
+		return;
+
+	g_allocator->deinit(caller);
+	g_allocator = NULL;
+}
+
 MPP_RET mpp_allocator_alloc(MppBufferInfo *info, const char *caller)
 {
 	if (!g_allocator || !g_allocator->alloc)

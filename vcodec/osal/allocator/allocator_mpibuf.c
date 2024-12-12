@@ -105,6 +105,7 @@ static MPP_RET allocator_mmap(MppBufferInfo *info, const char *caller)
 
 mpp_allocator_api mpi_buf_allocator = {
 	.init   = allocator_init,
+	.deinit = NULL,
 	.alloc  = allocator_alloc,
 	.free   = allocator_free,
 	.import = allocator_import,

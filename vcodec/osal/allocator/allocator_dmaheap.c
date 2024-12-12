@@ -8,11 +8,13 @@
 #include <linux/version.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
+#include <linux/module.h>
 
 #include "rk_type.h"
 #include "mpp_err.h"
 #include "mpp_log.h"
 #include "mpp_buffer.h"
+#include "mpp_maths.h"
 #include "mpp_mem.h"
 #include "rk_export_func.h"
 #include "allocator_dmaheap.h"
@@ -23,6 +25,17 @@ static struct dma_heap *g_dma_heap = NULL;
 #define allocator_dma_heap g_dma_heap
 static DEFINE_SPINLOCK(lock);
 
+typedef struct dma_buf *(*dma_heap_alloc_func)(struct dma_heap *heap, size_t len,
+					  unsigned int fd_flags,
+					  unsigned int heap_flags);
+
+static dma_heap_alloc_func dma_heap_alloc = NULL;
+static const char *alloc_symbol_name;
+static char *symbol_name[] = {
+	"dma_heap_buffer_alloc_exp",
+	"dma_heap_buffer_alloc",
+};
+
 static MPP_RET allocator_init(const char *caller)
 {
 	unsigned long flags;
@@ -32,19 +45,40 @@ static MPP_RET allocator_init(const char *caller)
 	spin_lock_irqsave(&lock, flags);
 	if (!g_dma_heap) {
 		struct dma_heap *heap = dma_heap_find(name);
+		RK_U32 i;
 
 		if (!heap) {
 			mpp_err_f("allocator %s not found\n", name);
 			ret = MPP_NOK;
 			goto __return;
 		}
-
+		/* find dma_heap_buffer_alloc func symbol */
+		for (i = 0; i < MPP_ARRAY_ELEMS(symbol_name); i++) {
+			dma_heap_alloc = (dma_heap_alloc_func)__symbol_get(symbol_name[i]);
+			if (dma_heap_alloc) {
+				alloc_symbol_name = symbol_name[i];
+				break;
+			}
+		}
+		if (!dma_heap_alloc) {
+			mpp_err_f("dma_heap_alloc_func not found\n");
+			goto __return;
+		}
 		g_dma_heap = heap;
 	}
 
 __return:
 	spin_unlock_irqrestore(&lock, flags);
 	return ret;
+}
+
+static void allocator_deinit(const char *caller)
+{
+	if (!g_dma_heap)
+		return;
+
+	if (dma_heap_alloc)
+		__symbol_put(alloc_symbol_name);
 }
 
 static MPP_RET allocator_alloc(MppBufferInfo *info, const char *caller)
@@ -54,12 +88,17 @@ static MPP_RET allocator_alloc(MppBufferInfo *info, const char *caller)
 	if (!info->size)
 		return MPP_NOK;
 
-	dma_buf = dma_heap_buffer_alloc(allocator_dma_heap, info->size, O_CLOEXEC | O_RDWR, 0);
+	if (!dma_heap_alloc) {
+		mpp_err_f("dma_heap_alloc_func not found\n");
+		return MPP_NOK;
+	}
+
+	dma_buf = dma_heap_alloc(allocator_dma_heap, info->size, O_CLOEXEC | O_RDWR, 0);
 	if (IS_ERR_OR_NULL(dma_buf)) {
 		mpp_err_f("get dma buf failed ret %ld size %zu caller %s\n", PTR_ERR(dma_buf), info->size, caller);
 		return MPP_ERR_NOMEM;
 	}
-	mpp_err_f("get dma buf %p size %zu caller %s\n", dma_buf, info->size, caller);
+
 	info->dma_buf = dma_buf;
 
 	return MPP_OK;
@@ -146,6 +185,7 @@ static MPP_RET allocator_mmap(MppBufferInfo *info, const char *caller)
 
 mpp_allocator_api dma_heap_allocator = {
 	.init   = allocator_init,
+	.deinit = allocator_deinit,
 	.alloc  = allocator_alloc,
 	.free   = allocator_free,
 	.import = allocator_import,
