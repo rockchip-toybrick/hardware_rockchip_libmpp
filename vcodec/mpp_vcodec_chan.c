@@ -506,4 +506,14 @@ int mpp_vcodec_chan_control(int chan_id, MppCtxType type, int cmd, void *arg)
 	return 0;
 }
 
-
+EXPORT_SYMBOL(mpp_vcodec_chan_create);
+EXPORT_SYMBOL(mpp_vcodec_chan_destory);
+EXPORT_SYMBOL(mpp_vcodec_chan_start);
+EXPORT_SYMBOL(mpp_vcodec_chan_stop);
+EXPORT_SYMBOL(mpp_vcodec_chan_pause);
+EXPORT_SYMBOL(mpp_vcodec_chan_resume);
+EXPORT_SYMBOL(mpp_vcodec_chan_control);
+EXPORT_SYMBOL(mpp_vcodec_chan_push_frm);
+EXPORT_SYMBOL(mpp_vcodec_chan_get_stream);
+EXPORT_SYMBOL(mpp_vcodec_chan_put_stream);
+EXPORT_SYMBOL(mpp_vcodec_schedule);

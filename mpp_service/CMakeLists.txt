@@ -129,7 +129,6 @@ SET(KMPP_SRC
     ../vcodec/osal/allocator/allocator_rkdmaheap.c
     ../vcodec/osal/allocator/allocator_mpibuf.c
     ../vcodec/mpp_vcodec_thread.c
-    ../vcodec/mpp_vcodec_test.c
     #mpp_av1dec.c
     mpp_iep2.c
     mpp_jpgdec.c

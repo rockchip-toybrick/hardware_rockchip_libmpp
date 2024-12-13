@@ -10,6 +10,7 @@
 #define __ROCKCHIP_MPP_VCODEC_BASE_H__
 
 #include <linux/spinlock.h>
+#include <linux/mutex.h>
 #include <linux/workqueue.h>
 
 #include"rk_type.h"

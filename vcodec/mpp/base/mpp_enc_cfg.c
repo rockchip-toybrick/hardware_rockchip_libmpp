@@ -434,3 +434,22 @@ void mpp_enc_cfg_show(void)
 		(RK_U32) MPP_ARRAY_ELEMS(cfg_apis), node_len,
 		mpp_trie_get_node_count(gCfgApi));
 }
+
+
+EXPORT_SYMBOL(mpp_enc_cfg_init);
+EXPORT_SYMBOL(mpp_enc_cfg_deinit);
+EXPORT_SYMBOL(mpp_enc_cfg_set_s32);
+EXPORT_SYMBOL(mpp_enc_cfg_set_u32);
+EXPORT_SYMBOL(mpp_enc_cfg_set_s64);
+EXPORT_SYMBOL(mpp_enc_cfg_set_u64);
+EXPORT_SYMBOL(mpp_enc_cfg_set_ptr);
+EXPORT_SYMBOL(mpp_enc_cfg_set_st);
+EXPORT_SYMBOL(mpp_enc_cfg_get_s32);
+EXPORT_SYMBOL(mpp_enc_cfg_get_u32);
+EXPORT_SYMBOL(mpp_enc_cfg_get_s64);
+EXPORT_SYMBOL(mpp_enc_cfg_get_u64);
+EXPORT_SYMBOL(mpp_enc_cfg_get_ptr);
+EXPORT_SYMBOL(mpp_enc_cfg_get_st);
+EXPORT_SYMBOL(mpp_enc_cfg_api_init);
+EXPORT_SYMBOL(mpp_enc_cfg_api_deinit);
+EXPORT_SYMBOL(mpp_enc_cfg_show);

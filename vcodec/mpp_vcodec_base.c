@@ -270,6 +270,7 @@ struct mpp_chan *mpp_vcodec_get_chan_entry(RK_S32 chan_id, MppCtxType type)
 
 	return chan;
 }
+EXPORT_SYMBOL(mpp_vcodec_get_chan_entry);
 
 RK_U32 mpp_vcodec_get_chan_num(MppCtxType type)
 {
@@ -621,6 +622,7 @@ struct venc_module *mpp_vcodec_get_enc_module_entry(void)
 {
 	return &g_vcodec_entry.venc;
 }
+EXPORT_SYMBOL(mpp_vcodec_get_enc_module_entry);
 
 void enc_chan_update_chan_prior_tab(void)
 {
