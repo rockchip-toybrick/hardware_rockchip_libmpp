@@ -58,7 +58,6 @@ _stdint.h
 *.mod
 *.symvers
 Makefile.in
-Makefile
 /m4
 tmp-orc.c
 *orc.h
