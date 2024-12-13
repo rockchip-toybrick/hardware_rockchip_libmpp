@@ -29,8 +29,10 @@
 #include "mpp_vcodec_thread.h"
 #include "rk_venc_cfg.h"
 #include "rk_export_func.h"
+#ifdef BUILD_ONE_KO
 #include "kmpp_osal.h"
-
+#include "kmpp_sys_defs.h"
+#endif
 struct vcodec_msg {
 	__u32 cmd;
 	__u32 ctrl_cmd;
