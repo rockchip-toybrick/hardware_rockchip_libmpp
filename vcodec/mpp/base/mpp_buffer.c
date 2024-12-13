@@ -45,7 +45,7 @@ MPP_RET mpp_buffer_pool_init(RK_U32 max_cnt)
 		return MPP_OK;
 
 	g_mppbuf_pool = mpp_mem_pool_init(module_name, sizeof(struct MppBufferImpl), max_cnt);
-	mpp_allocator_init(MPP_ALLOCATOR_DMABUF, __func__);
+	mpp_allocator_init(__func__);
 
 	return MPP_OK;
 }

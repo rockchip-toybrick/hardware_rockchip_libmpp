@@ -73,16 +73,13 @@ static MPP_RET allocator_import(MppBufferInfo *info, const char *caller)
 		mpp_err_f("invalid mpi buf\n");
 		return MPP_ERR_VALUE;
 	}
-
+	/* maybe dma buf is null when online mode */
 	dma_buf = rockit_allocator->buf_get_dmabuf(mpi_buf);
-	if (IS_ERR_OR_NULL(dma_buf)) {
-		mpp_err_f("dma_buf_get failed fd %d\n", info->fd);
-		return MPP_NOK;
+	if (dma_buf) {
+		info->size = dma_buf->size;
+		info->dma_buf = dma_buf;
 	}
-
 	rockit_allocator->buf_ref(mpi_buf);
-	info->size = dma_buf->size;
-	info->dma_buf = dma_buf;
 
 	return MPP_OK;
 }

@@ -118,10 +118,9 @@ typedef enum {
  * drm      : use the drm device interface for memory management
  */
 typedef enum {
-	MPP_BUFFER_TYPE_NORMAL,
-	MPP_BUFFER_TYPE_ION,
-	MPP_BUFFER_TYPE_EXT_DMA,
-	MPP_BUFFER_TYPE_DRM,
+	MPP_BUFFER_TYPE_DMAHEAP,
+	MPP_BUFFER_TYPE_RK_DMAHEAP,
+	MPP_BUFFER_TYPE_MPI_BUF,
 	MPP_BUFFER_TYPE_BUTT,
 } MppBufferType;
 

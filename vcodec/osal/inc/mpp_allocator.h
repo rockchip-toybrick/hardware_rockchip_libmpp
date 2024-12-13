@@ -8,13 +8,7 @@
 
 #include "mpp_buffer.h"
 
-enum mpp_allocator_type {
-        MPP_ALLOCATOR_MPI_BUF,
-        MPP_ALLOCATOR_RK_DMABUF,
-        MPP_ALLOCATOR_DMABUF,
-};
-
-MPP_RET mpp_allocator_init(enum mpp_allocator_type type, const char* caller);
+MPP_RET mpp_allocator_init(const char* caller);
 void    mpp_allocator_deinit(const char *caller);
 MPP_RET mpp_allocator_alloc(MppBufferInfo *info, const char *caller);
 MPP_RET mpp_allocator_free(MppBufferInfo *info, const char* caller);
