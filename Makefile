@@ -48,6 +48,7 @@ VEPU_CORE := RKVEPU510
 endif
 
 BUILD_ONE_KO=y
+KMPP_TEST_ENABLE=n
 
 ifeq ($(CPU_TYPE), arm64)
 	export PREB_KO := ./prebuild/ko_64
@@ -77,6 +78,10 @@ endif
 -include $(TOP)/vproc/Makefile
 -include $(TOP)/mpp_service/Makefile
 -include $(TOP)/vcodec/Makefile
+
+ifeq ($(KMPP_TEST_ENABLE), y)
+-include $(TOP)/test/Makefile
+endif
 
 ifeq ($(RK_ENABLE_FASTBOOT), y)
 obj-y += ${KMPP_SRC}.o

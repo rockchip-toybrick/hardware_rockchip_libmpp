@@ -2,8 +2,6 @@
 
 OSAL_DIR := $(TOP)/vcodec/osal
 
-VCODEC_TEST_ENABLE = n
-
 EXTRA_CFLAGS += -I$(TOP)/osal
 include $(TOP)/vcodec/mpp/base/base_make.cfg
 include $(TOP)/vcodec/mpp/codec/codec_make.cfg
@@ -12,27 +10,26 @@ include $(TOP)/vcodec/mpp/codec/rc/rc_make.cfg
 
 
 ${KMPP_SRC}-objs += vcodec/mpp_vcodec_base.o \
-		   vcodec/mpp_vcodec_chan.o \
-		   vcodec/mpp_vcodec_flow.o \
-		   vcodec/mpp_vcodec_thread.o \
-		   vcodec/mpp_vcodec_driver.o \
-		   vcodec/mpp_vcodec_rockit.o
+                    vcodec/mpp_vcodec_chan.o \
+                    vcodec/mpp_vcodec_flow.o \
+                    vcodec/mpp_vcodec_thread.o \
+                    vcodec/mpp_vcodec_driver.o \
+                    vcodec/mpp_vcodec_rockit.o
 
-${KMPP_SRC}-$(VCODEC_TEST_ENABLE) += vcodec/mpp/base/mpp_trie.o \
-				    vcodec/mpp/base/mpp_enc_cfg.o \
-				    vcodec/mpp/base/mpp_cfg.o \
-				    vcodec/mpp_vcodec_test.o
+${KMPP_SRC}-$(KMPP_TEST_ENABLE) += vcodec/mpp/base/mpp_trie.o \
+                                   vcodec/mpp/base/mpp_enc_cfg.o \
+                                   vcodec/mpp/base/mpp_cfg.o
 
 ${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_mpibuf.o
 ${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_dmaheap.o
 ${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_rkdmaheap.o
 ${KMPP_SRC}-objs += vcodec/osal/mpp_log.o \
-		   vcodec/osal/mpp_mem.o \
-		   vcodec/osal/mpp_maths.o \
-		   vcodec/osal/mpp_device.o \
-		   vcodec/osal/osal_mpp_service.o \
-		   vcodec/osal/mpp_time.o \
-		   vcodec/osal/mpp_allocator.o
+                    vcodec/osal/mpp_mem.o \
+                    vcodec/osal/mpp_maths.o \
+                    vcodec/osal/mpp_device.o \
+                    vcodec/osal/osal_mpp_service.o \
+                    vcodec/osal/mpp_time.o \
+                    vcodec/osal/mpp_allocator.o
 
 
 ${KMPP_SRC}-objs += $(BASE_CFILES)
