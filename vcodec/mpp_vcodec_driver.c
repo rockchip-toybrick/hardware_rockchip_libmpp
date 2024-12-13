@@ -31,7 +31,7 @@
 #include "rk_export_func.h"
 #ifdef BUILD_ONE_KO
 #include "kmpp_osal.h"
-#include "kmpp_sys_defs.h"
+#include "kmpp_sys.h"
 #endif
 struct vcodec_msg {
 	__u32 cmd;

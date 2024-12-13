@@ -44,6 +44,7 @@ struct mpp_frame_infos {
 			RK_U32  idr_request : 1;
 		};
 	};
+	void*	mpp_buffer;
 };
 
 struct vcodec_mpibuf_fn {

@@ -369,7 +369,7 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	struct vcodec_threads *thd;
 	struct mpp_chan *chan_entry = NULL;
 	MppBufferInfo buf_info;
-	MppBuffer buffer = NULL;
+	MppBuffer buffer = info->mpp_buffer;
 	MppFrame frame = NULL;
 
 	chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
@@ -377,9 +377,11 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	thd = venc->thd;
 
 	memset(&buf_info, 0, sizeof(buf_info));
-	buf_info.fd = info->fd;
-	mpp_buffer_import(&buffer, &buf_info);
-	mpp_err_f("import buffer %d buffer %px\n", info->fd, buffer);
+	if (info->fd) {
+		buf_info.fd = info->fd;
+		mpp_buffer_import(&buffer, &buf_info);
+		mpp_err_f("import buffer %d buffer %px\n", info->fd, buffer);
+	}
 	mpp_frame_init_with_frameinfo(&frame, info);
 	if (info->jpeg_chan_id > 0) {
 		MppFrame comb_frame = NULL;

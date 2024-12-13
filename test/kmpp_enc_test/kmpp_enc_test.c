@@ -8,10 +8,12 @@
 #include "rk_mpi_cmd.h"
 #include "mpp_vcodec_base.h"
 #include "mpp_vcodec_chan.h"
+#include "mpp_buffer.h"
 
 #include "kmpp_osal.h"
+#define TEST_CHANNEL_NUM 1
 
-void mpp_enc_cfg_setup(int chan_id, MppEncCfg cfg)
+int mpp_enc_cfg_setup(int chan_id)
 {
     RK_U32 width = 1280;
     RK_U32 height = 720;
@@ -29,6 +31,10 @@ void mpp_enc_cfg_setup(int chan_id, MppEncCfg cfg)
     RK_S32 rc_mode = MPP_ENC_RC_MODE_CBR;
     RK_U32 gop_len = 60;
     MppCodingType type = MPP_VIDEO_CodingHEVC;
+    MppEncCfg cfg = NULL;
+    int ret;
+
+    mpp_enc_cfg_init(&cfg);
 
     if (!bps)
         bps = width * height / 8 * (fps_out_num / fps_out_den);
@@ -202,31 +208,84 @@ void mpp_enc_cfg_setup(int chan_id, MppEncCfg cfg)
     }
     break;
     }
-    mpp_vcodec_chan_control(chan_id, MPP_CTX_ENC, MPP_ENC_SET_CFG, cfg);
+
+    ret = mpp_vcodec_chan_control(chan_id, MPP_CTX_ENC, MPP_ENC_SET_CFG, cfg);
+
+    mpp_enc_cfg_deinit(cfg);
+
+    return ret;
 }
 
 void enc_test(void)
 {
-    RK_U32 i = 0;
     struct venc_module *venc = NULL;
     struct vcodec_threads *thd;
-    RK_U32 chnl_num = 3;
-    MppEncCfg cfg = NULL;
     struct vcodec_attr attr;
     struct mpp_chan *chan_entry = NULL;
+    RK_U32 chnl_num = TEST_CHANNEL_NUM;
+    RK_S32 ret;
+    RK_U32 i = 0;
+
     mpp_enc_cfg_api_init();
     pr_info("mpp_enc_cfg_api_init ok");
+
     for (i = 0; i < chnl_num; i++) {
-        mpp_enc_cfg_init(&cfg);
+        struct mpp_frame_infos info;
+        MppBuffer buffer;
+        RK_U32 size = 1280 * 720 * 3 / 2;
+        struct venc_packet packet;
+        RK_U32 frame_num = 10;
+
+        memset(&attr, 0, sizeof(attr));
         attr.chan_id = i;
         attr.type = MPP_CTX_ENC;
         attr.coding = MPP_VIDEO_CodingHEVC;
-        mpp_vcodec_chan_create(&attr);
-        mpp_enc_cfg_setup(i, cfg);
+        attr.max_width = 1280;
+        attr.max_height = 720;
+
+        ret = mpp_vcodec_chan_create(&attr);
+        if (ret) {
+            kmpp_loge_f("mpp_vcodec_chan_create failed\n");
+            return;
+        }
+        ret = mpp_enc_cfg_setup(i);
+        if (ret) {
+            kmpp_loge_f("mpp_enc_cfg_setup failed\n");
+            return;
+        }
         mpp_vcodec_chan_start(i, MPP_CTX_ENC);
-        mpp_enc_cfg_deinit(cfg);
-        cfg = NULL;
+        while (frame_num--) {
+            RK_U32 cout = 0;
+
+            mpp_buffer_get(NULL, &buffer, size);
+
+            memset(&info, 0, sizeof(info));
+            info.width = 1280;
+            info.height = 720;
+            info.mpp_buffer = buffer;
+            info.fmt = 0;
+            info.hor_stride = 1280;
+            info.ver_stride = 720;
+
+            mpp_vcodec_chan_push_frm(i, &info);
+
+            osal_msleep(10);
+            while(1) {
+                ret = mpp_vcodec_chan_get_stream(i, MPP_CTX_ENC, &packet);
+                if (ret) {
+                    if (cout++ > 50)
+                        break;
+                    osal_msleep(1);
+                    continue;
+                }
+                kmpp_loge_f("get stream size %d\n", packet.len);
+                mpp_vcodec_chan_put_stream(i, MPP_CTX_ENC, &packet);
+                break;
+            }
+            mpp_buffer_put(buffer);
+        }
     }
+
     chan_entry = mpp_vcodec_get_chan_entry(0, MPP_CTX_ENC);
     venc = mpp_vcodec_get_enc_module_entry();
     thd = venc->thd;
@@ -234,12 +293,14 @@ void enc_test(void)
 
 void test_end(void)
 {
+    RK_U32 chnl_num = TEST_CHANNEL_NUM;
     RK_U32 i = 0;
-    RK_U32 chnl_num = 1;
+
     for (i = 0; i < chnl_num; i++) {
         mpp_vcodec_chan_stop(i, MPP_CTX_ENC);
         mpp_vcodec_chan_destory(i, MPP_CTX_ENC);
     }
+
     mpp_enc_cfg_api_deinit();
 }
 
