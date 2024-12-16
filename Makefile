@@ -8,6 +8,8 @@ KERNEL_VERSION=5.10
 CPU_TYPE=$(ARCH)
 OSTYPE=linux
 KMPP_SRC := kmpp
+MAKE_JOBS ?= $(shell echo `getconf _NPROCESSORS_ONLN`)
+KMPP_MAKE_JOBS := $(shell expr $(MAKE_JOBS) / 2)
 
 EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/inc
 EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/base/inc
@@ -114,7 +116,7 @@ linux_build: linux_clean
 	@echo ---- CROSS=$(CROSS_COMPILE)
 	@echo ---- CPU_TYPE=$(CPU_TYPE)
 	@$(call generate_version)
-	@$(MAKE) CROSS_COMPILE=${CROSS_COMPILE} ARCH=$(CPU_TYPE) -C $(KERNEL_ROOT) M=$(PWD) modules O=$(KMPP_BUILD_KERNEL_OBJ_DIR)
+	@$(MAKE) CROSS_COMPILE=${CROSS_COMPILE} ARCH=$(CPU_TYPE) -C $(KERNEL_ROOT) M=$(PWD) modules O=$(KMPP_BUILD_KERNEL_OBJ_DIR) -j$(KMPP_MAKE_JOBS)
 	@mkdir -p $(PREB_KO)
 	@cp ${KMPP_SRC}.ko $(PREB_KO)
 ifneq ($(BUILD_ONE_KO), y)
