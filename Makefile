@@ -72,6 +72,7 @@ $(shell [ -d "$(TOP)/.git/" ] && [ -d "$(TOP)/tools/hooks" ] && cp -rf $(TOP)/to
 ifeq ($(BUILD_ONE_KO), y)
 	EXTRA_CFLAGS += -DBUILD_ONE_KO
 endif
+-include $(TOP)/version.mk
 -include $(TOP)/mpp_osal/Makefile
 -include $(TOP)/osal/Makefile
 -include $(TOP)/sys/Makefile
@@ -112,6 +113,7 @@ linux_build: linux_clean
 	@echo -e "\e[0;32;1m--Compiling '$(VMPI)'... Configs as follow:\e[0;36;1m"
 	@echo ---- CROSS=$(CROSS_COMPILE)
 	@echo ---- CPU_TYPE=$(CPU_TYPE)
+	@$(call generate_version)
 	@$(MAKE) CROSS_COMPILE=${CROSS_COMPILE} ARCH=$(CPU_TYPE) -C $(KERNEL_ROOT) M=$(PWD) modules O=$(KMPP_BUILD_KERNEL_OBJ_DIR)
 	@mkdir -p $(PREB_KO)
 	@cp ${KMPP_SRC}.ko $(PREB_KO)
