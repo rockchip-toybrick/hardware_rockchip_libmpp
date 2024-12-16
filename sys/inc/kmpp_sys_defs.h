@@ -8,6 +8,17 @@
 
 #include "rk_type.h"
 
+typedef enum EntryType_e {
+    ENTRY_TYPE_s32,
+    ENTRY_TYPE_u32,
+    ENTRY_TYPE_s64,
+    ENTRY_TYPE_u64,
+    ENTRY_TYPE_ptr,
+    ENTRY_TYPE_fp,      /* function poineter */
+    ENTRY_TYPE_st,
+    ENTRY_TYPE_BUTT,
+} EntryType;
+
 /*
  * kmpp system definitions including the kernel space accessor and
  * userspace accessor helper.

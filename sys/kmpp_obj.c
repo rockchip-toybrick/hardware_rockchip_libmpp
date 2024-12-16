@@ -75,7 +75,11 @@ const rk_u8 *strof_entry_type(EntryType type)
         "rk_u64",
         "void *",
         "struct",
+        "invalid"
     };
+
+    if (type < 0 || type >= ENTRY_TYPE_BUTT)
+        type = ENTRY_TYPE_BUTT;
 
     return entry_type_names[type];
 }
@@ -791,3 +795,4 @@ rk_s32 kmpp_obj_dump(KmppObj obj, const rk_u8 *caller)
     return rk_nok;
 }
 EXPORT_SYMBOL(kmpp_obj_dump);
+

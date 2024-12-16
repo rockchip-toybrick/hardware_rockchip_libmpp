@@ -9,17 +9,6 @@
 #include "kmpp_sys_defs.h"
 #include "kmpp_trie.h"
 
-typedef enum EntryType_e {
-    ENTRY_TYPE_s32,
-    ENTRY_TYPE_u32,
-    ENTRY_TYPE_s64,
-    ENTRY_TYPE_u64,
-    ENTRY_TYPE_ptr,
-    ENTRY_TYPE_fp,      /* function poineter */
-    ENTRY_TYPE_st,
-    ENTRY_TYPE_BUTT,
-} EntryType;
-
 /* location table */
 typedef union KmppLocTbl_u {
     rk_u64              val;
@@ -98,5 +87,7 @@ rk_s32 kmpp_obj_run(KmppObj obj, const rk_u8 *name);
 rk_s32 kmpp_obj_dump(KmppObj obj, const rk_u8 *caller);
 
 #define kmpp_obj_dump_f(obj) kmpp_obj_dump(obj, __FUNCTION__)
+
+const rk_u8 *strof_entry_type(EntryType type);
 
 #endif /* __KMPP_OBJ_H__ */
