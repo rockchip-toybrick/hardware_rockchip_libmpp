@@ -17,6 +17,7 @@
 #include "mpp_time.h"
 #include "mpp_maths.h"
 #include "mpp_mem.h"
+#include "mpp_buffer.h"
 
 #include "mpp_frame_impl.h"
 #include "mpp_packet_impl.h"
@@ -688,21 +689,18 @@ MPP_RET mpp_enc_unref_osd_buf(MppEncOSDData3 *osd)
 	for (i = 0; i < osd->num_region; i++) {
 		MppEncOSDRegion3 *rgn = &osd->region[i];
 		if (rgn->osd_buf.buf)
-			mpi_buf_unref(rgn->osd_buf.buf);
+			mpp_buffer_put(rgn->osd_buf.buf);
 
 		if (rgn->inv_cfg.inv_buf.buf)
-			mpi_buf_unref(rgn->inv_cfg.inv_buf.buf);
+			mpp_buffer_put(rgn->inv_cfg.inv_buf.buf);
 	}
 	return MPP_OK;
 }
 MPP_RET mpp_enc_proc_export_osd_buf(MppEncOSDData3 *osd)
 {
 	RK_U32 i = 0;
-	struct mpi_buf *buf = NULL;
 	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
-	struct dma_buf *dmabuf = NULL;
-	struct mpp_frame_infos info;
-	memset(&info, 0, sizeof(info));
+	MppBufferInfo info;
 
 	if (!mpibuf_fn || !mpibuf_fn->dma_buf_import) {
 		mpp_err_f("mpibuf_ops get fail");
@@ -713,25 +711,25 @@ MPP_RET mpp_enc_proc_export_osd_buf(MppEncOSDData3 *osd)
 		MppEncOSDRegion3 *rgn = &osd->region[i];
 
 		if (rgn->osd_buf.fd > 0) {
-			dmabuf = dma_buf_get(rgn->osd_buf.fd);
-			if (!IS_ERR(dmabuf)) {
-				buf = mpibuf_fn->dma_buf_import(dmabuf, &info, -1);
-				rgn->osd_buf.buf = buf;
-				dma_buf_put(dmabuf);
-			} else
-				mpp_err("osd buf dma_buf_get fd %d failed\n",
-					rgn->osd_buf.fd);
+			MppBuffer buf = NULL;
+
+			memset(&info, 0, sizeof(info));
+			info.fd = rgn->osd_buf.fd;
+			mpp_buffer_import(&buf, &info);
+			if (!buf)
+				mpp_err_f("osd buf import fd %d failed\n", info.fd);
+			rgn->osd_buf.buf = buf;
 		}
 
 		if (rgn->inv_cfg.inv_buf.fd > 0) {
-			dmabuf = dma_buf_get(rgn->inv_cfg.inv_buf.fd);
-			if (!IS_ERR(dmabuf)) {
-				buf = mpibuf_fn->dma_buf_import(dmabuf, &info, -1);
-				rgn->inv_cfg.inv_buf.buf = buf;
-				dma_buf_put(dmabuf);
-			} else
-				mpp_err("osd inv buf dma_buf_get fd %d failed\n",
-					rgn->inv_cfg.inv_buf.fd);
+			MppBuffer buf = NULL;
+
+			memset(&info, 0, sizeof(info));
+			info.fd = rgn->osd_buf.fd;
+			mpp_buffer_import(&buf, &info);
+			if (!buf)
+				mpp_err_f("osd buf import fd %d failed\n", info.fd);
+			rgn->inv_cfg.inv_buf.buf = buf;
 		}
 	}
 	return MPP_OK;

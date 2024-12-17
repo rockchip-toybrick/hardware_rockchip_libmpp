@@ -380,7 +380,6 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	if (info->fd) {
 		buf_info.fd = info->fd;
 		mpp_buffer_import(&buffer, &buf_info);
-		mpp_err_f("import buffer %d buffer %px\n", info->fd, buffer);
 	}
 	mpp_frame_init_with_frameinfo(&frame, info);
 	if (info->jpeg_chan_id > 0) {

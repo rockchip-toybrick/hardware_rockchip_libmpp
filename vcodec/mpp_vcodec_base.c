@@ -136,11 +136,12 @@ static int mpp_vcodec_msg_handle(struct mpi_obj *obj, int event, void *args)
 
 			memset(&frm_info, 0, sizeof(frm_info));
 			if (vcodec_rockit_get_buf_frm_info(buf, &frm_info, entry->chan_id)) {
-				mpi_buf_unref(buf);
+				vcodec_rockit_buf_unref(buf);
 				return MPP_NOK;
 			}
 			memset(&buf_info, 0, sizeof(buf_info));
 			buf_info.hnd = buf;
+			buf_info.type = MPP_BUFFER_TYPE_MPI_BUF;
 			mpp_buffer_import(&buffer, &buf_info);
 			mpp_frame_init_with_frameinfo(&frame, &frm_info);
 			if (frm_info.jpeg_chan_id > 0) {

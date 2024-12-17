@@ -354,9 +354,9 @@ MPP_RET hal_jpege_vepu540c_set_osd(jpegeV540cHalContext *ctx)
 		reg->cfg8.osd_qp_min = tmp->qp_cfg.qp_min;
 		reg->cfg8.osd_qp_prj = tmp->qp_cfg.qp_prj;
 		if (tmp->inv_cfg.inv_buf.buf)
-			reg->osd_inv_st_addr = mpp_dev_get_mpi_ioaddress(jpeg_cfg->dev, tmp->inv_cfg.inv_buf.buf, 0);
+			reg->osd_inv_st_addr = mpp_buffer_get_iova(tmp->inv_cfg.inv_buf.buf, jpeg_cfg->dev);
 		if (tmp->osd_buf.buf)
-			reg->osd_st_addr = mpp_dev_get_mpi_ioaddress(jpeg_cfg->dev, tmp->osd_buf.buf, 0);
+			reg->osd_st_addr = mpp_buffer_get_iova(tmp->osd_buf.buf, jpeg_cfg->dev);
 		memcpy(reg->lut, tmp->lut, sizeof(tmp->lut));
 	}
 

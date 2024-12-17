@@ -264,12 +264,6 @@ typedef struct MppBufferInfo_t {
 #define mpp_buffer_group_get_external(group, type, ...) \
         mpp_buffer_group_get(group, type, MPP_BUFFER_EXTERNAL, MODULE_TAG, __FUNCTION__)
 
-#define mpi_buf_ref(buffer) \
-        mpi_buf_ref_with_tag(buffer,  MODULE_TAG, __FUNCTION__)
-
-#define mpi_buf_unref(buffer) \
-        mpi_buf_unref_with_tag(buffer,  MODULE_TAG, __FUNCTION__)
-
 #define mpp_buffer_get_dma(buffer) \
         mpp_buffer_get_dma_with_caller(buffer, __FUNCTION__)
 
@@ -357,9 +351,6 @@ RK_S32 mpp_buffer_attach_dev(MppBuffer buffer, MppDev dev, const char *caller);
 RK_S32 mpp_buffer_dettach_dev(MppBuffer buffer, const char *caller);
 
 RK_S32 mpp_buffer_get_mpi_buf_id_with_caller(MppBuffer buffer, const char *caller);
-
-MPP_RET mpi_buf_ref_with_tag(struct mpi_buf *buf, const char *tag, const char *caller);
-MPP_RET mpi_buf_unref_with_tag(struct mpi_buf *buf, const char *tag, const char *caller);
 
 void mpp_buffer_set_phy_caller(MppBuffer buffer, RK_U32 phy_addr, const char *caller);
 RK_S32 mpp_buffer_get_phy_caller(MppBuffer buffer, const char *caller);

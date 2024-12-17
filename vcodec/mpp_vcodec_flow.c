@@ -34,17 +34,42 @@ void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry, MppPacket packe
 MPP_RET frame_add_osd(MppFrame frame, MppEncOSDData3 *osd_data)
 {
 	RK_U32 i = 0;
+	void *mpi_buf = NULL;
+	MppBufferInfo info;
 
+	/* trasnfor mpi_buf to MppBuffer */
+	for (i = 0; i < osd_data->num_region; i++) {
+		mpi_buf = osd_data->region[i].osd_buf.buf;
+		if (mpi_buf) {
+			MppBuffer buf = NULL;
+
+			memset(&info, 0, sizeof(info));
+			info.hnd = mpi_buf;
+			info.type = MPP_BUFFER_TYPE_MPI_BUF;
+			mpp_buffer_import(&buf, &info);
+			vcodec_rockit_buf_unref(mpi_buf);
+			osd_data->region[i].osd_buf.buf = buf;
+		}
+
+		mpi_buf = osd_data->region[i].inv_cfg.inv_buf.buf;
+		if (mpi_buf) {
+			MppBuffer buf = NULL;
+
+			memset(&info, 0, sizeof(info));
+			info.hnd = mpi_buf;
+			info.type = MPP_BUFFER_TYPE_MPI_BUF;
+			mpp_buffer_import(&buf, &info);
+			vcodec_rockit_buf_unref(mpi_buf);
+			osd_data->region[i].inv_cfg.inv_buf.buf = buf;
+		}
+	}
 	mpp_frame_add_osd(frame, (MppOsd)osd_data);
-
 	for (i = 0; i < osd_data->num_region; i++) {
 		if (osd_data->region[i].osd_buf.buf)
-			mpi_buf_unref(osd_data->region[i].osd_buf.buf);
+			mpp_buffer_put(&osd_data->region[i].osd_buf);
 
-		if (osd_data->region[i].inv_cfg.inv_buf.buf) {
-			mpi_buf_unref(
-				osd_data->region[i].inv_cfg.inv_buf.buf);
-		}
+		if (osd_data->region[i].inv_cfg.inv_buf.buf)
+			mpp_buffer_put(&osd_data->region[i].inv_cfg.inv_buf);
 	}
 
 	return MPP_OK;

@@ -100,40 +100,6 @@ MPP_RET mpp_buffer_import_with_tag(MppBufferGroup group, MppBufferInfo *info,
 	return ret;
 }
 
-MPP_RET mpi_buf_ref_with_tag(struct mpi_buf *buf, const char *tag,
-			     const char *caller)
-{
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
-
-	if (!mpibuf_fn) {
-		mpp_err_f("mpibuf_ops get fail");
-		return MPP_NOK;
-	}
-	if (buf) {
-		if (mpibuf_fn->buf_ref)
-			mpibuf_fn->buf_ref(buf);
-	}
-
-	return MPP_OK;
-}
-
-MPP_RET mpi_buf_unref_with_tag(struct mpi_buf *buf, const char *tag,
-			       const char *caller)
-{
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
-
-	if (!mpibuf_fn) {
-		mpp_err_f("mpibuf_ops get fail");
-		return MPP_NOK;
-	}
-	if (buf) {
-		if (mpibuf_fn->buf_unref)
-			mpibuf_fn->buf_unref(buf);
-	}
-
-	return MPP_OK;
-}
-
 MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 				size_t size, const char *tag,
 				const char *caller)

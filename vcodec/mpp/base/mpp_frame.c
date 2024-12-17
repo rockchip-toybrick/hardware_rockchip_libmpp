@@ -101,15 +101,11 @@ MPP_RET mpp_frame_deinit(MppFrame * frame)
 
 		for (i = 0; i < osd_data->num_region; i++) {
 			if (osd_data->region[i].osd_buf.buf)
-				mpi_buf_unref(osd_data->region[i].osd_buf.buf);
+				mpp_buffer_put(osd_data->region[i].osd_buf.buf);
 
 			if (osd_data->region[i].inv_cfg.inv_buf.buf)
-				mpi_buf_unref(osd_data->region[i].inv_cfg.inv_buf.buf);
+				mpp_buffer_put(osd_data->region[i].inv_cfg.inv_buf.buf);
 		}
-	}
-
-	if (p->pp_info) {
-		//mpi_buf_unref(pp_info.smear);
 	}
 
 	mpp_mem_pool_put(g_frame_pool, p);
@@ -198,9 +194,9 @@ MPP_RET mpp_frame_add_osd(MppFrame frame, MppOsd osd)
 
 	for (i = 0; i < osd_data->num_region; i++) {
 		if (osd_data->region[i].osd_buf.buf)
-			mpi_buf_ref(osd_data->region[i].osd_buf.buf);
+			mpp_buffer_inc_ref(osd_data->region[i].osd_buf.buf);
 		if (osd_data->region[i].inv_cfg.inv_buf.buf)
-			mpi_buf_ref(osd_data->region[i].inv_cfg.inv_buf.buf);
+			mpp_buffer_inc_ref(osd_data->region[i].inv_cfg.inv_buf.buf);
 	}
 
 	return 0;
