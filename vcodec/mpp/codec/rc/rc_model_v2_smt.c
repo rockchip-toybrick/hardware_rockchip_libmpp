@@ -628,6 +628,9 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 	if (info->bit_max < 100)
 		info->bit_max = 100;
 
+	rc_dbg_rc("frame %lld bits_tgt_lower %d, bits_tgt_upper %d, bit_max %d, qp_out %d",
+		  p->frm_num, p->bits_target_lr, p->bits_target_hr, info->bit_max, p->qp_out);
+
 	return MPP_OK;
 }
 
@@ -757,6 +760,11 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 		} else
 			qp_out = p->usr_cfg.init_quality;
 		p->qp_out = qp_out;
+
+		rc_dbg_rc("first frame init_quality %d bits_tgt_upper %d "
+			  "mb_w %d mb_h %d ratio %d qp_out %d\n",
+			  p->usr_cfg.init_quality, p->bits_target_hr,
+			  mb_w, mb_h, ratio, p->qp_out);
 	}
 
 	if (p->frame_type == INTRA_FRAME) {
@@ -809,8 +817,9 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 			RK_S32 diff_bit = (p->pid_alr.i + p->pid_ahr.i) >> 1;
 
 			qp_out = p->qp_out;
-			bits_target_use = (m_tbr * coef + p->bits_target_lr * 1024) >> 10;
-			pre_diff_bit_use = (m_dbr * coef + p->pre_diff_bit_lr * 1024) >> 10;
+			bits_target_use = ((RK_S64)m_tbr * coef + (RK_S64)p->bits_target_lr * 1024) >> 10;
+			pre_diff_bit_use = ((RK_S64)m_dbr * coef + (RK_S64)p->pre_diff_bit_lr * 1024) >> 10;
+
 			if (bits_target_use < 100)
 				bits_target_use = 100;
 
@@ -841,7 +850,7 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 			}
 
 			qp_out = mpp_clip(qp_out, p->qp_min, p->qp_max);
-			pre_diff_bit_use = (m_dbr * coef + p->pre_diff_bit_lr * 1024) >> 10;
+			pre_diff_bit_use = ((RK_S64)m_dbr * coef + (RK_S64)p->pre_diff_bit_lr * 1024) >> 10;
 			bits_target_use = avg_bps / fps_out;
 			bits_target_use = -bits_target_use / 5;
 			if (qp_out > LOW_QP) {
@@ -851,8 +860,8 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 				if (coef >= 1024 || qp_out > LOW_LOW_QP)
 					coef = 1024;
 
-				pre_diff_bit_use = (m_dbr * coef + p->pre_diff_bit_lr * 1024) >> 10;
-				bits_target_use = (m_tbr * coef + p->bits_target_lr * 1024) >> 10;
+				pre_diff_bit_use = ((RK_S64)m_dbr * coef + (RK_S64)p->pre_diff_bit_lr * 1024) >> 10;
+				bits_target_use = ((RK_S64)m_tbr * coef + (RK_S64)p->bits_target_lr * 1024) >> 10;
 				if (bits_target_use < 100)
 					bits_target_use = 100;
 				if (abs(pre_diff_bit_use) * 100 <= bits_target_use * 3)
@@ -930,6 +939,11 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 	info->quality_max = p->usr_cfg.max_quality;
 	info->quality_min = p->usr_cfg.min_quality;
 	info->bit_target = p->bits_target_hr;
+
+	rc_dbg_rc("frame %lld quality [%d : %d : %d] complex_scene %d\n",
+		  p->frm_num, info->quality_min, info->quality_target,
+		  info->quality_max, info->complex_scene);
+
 	p->frm_num++;
 	p->reenc_cnt = 0;
 
