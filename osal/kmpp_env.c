@@ -40,6 +40,7 @@ typedef struct KmppEnvNodeImpl_t {
     rk_s32 str_val_size;
     KmppEnvGrpImpl *grp;
     struct seq_file *seq;
+    void *pde;
 } KmppEnvNodeImpl;
 
 static osal_list_head list_env_grp;
@@ -373,6 +374,8 @@ rk_s32 kmpp_env_add(KmppEnvGrp env, KmppEnvNode *node, KmppEnvInfo *info)
         goto failed;
     }
 
+    n->pde = pde;
+
     osal_spin_lock(lock_env);
     osal_list_add_tail(&n->list, &grp->list_nodes);
     osal_spin_unlock(lock_env);
@@ -406,6 +409,11 @@ rk_s32 kmpp_env_del(KmppEnvGrp env, KmppEnvNode node)
         osal_spin_lock(lock_env);
         osal_list_del_init(&p->list);
         osal_spin_unlock(lock_env);
+
+        if (p->pde) {
+            proc_remove(p->pde);
+            p->pde = NULL;
+        }
 
         if (p->info.type == KmppEnv_str) {
             kmpp_free(p->info.val);
