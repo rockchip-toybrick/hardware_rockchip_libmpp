@@ -1,3 +1,4 @@
 -include $(TOP)/test/kmpp_enc_test/Makefile
+-include $(TOP)/test/kmpi_enc_test/Makefile
 -include $(TOP)/test/kmpp_test/Makefile
 -include $(TOP)/test/osal_test/Makefile
