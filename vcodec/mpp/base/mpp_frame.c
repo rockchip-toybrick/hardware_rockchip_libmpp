@@ -322,12 +322,14 @@ RK_U32 mpp_frame_get_fbc_stride(MppFrame frame)
 							\
         return ((MppFrameImpl*)s)->field;		\
     }							\
+    EXPORT_SYMBOL(mpp_frame_get_##field);		\
     void mpp_frame_set_##field(MppFrame s, type v)	\
     {							\
         check_is_mpp_frame((MppFrameImpl*)s);		\
 							\
         ((MppFrameImpl*)s)->field = v;			\
-    }
+    }							\
+    EXPORT_SYMBOL(mpp_frame_set_##field);
 
 MPP_FRAME_ACCESSORS(RK_U32, width)
 MPP_FRAME_ACCESSORS(RK_U32, height)
@@ -356,3 +358,19 @@ MPP_FRAME_ACCESSORS(RK_U32, pskip_request)
 MPP_FRAME_ACCESSORS(RK_U32, pskip_num)
 MPP_FRAME_ACCESSORS(RK_U32, chan_id)
 MPP_FRAME_ACCESSORS(MppFrame, combo_frame)
+
+EXPORT_SYMBOL(mpp_frame_init);
+EXPORT_SYMBOL(mpp_frame_deinit);
+EXPORT_SYMBOL(mpp_frame_get_buffer);
+EXPORT_SYMBOL(mpp_frame_set_buffer);
+EXPORT_SYMBOL(mpp_frame_has_meta);
+EXPORT_SYMBOL(mpp_frame_add_roi);
+EXPORT_SYMBOL(mpp_frame_get_roi);
+EXPORT_SYMBOL(mpp_frame_add_osd);
+EXPORT_SYMBOL(mpp_frame_get_osd);
+EXPORT_SYMBOL(mpp_frame_add_ppinfo);
+EXPORT_SYMBOL(mpp_frame_get_ppinfo);
+EXPORT_SYMBOL(mpp_frame_copy);
+EXPORT_SYMBOL(mpp_frame_info_cmp);
+EXPORT_SYMBOL(mpp_frame_get_fbc_offset);
+EXPORT_SYMBOL(mpp_frame_get_fbc_stride);

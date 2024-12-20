@@ -390,7 +390,6 @@ RK_U32 mpp_packet_get_eos(MppPacket packet)
 	return (p->flag & MPP_PACKET_FLAG_EOS) ? (1) : (0);
 }
 
-
 MPP_RET mpp_packet_reset(MppPacketImpl * packet)
 {
 	void *data;
@@ -413,8 +412,6 @@ MPP_RET mpp_packet_reset(MppPacketImpl * packet)
 
 void mpp_packet_set_buffer(MppPacket packet, MppBuffer buffer)
 {
-
-//    MppPacketImpl *p = NULL;
 	if (check_is_mpp_packet(packet))
 		return;
 #if 0
@@ -605,11 +602,13 @@ RK_U32  mpp_packet_get_flag(const MppPacket packet)
         check_is_mpp_packet(s); \
         return ((MppPacketImpl*)s)->field; \
     } \
+    EXPORT_SYMBOL(mpp_packet_get_##field); \
     void mpp_packet_set_##field(MppPacket s, type v) \
     { \
         check_is_mpp_packet(s); \
         ((MppPacketImpl*)s)->field = v; \
-    }
+    }\
+    EXPORT_SYMBOL(mpp_packet_set_##field);
 
 MPP_PACKET_ACCESSORS(void *, data)
 MPP_PACKET_ACCESSORS(size_t, size)
@@ -618,3 +617,28 @@ MPP_PACKET_ACCESSORS(RK_S64, pts)
 MPP_PACKET_ACCESSORS(RK_S64, dts)
 MPP_PACKET_ACCESSORS(RK_U32, temporal_id)
 
+EXPORT_SYMBOL(mpp_packet_new);
+EXPORT_SYMBOL(mpp_packet_new_ring_buf);
+EXPORT_SYMBOL(mpp_packet_ring_buf_put_used);
+EXPORT_SYMBOL(mpp_packet_init);
+EXPORT_SYMBOL(mpp_packet_init_with_buffer);
+EXPORT_SYMBOL(mpp_packet_deinit);
+EXPORT_SYMBOL(mpp_packet_set_pos);
+EXPORT_SYMBOL(mpp_packet_get_pos);
+EXPORT_SYMBOL(mpp_packet_set_eos);
+EXPORT_SYMBOL(mpp_packet_clr_eos);
+EXPORT_SYMBOL(mpp_packet_get_eos);
+EXPORT_SYMBOL(mpp_packet_reset);
+EXPORT_SYMBOL(mpp_packet_set_buffer);
+EXPORT_SYMBOL(mpp_packet_get_buffer);
+EXPORT_SYMBOL(mpp_packet_set_status);
+EXPORT_SYMBOL(mpp_packet_get_status);
+EXPORT_SYMBOL(mpp_packet_is_partition);
+EXPORT_SYMBOL(mpp_packet_is_soi);
+EXPORT_SYMBOL(mpp_packet_is_eoi);
+EXPORT_SYMBOL(mpp_packet_read);
+EXPORT_SYMBOL(mpp_packet_write);
+EXPORT_SYMBOL(mpp_packet_copy);
+EXPORT_SYMBOL(mpp_packet_append);
+EXPORT_SYMBOL(mpp_packet_set_flag);
+EXPORT_SYMBOL(mpp_packet_get_flag);
