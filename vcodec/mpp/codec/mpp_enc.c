@@ -209,7 +209,7 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 	}
 
 	if (enc->ring_pool) {
-		if (!enc->shared_buf->stream_buf) {
+		if (!enc->shared_buf || !enc->shared_buf->stream_buf) {
 			if (enc->ring_pool->buf)
 				mpp_buffer_put(enc->ring_pool->buf);
 		}
