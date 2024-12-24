@@ -236,6 +236,8 @@ static void *jpgenc_alloc_task(struct mpp_session *session, struct mpp_task_msgs
 	mpp_task_init(session, mpp_task);
 	mpp_task->hw_info = mpp->var->hw_info;
 	mpp_task->reg = task->reg;
+	if (session->k_space)
+		mpp_task->clbk_en = 1;
 	/* process fd in register */
 	ret = jpgenc_extract_task_msg(task, msgs);
 	if (ret)

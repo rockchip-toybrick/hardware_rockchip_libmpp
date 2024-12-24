@@ -67,6 +67,7 @@ SET(KMPP_SRC
     #../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu540c.c
     #../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vepu540c.c
     #../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vepu500.c
+    ../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vpu720.c
     ../vcodec/mpp/hal/common/h264/hal_h264e_api_v2.c
     ../vcodec/mpp/hal/common/h265/hal_h265e_api_v2.c
     ../vcodec/mpp/hal/common/hal_bufs.c
