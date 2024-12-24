@@ -154,4 +154,4 @@ SET(KMPP_SRC
     hack/mpp_rkvdec2_link_hack_rk3568.c
 )
 
-ADD_KBUILD(kmpp SRC ${KMPP_SRC} DEPS osal)
+ADD_KBUILD(kmpp SRC ${KMPP_SRC} DEPS osal sys)

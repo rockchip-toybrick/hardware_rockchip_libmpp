@@ -15,6 +15,7 @@
 #include "kmpp_sym.h"
 #include "kmpp_shm.h"
 #include "kmpp_frame.h"
+#include "kmpp_venc_objs.h"
 
 KmppEnvGrp kmpp_env_sys;
 EXPORT_SYMBOL(kmpp_env_sys);
@@ -108,6 +109,7 @@ int sys_init(void)
 
     kmpp_shm_init();
     kmpp_frame_init();
+    kmpp_venc_init_cfg_init();
 
     return 0;
 }
@@ -116,6 +118,7 @@ void sys_exit(void)
 {
     kmpp_logi("sys exit\n");
 
+    kmpp_venc_init_cfg_deinit();
     kmpp_frame_deinit();
     kmpp_shm_deinit();
 

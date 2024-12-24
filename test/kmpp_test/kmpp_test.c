@@ -24,25 +24,19 @@ typedef struct KmppCallback_t {
     rk_s32 (*func)(void *param);
 } KmppCallback;
 
-#define KMPP_OBJ_IMPL_TYPE  KmppCallback
-#define KMPP_OBJ_IMPL_DEF   kmpp_obj
+#define ENTRY_TABLE(ENTRY, prefix) \
+    ENTRY(prefix, ptr, void *, arg0) \
+    ENTRY(prefix, u32, rk_u32, arg1) \
+    ENTRY(prefix, u64, rk_u64, arg2) \
+    ENTRY(prefix, fp,  void *, func)
 
+#define KMPP_OBJ_NAME           kmpp_obj_test
+#define KMPP_OBJ_INTF_TYPE      MppFrame
+#define KMPP_OBJ_IMPL_TYPE      KmppCallback
+#define KMPP_OBJ_ENTRY_TABLE    ENTRY_TABLE
 #include "kmpp_obj_helper.h"
 
-#define ENTRY_TO_TRIE(cls, field, type) \
-    do { \
-        KmppLocTbl tbl = FIELD_TO_LOCTBL_ACCESS1(field, type); \
-        kmpp_objdef_add_entry(cls, #field, &tbl); \
-    } while (0);
-
-
-#define ENTRY_TABLE(ENTRY, cls) \
-    ENTRY(cls, arg0, ptr) \
-    ENTRY(cls, arg1, u32) \
-    ENTRY(cls, arg2, u64) \
-    ENTRY(cls, func, ptr)
-
-static rk_s32 kmpp_show(void *param)
+static rk_s32 kmpp_obj_test_impl_dump(void *param)
 {
     KmppCallback *cb = (KmppCallback *)param;
 
@@ -53,17 +47,16 @@ static rk_s32 kmpp_show(void *param)
     return 0;
 }
 
- void kmpp_func_preset(void *obj)
+ static void kmpp_obj_test_impl_preset(void *obj)
  {
     KmppCallback *cb = (KmppCallback *)obj;
 
     cb->arg0 = NULL;
     cb->arg1 = 1234;
     cb->arg2 = 5678;
-    cb->func = kmpp_show;
+    cb->func = kmpp_obj_test_impl_dump;
  }
 
-static KmppObjDef kmpp_def = NULL;
 static KmppObjDef test_def = NULL;
 
 rk_s32 kmpp_test_func(void *param)
@@ -87,14 +80,11 @@ rk_s32 kmpp_test_func(void *param)
     if (ret)
         goto done;
 
-    kmpp_objdef_init(&kmpp_def, sizeof(KmppCallback), "kmpp_call");
-    ENTRY_TABLE(ENTRY_TO_TRIE, kmpp_def);
-    kmpp_objdef_add_entry(kmpp_def, NULL, NULL);
-    kmpp_objdef_add_preset(kmpp_def, kmpp_func_preset);
+    kmpp_obj_test_init();
 
-    kmpp_logi_f("obj init done %px\n", kmpp_def);
+    kmpp_logi_f("obj init done %px\n", kmpp_obj_test_def);
 
-    trie1 = kmpp_objdef_get_trie(kmpp_def);
+    trie1 = kmpp_objdef_get_trie(kmpp_obj_test_def);
     if (!trie1) {
         kmpp_loge("get trie failed\n");
         goto done;
@@ -120,14 +110,14 @@ rk_s32 kmpp_test_func(void *param)
 
     kmpp_trie_deinit(trie2);
 
-    kmpp_obj_get(&obj, kmpp_def);
+    kmpp_obj_get(&obj, kmpp_obj_test_def);
 
     kmpp_obj_set_ptr(obj, "arg0", NULL);
     kmpp_obj_set_s32(obj, "arg1", 1);
     kmpp_obj_set_u64(obj, "arg2", 2);
-    kmpp_obj_set_ptr(obj, "func", kmpp_show);
+    kmpp_obj_set_ptr(obj, "func", kmpp_obj_test_impl_dump);
 
-    kmpp_logi_f("kmpp_show %px\n", kmpp_show);
+    kmpp_logi_f("kmpp_show %px\n", kmpp_obj_test_impl_dump);
 
     kmpp_obj_run(obj, "func");
 
@@ -163,6 +153,7 @@ void kmpp_test_prepare(void)
 
 void kmpp_test_finish(void)
 {
+    kmpp_obj_test_deinit();
     kmpp_logi("kmpp test end\n");
 }
 
@@ -183,9 +174,9 @@ void kmpp_test_exit(void)
     osal_worker_deinit(&test_worker);
     osal_work_deinit(&test_work);
 
-    if (kmpp_def) {
-        kmpp_objdef_deinit(kmpp_def);
-        kmpp_def = NULL;
+    if (kmpp_obj_test_def) {
+        kmpp_objdef_deinit(kmpp_obj_test_def);
+        kmpp_obj_test_def = NULL;
     }
 
     kmpp_test_finish();

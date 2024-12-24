@@ -9,16 +9,25 @@
 
 #include <linux/types.h>
 
-/* kernel object trie share info */
-typedef struct KmppObjTrie_t {
-    /* share object trie root userspace address (read only) */
-    __u64   trie_root;
+/*
+ * kernel object trie share info
+ * used in KMPP_SHM_IOC_QUERY_INFO
+ *
+ * input  : object name userspace address
+ * output : trie_root userspace address (read only)
+ */
+typedef union KmppObjTrie_u {
+    __u64       name_uaddr;
+    __u64       trie_root;
 } KmppObjTrie;
 
 /* kernel object share memory */
-typedef struct KmppObjShm_t {
-    __u64   kobj_uaddr;
-    __u64   kobj_kaddr;
+typedef struct KmppObjShm_u {
+    union {
+    __u64       name_uaddr;
+    __u64       kobj_uaddr;
+    };
+    __u64       kobj_kaddr;
     /* DO NOT access reserved data only used by kernel */
 } KmppObjShm;
 

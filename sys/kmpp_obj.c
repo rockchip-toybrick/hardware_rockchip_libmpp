@@ -43,6 +43,7 @@ typedef struct KmppObjDefImpl_t {
     rk_s32 buf_size;
     KmppTrie trie;
     KmppShmMgr shm_mgr;
+    rk_s32 shm_bind;
     KmppObjPreset preset;
     KmppObjDump dump;
     const rk_u8 *name_check;            /* for object name address check */
@@ -224,6 +225,7 @@ rk_s32 check_entry_tbl(KmppLocTbl *tbl, const rk_u8 *name, EntryType type,
 rk_s32 kmpp_objdef_init(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
 {
     KmppObjDefImpl *impl = NULL;
+    rk_s32 offset;
     rk_s32 len;
 
     if (!def || !size || !name) {
@@ -249,6 +251,8 @@ rk_s32 kmpp_objdef_init(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
     kmpp_trie_init(&impl->trie, name);
     /* record object impl size */
     kmpp_trie_add_info(impl->trie, "__size", &size, sizeof(size));
+    offset = kmpp_shm_entry_offset();
+    kmpp_trie_add_info(impl->trie, "__offset", &offset, sizeof(offset));
 
     OSAL_INIT_LIST_HEAD(&impl->list);
     osal_list_add_tail(&impl->list, &kmpp_obj_list);
@@ -337,6 +341,36 @@ rk_s32 kmpp_objdef_add_shm_mgr(KmppObjDef def)
 }
 EXPORT_SYMBOL(kmpp_objdef_add_shm_mgr);
 
+rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def)
+{
+    KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+    KmppShmMgr mgr = NULL;
+    rk_s32 ret = rk_nok;
+
+    if (!impl) {
+        kmpp_loge_f("invalid param obj def NULL\n");
+        return rk_nok;
+    }
+
+    mgr = kmpp_shm_get_objs_mgr();
+    if (!mgr) {
+        kmpp_loge_f("kmpp_shm_get_objs_mgr failed\n");
+        return ret;
+    }
+
+    ret = kmpp_shm_mgr_bind_objdef(mgr, def);
+    if (ret) {
+        kmpp_loge_f("bind kmpp_objs shm mgr failed ret %d\n", ret);
+        mgr = NULL;
+    }
+
+    impl->shm_mgr = mgr;
+    impl->shm_bind = 1;
+
+    return ret;
+}
+EXPORT_SYMBOL(kmpp_objdef_bind_shm_mgr);
+
 rk_s32 kmpp_objdef_deinit(KmppObjDef def)
 {
     KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
@@ -347,7 +381,11 @@ rk_s32 kmpp_objdef_deinit(KmppObjDef def)
 
         if (!impl->ref_cnt) {
             if (impl->shm_mgr) {
-                kmpp_shm_mgr_put(impl->shm_mgr);
+                if (impl->shm_bind)
+                    kmpp_shm_mgr_unbind_objdef(impl->shm_mgr, def);
+                else
+                    kmpp_shm_mgr_put(impl->shm_mgr);
+
                 impl->shm_mgr = NULL;
             }
 

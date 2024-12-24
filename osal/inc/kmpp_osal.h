@@ -31,6 +31,7 @@
 #include "kmpp_time.h"
 #include "kmpp_wait.h"
 #include "kmpp_delay.h"
+#include "kmpp_uaccess.h"
 
 int osal_init(void);
 void osal_exit(void);

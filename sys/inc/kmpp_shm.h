@@ -20,11 +20,26 @@ typedef struct KmppShmGrpCfg_t {
 /* global init / exit funciton on module init / exit */
 rk_s32 kmpp_shm_init(void);
 rk_s32 kmpp_shm_deinit(void);
+KmppShmMgr *kmpp_shm_get_objs_mgr(void);
+rk_s32 kmpp_shm_entry_offset(void);
 
-/* normal share memory manager with name and size */
-rk_s32 kmpp_shm_mgr_get(KmppShmMgr *mgr, const rk_u8 *name, rk_s32 size);
-/* kmpp object share memory manager with kmpp object definition */
+/*
+ * share memory manager has two mode:
+ * 1. One-to-one mode:
+ *    One share memory manager is binded with only one kmpp object definition
+ * 2. One-to-N mode:
+ *    The kmpp_objs share memory manager is binded with multiple kmpp object definitions
+ */
+
+/* One-to-one mode create funciton */
 rk_s32 kmpp_shm_mgr_get_by_objdef(KmppShmMgr *mgr, KmppObjDef def);
+
+/* Create share memory manager with device name */
+rk_s32 kmpp_shm_mgr_get(KmppShmMgr *mgr, const rk_u8 *name);
+/* kmpp object share memory manager add KmppObjDef binding */
+rk_s32 kmpp_shm_mgr_bind_objdef(KmppShmMgr mgr, KmppObjDef def);
+rk_s32 kmpp_shm_mgr_unbind_objdef(KmppShmMgr mgr, KmppObjDef def);
+
 rk_s32 kmpp_shm_mgr_put(KmppShmMgr mgr);
 rk_s32 kmpp_shm_mgr_query(KmppShmMgr *mgr, const rk_u8 *name);
 
