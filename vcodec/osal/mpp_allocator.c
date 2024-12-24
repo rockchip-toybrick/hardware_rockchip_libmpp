@@ -31,9 +31,9 @@ typedef struct AllocatorInfo_t {
 
 static AllocatorInfo infos[MPP_ALLOCATOR_BUTT];
 static mpp_allocator_api *apis[] = {
-	&mpi_buf_allocator,
-	&rk_dma_heap_allocator,
 	&dma_heap_allocator,
+	&rk_dma_heap_allocator,
+	&mpi_buf_allocator,
 };
 
 static mpp_allocator_api *get_allocator(MppBufferType type)
@@ -48,6 +48,15 @@ static mpp_allocator_api *get_allocator(MppBufferType type)
 	}
 
 	if (!infos[allocator_type].valid) {
+		MPP_RET ret = MPP_OK;
+
+		ret = apis[allocator_type]->init(__func__);
+		if (!ret) {
+			infos[allocator_type].type = allocator_type;
+			infos[allocator_type].api = apis[allocator_type];
+			infos[allocator_type].valid = 1;
+			goto __return;
+		}
 		for (i = 0; i < MPP_ARRAY_ELEMS(infos); i++) {
 			if (infos[i].valid && infos[i].api) {
 				allocator_type = infos[i].type;
@@ -56,6 +65,7 @@ static mpp_allocator_api *get_allocator(MppBufferType type)
 		}
 	}
 
+__return:
 	api = infos[allocator_type].api;
 
 	return api;
