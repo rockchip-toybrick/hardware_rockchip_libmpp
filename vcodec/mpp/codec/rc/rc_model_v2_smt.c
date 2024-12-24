@@ -125,10 +125,10 @@ MPP_RET bits_model_smt_init(RcModelV2SmtCtx * ctx)
 	RK_S32 avg_lr = 0;
 	RK_S32 avg_hr = 0;
 	RK_S32 bit_ratio[5] = {7, 8, 9, 10, 11};
-	RK_S32 nfps = fps->fps_out_num / fps->fps_out_denorm;
+	RK_S32 nfps = fps->fps_out_num / fps->fps_out_denom;
 	RK_S32 win_len = mpp_clip(MPP_MAX3(gop_len, nfps, 10), 1, nfps);
-	RK_S32 stat_len = fps->fps_out_num * ctx->usr_cfg.stats_time / fps->fps_out_denorm;
-	stat_len = stat_len ? stat_len : (fps->fps_out_num * 8 / fps->fps_out_denorm);
+	RK_S32 stat_len = fps->fps_out_num * ctx->usr_cfg.stats_time / fps->fps_out_denom;
+	stat_len = stat_len ? stat_len : (fps->fps_out_num * 8 / fps->fps_out_denom);
 
 	rc_dbg_func("enter %p\n", ctx);
 	ctx->frm_num = 0;
@@ -173,8 +173,8 @@ MPP_RET bits_model_smt_init(RcModelV2SmtCtx * ctx)
 	mpp_pid_set_param(&ctx->pid_alr, 4, 6, 0, 100, gop_len);
 	mpp_pid_set_param(&ctx->pid_ahr, 4, 6, 0, 100, gop_len);
 
-	avg_lr = axb_div_c(ctx->usr_cfg.bps_min, fps->fps_out_denorm, fps->fps_out_num);
-	avg_hr = axb_div_c(ctx->usr_cfg.bps_max, fps->fps_out_denorm, fps->fps_out_num);
+	avg_lr = axb_div_c(ctx->usr_cfg.bps_min, fps->fps_out_denom, fps->fps_out_num);
+	avg_hr = axb_div_c(ctx->usr_cfg.bps_max, fps->fps_out_denom, fps->fps_out_num);
 	ctx->acc_intra_count = 0;
 	ctx->acc_inter_count = 0;
 	ctx->last_fps_bits = 0;
@@ -489,7 +489,7 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 	RcModelV2SmtCtx *p = (RcModelV2SmtCtx *) ctx;
 	EncRcTaskInfo *info = &task->info;
 	RcFpsCfg *fps = &p->usr_cfg.fps;
-	RK_S32 fps_out = fps->fps_out_num / fps->fps_out_denorm;
+	RK_S32 fps_out = fps->fps_out_num / fps->fps_out_denom;
 	RK_S32 b_min = p->usr_cfg.bps_min;
 	RK_S32 b_max = p->usr_cfg.bps_max;
 	if (ppinfo) {
@@ -599,8 +599,8 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 			} else {
 				RK_S32 diff_bit_lr = mpp_data_mean_v2(p->pid_plr);
 				RK_S32 diff_bit_hr = mpp_data_mean_v2(p->pid_phr);
-				RK_S32 lr = axb_div_c(b_min, fps->fps_out_denorm, fps->fps_out_num);
-				RK_S32 hr = axb_div_c(b_max, fps->fps_out_denorm, fps->fps_out_num);
+				RK_S32 lr = axb_div_c(b_min, fps->fps_out_denom, fps->fps_out_num);
+				RK_S32 hr = axb_div_c(b_max, fps->fps_out_denom, fps->fps_out_num);
 
 				p->bits_target_lr = p->bits_per_plr - diff_bit_lr;
 				if (p->bits_target_lr > 2 * lr)
@@ -722,7 +722,7 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 	RK_S32 qp_minus = 0;
 	RK_S32 bit_target_use = 0;
 	RK_S32 avg_bps = (p->usr_cfg.bps_min + p->usr_cfg.bps_max) / 2;
-	RK_S32 fps_out = fps->fps_out_num / fps->fps_out_denorm;
+	RK_S32 fps_out = fps->fps_out_num / fps->fps_out_denom;
 	RK_S32 avg_pqp = 0;
 	RK_S32 qp_out = 0;
 	RK_S32 prev_pqp = p->qp_prev_out;
@@ -1179,15 +1179,15 @@ void rc_model_v2_smt_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 	if (usr_cfg->mode == RC_FIXQP) {
 		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%13s|%13s|%5u|%5u \n",
 			   chl_id, usr_cfg->igop, usr_cfg->stats_time,
-			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denorm,
-			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denorm,
+			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denom,
+			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denom,
 			   strof_rc_mode(usr_cfg->mode), "N/A", "N/A",
 			   usr_cfg->init_quality, usr_cfg->init_quality);
 	} else {
 		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%13u|%13u|%5s|%5s \n",
 			   chl_id, usr_cfg->igop, usr_cfg->stats_time,
-			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denorm,
-			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denorm,
+			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denom,
+			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denom,
 			   "smart", usr_cfg->bps_min / 1000, usr_cfg->bps_max / 1000, "N/A", "N/A");
 	}
 

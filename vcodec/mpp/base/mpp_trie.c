@@ -41,8 +41,8 @@
 #define MPP_TRIE_INFO_MAX               (1 << 12)
 #define MPP_TRIE_NAME_MAX               (1 << 12)
 
-#define DEFAULT_NODE_COUNT              2000
-#define DEFAULT_INFO_COUNT              150
+#define DEFAULT_NODE_COUNT              3000
+#define DEFAULT_INFO_COUNT              300
 #define INVALID_NODE_ID                 (-1)
 #define MPP_TRIE_TAG_LEN_MAX            ((sizeof(RK_U64) * 8) / MPP_TRIE_KEY_LEN)
 
@@ -178,7 +178,7 @@ MPP_RET mpp_trie_init(MppTrie *trie, const char *name)
         goto DONE;
     }
 
-    p->info_buf_size = SZ_4K;
+    p->info_buf_size = SZ_8K;
     p->info_buf = mpp_calloc_size(void, p->info_buf_size);
     if (!p->info_buf) {
         mpp_err_f("failed to alloc %d info buffer\n", p->info_buf_size);

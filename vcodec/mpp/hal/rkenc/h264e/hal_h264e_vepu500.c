@@ -1147,10 +1147,10 @@ static void setup_vepu500_rdo_pred(HalH264eVepu500Ctx *ctx, H264eSps *sps,
 
 	if (slice->slice_type == H264_I_SLICE) {
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 6;
-		lambda_idx = ctx->cfg->tune.lambda_i_idx;
+		lambda_idx = ctx->cfg->tune.lambda_idx_i;
 	} else {
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = (sm == MPP_ENC_SCENE_MODE_IPC) ? 9 : 6;
-		lambda_idx = ctx->cfg->tune.lambda_idx;
+		lambda_idx = ctx->cfg->tune.lambda_idx_p;
 	}
 
 	if (sm == MPP_ENC_SCENE_MODE_IPC)
@@ -1221,11 +1221,11 @@ static void setup_vepu500_rc_base(HalH264eVepu500Ctx *ctx, HalVepu500RegSet *reg
 		RK_S32 fqp_min, fqp_max;
 
 		if (slice->slice_type == H264_I_SLICE) {
-			fqp_min = rc->fm_lvl_qp_min_i;
-			fqp_max = rc->fm_lvl_qp_max_i;
+			fqp_min = rc->fqp_min_i;
+			fqp_max = rc->fqp_max_i;
 		} else {
-			fqp_min = rc->fm_lvl_qp_min_p;
-			fqp_max = rc->fm_lvl_qp_max_p;
+			fqp_min = rc->fqp_min_p;
+			fqp_max = rc->fqp_max_p;
 		}
 
 		if (fqp_min == fqp_max) {

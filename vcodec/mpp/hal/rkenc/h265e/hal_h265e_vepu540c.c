@@ -1003,8 +1003,8 @@ static void vepu540c_h265_global_cfg_set(H265eV540cHalContext *ctx,
 	hevc_vepu540c_wgt *reg_wgt = &regs->reg_wgt;
 	vepu540c_rdo_cfg *reg_rdo = &regs->reg_rdo;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
-	RK_S32 lmd_idx = ctx->frame_type == INTRA_FRAME ? ctx->cfg->tune.lambda_i_idx :
-			 ctx->cfg->tune.lambda_idx;
+	RK_S32 lmd_idx = ctx->frame_type == INTRA_FRAME ? ctx->cfg->tune.lambda_idx_i :
+			 ctx->cfg->tune.lambda_idx_p;
 	vepu540c_h265_rdo_cfg(ctx, reg_rdo, task);
 	setup_vepu540c_hevc_scl_cfg(&regs->reg_scl_jpgtbl.scl, task);
 
@@ -1427,15 +1427,15 @@ static MPP_RET vepu540c_h265_set_rc_regs(H265eV540cHalContext *ctx,
 		reg_base->reg214_rc_tgt.ctu_ebit = ctu_target_bits_mul_16;
 
 		if (ctx->frame_type == INTRA_FRAME) {
-			if (rc->fm_lvl_qp_min_i == rc->fm_lvl_qp_max_i) {
-				reg_base->reg0192_enc_pic.pic_qp = rc->fm_lvl_qp_min_i;
-				reg_base->reg0240_synt_sli1.sli_qp = rc->fm_lvl_qp_min_i;
+			if (rc->fqp_min_i == rc->fqp_max_i) {
+				reg_base->reg0192_enc_pic.pic_qp = rc->fqp_min_i;
+				reg_base->reg0240_synt_sli1.sli_qp = rc->fqp_min_i;
 				reg_base->reg213_rc_qp.rc_qp_range = 0;
 			}
 		} else {
-			if (rc->fm_lvl_qp_min_p == rc->fm_lvl_qp_max_p) {
-				reg_base->reg0192_enc_pic.pic_qp = rc->fm_lvl_qp_min_p;
-				reg_base->reg0240_synt_sli1.sli_qp = rc->fm_lvl_qp_min_p;
+			if (rc->fqp_min_p == rc->fqp_max_p) {
+				reg_base->reg0192_enc_pic.pic_qp = rc->fqp_min_p;
+				reg_base->reg0240_synt_sli1.sli_qp = rc->fqp_min_p;
 				reg_base->reg213_rc_qp.rc_qp_range = 0;
 			}
 		}

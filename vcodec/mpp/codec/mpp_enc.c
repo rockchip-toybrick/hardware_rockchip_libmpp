@@ -713,8 +713,8 @@ RK_S32 mpp_enc_get_fps_out(MppEnc ctx)
 		return MPP_ERR_NULL_PTR;
 	}
 
-	if (enc->cfg.rc.fps_out_num && enc->cfg.rc.fps_out_denorm)
-		fps_out = enc->cfg.rc.fps_out_num / enc->cfg.rc.fps_out_denorm;
+	if (enc->cfg.rc.fps_out_num && enc->cfg.rc.fps_out_denom)
+		fps_out = enc->cfg.rc.fps_out_num / enc->cfg.rc.fps_out_denom;
 
 	return fps_out;
 }

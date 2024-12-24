@@ -1581,13 +1581,13 @@ static void setup_vepu540c_rc_base(HalH264eVepu540cCtx *ctx, H264eSps *sps,
 	regs->reg_base.rc_qp.rc_min_qp = qp_min;
 
 	if (slice->slice_type == H264_I_SLICE) {
-		if (rc->fm_lvl_qp_min_i == rc->fm_lvl_qp_max_i) {
-			regs->reg_base.enc_pic.pic_qp = rc->fm_lvl_qp_min_i;
+		if (rc->fqp_min_i == rc->fqp_max_i) {
+			regs->reg_base.enc_pic.pic_qp = rc->fqp_min_i;
 			regs->reg_base.rc_qp.rc_qp_range = 0;
 		}
 	} else {
-		if (rc->fm_lvl_qp_min_p == rc->fm_lvl_qp_max_p) {
-			regs->reg_base.enc_pic.pic_qp = rc->fm_lvl_qp_min_p;
+		if (rc->fqp_min_p == rc->fqp_max_p) {
+			regs->reg_base.enc_pic.pic_qp = rc->fqp_min_p;
 			regs->reg_base.rc_qp.rc_qp_range = 0;
 		}
 	}
@@ -2041,8 +2041,8 @@ static void setup_vepu540c_l2(HalH264eVepu540cCtx *ctx, H264eSlice *slice,
 	HalVepu540cRegSet *regs = ctx->regs_set;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
 	RK_S32 atl_str = ctx->cfg->tune.atl_str;
-	RK_S32 lambda_idx = slice->slice_type == H264_I_SLICE ? ctx->cfg->tune.lambda_i_idx :
-			    ctx->cfg->tune.lambda_idx;
+	RK_S32 lambda_idx = slice->slice_type == H264_I_SLICE ? ctx->cfg->tune.lambda_idx_i :
+			    ctx->cfg->tune.lambda_idx_p;
 
 	hal_h264e_dbg_func("enter\n");
 

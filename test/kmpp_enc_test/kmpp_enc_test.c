@@ -48,10 +48,10 @@ int mpp_enc_cfg_setup(int chan_id)
     /* fix input / output frame rate */
     mpp_enc_cfg_set_s32(cfg, "rc:fps_in_flex", fps_in_flex);
     mpp_enc_cfg_set_s32(cfg, "rc:fps_in_num", fps_in_num);
-    mpp_enc_cfg_set_s32(cfg, "rc:fps_in_denorm", fps_in_den);
+    mpp_enc_cfg_set_s32(cfg, "rc:fps_in_denom", fps_in_den);
     mpp_enc_cfg_set_s32(cfg, "rc:fps_out_flex", fps_out_flex);
     mpp_enc_cfg_set_s32(cfg, "rc:fps_out_num", fps_out_num);
-    mpp_enc_cfg_set_s32(cfg, "rc:fps_out_denorm", fps_out_den);
+    mpp_enc_cfg_set_s32(cfg, "rc:fps_out_denom", fps_out_den);
     mpp_enc_cfg_set_s32(cfg, "rc:gop",
                 gop_len ? gop_len : fps_out_num * 2);
 

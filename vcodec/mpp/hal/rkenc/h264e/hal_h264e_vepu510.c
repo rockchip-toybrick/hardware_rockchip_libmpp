@@ -1230,11 +1230,11 @@ static void setup_vepu510_rc_base(HalVepu510RegSet *regs, HalH264eVepu510Ctx *ct
 		RK_S32 fqp_min, fqp_max;
 
 		if (slice->slice_type == H264_I_SLICE) {
-			fqp_min = rc->fm_lvl_qp_min_i;
-			fqp_max = rc->fm_lvl_qp_max_i;
+			fqp_min = rc->fqp_min_i;
+			fqp_max = rc->fqp_max_i;
 		} else {
-			fqp_min = rc->fm_lvl_qp_min_p;
-			fqp_max = rc->fm_lvl_qp_max_p;
+			fqp_min = rc->fqp_min_p;
+			fqp_max = rc->fqp_max_p;
 		}
 
 		if ((fqp_min == fqp_max) && (fqp_min >= 1) && (fqp_max <= 51)) {
@@ -1711,7 +1711,7 @@ setup_vepu510_l2(HalH264eVepu510Ctx *ctx, MppEncHwCfg *hw)
 {
 	HalVepu510RegSet *regs = ctx->regs_set;
 	MppEncSceneMode sm = ctx->cfg->tune.scene_mode;
-	RK_S32 lambda_idx = ctx->cfg->tune.lambda_i_idx; //TODO: lambda_idx_p
+	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx_i; //TODO: lambda_idx_p
 
 	hal_h264e_dbg_func("enter\n");
 

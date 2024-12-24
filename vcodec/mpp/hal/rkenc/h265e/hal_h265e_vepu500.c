@@ -441,7 +441,7 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 {
 	HevcVepu500Frame *reg_frm = &regs->reg_frm;
 	HevcVepu500Param *reg_param = &regs->reg_param;
-	RK_S32 lambda_idx = ctx->cfg->tune.lambda_i_idx;
+	RK_S32 lambda_idx = ctx->cfg->tune.lambda_idx_i;
 
 	reg_param->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
 	reg_frm->reg0248_sao_cfg.sao_lambda_multi = ctx->cfg->codec.h265.sao_cfg.sao_bit_ratio;
@@ -453,7 +453,7 @@ static void vepu500_h265_global_cfg_set(H265eV500HalContext *ctx, H265eV500RegSe
 		if (ctx->frame_type == INTRA_FRAME) {
 			lambda_tbl = &rdo_lambda_table_I[lambda_idx];
 		} else {
-			lambda_idx = ctx->cfg->tune.lambda_idx;
+			lambda_idx = ctx->cfg->tune.lambda_idx_p;
 			lambda_tbl = &rdo_lambda_table_P[lambda_idx];
 		}
 
@@ -721,11 +721,11 @@ static MPP_RET vepu500_h265_set_rc_regs(H265eV500HalContext *ctx, H265eV500RegSe
 			RK_S32 fqp_min, fqp_max;
 
 			if (ctx->frame_type == INTRA_FRAME) {
-				fqp_min = rc->fm_lvl_qp_min_i;
-				fqp_max = rc->fm_lvl_qp_max_i;
+				fqp_min = rc->fqp_min_i;
+				fqp_max = rc->fqp_max_i;
 			} else {
-				fqp_min = rc->fm_lvl_qp_min_p;
-				fqp_max = rc->fm_lvl_qp_max_p;
+				fqp_min = rc->fqp_min_p;
+				fqp_max = rc->fqp_max_p;
 			}
 
 			if ((fqp_min == fqp_max) && (fqp_min >= 0) && (fqp_max <= 51)) {

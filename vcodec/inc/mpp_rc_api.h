@@ -66,7 +66,7 @@ typedef enum GopMode_e {
  * fps_in_num
  * input frame rate numerator, if 0 then default 30
  *
- * fps_in_denorm
+ * fps_in_denom
  * input frame rate denorminator, if 0 then default 1
  *
  * fps_out_flex
@@ -76,16 +76,16 @@ typedef enum GopMode_e {
  * fps_out_num
  * output frame rate numerator, if 0 then default 30
  *
- * fps_out_denorm
+ * fps_out_denom
  * output frame rate denorminator, if 0 then default 1
  */
 typedef struct RcFpsCfg_t {
 	RK_S32      fps_in_flex;
 	RK_S32      fps_in_num;
-	RK_S32      fps_in_denorm;
+	RK_S32      fps_in_denom;
 	RK_S32      fps_out_flex;
 	RK_S32      fps_out_num;
-	RK_S32      fps_out_denorm;
+	RK_S32      fps_out_denom;
 } RcFpsCfg;
 
 typedef struct RcSuperframeCfg_t {
@@ -185,8 +185,8 @@ typedef struct RcCfg_s {
 	RK_S32          deblur_str;
 	RK_S32          atr_str;
 	RK_S32          atl_str;
-	RK_S32          lambda_idx;
-	RK_S32          lambda_i_idx;
+	RK_S32          lambda_idx_p;
+	RK_S32          lambda_idx_i;
 	RK_S32          atf_str;
 } RcCfg;
 

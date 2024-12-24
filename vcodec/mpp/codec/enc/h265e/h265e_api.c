@@ -98,8 +98,8 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 	p->cfg->tune.deblur_str = 3;
 	p->cfg->tune.atr_str = 2;
 	p->cfg->tune.atl_str = 2;
-	p->cfg->tune.lambda_idx = 4;
-	p->cfg->tune.lambda_i_idx = 4;
+	p->cfg->tune.lambda_idx_p = 4;
+	p->cfg->tune.lambda_idx_i = 4;
 	p->cfg->tune.atf_str = 2;
 	p->cfg->tune.lgt_chg_lvl = 0;
 	p->cfg->tune.static_frm_num = 5;
@@ -139,10 +139,10 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 	rc_cfg->bps_min = rc_cfg->bps_target * 3 / 4;
 	rc_cfg->fps_in_flex = 0;
 	rc_cfg->fps_in_num = 30;
-	rc_cfg->fps_in_denorm = 1;
+	rc_cfg->fps_in_denom = 1;
 	rc_cfg->fps_out_flex = 0;
 	rc_cfg->fps_out_num = 30;
-	rc_cfg->fps_out_denorm = 1;
+	rc_cfg->fps_out_denom = 1;
 	rc_cfg->gop = 60;
 	rc_cfg->max_reenc_times = 1;
 	rc_cfg->max_i_prop = 30;
@@ -155,10 +155,10 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 	rc_cfg->qp_min_i = 15;
 	rc_cfg->qp_delta_ip = 4;
 	rc_cfg->qp_delta_vi = 2;
-	rc_cfg->fm_lvl_qp_min_i = 26;
-	rc_cfg->fm_lvl_qp_min_p = 28;
-	rc_cfg->fm_lvl_qp_max_i = 51;
-	rc_cfg->fm_lvl_qp_max_p = 51;
+	rc_cfg->fqp_min_i = 26;
+	rc_cfg->fqp_min_p = 28;
+	rc_cfg->fqp_max_i = 51;
+	rc_cfg->fqp_max_p = 51;
 	rc_cfg->mt_st_swth_frm_qp = 32;
 
 	h265e_dbg_func("leave ctx %p\n", ctx);

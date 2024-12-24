@@ -50,6 +50,12 @@ typedef enum {
 } MppFrameColorRange;
 
 typedef enum {
+    MPP_FRAME_CHROMA_DOWN_SAMPLE_MODE_NONE,
+    MPP_FRAME_CHORMA_DOWN_SAMPLE_MODE_AVERAGE,
+    MPP_FRAME_CHORMA_DOWN_SAMPLE_MODE_DISCARD,
+} MppFrameChromaDownSampleMode;
+
+typedef enum {
 	MPP_FRAME_VIDEO_FMT_COMPONEMT   = 0,
 	MPP_FRAME_VIDEO_FMT_PAL         = 1,
 	MPP_FRAME_VIDEO_FMT_NTSC        = 2,
@@ -155,6 +161,17 @@ typedef enum {
 	MPP_CHROMA_LOC_BOTTOM      = 6,
 	MPP_CHROMA_LOC_NB,                  ///< Not part of ABI
 } MppFrameChromaLocation;
+
+typedef enum {
+    MPP_CHROMA_UNSPECIFIED,
+    MPP_CHROMA_400,
+    MPP_CHROMA_410,
+    MPP_CHROMA_411,
+    MPP_CHROMA_420,
+    MPP_CHROMA_422,
+    MPP_CHROMA_440,
+    MPP_CHROMA_444,
+} MppFrameChromaFormat;
 
 #define MPP_FRAME_FMT_MASK          (0x000fffff)
 

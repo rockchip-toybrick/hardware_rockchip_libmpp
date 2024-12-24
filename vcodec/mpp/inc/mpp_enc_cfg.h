@@ -28,23 +28,27 @@ typedef enum ENC_FRAME_TYPE_E {
 } ENC_FRAME_TYPE;
 
 typedef struct MppEncCfgSet_t {
-	MppEncBaseCfg base;
+	MppEncBaseCfg       base;
 
 	// esential config
-	MppEncPrepCfg prep;
-	MppEncRcCfg rc;
+	MppEncPrepCfg       prep;
+	MppEncRcCfg         rc;
 
 	// hardware related config
-	MppEncHwCfg hw;
+	MppEncHwCfg         hw;
 
 	// codec detail config
-	MppEncCodecCfg codec;
+	MppEncCodecCfg      codec;
 
-	MppEncSliceSplit split;
-	MppEncROICfg roi;
-	MppEncOSDData3 osd;
-	MppEncRefParam ref_param;
-	MppEncRefCfg ref_cfg;
-	MppEncFineTuneCfg tune;
+	MppEncSliceSplit    split;
+	MppEncRefCfg        ref_cfg;
+	MppEncROICfg        roi;
+	MppEncOSDData3      osd;
+	MppEncOSDPltCfg     plt_cfg;
+	MppEncOSDPlt        plt_data;
+	MppEncRefParam      ref_param;
+
+	// quality fine tuning config
+	MppEncFineTuneCfg   tune;
 } MppEncCfgSet;
 #endif /*__MPP_ENC_CFG_H__*/

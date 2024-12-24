@@ -326,13 +326,13 @@ MPP_RET mpp_enc_proc_rc_cfg(MppEncRcCfg *dst, MppEncRcCfg *src)
 		if (change & MPP_ENC_RC_CFG_CHANGE_FPS_IN) {
 			dst->fps_in_flex = src->fps_in_flex;
 			dst->fps_in_num = src->fps_in_num;
-			dst->fps_in_denorm = src->fps_in_denorm;
+			dst->fps_in_denom = src->fps_in_denom;
 		}
 
 		if (change & MPP_ENC_RC_CFG_CHANGE_FPS_OUT) {
 			dst->fps_out_flex = src->fps_out_flex;
 			dst->fps_out_num = src->fps_out_num;
-			dst->fps_out_denorm = src->fps_out_denorm;
+			dst->fps_out_denom = src->fps_out_denom;
 		}
 
 		if (change & MPP_ENC_RC_CFG_CHANGE_GOP)
@@ -413,11 +413,11 @@ MPP_RET mpp_enc_proc_rc_cfg(MppEncRcCfg *dst, MppEncRcCfg *src)
 			dst->qp_delta_vi = src->qp_delta_vi;
 
 
-		if (change & MPP_ENC_RC_CFG_CHANGE_FM_LV_QP) {
-			dst->fm_lvl_qp_min_i = src->fm_lvl_qp_min_i;
-			dst->fm_lvl_qp_min_p = src->fm_lvl_qp_min_p;
-			dst->fm_lvl_qp_max_i = src->fm_lvl_qp_max_i;
-			dst->fm_lvl_qp_max_p = src->fm_lvl_qp_max_p;
+		if (change & MPP_ENC_RC_CFG_CHANGE_FQP) {
+			dst->fqp_min_i = src->fqp_min_i;
+			dst->fqp_min_p = src->fqp_min_p;
+			dst->fqp_max_i = src->fqp_max_i;
+			dst->fqp_max_p = src->fqp_max_p;
 			dst->mt_st_swth_frm_qp = src->mt_st_swth_frm_qp;
 		}
 
@@ -785,18 +785,18 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			ret = MPP_ERR_VALUE;
 		}
 
-		if (change & MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_IDX)
-			dst->lambda_idx = src->lambda_idx;
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_IDX_P)
+			dst->lambda_idx_p = src->lambda_idx_p;
 
-		if (dst->lambda_idx < 0 || dst->lambda_idx > 8) {
+		if (dst->lambda_idx_p < 0 || dst->lambda_idx_p > 8) {
 			mpp_err("invalid lambda idx not in range [0 : 8]\n");
 			ret = MPP_ERR_VALUE;
 		}
 
-		if (change & MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_I_IDX)
-			dst->lambda_i_idx = src->lambda_i_idx;
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_LAMBDA_IDX_I)
+			dst->lambda_idx_i = src->lambda_idx_i;
 
-		if (dst->lambda_i_idx < 0 || dst->lambda_i_idx > 8) {
+		if (dst->lambda_idx_i < 0 || dst->lambda_idx_i > 8) {
 			mpp_err("invalid I frame lambda idx not in range [0 : 8]\n");
 			ret = MPP_ERR_VALUE;
 		}
@@ -860,7 +860,6 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 	return ret;
 }
 
-
 MPP_RET mpp_enc_proc_cfg(MppEncImpl *enc, MpiCmd cmd, void *param)
 {
 	MPP_RET ret = MPP_OK;
@@ -871,8 +870,9 @@ MPP_RET mpp_enc_proc_cfg(MppEncImpl *enc, MpiCmd cmd, void *param)
 		MppEncCfgSet *src = &impl->cfg;
 		RK_U32 change = src->base.change;
 
-		mpp_log("MPP_ENC_SET_CFG in \n");
-
+		if (sizeof(MppEncCfgSet) != impl->size)
+			mpp_err_f("MPP_ENC_SET_CFG in size err %ld != %d\n",
+				   sizeof(MppEncCfgSet), impl->size);
 		/* get base cfg here */
 		if (change) {
 			MppEncCfgSet *dst = &enc->cfg;
@@ -1060,7 +1060,7 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	MppEncCodecCfg *codec = &cfg_set->codec;
 	MppEncRefCfgImpl *ref = (MppEncRefCfgImpl *)cfg_set->ref_cfg;
 	MppEncCpbInfo *info = &ref->cpb_info;
-	RK_S32 fps = (!!rc->fps_in_denorm) ? (rc->fps_in_num / rc->fps_in_denorm) : 1;
+	RK_S32 fps = (!!rc->fps_in_denom) ? (rc->fps_in_num / rc->fps_in_denom) : 1;
 	RK_S32 status_time = 4 * ((!!fps) ? (rc->gop / fps) : 8);
 
 	if (status_time > 8)
@@ -1091,18 +1091,18 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 
 	cfg->fps.fps_in_flex = rc->fps_in_flex;
 	cfg->fps.fps_in_num = rc->fps_in_num;
-	cfg->fps.fps_in_denorm = rc->fps_in_denorm;
+	cfg->fps.fps_in_denom = rc->fps_in_denom;
 	cfg->fps.fps_out_flex = rc->fps_out_flex;
 	cfg->fps.fps_out_num = rc->fps_out_num;
-	cfg->fps.fps_out_denorm = rc->fps_out_denorm;
+	cfg->fps.fps_out_denom = rc->fps_out_denom;
 	cfg->igop = rc->gop;
 	cfg->max_i_bit_prop = rc->max_i_prop;
 	cfg->min_i_bit_prop = rc->min_i_prop;
 	cfg->init_ip_ratio = rc->init_ip_ratio;
-	cfg->fm_lv_min_quality = rc->fm_lvl_qp_min_p;
-	cfg->fm_lv_min_i_quality = rc->fm_lvl_qp_min_i;
-	cfg->fm_lv_max_quality = rc->fm_lvl_qp_max_p;
-	cfg->fm_lv_max_i_quality = rc->fm_lvl_qp_max_i;
+	cfg->fm_lv_min_quality = rc->fqp_min_p;
+	cfg->fm_lv_min_i_quality = rc->fqp_min_i;
+	cfg->fm_lv_max_quality = rc->fqp_max_p;
+	cfg->fm_lv_max_i_quality = rc->fqp_max_i;
 	cfg->mt_st_swth_frm_qp = rc->mt_st_swth_frm_qp;
 	cfg->bps_target = rc->bps_target;
 	cfg->bps_max = rc->bps_max;
@@ -1112,8 +1112,8 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	cfg->deblur_str = cfg_set->tune.deblur_str;
 	cfg->atr_str = cfg_set->tune.atr_str;
 	cfg->atl_str = cfg_set->tune.atl_str;
-	cfg->lambda_idx = cfg_set->tune.lambda_idx;
-	cfg->lambda_i_idx = cfg_set->tune.lambda_i_idx;
+	cfg->lambda_idx_p = cfg_set->tune.lambda_idx_p;
+	cfg->lambda_idx_i = cfg_set->tune.lambda_idx_i;
 	cfg->atf_str = cfg_set->tune.atf_str;
 
 	cfg->hier_qp_cfg.hier_qp_en = rc->hier_qp_en;
@@ -1185,9 +1185,9 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 		mpp_log("mode %s bps [%d:%d:%d] fps %s [%d/%d] -> %s [%d/%d] gop i [%d] v [%d]\n",
 			name_of_rc_mode[cfg->mode], rc->bps_min, rc->bps_target,
 			rc->bps_max, cfg->fps.fps_in_flex ? "flex" : "fix",
-			cfg->fps.fps_in_num, cfg->fps.fps_in_denorm,
+			cfg->fps.fps_in_num, cfg->fps.fps_in_denom,
 			cfg->fps.fps_out_flex ? "flex" : "fix",
-			cfg->fps.fps_out_num, cfg->fps.fps_out_denorm,
+			cfg->fps.fps_out_num, cfg->fps.fps_out_denom,
 			cfg->igop, cfg->vgop);
 	}
 }
@@ -2355,8 +2355,8 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 		   task->seq_idx, strof_gop_mode((MppEncRcGopMode)enc->gop_mode), 0,
 		   cfg->prep.max_width, cfg->prep.max_height, enc->online, enc->ref_buf_shared);
 
-	source_frate = cfg->rc.fps_in_num / cfg->rc.fps_in_denorm;
-	target_frame_rate = cfg->rc.fps_out_num / cfg->rc.fps_out_denorm;
+	source_frate = cfg->rc.fps_in_num / cfg->rc.fps_in_denom;
+	target_frame_rate = cfg->rc.fps_out_num / cfg->rc.fps_out_denom;
 	seq_puts(seq,
 		 "\n--------venc chn attr 2---------------------------------------------------------------------------\n");
 	seq_printf(seq, "%8s|%8s|%8s|%8s|%12s|%12s|%12s|%12s|%10s\n",
@@ -2442,11 +2442,11 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 		seq_puts(seq,
 			 "\n--------fine tuning param------------------------------------------------------------------------\n");
 		seq_printf(seq, "%8s|%12s|%12s|%12s|%10s|%10s|%12s|%12s|%12s\n", "ID",
-			   "scene_mode", "md_swth_en", "deblur_str", "atr_str", "atl_str", "lambda_idx", "lambda_i_idx",
+			   "scene_mode", "md_swth_en", "deblur_str", "atr_str", "atl_str", "lambda_idx_p", "lambda_idx_i",
 			   "atf_str");
 		seq_printf(seq, "%8u|%12d|%12d|%12d|%10d|%10d|%12d|%12d|%12d\n", chl_id,
 			   tune->scene_mode, tune->motion_static_switch_enable, tune->deblur_str, tune->atr_str,
-			   tune->atl_str, tune->lambda_idx, tune->lambda_i_idx, tune->atf_str);
+			   tune->atl_str, tune->lambda_idx_p, tune->lambda_idx_i, tune->atf_str);
 
 #ifdef RKVEPU500_SUPPORT
 		seq_printf(seq, "%8s|%14s|%12s|%12s|%12s|%12s\n", "ID",

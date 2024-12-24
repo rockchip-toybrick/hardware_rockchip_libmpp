@@ -89,7 +89,7 @@ int mpp_vcodec_chan_create(struct vcodec_attr *attr)
 			break;
 		mpp_enc_register_chl(enc, (void *)mpp_vcodec_enc_int_handle, chan_id);
 		mpp_vcodec_chan_entry_init(chan_entry, type, coding, (void *)enc);
-#ifdef CHAN_BUF_SHARED
+#if 0//def CHAN_BUF_SHARED
 		if (mpp_vcodec_chan_setup_hal_bufs(chan_entry, attr)) {
 			mpp_enc_deinit(chan_entry->handle);
 			mpp_vcodec_chan_entry_deinit(chan_entry);
@@ -311,7 +311,6 @@ int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
 		struct dma_buf *dmabuf = mpp_buffer_get_dma(packet->buf.buf);
 		get_dma_buf(dmabuf);
 		enc_packet->u64priv_data = dma_buf_fd(dmabuf, 0);
-		enc_packet->u64priv_data |= (RK_U64)((RK_U64)1 << 32);
 	}
 	enc_packet->offset = packet->buf.start_offset;
 	enc_packet->u64packet_addr = (uintptr_t )packet;

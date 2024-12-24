@@ -221,7 +221,7 @@ MPP_RET h265e_set_sps(H265eCtx * ctx, h265_sps * sps, h265_vps * vps)
 	MppEncH265VuiCfg *vui = &codec->vui;
 	MppFrameFormat fmt = prep->format;
 	RK_S32 i_timebase_num = 1;
-	RK_S32 i_timebase_den = rc->fps_out_num / rc->fps_out_denorm;
+	RK_S32 i_timebase_den = rc->fps_out_num / rc->fps_out_denom;
 	RK_U8 convertToBit[MAX_CU_SIZE + 1];
 	RK_U32 maxCUDepth, minCUDepth, addCUDepth;
 	RK_S32 pad[2] = { 0 };

@@ -15,8 +15,8 @@
 #include "mpp_enc_cfg.h"
 
 typedef struct MppEncCfgImpl_t {
-	MppEncCfgSet cfg;
 	RK_S32 size;
+	MppEncCfgSet cfg;
 } MppEncCfgImpl;
 
 #endif /*__MPP_ENC_CFG_IMPL_H__*/

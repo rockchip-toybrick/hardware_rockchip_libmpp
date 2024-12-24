@@ -97,8 +97,8 @@ static void init_h264e_cfg_set(MppEncCfgSet *cfg, MppClientType type)
 	cfg->tune.deblur_str = 3;
 	cfg->tune.atr_str = 2;
 	cfg->tune.atl_str = 2;
-	cfg->tune.lambda_idx = 6;
-	cfg->tune.lambda_i_idx = 6;
+	cfg->tune.lambda_idx_p = 6;
+	cfg->tune.lambda_idx_i = 6;
 	cfg->tune.atf_str = 2;
 
 	switch (type) {
@@ -154,10 +154,10 @@ static void init_h264e_cfg_set(MppEncCfgSet *cfg, MppClientType type)
 	rc_cfg->bps_min = rc_cfg->bps_target * 3 / 4;
 	rc_cfg->fps_in_flex = 0;
 	rc_cfg->fps_in_num = 30;
-	rc_cfg->fps_in_denorm = 1;
+	rc_cfg->fps_in_denom = 1;
 	rc_cfg->fps_out_flex = 0;
 	rc_cfg->fps_out_num = 30;
-	rc_cfg->fps_out_denorm = 1;
+	rc_cfg->fps_out_denom = 1;
 	rc_cfg->gop = 60;
 	rc_cfg->max_reenc_times = 1;
 	rc_cfg->max_i_prop = 60;
@@ -170,10 +170,10 @@ static void init_h264e_cfg_set(MppEncCfgSet *cfg, MppClientType type)
 	rc_cfg->qp_max_i = 0;
 	rc_cfg->qp_min_i = 0;
 	rc_cfg->qp_delta_ip = 2;
-	rc_cfg->fm_lvl_qp_min_i = 26;
-	rc_cfg->fm_lvl_qp_min_p = 28;
-	rc_cfg->fm_lvl_qp_max_i = 51;
-	rc_cfg->fm_lvl_qp_max_p = 51;
+	rc_cfg->fqp_min_i = 26;
+	rc_cfg->fqp_min_p = 28;
+	rc_cfg->fqp_max_i = 51;
+	rc_cfg->fqp_max_p = 51;
 	rc_cfg->mt_st_swth_frm_qp = 32;
 }
 

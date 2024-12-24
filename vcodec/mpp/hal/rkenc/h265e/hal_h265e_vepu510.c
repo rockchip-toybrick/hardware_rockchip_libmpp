@@ -957,12 +957,12 @@ static void vepu510_h265_global_cfg_set(H265eV510HalContext *ctx, H265eV510RegSe
 
 	if (ctx->frame_type == INTRA_FRAME) {
 		reg_param->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
-		lambda_idx = ctx->cfg->tune.lambda_i_idx;
+		lambda_idx = ctx->cfg->tune.lambda_idx_i;
 		memcpy(&reg_param->rdo_wgta_qp_grpa_0_51[0],
 		       &rdo_lambda_table_I[lambda_idx], H265E_LAMBDA_TAB_SIZE);
 	} else {
 		reg_param->iprd_lamb_satd_ofst.lambda_satd_offset = 11;
-		lambda_idx = ctx->cfg->tune.lambda_idx;
+		lambda_idx = ctx->cfg->tune.lambda_idx_p;
 		memcpy(&reg_param->rdo_wgta_qp_grpa_0_51[0],
 		       &rdo_lambda_table_P[lambda_idx], H265E_LAMBDA_TAB_SIZE);
 	}
@@ -1348,11 +1348,11 @@ static MPP_RET vepu510_h265_set_rc_regs(H265eV510HalContext *ctx, H265eV510RegSe
 			RK_S32 fqp_min, fqp_max;
 
 			if (ctx->frame_type == INTRA_FRAME) {
-				fqp_min = rc->fm_lvl_qp_min_i;
-				fqp_max = rc->fm_lvl_qp_max_i;
+				fqp_min = rc->fqp_min_i;
+				fqp_max = rc->fqp_max_i;
 			} else {
-				fqp_min = rc->fm_lvl_qp_min_p;
-				fqp_max = rc->fm_lvl_qp_max_p;
+				fqp_min = rc->fqp_min_p;
+				fqp_max = rc->fqp_max_p;
 			}
 
 			if ((fqp_min == fqp_max) && (fqp_min >= 0) && (fqp_max <= 51)) {
