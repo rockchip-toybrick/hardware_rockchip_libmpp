@@ -91,6 +91,7 @@ static void init_h264e_cfg_set(MppEncCfgSet *cfg, MppClientType type)
 	h264->profile = H264_PROFILE_BASELINE;
 	h264->level = H264_LEVEL_3_1;
 	h264->scaling_list_mode = 0;
+	h264->transform8x8_mode = 1;
 	cfg->tune.scene_mode = MPP_ENC_SCENE_MODE_IPC;
 	cfg->tune.motion_static_switch_enable = 0;
 	cfg->tune.deblur_str = 3;
