@@ -130,7 +130,6 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 
 	return (buf_impl) ? (MPP_OK) : (MPP_NOK);
 }
-EXPORT_SYMBOL(mpp_buffer_get_with_tag);
 
 MPP_RET mpp_ring_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 				     size_t size, const char *tag,
@@ -184,7 +183,6 @@ MPP_RET mpp_buffer_put_with_caller(MppBuffer buffer, const char *caller)
 
 	return MPP_OK;
 }
-EXPORT_SYMBOL(mpp_buffer_put_with_caller);
 
 void *mpp_buffer_map_ring_ptr(struct MppBufferImpl *p)
 {
@@ -384,7 +382,6 @@ void *mpp_buffer_get_ptr_with_caller(MppBuffer buffer, const char *caller)
 
 	return p->info.ptr;
 }
-EXPORT_SYMBOL(mpp_buffer_get_ptr_with_caller);
 
 int mpp_buffer_get_fd_with_caller(MppBuffer buffer, const char *caller)
 {
@@ -416,7 +413,7 @@ int mpp_buffer_get_fd_with_caller(MppBuffer buffer, const char *caller)
 
 	return fd;
 }
-EXPORT_SYMBOL(mpp_buffer_get_fd_with_caller);
+
 struct dma_buf *mpp_buffer_get_dma_with_caller(MppBuffer buffer,
 					       const char *caller)
 {
@@ -432,7 +429,6 @@ struct dma_buf *mpp_buffer_get_dma_with_caller(MppBuffer buffer,
 
 	return p->info.dma_buf;
 }
-EXPORT_SYMBOL(mpp_buffer_get_dma_with_caller);
 
 size_t mpp_buffer_get_size_with_caller(MppBuffer buffer, const char *caller)
 {
@@ -731,3 +727,27 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
 
 	return p->info.iova;
 }
+
+EXPORT_SYMBOL(mpp_buffer_import_with_tag);
+EXPORT_SYMBOL(mpp_buffer_get_with_tag);
+EXPORT_SYMBOL(mpp_ring_buffer_get_with_tag);
+EXPORT_SYMBOL(mpp_buffer_put_with_caller);
+EXPORT_SYMBOL(mpp_buffer_get_ptr_with_caller);
+EXPORT_SYMBOL(mpp_buffer_get_fd_with_caller);
+EXPORT_SYMBOL(mpp_buffer_get_dma_with_caller);
+EXPORT_SYMBOL(mpp_buffer_get_size_with_caller);
+EXPORT_SYMBOL(mpp_buffer_get_index_with_caller);
+EXPORT_SYMBOL(mpp_buffer_set_index_with_caller);
+EXPORT_SYMBOL(mpp_buffer_get_offset_with_caller);
+EXPORT_SYMBOL(mpp_buffer_set_offset_with_caller);
+EXPORT_SYMBOL(mpp_buffer_info_get_with_caller);
+EXPORT_SYMBOL(mpp_buffer_flush_for_cpu_with_caller);
+EXPORT_SYMBOL(mpp_buffer_flush_for_device_with_caller);
+EXPORT_SYMBOL(mpp_buffer_flush_for_cpu_partial_with_caller);
+EXPORT_SYMBOL(mpp_buffer_flush_for_device_partial_with_caller);
+EXPORT_SYMBOL(mpp_buffer_get_mpi_buf_id_with_caller);
+EXPORT_SYMBOL(mpp_buffer_set_phy_caller);
+EXPORT_SYMBOL(mpp_buffer_get_phy_caller);
+EXPORT_SYMBOL(mpp_buffer_attach_dev);
+EXPORT_SYMBOL(mpp_buffer_dettach_dev);
+EXPORT_SYMBOL(mpp_buffer_get_iova_f);
