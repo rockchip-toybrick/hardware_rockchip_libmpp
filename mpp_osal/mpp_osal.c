@@ -5,6 +5,7 @@
  */
 #include "mpp_osal.h"
 
+#ifndef CONFIG_ROCKCHIP_MPP_OSAL
 struct device_node *mpp_dev_of_node(struct device *dev)
 {
 	return dev_of_node(dev);
@@ -28,3 +29,5 @@ int mpp_device_init_wakeup(struct device *dev, bool enable)
 	return device_init_wakeup(dev, enable);
 }
 EXPORT_SYMBOL(mpp_device_init_wakeup);
+
+#endif
