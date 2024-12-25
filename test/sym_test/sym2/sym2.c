@@ -28,10 +28,10 @@ static rk_s64 symbol_s64 = 0x3456789abcdef;
 static rk_u64 symbol_u64 = 0x456789abcdef12;
 static void *symbol_ptr = (void *)&test_worker;
 
-#define CONAT(prefix, sufix) prefix##_##sufix
+#define CONCAT(prefix, sufix) prefix##_##sufix
 
 #define SYMBOL_ACCESS(sym, pr_sym) \
-static rk_s32 CONAT(sym, set)(void *in, void *out, const rk_u8 *caller) \
+static rk_s32 CONCAT(sym, set)(void *in, void *out, const rk_u8 *caller) \
 { \
     rk_s32 ret = rk_nok; \
     if (in) { \
@@ -46,7 +46,7 @@ static rk_s32 CONAT(sym, set)(void *in, void *out, const rk_u8 *caller) \
         *(rk_s32 *)out = ret; \
     return rk_ok; \
 } \
-static rk_s32 CONAT(sym, get)(void *in, void *out, const rk_u8 *caller) \
+static rk_s32 CONCAT(sym, get)(void *in, void *out, const rk_u8 *caller) \
 { \
     rk_s32 ret = rk_nok; \
     if (in) { \
