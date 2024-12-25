@@ -143,6 +143,11 @@ static MPP_RET allocator_import(MppBufferInfo *info, const char *caller)
 		dma_buf = dma_buf_get(info->fd);
 	}
 
+	if (info->dma_buf) {
+		get_dma_buf(info->dma_buf);
+		dma_buf = info->dma_buf;
+	}
+
 	if (IS_ERR_OR_NULL(dma_buf)) {
 		mpp_err_f("dma_buf_get failed fd %d\n", info->fd);
 		return MPP_NOK;

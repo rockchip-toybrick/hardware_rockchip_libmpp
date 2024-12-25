@@ -102,7 +102,7 @@ static MPP_RET allocator_import(MppBufferInfo *info, const char *caller)
 
 	if (info->dma_buf) {
 		get_dma_buf(info->dma_buf);
-		return MPP_OK;
+		dma_buf = info->dma_buf;
 	}
 
 	if (info->fd) {
