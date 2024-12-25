@@ -14,23 +14,74 @@
 #include "rk_type.h"
 #include "mpp_err.h"
 
-typedef void *MppTrie;
+typedef void* MppTrie;
+
+#define MPP_TRIE_KEY_LEN                (4)
+#define MPP_TRIE_KEY_MAX                (1 << (MPP_TRIE_KEY_LEN))
+
+/*
+ * MppTrie node buffer layout
+ * +---------------+
+ * |  MppTrieImpl  |
+ * +---------------+
+ * |  MppTrieNodes |
+ * +---------------+
+ * |  MppTrieInfos |
+ * +---------------+
+ *
+ * MppTrieInfo element layout
+ * +---------------+
+ * |  MppTrieInfo  |
+ * +---------------+
+ * |  name string  |
+ * +---------------+
+ * |  User context |
+ * +---------------+
+ */
+typedef struct MppTrieInfo_t {
+    RK_U32      index       : 12;
+    RK_U32      ctx_len     : 12;
+    RK_U32      str_len     : 8;
+} MppTrieInfo;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-MPP_RET mpp_trie_init(MppTrie * trie, RK_S32 node_count,
-		      RK_S32 info_count);
+MPP_RET mpp_trie_init(MppTrie *trie, const char *name);
 MPP_RET mpp_trie_deinit(MppTrie trie);
 
-MPP_RET mpp_trie_add_info(MppTrie trie, const char **info);
-const char **mpp_trie_get_info(MppTrie trie, const char *name);
+/* Add NULL info to mark the last trie entry */
+MPP_RET mpp_trie_add_info(MppTrie trie, const char *name, void *ctx, RK_U32 ctx_len);
+MPP_RET mpp_trie_import(MppTrie trie, void *root);
 
 RK_S32 mpp_trie_get_node_count(MppTrie trie);
 RK_S32 mpp_trie_get_info_count(MppTrie trie);
+RK_S32 mpp_trie_get_buf_size(MppTrie trie);
+void *mpp_trie_get_node_root(MppTrie trie);
+
+static inline const char *mpp_trie_info_name(MppTrieInfo *info)
+{
+    return (info) ? (const char *)(info + 1) : NULL;
+}
+
+static inline void *mpp_trie_info_ctx(MppTrieInfo *info)
+{
+    return (info) ? (void *)((char *)(info + 1) + info->str_len) : NULL;
+}
+
+/* trie lookup function */
+MppTrieInfo *mpp_trie_get_info(MppTrie trie, const char *name);
+MppTrieInfo *mpp_trie_get_info_first(MppTrie trie);
+MppTrieInfo *mpp_trie_get_info_next(MppTrie trie, MppTrieInfo *info);
+/* root base lookup function */
+MppTrieInfo *mpp_trie_get_info_from_root(void *root, const char *name);
+
+void mpp_trie_dump(MppTrie trie, const char *func);
+#define mpp_trie_dump_f(trie)   mpp_trie_dump(trie, __FUNCTION__)
 
 #ifdef __cplusplus
 }
 #endif
+
 #endif /*__MPP_TRIE_H__*/
