@@ -32,6 +32,9 @@
 #define mpp_realloc(ptr, type, count) \
     (type*)mpp_osal_realloc(__FUNCTION__, ptr, sizeof(type) * (count))
 
+#define mpp_realloc_size(ptr, type, size) \
+    (type*)mpp_osal_realloc(__FUNCTION__, ptr, size)
+
 #define mpp_free(ptr) \
     mpp_osal_free(__FUNCTION__, ptr)
 
