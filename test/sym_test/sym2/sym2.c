@@ -31,13 +31,13 @@ static void *symbol_ptr = (void *)&test_worker;
 #define CONCAT(prefix, sufix) prefix##_##sufix
 
 #define SYMBOL_ACCESS(sym, pr_sym) \
-static rk_s32 CONCAT(sym, set)(void *in, void *out, const rk_u8 *caller) \
+static rk_s32 CONCAT(sym, set)(void *in, void **out, const rk_u8 *caller) \
 { \
     rk_s32 ret = rk_nok; \
     if (in) { \
         typeof(sym) val = sym; \
         rk_u32 debug = 0; \
-        kmpp_sym_run(sym_debug, &debug, NULL); \
+        kmpp_sym_run(sym_debug, &debug, NULL, NULL); \
         kmpp_logi_c(debug, MODULE_TAG #sym " set " #pr_sym " -> " #pr_sym "\n", sym, val); \
         sym = val; \
         ret = rk_ok; \
@@ -46,13 +46,13 @@ static rk_s32 CONCAT(sym, set)(void *in, void *out, const rk_u8 *caller) \
         *(rk_s32 *)out = ret; \
     return rk_ok; \
 } \
-static rk_s32 CONCAT(sym, get)(void *in, void *out, const rk_u8 *caller) \
+static rk_s32 CONCAT(sym, get)(void *in, void **out, const rk_u8 *caller) \
 { \
     rk_s32 ret = rk_nok; \
     if (in) { \
         typeof(sym) *val = (typeof(sym) *)in; \
         rk_u32 debug = 0; \
-        kmpp_sym_run(sym_debug, &debug, NULL); \
+        kmpp_sym_run(sym_debug, &debug, NULL, NULL); \
         kmpp_logi_c(debug, MODULE_TAG #sym " get " #pr_sym " -> " #pr_sym "\n", *val, sym); \
         *val = sym; \
         ret = rk_ok; \
@@ -68,10 +68,10 @@ SYMBOL_ACCESS(symbol_s64, %llx)
 SYMBOL_ACCESS(symbol_u64, %llx)
 SYMBOL_ACCESS(symbol_ptr, %px)
 
-static rk_s32 symbol_funcion(void *in, void *out, const rk_u8 *caller)
+static rk_s32 symbol_funcion(void *in, void **out, const rk_u8 *caller)
 {
     rk_u32 debug = 0;
-    kmpp_sym_run(sym_debug, &debug, NULL);
+    kmpp_sym_run(sym_debug, &debug, NULL, NULL);
 
     kmpp_logi_c(debug, MODULE_TAG " test func enter\n");
     kmpp_logi_c(debug, MODULE_TAG " s32 %x\n", symbol_s32);
@@ -121,7 +121,7 @@ static rk_s32 sym_test_func(const char *syms_name)
             continue;
         }
 
-        ret = kmpp_sym_run_f(sym, NULL, NULL, MODULE_TAG);
+        ret = kmpp_sym_run_f(sym, NULL, NULL, NULL, MODULE_TAG);
 
         kmpp_logi(MODULE_TAG " run sym %s:%s ret %d\n", syms_name, info->name, ret);
 

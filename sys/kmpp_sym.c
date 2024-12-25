@@ -830,11 +830,10 @@ rk_u32 kmpp_sym_put(KmppSym sym)
     return rk_ok;
 }
 
-rk_s32 kmpp_sym_run_f(KmppSym sym, void *in, void *out, const rk_u8 *caller)
+rk_s32 kmpp_sym_run_f(KmppSym sym, void *in, void **out, rk_s32 *ret, const rk_u8 *caller)
 {
     KmppSymImpl *impl = (KmppSymImpl *)sym;
     KmppSymsImpl *syms = impl ? impl->syms : NULL;
-    rk_s32 ret = rk_nok;
 
     if (!impl || !syms) {
         kmpp_loge_f("invalid param sym %px - %px\n", syms, impl);
@@ -849,15 +848,19 @@ rk_s32 kmpp_sym_run_f(KmppSym sym, void *in, void *out, const rk_u8 *caller)
     sym_dbg_run("sym %s:%s run func %px at %s\n",
                 syms->name, impl->name, impl->func, caller);
 
-    if (impl->func)
-        ret = impl->func(in, out, caller);
+    if (impl->func) {
+        rk_s32 val = impl->func(in, out, caller);
+
+        if (ret)
+            *ret = val;
+    }
 
     osal_spin_lock(impl->lock);
     update_sym(impl, "sym_run after");
     osal_list_move_tail(&impl->list_syms, &syms->list_sym);
     osal_spin_unlock(impl->lock);
 
-    return ret;
+    return rk_ok;
 }
 
 EXPORT_SYMBOL(kmpp_symdef_get_f);

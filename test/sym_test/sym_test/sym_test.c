@@ -62,7 +62,7 @@ static rk_s32 sym_test_func(const rk_u8 *syms_name, rk_s32 *status)
 
         ret = kmpp_sym_get(&sym, syms, name);
         if (!ret && sym) {
-            ret = kmpp_sym_run_f(sym, NULL, NULL, MODULE_TAG);
+            ret = kmpp_sym_run_f(sym, NULL, NULL, NULL, MODULE_TAG);
             if (!ret)
                 valid = 1;
         }
@@ -108,7 +108,7 @@ rk_s32 symbol_func(void *param)
     return rk_ok;
 }
 
-static rk_s32 sys_test_get_debug(void *in, void *out, const rk_u8 *caller)
+static rk_s32 sys_test_get_debug(void *in, void **out, const rk_u8 *caller)
 {
     rk_u32 *debug = (rk_u32 *)in;
 
