@@ -30,7 +30,7 @@ EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/osal/inc
 
 ifeq ($(RK_ENABLE_FASTBOOT), y)
 EXTRA_CFLAGS += -fno-verbose-asm
-TOP := $(src)
+TOP := $(srctree)/$(src)
 else
 TOP := $(PWD)
 endif
