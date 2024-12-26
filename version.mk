@@ -39,12 +39,15 @@ define generate_version
     echo Generating version.h...
     @mkdir -p include
     @echo "#ifndef __VERSION_H__" > $(VERSION_H)
-    @echo "#define __VERSION_H__\n" >> $(VERSION_H)
-    @echo "#define CURRENT_TIME       \"$(CURRENT_TIME)\"\n" >> $(VERSION_H)
+    @echo "#define __VERSION_H__" >> $(VERSION_H)
+    @echo " " >> $(VERSION_H)
+    @echo "#define CURRENT_TIME       \"$(CURRENT_TIME)\"" >> $(VERSION_H)
+    @echo " " >> $(VERSION_H)
     @echo "#define KMPP_VERSION       $(VERSION_INFO)" >> $(VERSION_H)
     @echo "#define KMPP_VER_HIST_CNT  $(VERSION_CNT)" >> $(VERSION_H)
     $(foreach N,$(shell seq 0 $(shell echo $(VERSION_CNT)-1 | bc)), \
         echo "#define KMPP_VER_HIST_$(N)    \"$(VERSION_HISTORY_$(N))\" >> $(VERSION_H); \
     )
-    @echo "\n#endif // __VERSION_H__" >> $(VERSION_H)
+    @echo " " >> $(VERSION_H)
+    @echo "#endif // __VERSION_H__" >> $(VERSION_H)
 endef
