@@ -262,7 +262,6 @@ void enc_test(void)
             memset(&info, 0, sizeof(info));
             info.width = 1280;
             info.height = 720;
-            info.mpp_buffer = buffer;
             info.fmt = 0;
             info.hor_stride = 1280;
             info.ver_stride = 720;

@@ -14,6 +14,29 @@
 struct dma_buf;
 struct mpi_obj;
 
+struct pp_md_cfg {
+	struct mpi_buf *mdw_buf;
+	int switch_sad;
+	int thres_sad;
+	int thres_move;
+	int night_mode;
+	int filter_switch;
+	int thres_dust_move;
+	int thres_dust_blk;
+	int thres_dust_chng;
+	int reserved[5];
+};
+
+struct pp_od_cfg {
+	int is_background;
+	int thres_complex;
+	int thres_area_complex;
+	struct mpi_buf *odw_buf;
+	int thres_complex_cnt;
+	int thres_sad;
+	int reserved[5];
+};
+
 struct mpp_frame_infos {
 	RK_U32  width;
 	RK_U32  height;
@@ -44,7 +67,16 @@ struct mpp_frame_infos {
 			RK_U32  idr_request : 1;
 		};
 	};
-	void*	mpp_buffer;
+	/* pp combo */
+	RK_S32 pp_chn;
+	RK_S32 md_en;
+	RK_S32 od_en;
+	RK_S32 pp_frm_cnt;
+	struct pp_md_cfg md_cfg;
+	struct pp_od_cfg od_cfg;
+	RK_U32 md_index;
+	RK_U32 od_index;
+	RK_U32 reserved[8];
 };
 
 struct vcodec_mpibuf_fn {
