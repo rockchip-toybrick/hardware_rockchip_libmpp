@@ -12,7 +12,7 @@ typedef void* KmppSymDef;
 typedef void* KmppSyms;
 typedef void* KmppSym;
 
-typedef rk_s32 (*KmppFuncPtr)(void *in, void **out, const rk_u8 *caller);
+typedef rk_s32 (*KmppFuncPtr)(void *arg, const rk_u8 *caller);
 
 /* manager init / deinit */
 rk_s32 kmpp_sym_init(void);
@@ -42,7 +42,7 @@ rk_u32 kmpp_sym_get(KmppSym *sym, KmppSyms syms, const rk_u8 *name);
 rk_u32 kmpp_sym_put(KmppSym sym);
 
 /* run the callback function */
-rk_s32 kmpp_sym_run_f(KmppSym sym, void *in, void **out, rk_s32 *ret, const rk_u8 *caller);
-#define kmpp_sym_run(sym, in, out, ret) kmpp_sym_run_f(sym, in, out, ret, __FUNCTION__)
+rk_s32 kmpp_sym_run_f(KmppSym sym, void *arg, rk_s32 *ret, const rk_u8 *caller);
+#define kmpp_sym_run(sym, arg, ret) kmpp_sym_run_f(sym, arg, ret, __FUNCTION__)
 
 #endif /* __KMPP_SYM_H__ */

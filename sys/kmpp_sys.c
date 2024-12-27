@@ -86,9 +86,9 @@ static void sys_env_deinit(void)
     kmpp_env_sys = NULL;
 }
 
-static rk_s32 sys_func_sample(void *in, void **out, const rk_u8 *caller)
+static rk_s32 sys_func_sample(void *arg, const rk_u8 *caller)
 {
-    kmpp_logi("sys func sample called in %px out %px at %s\n", in, out, caller);
+    kmpp_logi("sys func sample called arg %px at %s\n", arg, caller);
     return rk_ok;
 }
 

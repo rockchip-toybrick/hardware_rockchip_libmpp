@@ -830,14 +830,15 @@ rk_u32 kmpp_sym_put(KmppSym sym)
     return rk_ok;
 }
 
-rk_s32 kmpp_sym_run_f(KmppSym sym, void *in, void **out, rk_s32 *ret, const rk_u8 *caller)
+rk_s32 kmpp_sym_run_f(KmppSym sym, void *arg, rk_s32 *ret, const rk_u8 *caller)
 {
     KmppSymImpl *impl = (KmppSymImpl *)sym;
     KmppSymsImpl *syms = impl ? impl->syms : NULL;
+    rk_s32 ret_flow = rk_nok;
 
     if (!impl || !syms) {
         kmpp_loge_f("invalid param sym %px - %px\n", syms, impl);
-        return rk_nok;
+        return ret_flow;
     }
 
     osal_spin_lock(impl->lock);
@@ -849,10 +850,12 @@ rk_s32 kmpp_sym_run_f(KmppSym sym, void *in, void **out, rk_s32 *ret, const rk_u
                 syms->name, impl->name, impl->func, caller);
 
     if (impl->func) {
-        rk_s32 val = impl->func(in, out, caller);
+        rk_s32 ret_func = impl->func(arg, caller);
 
         if (ret)
-            *ret = val;
+            *ret = ret_func;
+
+        ret_flow = rk_ok;
     }
 
     osal_spin_lock(impl->lock);
@@ -860,7 +863,7 @@ rk_s32 kmpp_sym_run_f(KmppSym sym, void *in, void **out, rk_s32 *ret, const rk_u
     osal_list_move_tail(&impl->list_syms, &syms->list_sym);
     osal_spin_unlock(impl->lock);
 
-    return rk_ok;
+    return ret_flow;
 }
 
 EXPORT_SYMBOL(kmpp_symdef_get_f);
