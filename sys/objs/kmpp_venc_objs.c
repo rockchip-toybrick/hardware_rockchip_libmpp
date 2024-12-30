@@ -15,13 +15,6 @@
 #define KMPP_VENC_OBJS_KOBJ_IMPL
 #include "kmpp_venc_objs.h"
 
-#define KMPP_OBJ_FUNC_EXPORT_ENABLE
-#define KMPP_OBJ_NAME               kmpp_venc_init_cfg
-#define KMPP_OBJ_INTF_TYPE          KmppVencInitCfg
-#define KMPP_OBJ_IMPL_TYPE          KmppVencInitCfgImpl
-#define KMPP_OBJ_ENTRY_TABLE        ENTRY_TABLE_KMPP_VENC_INIT_CFG
-#include "kmpp_obj_helper.h"
-
 static void kmpp_venc_init_cfg_impl_preset(void *entry)
 {
     if (entry) {
@@ -70,3 +63,13 @@ static rk_s32 kmpp_venc_init_cfg_impl_dump(void *entry)
 
     return rk_ok;
 }
+
+#define KMPP_OBJ_NAME               kmpp_venc_init_cfg
+#define KMPP_OBJ_INTF_TYPE          KmppVencInitCfg
+#define KMPP_OBJ_IMPL_TYPE          KmppVencInitCfgImpl
+#define KMPP_OBJ_ENTRY_TABLE        ENTRY_TABLE_KMPP_VENC_INIT_CFG
+#define KMPP_OBJ_FUNC_PRESET        kmpp_venc_init_cfg_impl_preset
+#define KMPP_OBJ_FUNC_DUMP          kmpp_venc_init_cfg_impl_dump
+#define KMPP_OBJ_FUNC_EXPORT_ENABLE
+#define KMPP_OBJ_SHM_IN_OBJS
+#include "kmpp_obj_helper.h"

@@ -11,16 +11,24 @@
 #if !defined(KMPP_OBJ_NAME) || \
     !defined(KMPP_OBJ_INTF_TYPE) || \
     !defined(KMPP_OBJ_IMPL_TYPE) || \
-    !defined(KMPP_OBJ_ENTRY_TABLE)
+    !defined(KMPP_OBJ_ENTRY_TABLE) || \
+    (!defined(KMPP_OBJ_SHM_DISABLE) && \
+     !defined(KMPP_OBJ_SHM_STAND_ALONE) && \
+     !defined(KMPP_OBJ_SHM_IN_OBJS))
 
 #warning "When using kmpp_obj_helper.h The following macro must be defined:"
 #warning "KMPP_OBJ_NAME                  - object name"
 #warning "KMPP_OBJ_INTF_TYPE             - object interface type"
 #warning "KMPP_OBJ_IMPL_TYPE             - object implement type"
 #warning "KMPP_OBJ_ENTRY_TABLE           - object element entry table"
+#warning "one of three types of object share memory config must be defined:"
+#warning "KMPP_OBJ_SHM_DISABLE           - do not share object to userspace"
+#warning "KMPP_OBJ_SHM_STAND_ALONE       - use stand-alone path to share object to userspace"
+#warning "KMPP_OBJ_SHM_IN_OBJS           - use /dev/kmpp_objs to share object to userspace"
 #warning "option macro:"
 #warning "KMPP_OBJ_FUNC_EXPORT_ENABLE    - enable function EXPORT_SYMBOL"
-#warning "KMPP_OBJ_DEV_PATH_ENABLE       - enable stand-alone device path"
+#warning "KMPP_OBJ_FUNC_PRESET           - add object preset function"
+#warning "KMPP_OBJ_FUNC_DUMP             - add object dump function"
 
 #ifndef KMPP_OBJ_NAME
 #error "KMPP_OBJ_NAME not defined"
@@ -33,6 +41,9 @@
 #endif
 #ifndef KMPP_OBJ_ENTRY_TABLE
 #error "KMPP_OBJ_ENTRY_TABLE not defined"
+#endif
+#if !defined(KMPP_OBJ_SHM_DISABLE) && !defined(KMPP_OBJ_SHM_STAND_ALONE) && !defined(KMPP_OBJ_SHM_IN_OBJS)
+#error "KMPP_OBJ_SHM_DISABLE, KMPP_OBJ_SHM_STAND_ALONE or KMPP_OBJ_SHM_IN_OBJS must be defined one of them"
 #endif
 
 #else /* all input macro defined */
@@ -130,12 +141,30 @@
         return ret; \
     }
 
-#ifdef KMPP_OBJ_DEV_PATH_ENABLE
+#if defined(KMPP_OBJ_SHM_DISABLE)
 #define KMPP_OBJ_DEF_NAME(x, y) KMPP_OBJ_TO_STR(x)
-#define KMPP_OBJ_SHM_FUNC       kmpp_objdef_add_shm_mgr
-#else
+#define KMPP_OBJ_SHM_FUNC(x)    rk_ok
+#elif defined(KMPP_OBJ_SHM_STAND_ALONE)
+#define KMPP_OBJ_DEF_NAME(x, y) KMPP_OBJ_TO_STR(x)
+#define KMPP_OBJ_SHM_FUNC(x)    kmpp_objdef_add_shm_mgr(x)
+#elif defined(KMPP_OBJ_SHM_IN_OBJS)
 #define KMPP_OBJ_DEF_NAME(x, y) KMPP_OBJ_TO_STR(y)
-#define KMPP_OBJ_SHM_FUNC       kmpp_objdef_bind_shm_mgr
+#define KMPP_OBJ_SHM_FUNC(x)    kmpp_objdef_bind_shm_mgr(x)
+#else
+#define KMPP_OBJ_DEF_NAME(x, y) KMPP_OBJ_TO_STR(x)
+#define KMPP_OBJ_SHM_FUNC(x)    rk_ok
+#endif
+
+#if defined(KMPP_OBJ_FUNC_PRESET)
+#define KMPP_OBJ_ADD_PRESET(x)  kmpp_objdef_add_preset(KMPP_OBJ_DEF(x), KMPP_OBJ_FUNC_PRESET)
+#else
+#define KMPP_OBJ_ADD_PRESET(x)
+#endif
+
+#if defined(KMPP_OBJ_FUNC_DUMP)
+#define KMPP_OBJ_ADD_DUMP(x)    kmpp_objdef_add_dump(KMPP_OBJ_DEF(x), KMPP_OBJ_FUNC_DUMP)
+#else
+#define KMPP_OBJ_ADD_DUMP(x)
 #endif
 
 #define KMPP_OBJS_USAGE_SET(prefix) \
@@ -153,8 +182,8 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
     } \
     KMPP_OBJ_ENTRY_TABLE(ENTRY_TO_TRIE1, prefix) \
     kmpp_objdef_add_entry(KMPP_OBJ_DEF(prefix), NULL, NULL); \
-    kmpp_objdef_add_preset(KMPP_OBJ_DEF(prefix), KMPP_OBJ_FUNC2(prefix, impl_preset)); \
-    kmpp_objdef_add_dump(KMPP_OBJ_DEF(prefix), KMPP_OBJ_FUNC2(prefix, impl_dump)); \
+    KMPP_OBJ_ADD_PRESET(prefix); \
+    KMPP_OBJ_ADD_DUMP(prefix); \
     KMPP_OBJ_ENTRY_TABLE(ENTRY_QUERY, prefix) \
     return KMPP_OBJ_SHM_FUNC(KMPP_OBJ_DEF(prefix)); \
 } \
@@ -214,7 +243,11 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_IMPL_TYPE
 #undef KMPP_OBJ_ENTRY_TABLE
 #undef KMPP_OBJ_FUNC_EXPORT_ENABLE
-#undef KMPP_OBJ_DEV_PATH_ENABLE
+#undef KMPP_OBJ_FUNC_PRESET
+#undef KMPP_OBJ_FUNC_DUMP
+#undef KMPP_OBJ_SHM_DISABLE
+#undef KMPP_OBJ_SHM_STAND_ALONE
+#undef KMPP_OBJ_SHM_IN_OBJS
 
 /* undef tmp macro */
 #undef FIELD_TO_LOCTBL_FLAG1
@@ -231,6 +264,8 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_DEF_NAME
 #undef KMPP_OBJ_SHM_FUNC
 #undef KMPP_OBJ_FUNC_EXPORT
+#undef KMPP_OBJ_ADD_PRESET
+#undef KMPP_OBJ_ADD_DUMP
 
 #undef __KMPP_OBJ_HERLPER_H__
 

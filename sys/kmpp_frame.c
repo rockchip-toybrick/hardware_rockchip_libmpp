@@ -14,14 +14,6 @@
 #define KMPP_FRAME_KOBJ_IMPL
 #include "kmpp_frame.h"
 
-#define KMPP_OBJ_INTF_TYPE          KmppFrame
-#define KMPP_OBJ_IMPL_TYPE          KmppFrameImpl
-#define KMPP_OBJ_ENTRY_TABLE        ENTRY_TABLE_KMPP_FRAME
-#define KMPP_OBJ_NAME               kmpp_frame
-#define KMPP_OBJ_FUNC_EXPORT_ENABLE
-#define KMPP_OBJ_DEV_PATH_ENABLE
-#include "kmpp_obj_helper.h"
-
 static void kmpp_frame_impl_preset(void *entry)
 {
     if (entry) {
@@ -60,3 +52,13 @@ static rk_s32 kmpp_frame_impl_dump(void *entry)
 
     return rk_ok;
 }
+
+#define KMPP_OBJ_NAME               kmpp_frame
+#define KMPP_OBJ_INTF_TYPE          KmppFrame
+#define KMPP_OBJ_IMPL_TYPE          KmppFrameImpl
+#define KMPP_OBJ_ENTRY_TABLE        ENTRY_TABLE_KMPP_FRAME
+#define KMPP_OBJ_FUNC_PRESET        kmpp_frame_impl_preset
+#define KMPP_OBJ_FUNC_DUMP          kmpp_frame_impl_dump
+#define KMPP_OBJ_FUNC_EXPORT_ENABLE
+#define KMPP_OBJ_SHM_STAND_ALONE
+#include "kmpp_obj_helper.h"
