@@ -35,6 +35,7 @@ rk_s32 KMPP_OBJ_CONCAT2(prefix, get)(KMPP_OBJ_INTF_TYPE *p); \
 rk_s32 KMPP_OBJ_CONCAT2(prefix, get_share)(KMPP_OBJ_INTF_TYPE *p, KmppShmGrp grp); \
 rk_s32 KMPP_OBJ_CONCAT2(prefix, assign)(KMPP_OBJ_INTF_TYPE *p, void *buf, rk_s32 size); \
 rk_s32 KMPP_OBJ_CONCAT2(prefix, put)(KMPP_OBJ_INTF_TYPE p); \
+rk_s32 KMPP_OBJ_CONCAT2(prefix, dump)(KMPP_OBJ_INTF_TYPE p, const rk_u8 *caller);
 
 KMPP_OBJ_FUNC_DEFINE(KMPP_OBJ_NAME)
 KMPP_OBJ_ENTRY_TABLE(ENTRY_TO_DECLARE, KMPP_OBJ_NAME)

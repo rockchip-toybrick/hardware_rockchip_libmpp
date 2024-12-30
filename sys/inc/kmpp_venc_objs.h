@@ -72,8 +72,7 @@ rk_s32 kmpp_venc_init_cfg_set_only_smartp(KmppVencInitCfg cfg, rk_u32 only_smart
 
 #endif
 
-void kmpp_venc_init_cfg_dump(KmppVencInitCfg cfg, const rk_u8 *caller);
-#define kmpp_venc_init_cfg_dump_f(cfg) kmpp_venc_init_cfg_dump(cfg, __func__)
+#define kmpp_venc_init_cfg_dump_f(cfg) kmpp_venc_init_cfg_dump(cfg, __FUNCTION__)
 
 #include "kmpp_venc_objs_impl.h"
 

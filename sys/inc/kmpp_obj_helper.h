@@ -211,9 +211,9 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, put)(KMPP_OBJ_INTF_TYPE obj) \
 { \
     return kmpp_obj_put(obj); \
 } \
-void KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller) \
+rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller) \
 { \
-    kmpp_obj_dump(obj, caller); \
+    return kmpp_obj_dump(obj, caller); \
 }
 
 KMPP_OBJS_USAGE_SET(KMPP_OBJ_NAME);

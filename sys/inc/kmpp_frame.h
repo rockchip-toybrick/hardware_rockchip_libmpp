@@ -8,9 +8,6 @@
 
 #include "kmpi_defs.h"
 
-void kmpp_frame_dump(KmppFrame frame, const rk_u8 *caller);
-#define kmpp_frame_dump_f(frame) kmpp_frame_dump(frame, __func__)
-
 #define ENTRY_TABLE_KMPP_FRAME(ENTRY, prefix) \
     ENTRY(prefix, u32, rk_u32, width) \
     ENTRY(prefix, u32, rk_u32, height) \
@@ -26,6 +23,8 @@ void kmpp_frame_dump(KmppFrame frame, const rk_u8 *caller);
 #define KMPP_OBJ_INTF_TYPE      KmppFrame
 #define KMPP_OBJ_ENTRY_TABLE    ENTRY_TABLE_KMPP_FRAME
 #include "kmpp_obj_func.h"
+
+#define kmpp_frame_dump_f(frame) kmpp_frame_dump(frame, __FUNCTION__)
 
 #include "kmpp_frame_impl.h"
 
