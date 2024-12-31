@@ -33,8 +33,6 @@ rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump);
 rk_s32 kmpp_objdef_deinit(KmppObjDef def);
 rk_u32 kmpp_objdef_lookup(KmppObjDef *def, const rk_u8 *name);
 
-/* Create one-to-one share memory management binding */
-rk_s32 kmpp_objdef_add_shm_mgr(KmppObjDef def);
 /* Bind objdef to kmpp_objs */
 rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def);
 

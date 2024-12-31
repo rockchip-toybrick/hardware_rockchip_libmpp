@@ -71,5 +71,5 @@ static rk_s32 kmpp_venc_init_cfg_impl_dump(void *entry)
 #define KMPP_OBJ_FUNC_PRESET        kmpp_venc_init_cfg_impl_preset
 #define KMPP_OBJ_FUNC_DUMP          kmpp_venc_init_cfg_impl_dump
 #define KMPP_OBJ_FUNC_EXPORT_ENABLE
-#define KMPP_OBJ_SHM_IN_OBJS
+#define KMPP_OBJ_SHM_ENABLE
 #include "kmpp_obj_helper.h"

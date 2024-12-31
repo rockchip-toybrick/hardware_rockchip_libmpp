@@ -328,19 +328,6 @@ rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump)
 }
 EXPORT_SYMBOL(kmpp_objdef_add_dump);
 
-rk_s32 kmpp_objdef_add_shm_mgr(KmppObjDef def)
-{
-    KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
-
-    if (!impl) {
-        kmpp_loge_f("invalid param obj def NULL\n");
-        return rk_nok;
-    }
-
-    return kmpp_shm_mgr_get_by_objdef(&impl->shm_mgr, def);
-}
-EXPORT_SYMBOL(kmpp_objdef_add_shm_mgr);
-
 rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def)
 {
     KmppObjDefImpl *impl = (KmppObjDefImpl *)def;

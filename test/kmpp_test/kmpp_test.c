@@ -57,7 +57,6 @@ static rk_s32 kmpp_obj_test_impl_dump(void *param)
 #define KMPP_OBJ_ENTRY_TABLE    ENTRY_TABLE
 #define KMPP_OBJ_FUNC_PRESET    kmpp_obj_test_impl_preset
 #define KMPP_OBJ_FUNC_DUMP      kmpp_obj_test_impl_dump
-#define KMPP_OBJ_SHM_DISABLE
 #include "kmpp_obj_helper.h"
 
 static KmppObjDef test_def = NULL;

@@ -115,7 +115,7 @@ typedef struct KmppShmGrpImpl_t {
 } KmppShmGrpImpl;
 
 typedef struct KmppShmImpl_t {
-    KmppObjShm      ioc_data;
+    KmppObjShm      ioc;
 
     osal_fs_vm      *vm_shm;
 
@@ -371,53 +371,103 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
             kmpp_loge_f("KMPP_SHM_IOC_QUERY_INFO osal_copy_to_user fail ret %d\n", ret);
     } break;
     case KMPP_SHM_IOC_GET_SHM : {
-        KmppShmGrpImpl *grp = NULL;
-        KmppObj obj = NULL;
-        KmppShm shm = NULL;
-        void *kbase = NULL;
-        rk_ul ubase = 0;
+        KmppObjIocArg ioc;
+        rk_u32 i;
 
-        grp = get_shm_grp_by_arg(file, arg, "KMPP_SHM_IOC_GET_SHM");
-        if (!grp || !grp->def) {
-            kmpp_loge_f("KMPP_SHM_IOC_GET_SHM get_shm_grp_by_arg failed\n");
+        ret = osal_copy_from_user(&ioc, arg, sizeof(ioc));
+        if (ret) {
+            kmpp_loge_f("KMPP_SHM_IOC_GET_SHM osal_copy_from_user KmppObjIocArg fail\n");
             break;
         }
 
-        ret = kmpp_obj_get_share(&obj, grp->def, grp);
-        if (ret || !obj)
-            kmpp_loge_f("kmpp_obj_get_share fail ret %d\n", ret);
+        shm_dbg_ioctl("put shm %d\n", ioc.count);
 
-        if (obj && (kmpp_shm_debug & SHM_DBG_DUMP))
-            kmpp_obj_dump(obj, "KMPP_SHM_IOC_GET_SHM");
-
-        shm = kmpp_obj_get_shm(obj);
-        ubase = kmpp_shm_get_ubase(shm);
-        kbase = kmpp_shm_get_kbase(shm);
-
-        shm_dbg_ioctl("get shm k:%px u:%#llx\n", kbase, ubase);
-
-        if (osal_copy_to_user(arg, &ubase, sizeof(ubase))) {
-            kmpp_loge_f("KMPP_SHM_IOC_GET_SHM osal_copy_to_user fail\n");
-            ret = rk_nok;
+        if (ioc.count > KMPP_SHM_IOC_MAX_COUNT) {
+            kmpp_loge_f("KMPP_SHM_IOC_GET_SHM count %d over max %d\n",
+                        ioc.count, KMPP_SHM_IOC_MAX_COUNT);
+            break;
         }
-    } break;
-    case KMPP_SHM_IOC_PUT_SHM : {
-        KmppObjShm ref;
 
-        ret = osal_copy_from_user(&ref, arg, sizeof(ref));
-        if (ret) {
-            kmpp_loge_f("KMPP_SHM_IOC_PUT_SHM osal_copy_from_user fail\n");
-        } else {
-            KmppShmImpl *impl;
+        arg += sizeof(ioc);
 
-            impl = (KmppShmImpl *)ref.kobj_kaddr;
+        for (i = 0; i < ioc.count; i++, arg += sizeof(rk_u64)) {
+            KmppShmGrpImpl *grp = NULL;
+            KmppObj obj = NULL;
+            KmppShm shm = NULL;
+            void *kbase = NULL;
+            rk_u64 ubase = 0;
 
-            if (!impl || impl != impl->kbase) {
-                kmpp_loge_f("KMPP_SHM_IOC_PUT_SHM invalid shm %px\n", impl);
+            shm_dbg_ioctl("get shm ioc %d\n", i);
+
+            grp = get_shm_grp_by_arg(file, arg, "KMPP_SHM_IOC_GET_SHM");
+            if (!grp || !grp->def) {
+                kmpp_loge_f("slot %d KMPP_SHM_IOC_GET_SHM get_shm_grp_by_arg failed\n", i);
                 break;
             }
 
-            shm_dbg_ioctl("put shm k:%px u:%#llx\n", impl->kbase, impl->ubase);
+            ret = kmpp_obj_get_share(&obj, grp->def, grp);
+            if (ret || !obj)
+                kmpp_loge_f("slot %d kmpp_obj_get_share fail ret %d\n", i, ret);
+
+            if (obj && (kmpp_shm_debug & SHM_DBG_DUMP))
+                kmpp_obj_dump(obj, "KMPP_SHM_IOC_GET_SHM");
+
+            shm = kmpp_obj_get_shm(obj);
+            ubase = kmpp_shm_get_ubase(shm);
+            kbase = kmpp_shm_get_kbase(shm);
+
+            shm_dbg_ioctl("slot %d get shm k:%px u:%#llx\n", i, kbase, ubase);
+
+            if (osal_copy_to_user(arg, &ubase, sizeof(ubase))) {
+                kmpp_loge_f("slot %d KMPP_SHM_IOC_GET_SHM osal_copy_to_user fail\n", i);
+                ret = rk_nok;
+            }
+        }
+    } break;
+    case KMPP_SHM_IOC_PUT_SHM : {
+        KmppObjIocArg ioc;
+        rk_u32 i;
+
+        ret = osal_copy_from_user(&ioc, arg, sizeof(ioc));
+        if (ret) {
+            kmpp_loge_f("KMPP_SHM_IOC_GET_SHM osal_copy_from_user KmppObjIocArg fail\n");
+            break;
+        }
+
+        shm_dbg_ioctl("put shm %d\n", ioc.count);
+
+        if (ioc.count > KMPP_SHM_IOC_MAX_COUNT) {
+            kmpp_loge_f("KMPP_SHM_IOC_GET_SHM count %d over max %d\n",
+                        ioc.count, KMPP_SHM_IOC_MAX_COUNT);
+            break;
+        }
+
+        arg += sizeof(ioc);
+
+        for (i = 0; i < ioc.count; i++, arg += sizeof(rk_u64)) {
+            rk_u64 uaddr;
+            KmppObjShm shm;
+            KmppShmImpl *impl;
+
+            ret = osal_copy_from_user(&uaddr, arg, sizeof(uaddr));
+            if (ret) {
+                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM osal_copy_from_user uaddr fail\n", i);
+                break;
+            }
+
+            ret = osal_copy_from_user(&shm, (void *)uaddr, sizeof(shm));
+            if (ret) {
+                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM osal_copy_from_user KmppObjShm fail\n", i);
+                break;
+            }
+
+            impl = (KmppShmImpl *)shm.kobj_kaddr;
+            if (!impl || impl != impl->kbase) {
+                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM invalid shm %px\n", i, impl);
+                break;
+            }
+
+            shm_dbg_ioctl("slot %d put shm k:%px u:%#llx\n", i, impl->kbase, impl->ubase);
 
             if (impl->obj) {
                 if (kmpp_shm_debug & SHM_DBG_DUMP)
@@ -605,67 +655,6 @@ done:
     if (ret && impl) {
         kmpp_shm_mgr_put(impl);
         impl = NULL;
-    }
-
-    *mgr = impl;
-
-    return ret;
-}
-
-rk_s32 kmpp_shm_mgr_get_by_objdef(KmppShmMgr *mgr, KmppObjDef def)
-{
-    KmppShmMgrImpl *impl;
-    osal_fs_dev_cfg cfg;
-    const rk_u8 *name;
-    rk_s32 mgr_size;
-    rk_s32 ret = rk_nok;
-
-    if (!mgr || !def) {
-        kmpp_loge_f("invalid param mgr %px objdef %px\n", mgr, def);
-        return ret;
-    }
-
-    *mgr = NULL;
-    name = kmpp_objdef_get_name(def);
-    mgr_size = osal_fs_dev_mgr_size(name);
-    impl = kmpp_calloc(sizeof(*impl) + mgr_size);
-    if (!impl) {
-        kmpp_loge_f("%s malloc size %d failed\n", name, mgr_size);
-        return ret;
-    }
-
-    cfg.cls = kmpp_shm_cls->cls;
-    cfg.name = name;
-    cfg.fops = &kmpp_shm_cls->fops;
-    cfg.drv_data = impl;
-    cfg.priv_size = kmpp_shm_grp_size();
-    cfg.buf = (void *)(impl + 1);
-    cfg.size = mgr_size;
-
-    ret = osal_fs_dev_mgr_init(&impl->mgr, &cfg);
-    if (ret || !impl->mgr) {
-        kmpp_loge_f("dev mgr %s init failed\n", name);
-        kmpp_free(impl);
-    } else {
-        rk_s32 size = kmpp_objdef_get_entry_size(def);
-
-        impl->name = cfg.name;
-        impl->size = size;
-        impl->def = def;
-
-        size_to_map_info(&impl->map_size, size);
-
-        OSAL_INIT_LIST_HEAD(&impl->list_cls);
-        OSAL_INIT_LIST_HEAD(&impl->list_grp);
-        OSAL_INIT_LIST_HEAD(&impl->list_def);
-
-        if (kmpp_shm_cls) {
-            osal_spin_lock(kmpp_shm_cls->lock);
-            osal_list_add_tail(&impl->list_cls, &kmpp_shm_cls->list_mgr);
-            osal_spin_unlock(kmpp_shm_cls->lock);
-        }
-
-        ret = rk_ok;
     }
 
     *mgr = impl;
@@ -965,8 +954,8 @@ rk_s32 kmpp_shm_get(KmppShm *shm, KmppShmGrp grp, KmppObj obj)
     impl_shm->ubase = impl_shm->vm_shm->uaddr;
     impl_shm->uaddr = impl_shm->ubase + entry_offset;
 
-    impl_shm->ioc_data.kobj_uaddr = impl_shm->uaddr;
-    impl_shm->ioc_data.kobj_kaddr = (__u64)impl_shm;
+    impl_shm->ioc.kobj_uaddr = impl_shm->uaddr;
+    impl_shm->ioc.kobj_kaddr = (__u64)impl_shm;
 
     shm_dbg_detail("shm %px kaddr [%px:%px] uaddr [%#lx:%#llx]\n",
                    impl_shm, impl_shm->kbase, impl_shm->kaddr,
@@ -1043,7 +1032,6 @@ rk_u64 kmpp_shm_get_uaddr(KmppShm shm)
     return impl ? impl->uaddr : 0;
 }
 
-EXPORT_SYMBOL(kmpp_shm_mgr_get_by_objdef);
 EXPORT_SYMBOL(kmpp_shm_mgr_get);
 EXPORT_SYMBOL(kmpp_shm_mgr_bind_objdef);
 EXPORT_SYMBOL(kmpp_shm_mgr_unbind_objdef);
