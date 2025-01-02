@@ -644,7 +644,7 @@ EXPORT_SYMBOL(osal_fs_vm_mmap);
 rk_s32 osal_fs_vm_munmap(osal_fs_vm *vm)
 {
     osal_vm_node *node = vm_to_node(vm);
-    rk_s32 ret = rk_nok;
+    rk_s32 ret = rk_ok;
 
     if (!vm || !vm->dev || !vm->kaddr || !vm->uaddr) {
         kmpp_loge_f("invalid param vm %px dev %px kaddr %px uaddr %#lx\n",
