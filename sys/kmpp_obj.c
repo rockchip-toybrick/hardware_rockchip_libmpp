@@ -328,36 +328,6 @@ rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump)
 }
 EXPORT_SYMBOL(kmpp_objdef_add_dump);
 
-rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def)
-{
-    KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
-    KmppShmMgr mgr = NULL;
-    rk_s32 ret = rk_nok;
-
-    if (!impl) {
-        kmpp_loge_f("invalid param obj def NULL\n");
-        return rk_nok;
-    }
-
-    mgr = kmpp_shm_get_objs_mgr();
-    if (!mgr) {
-        kmpp_loge_f("kmpp_shm_get_objs_mgr failed\n");
-        return ret;
-    }
-
-    ret = kmpp_shm_mgr_bind_objdef(mgr, def);
-    if (ret) {
-        kmpp_loge_f("bind kmpp_objs shm mgr failed ret %d\n", ret);
-        mgr = NULL;
-    }
-
-    impl->shm_mgr = mgr;
-    impl->shm_bind = 1;
-
-    return ret;
-}
-EXPORT_SYMBOL(kmpp_objdef_bind_shm_mgr);
-
 rk_s32 kmpp_objdef_deinit(KmppObjDef def)
 {
     KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
@@ -390,6 +360,96 @@ rk_s32 kmpp_objdef_deinit(KmppObjDef def)
     return ret;
 }
 EXPORT_SYMBOL(kmpp_objdef_deinit);
+
+rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def)
+{
+    KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+    KmppShmMgr mgr = NULL;
+    rk_s32 ret = rk_nok;
+
+    if (!impl) {
+        kmpp_loge_f("invalid param obj def NULL\n");
+        return rk_nok;
+    }
+
+    mgr = kmpp_shm_get_objs_mgr();
+    if (!mgr) {
+        kmpp_loge_f("kmpp_shm_get_objs_mgr failed\n");
+        return ret;
+    }
+
+    ret = kmpp_shm_mgr_bind_objdef(mgr, def);
+    if (ret) {
+        kmpp_loge_f("bind kmpp_objs shm mgr failed ret %d\n", ret);
+        mgr = NULL;
+    }
+
+    impl->shm_mgr = mgr;
+    impl->shm_bind = 1;
+
+    return ret;
+}
+EXPORT_SYMBOL(kmpp_objdef_bind_shm_mgr);
+
+rk_s32 kmpp_objdef_dump(KmppObjDef def)
+{
+    if (def) {
+        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+        KmppTrie trie = impl->trie;
+        KmppTrieInfo *info = NULL;
+        const rk_u8 *name = impl->name;
+        RK_S32 i = 0;
+
+        kmpp_logi("dump objdef %-16s entry_size %d element count %d\n",
+                 name, impl->entry_size, kmpp_trie_get_info_count(trie));
+
+        info = kmpp_trie_get_info_first(trie);
+        while (info) {
+            name = kmpp_trie_info_name(info);
+            if (!osal_strstr(name, "__")) {
+                KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
+                rk_s32 idx = i++;
+
+                kmpp_logi("%-2d - %-16s offset %4d size %d\n", idx,
+                          name, tbl->data_offset, tbl->data_size);
+            }
+            info = kmpp_trie_get_info_next(trie, info);
+        }
+
+        info = kmpp_trie_get_info_first(trie);
+        while (info) {
+            name = kmpp_trie_info_name(info);
+            if (osal_strstr(name, "__")) {
+                void *p = kmpp_trie_info_ctx(info);
+                rk_s32 idx = i++;
+
+                if (info->ctx_len == sizeof(RK_U32)) {
+
+                    kmpp_logi("%-2d - %-16s val %d\n", idx, name, *(RK_U32 *)p);
+                } else {
+                    kmpp_logi("%-2d - %-16s str %s\n", idx, name, p);
+                }
+            }
+            info = kmpp_trie_get_info_next(trie, info);
+        }
+
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(kmpp_objdef_dump);
+
+void kmpp_objdef_dump_all(void)
+{
+    KmppObjDefImpl *impl = NULL;
+    KmppObjDefImpl *n = NULL;
+
+    osal_list_for_each_entry_safe(impl, n, &kmpp_obj_list, KmppObjDefImpl, list) {
+        kmpp_objdef_dump(impl);
+    }
+}
+EXPORT_SYMBOL(kmpp_objdef_dump_all);
 
 const rk_u8 *kmpp_objdef_get_name(KmppObjDef def)
 {

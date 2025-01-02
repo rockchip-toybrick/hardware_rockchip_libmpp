@@ -9,6 +9,28 @@
 #include "kmpp_sys_defs.h"
 #include "kmpp_trie.h"
 
+/*
+ * kernel object definition and kernel object
+ *
+ * The kernel object definition is used to define the object structure.
+ * It uses trie to record the object name and the location tables to
+ * which keep each element offset and size info in the object structure.
+ *
+ * The kernel object is the actual object used by kernel and userspace.
+ *
+ * Normal kernel object can be shared between different kernel modules.
+ * When KMPP_OBJ_SHM_ENABLE is defined before kmpp_obj_helper.h the kernel object
+ * can be shared between kernel and userspace.
+ *
+ * Different kernel object creation methods:
+ * kmpp_obj_get
+ * - create an object by malloc and used only in kernel
+ * kmpp_obj_assign
+ * - create an object by external buffer and used only in kernel
+ * kmpp_obj_get_share
+ * - create an object by share memory and used both in kernel and userspace
+ */
+
 /* location table */
 typedef union KmppLocTbl_u {
     rk_u64              val;
@@ -35,8 +57,10 @@ rk_u32 kmpp_objdef_lookup(KmppObjDef *def, const rk_u8 *name);
 
 /* Bind objdef to kmpp_objs */
 rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def);
+rk_s32 kmpp_objdef_dump(KmppObjDef def);
+void kmpp_objdef_dump_all(void);
 
-/* kmpp objcet internal element set / get function */
+/* kmpp objcet internal element access function */
 const rk_u8 *kmpp_objdef_get_name(KmppObjDef def);
 rk_s32 kmpp_objdef_get_buf_size(KmppObjDef def);
 rk_s32 kmpp_objdef_get_entry_size(KmppObjDef def);
@@ -87,7 +111,6 @@ rk_s32 kmpp_obj_tbl_get_st(KmppObj obj, KmppLocTbl *tbl, void *val);
 /* run a callback function */
 rk_s32 kmpp_obj_run(KmppObj obj, const rk_u8 *name);
 rk_s32 kmpp_obj_dump(KmppObj obj, const rk_u8 *caller);
-
 #define kmpp_obj_dump_f(obj) kmpp_obj_dump(obj, __FUNCTION__)
 
 const rk_u8 *strof_entry_type(EntryType type);

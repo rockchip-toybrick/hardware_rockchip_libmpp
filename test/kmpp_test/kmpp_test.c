@@ -70,6 +70,8 @@ rk_s32 kmpp_test_func(void *param)
     KmppTrie trie2;
     void *root;
 
+    kmpp_objdef_dump_all();
+
     ret = kmpp_frame_get(&frame);
     kmpp_logi_f("get frame %px ret %d\n", frame, ret);
     if (ret)

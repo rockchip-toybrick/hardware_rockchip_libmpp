@@ -10,6 +10,28 @@
 
 #include "kmpp_sys_defs.h"
 
+/*
+ * kernel share memory layout
+ *
+ * |---------------------|
+ * |     KmppObjShm      |
+ * |---------------------|
+ * |     KmppShmImpl     |
+ * |---------------------|
+ * |     share memory    |
+ * |---------------------|
+ *
+ * KmppObjShm is the ioctl userspace access object
+ * kobj_uaddr in KmppObjShm is the KmppObjShm struct userspace address
+ * kobj_kaddr in KmppObjShm is the KmppObjShm struct kernel address
+ *
+ * KmppObjShm is at the head of KmppShmImpl and KmppShmImpl can only
+ * be seen by kernel. Userspace should not access KmppShmImpl.
+ *
+ * The share memory is the actual memory access by both kernel and userspace.
+ * Also the share memory address will be assigned to KmppObjImpl entry.
+ */
+
 typedef struct KmppShmGrpCfg_t {
     KmppShmMgr mgr;
     osal_fs_dev *file;
