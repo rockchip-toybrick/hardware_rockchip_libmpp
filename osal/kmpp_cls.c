@@ -301,6 +301,36 @@ static long osal_fs_ioctl(struct file *file, unsigned int cmd, unsigned long arg
     return ret;
 }
 
+static ssize_t osal_fs_read(struct file *file, char __user *buffer, size_t length, loff_t *offset)
+{
+    osal_fs_dev_impl *impl = file->private_data;
+    osal_fs_dev *dev = &impl->dev;
+    osal_fs_dev_mgr *mgr = dev->mgr;
+    rk_s32 ret = rk_nok;
+
+    kmpp_cls_dbg_fops("%s priv %px buffer %px length %d offset %d\n",
+                      dev->name, dev->priv_data, buffer, length, (rk_s32)*offset);
+
+    if (mgr->fops.read) {
+        void *buf = NULL;
+        rk_s32 len = 0;
+        rk_s32 start = (offset) ? *offset : 0;
+
+        ret = mgr->fops.read(dev, start, &buf, &len);
+        if (!ret && buf && len > 0) {
+            ret = copy_to_user(buffer, buf, len);
+            if (!ret) {
+                *offset += len;
+            } else {
+                kmpp_loge_f("copy_to_user %px -> %px len %d failed %d\n",
+                            buf, buffer, len, ret);
+            }
+        }
+    }
+
+    return ret;
+}
+
 #define vm_node_unref_f(node) vm_node_unref(node, __func__)
 static rk_s32 vm_node_unref(osal_vm_node *node, const rk_u8 *func)
 {
@@ -418,6 +448,7 @@ static int osal_fs_mmap(struct file *file, struct vm_area_struct *vma)
 
 static struct file_operations osal_fs_dev_fops = {
     .owner          = THIS_MODULE,
+    .read           = osal_fs_read,
     .open           = osal_fs_open,
     .release        = osal_fs_release,
     .unlocked_ioctl = osal_fs_ioctl,

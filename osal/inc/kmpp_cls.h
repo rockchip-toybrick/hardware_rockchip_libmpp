@@ -47,6 +47,7 @@ typedef struct osal_fs_vm_t {
 typedef rk_s32 (*kmpp_fs_open)(osal_fs_dev *dev);
 typedef rk_s32 (*kmpp_fs_release)(osal_fs_dev *dev);
 typedef rk_s32 (*kmpp_fs_ioctl)(osal_fs_dev *dev, rk_s32 cmd, void *arg);
+typedef rk_s32 (*kmpp_fs_read)(osal_fs_dev *dev, rk_s32 offset, void **buf, rk_s32 *size);
 
 typedef rk_s32 (*kmpp_fs_vm_mmap)(osal_fs_dev *dev, osal_fs_vm *vm);
 typedef rk_s32 (*kmpp_fs_vm_open)(osal_fs_dev *dev, osal_fs_vm *vm);
@@ -56,6 +57,7 @@ typedef struct osal_dev_fops_t {
     kmpp_fs_open    open;
     kmpp_fs_release release;
     kmpp_fs_ioctl   ioctl;
+    kmpp_fs_read    read;
 } osal_dev_fops;
 
 typedef struct osal_fs_dev_cfg_t {
