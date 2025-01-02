@@ -507,6 +507,12 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
     return ret;
 }
 
+rk_s32 kmpp_shm_read(osal_fs_dev *file, rk_s32 offset, void **buf, rk_s32 *size)
+{
+    kmpp_objdef_dump_all();
+    return 0;
+}
+
 rk_s32 kmpp_shm_init(void)
 {
     KmppEnvInfo env;
@@ -534,6 +540,7 @@ rk_s32 kmpp_shm_init(void)
     kmpp_shm_cls->fops.open = kmpp_shm_open;
     kmpp_shm_cls->fops.release = kmpp_shm_release;
     kmpp_shm_cls->fops.ioctl = kmpp_shm_ioctl;
+    kmpp_shm_cls->fops.read = kmpp_shm_read;
 
     OSAL_INIT_LIST_HEAD(&kmpp_shm_cls->list_mgr);
 
