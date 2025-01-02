@@ -27,6 +27,8 @@
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_mem.h"
 #include "mpp_vcodec_rockit.h"
+#include "kmpp_shm.h"
+#include "rk-mpp-kobj.h"
 
 int mpp_vcodec_schedule(void)
 {
@@ -478,9 +480,20 @@ int mpp_vcodec_chan_control(int chan_id, MppCtxType type, int cmd, void *arg)
 		;
 	} break;
 	case MPP_CTX_ENC: {
-		if (cmd == MPP_ENC_SET_CHANGE_STREAM_TYPE)
-			mpp_vcodec_chan_change_coding_type(chan_id, arg);
-		else {
+		if (cmd == MPP_ENC_SET_CHANGE_STREAM_TYPE) {
+			struct vcodec_attr *attr = NULL;
+			KmppObjShm *ioc = (KmppObjShm *)arg;
+			KmppShm shm = (KmppShm)ioc->kobj_kaddr;
+			void *kbase = kmpp_shm_get_kbase(shm);
+
+			if (!kbase || kbase != shm) {
+				mpp_err_f("invalid obj kbase %px shm %px\n", kbase, shm);
+				return -EINVAL;
+			}
+
+			attr = (struct vcodec_attr *)kmpp_shm_get_kaddr(shm);
+			mpp_vcodec_chan_change_coding_type(chan_id, attr);
+		} else {
 			MppEncCfgImpl *cfg = (MppEncCfgImpl *)arg;
 			bool prep_change = cfg ? cfg->cfg.prep.change : false;
 

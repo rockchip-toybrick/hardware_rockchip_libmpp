@@ -33,6 +33,12 @@
 #include "kmpp_osal.h"
 #include "kmpp_sys.h"
 #endif
+
+#include "kmpp_obj.h"
+#include "kmpp_sys_defs.h"
+#include "kmpp_shm.h"
+#include "rk-mpp-kobj.h"
+
 struct vcodec_msg {
 	__u32 cmd;
 	__u32 ctrl_cmd;
@@ -121,27 +127,33 @@ static int vcodec_process_cmd(void *private, struct vcodec_request *req)
 
 	switch (req->cmd) {
 	case VCODEC_CHAN_CREATE: {
-		struct vcodec_attr *attr = (struct vcodec_attr *)param;
+		struct vcodec_attr *attr = NULL;
+		KmppObjShm *ioc = (KmppObjShm *)param;
+		KmppShm shm;
+		void *kbase;
 
 		if (copy_from_user(param, req->data, req->size)) {
 			ret = -EFAULT;
+			mpp_err_f("copy_from_user failed\n");
 			goto fail;
 		}
-		if (req->size != sizeof(*attr)) {
-			mpp_err("kernel vcodec_attr define is diff from user \n");
-			ret = -EFAULT;
+
+		shm = (KmppShm)ioc->kobj_kaddr;
+		kbase = kmpp_shm_get_kbase(shm);
+		if (!kbase || kbase != shm) {
+			mpp_err_f("invalid obj kbase %px shm %px\n", kbase, shm);
+			ret = -EINVAL;
 			goto fail;
 		}
-		ctx->type = attr->type;
+
+		attr = (struct vcodec_attr *)kmpp_shm_get_kaddr(shm);
 		ret = mpp_vcodec_chan_create(attr);
-		if (copy_to_user(req->data, param, req->size)) {
-			mpp_err("copy_to_user failed.\n");
-			return -EINVAL;
-		}
-		ctx->chan_id = attr->chan_id;
-		ctx->chan_dup = attr->chan_dup;
 		if (ret)
 			goto fail;
+
+		ctx->type = attr->type;
+		ctx->chan_id = attr->chan_id;
+		ctx->chan_dup = attr->chan_dup;
 		ctx->chan_create = 1;
 	} break;
 	case VCODEC_CHAN_DESTROY: {
