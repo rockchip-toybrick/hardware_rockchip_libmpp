@@ -9,6 +9,7 @@
 #include "kmpi_venc.h"
 
 #define ENTRY_TABLE_KMPP_VENC_INIT_CFG(ENTRY, prefix) \
+    ENTRY(prefix, u32, MppCtxType, type) \
     ENTRY(prefix, u32, MppCodingType, coding) \
     ENTRY(prefix, s32, rk_s32, chan_id) \
     ENTRY(prefix, s32, rk_s32, online) \

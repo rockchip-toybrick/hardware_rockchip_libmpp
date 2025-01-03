@@ -20,6 +20,7 @@ static void kmpp_venc_init_cfg_impl_preset(void *entry)
     if (entry) {
         KmppVencInitCfgImpl *impl = (KmppVencInitCfgImpl*)entry;
 
+        impl->type = MPP_CTX_BUTT;
         impl->coding = MPP_VIDEO_CodingUnused;
         impl->chan_id = -1;
         impl->online = 0;
@@ -46,6 +47,7 @@ static rk_s32 kmpp_venc_init_cfg_impl_dump(void *entry)
         return rk_nok;
     }
 
+    kmpp_logi("type             %d\n", impl->type);
     kmpp_logi("coding           %d\n", impl->coding);
     kmpp_logi("chan_id          %d\n", impl->chan_id);
     kmpp_logi("online           %d\n", impl->online);

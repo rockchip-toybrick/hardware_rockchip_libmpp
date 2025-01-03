@@ -11,6 +11,7 @@
 #ifdef KMPP_VENC_OBJS_KOBJ_IMPL
 
 typedef struct KmppVencInitCfgImpl_t {
+    MppCtxType      type;
     MppCodingType   coding;
     rk_s32          chan_id;
     rk_s32          online;
