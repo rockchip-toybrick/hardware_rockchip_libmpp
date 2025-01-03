@@ -766,7 +766,7 @@ rk_s32 kmpp_shm_mgr_put(KmppShmMgr mgr)
         osal_spin_unlock(impl->lock);
 
         osal_list_for_each_entry_safe(pos, n, &list, KmppObjDefNode, list_mgr) {
-            kmpp_objdef_deinit(pos->def);
+            kmpp_objdef_put(pos->def);
             kmpp_free(pos);
         }
     }

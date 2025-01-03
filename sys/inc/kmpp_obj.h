@@ -47,13 +47,14 @@ typedef union KmppLocTbl_u {
 typedef void (*KmppObjPreset)(void *obj);
 typedef rk_s32 (*KmppObjDump)(void *entry);
 
-rk_s32 kmpp_objdef_init(KmppObjDef *def, rk_s32 size, const rk_u8 *name);
+rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name);
+rk_s32 kmpp_objdef_put(KmppObjDef def);
+rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name);
+
 rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl);
 rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl **tbl);
 rk_s32 kmpp_objdef_add_preset(KmppObjDef def, KmppObjPreset preset);
 rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump);
-rk_s32 kmpp_objdef_deinit(KmppObjDef def);
-rk_u32 kmpp_objdef_lookup(KmppObjDef *def, const rk_u8 *name);
 
 /* Bind objdef to kmpp_objs */
 rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def);

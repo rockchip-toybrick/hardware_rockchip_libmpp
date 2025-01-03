@@ -6,23 +6,22 @@
 #ifndef __KMPP_OBJ_HERLPER_H__
 #define __KMPP_OBJ_HERLPER_H__
 
-#include "kmpp_shm.h"
-
 #if !defined(KMPP_OBJ_NAME) || \
     !defined(KMPP_OBJ_INTF_TYPE) || \
     !defined(KMPP_OBJ_IMPL_TYPE) || \
     !defined(KMPP_OBJ_ENTRY_TABLE)
 
 #warning "When using kmpp_obj_helper.h The following macro must be defined:"
-#warning "KMPP_OBJ_NAME                  - object name"
-#warning "KMPP_OBJ_INTF_TYPE             - object interface type"
-#warning "KMPP_OBJ_IMPL_TYPE             - object implement type"
-#warning "KMPP_OBJ_ENTRY_TABLE           - object element entry table"
+#warning "KMPP_OBJ_NAME                 - object name"
+#warning "KMPP_OBJ_INTF_TYPE            - object interface type"
+#warning "KMPP_OBJ_IMPL_TYPE            - object implement type"
+#warning "KMPP_OBJ_ENTRY_TABLE          - object element entry table"
 #warning "option macro:"
-#warning "KMPP_OBJ_FUNC_EXPORT_ENABLE    - enable function EXPORT_SYMBOL"
+#warning "KMPP_OBJ_FUNC_EXPORT_ENABLE   - enable function EXPORT_SYMBOL"
+#warning "KMPP_OBJ_FUNC_STUB_ENABLE     - enable function stub mode by define empty function"
 #warning "KMPP_OBJ_SHM_ENABLE           - use /dev/kmpp_objs to share object to userspace"
-#warning "KMPP_OBJ_FUNC_PRESET           - add object preset function"
-#warning "KMPP_OBJ_FUNC_DUMP             - add object dump function"
+#warning "KMPP_OBJ_FUNC_PRESET          - add object preset function"
+#warning "KMPP_OBJ_FUNC_DUMP            - add object dump function"
 
 #ifndef KMPP_OBJ_NAME
 #error "KMPP_OBJ_NAME not defined"
@@ -110,6 +109,25 @@
 #define KMPP_OBJ_FUNC2(x, y)    x##_##y
 #define KMPP_OBJ_FUNC3(x, y, z) x##_##y##_##z
 
+#if defined(KMPP_OBJ_SHM_ENABLE)
+#define KMPP_OBJ_SHM_FUNC(x)    kmpp_objdef_bind_shm_mgr(x)
+#else
+#define KMPP_OBJ_SHM_FUNC(x)    rk_ok
+#endif
+
+#if defined(KMPP_OBJ_FUNC_PRESET)
+#define KMPP_OBJ_ADD_PRESET(x)  kmpp_objdef_add_preset(KMPP_OBJ_DEF(x), KMPP_OBJ_FUNC_PRESET)
+#else
+#define KMPP_OBJ_ADD_PRESET(x)
+#endif
+
+#if defined(KMPP_OBJ_FUNC_DUMP)
+#define KMPP_OBJ_ADD_DUMP(x)    kmpp_objdef_add_dump(KMPP_OBJ_DEF(x), KMPP_OBJ_FUNC_DUMP)
+#else
+#define KMPP_OBJ_ADD_DUMP(x)
+#endif
+
+#if !defined(KMPP_OBJ_FUNC_STUB_ENABLE)
 #define KMPP_OBJ_ACCESSORS(prefix, ftype, type, field) \
     static KmppLocTbl *tbl_##field = NULL; \
     rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
@@ -133,24 +151,6 @@
         return ret; \
     }
 
-#if defined(KMPP_OBJ_SHM_ENABLE)
-#define KMPP_OBJ_SHM_FUNC(x)    kmpp_objdef_bind_shm_mgr(x)
-#else
-#define KMPP_OBJ_SHM_FUNC(x)    rk_ok
-#endif
-
-#if defined(KMPP_OBJ_FUNC_PRESET)
-#define KMPP_OBJ_ADD_PRESET(x)  kmpp_objdef_add_preset(KMPP_OBJ_DEF(x), KMPP_OBJ_FUNC_PRESET)
-#else
-#define KMPP_OBJ_ADD_PRESET(x)
-#endif
-
-#if defined(KMPP_OBJ_FUNC_DUMP)
-#define KMPP_OBJ_ADD_DUMP(x)    kmpp_objdef_add_dump(KMPP_OBJ_DEF(x), KMPP_OBJ_FUNC_DUMP)
-#else
-#define KMPP_OBJ_ADD_DUMP(x)
-#endif
-
 #define KMPP_OBJS_USAGE_SET(prefix) \
 static KmppObjDef KMPP_OBJ_DEF(prefix) = NULL; \
 static void KMPP_OBJ_FUNC3(prefix, impl, preset)(void *obj); \
@@ -159,7 +159,7 @@ KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_ACCESSORS, prefix) \
 rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
 { \
     rk_s32 impl_size = sizeof(KMPP_OBJ_IMPL_TYPE); \
-    kmpp_objdef_init(&KMPP_OBJ_DEF(prefix), impl_size, KMPP_OBJ_DEF_NAME(KMPP_OBJ_INTF_TYPE)); \
+    kmpp_objdef_get(&KMPP_OBJ_DEF(prefix), impl_size, KMPP_OBJ_DEF_NAME(KMPP_OBJ_INTF_TYPE)); \
     if (!KMPP_OBJ_DEF(prefix)) { \
         kmpp_loge_f(#prefix " init failed\n"); \
         return rk_nok; \
@@ -173,7 +173,7 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
 } \
 rk_s32 KMPP_OBJ_FUNC2(prefix, deinit)(void) \
 { \
-    return kmpp_objdef_deinit(KMPP_OBJ_DEF(prefix)); \
+    return kmpp_objdef_put(KMPP_OBJ_DEF(prefix)); \
 } \
 rk_s32 KMPP_OBJ_FUNC2(prefix, size)(void) \
 { \
@@ -199,6 +199,58 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
 { \
     return kmpp_obj_dump(obj, caller); \
 }
+
+#else
+#define KMPP_OBJ_ACCESSORS(prefix, ftype, type, field) \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
+    { \
+        (void) s; \
+        (void) v; \
+        return rk_ok; \
+    } \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, set, field)(KMPP_OBJ_INTF_TYPE s, type v) \
+    { \
+        (void) s; \
+        (void) v; \
+        return rk_ok; \
+    }
+
+#define KMPP_OBJS_USAGE_SET(prefix) \
+KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_ACCESSORS, prefix) \
+rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
+{ \
+    return rk_ok; \
+} \
+rk_s32 KMPP_OBJ_FUNC2(prefix, deinit)(void) \
+{ \
+    return rk_ok; \
+} \
+rk_s32 KMPP_OBJ_FUNC2(prefix, size)(void) \
+{ \
+    return rk_ok; \
+} \
+rk_s32 KMPP_OBJ_FUNC2(prefix, get)(KMPP_OBJ_INTF_TYPE *obj) \
+{ \
+    return rk_ok; \
+} \
+rk_s32 KMPP_OBJ_FUNC2(prefix, get_share)(KMPP_OBJ_INTF_TYPE *obj, KmppShmGrp grp) \
+{ \
+    return rk_ok; \
+} \
+rk_s32 KMPP_OBJ_FUNC2(prefix, assign)(KMPP_OBJ_INTF_TYPE *obj, void *buf, rk_s32 size) \
+{ \
+    return rk_ok; \
+} \
+rk_s32 KMPP_OBJ_FUNC2(prefix, put)(KMPP_OBJ_INTF_TYPE obj) \
+{ \
+    return rk_ok; \
+} \
+rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller) \
+{ \
+    return rk_ok; \
+}
+#endif
+
 
 KMPP_OBJS_USAGE_SET(KMPP_OBJ_NAME);
 

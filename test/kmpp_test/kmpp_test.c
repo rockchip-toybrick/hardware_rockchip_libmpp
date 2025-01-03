@@ -127,7 +127,7 @@ rk_s32 kmpp_test_func(void *param)
 
     kmpp_obj_put(obj);
 
-    kmpp_objdef_lookup(&test_def, "kmpp_call");
+    kmpp_objdef_find(&test_def, "kmpp_call");
 
     kmpp_logi_f("lookup kmpp_call ret %px\n", test_def);
 
@@ -139,7 +139,7 @@ rk_s32 kmpp_test_func(void *param)
         kmpp_obj_run(obj, "func");
         kmpp_obj_put(obj);
 
-        kmpp_objdef_deinit(test_def);
+        kmpp_objdef_put(test_def);
 
         ret = rk_ok;
     }
@@ -179,7 +179,7 @@ void kmpp_test_exit(void)
     osal_work_deinit(&test_work);
 
     if (kmpp_obj_test_def) {
-        kmpp_objdef_deinit(kmpp_obj_test_def);
+        kmpp_objdef_put(kmpp_obj_test_def);
         kmpp_obj_test_def = NULL;
     }
 

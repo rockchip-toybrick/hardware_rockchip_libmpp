@@ -15,7 +15,7 @@
 #error "KMPP_OBJ_ENTRY_TABLE must be defined on using kmpp_idef_begin.h"
 #endif
 
-#include "kmpp_shm.h"
+#include "kmpp_sys_defs.h"
 
 #ifndef KMPP_OBJ_CONCAT2
 #define KMPP_OBJ_CONCAT2(x, y)      x##_##y

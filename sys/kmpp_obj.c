@@ -65,7 +65,9 @@ typedef struct KmppObjImpl_t {
 
 //static rk_u32 kmpp_obj_debug = KMPP_OBJ_DBG_SET | KMPP_OBJ_DBG_GET;
 static rk_u32 kmpp_obj_debug = 0;
-static OSAL_LIST_HEAD(kmpp_obj_list);
+/* NOTE: objdef get / put MUST on insmod / rmmod in spinlock */
+static OSAL_LIST_HEAD(kmpp_objdef_list);
+static rk_s32 kmpp_objdef_count = 0;
 
 const rk_u8 *strof_entry_type(EntryType type)
 {
@@ -222,7 +224,7 @@ rk_s32 check_entry_tbl(KmppLocTbl *tbl, const rk_u8 *name, EntryType type,
     return ret;
 }
 
-rk_s32 kmpp_objdef_init(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
+rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
 {
     KmppObjDefImpl *impl = NULL;
     rk_s32 offset;
@@ -255,14 +257,68 @@ rk_s32 kmpp_objdef_init(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
     kmpp_trie_add_info(impl->trie, "__offset", &offset, sizeof(offset));
 
     OSAL_INIT_LIST_HEAD(&impl->list);
-    osal_list_add_tail(&impl->list, &kmpp_obj_list);
+    osal_list_add_tail(&impl->list, &kmpp_objdef_list);
+    kmpp_objdef_count++;
     impl->ref_cnt++;
 
     *def = impl;
 
     return rk_ok;
 }
-EXPORT_SYMBOL(kmpp_objdef_init);
+EXPORT_SYMBOL(kmpp_objdef_get);
+
+rk_s32 kmpp_objdef_put(KmppObjDef def)
+{
+    KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+    rk_s32 ret = rk_nok;
+
+    if (impl) {
+        impl->ref_cnt--;
+
+        if (!impl->ref_cnt) {
+            if (impl->shm_mgr) {
+                if (impl->shm_bind)
+                    kmpp_shm_mgr_unbind_objdef(impl->shm_mgr, def);
+                else
+                    kmpp_shm_mgr_put(impl->shm_mgr);
+
+                impl->shm_mgr = NULL;
+            }
+
+            if (impl->trie)
+                ret = kmpp_trie_deinit(impl->trie);
+
+            osal_list_del_init(&impl->list);
+            kmpp_objdef_count--;
+
+            kmpp_free(impl);
+        }
+
+        ret = rk_ok;
+    }
+
+    return ret;
+}
+EXPORT_SYMBOL(kmpp_objdef_put);
+
+rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name)
+{
+    KmppObjDefImpl *impl = NULL;
+    KmppObjDefImpl *n = NULL;
+
+    osal_list_for_each_entry_safe(impl, n, &kmpp_objdef_list, KmppObjDefImpl, list) {
+        if (osal_strcmp(impl->name, name) == 0) {
+            impl->ref_cnt++;
+            *def = impl;
+            return rk_ok;
+        }
+    }
+
+    *def = NULL;
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(kmpp_objdef_find);
 
 rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl)
 {
@@ -327,39 +383,6 @@ rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump)
     return rk_nok;
 }
 EXPORT_SYMBOL(kmpp_objdef_add_dump);
-
-rk_s32 kmpp_objdef_deinit(KmppObjDef def)
-{
-    KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
-    rk_s32 ret = rk_nok;
-
-    if (impl) {
-        impl->ref_cnt--;
-
-        if (!impl->ref_cnt) {
-            if (impl->shm_mgr) {
-                if (impl->shm_bind)
-                    kmpp_shm_mgr_unbind_objdef(impl->shm_mgr, def);
-                else
-                    kmpp_shm_mgr_put(impl->shm_mgr);
-
-                impl->shm_mgr = NULL;
-            }
-
-            if (impl->trie)
-                ret = kmpp_trie_deinit(impl->trie);
-
-            osal_list_del_init(&impl->list);
-
-            kmpp_free(impl);
-        }
-
-        ret = rk_ok;
-    }
-
-    return ret;
-}
-EXPORT_SYMBOL(kmpp_objdef_deinit);
 
 rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def)
 {
@@ -445,7 +468,7 @@ void kmpp_objdef_dump_all(void)
     KmppObjDefImpl *impl = NULL;
     KmppObjDefImpl *n = NULL;
 
-    osal_list_for_each_entry_safe(impl, n, &kmpp_obj_list, KmppObjDefImpl, list) {
+    osal_list_for_each_entry_safe(impl, n, &kmpp_objdef_list, KmppObjDefImpl, list) {
         kmpp_objdef_dump(impl);
     }
 }
@@ -494,25 +517,6 @@ rk_s32 kmpp_obj_set_shm_mgr(KmppObjDef def, KmppShmMgr mgr)
 
     return rk_nok;
 }
-
-rk_u32 kmpp_objdef_lookup(KmppObjDef *def, const rk_u8 *name)
-{
-    KmppObjDefImpl *impl = NULL;
-    KmppObjDefImpl *n = NULL;
-
-    osal_list_for_each_entry_safe(impl, n, &kmpp_obj_list, KmppObjDefImpl, list) {
-        if (osal_strcmp(impl->name, name) == 0) {
-            impl->ref_cnt++;
-            *def = impl;
-            return rk_ok;
-        }
-    }
-
-    *def = NULL;
-
-    return rk_nok;
-}
-EXPORT_SYMBOL(kmpp_objdef_lookup);
 
 rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def)
 {
