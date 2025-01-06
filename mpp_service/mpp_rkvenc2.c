@@ -1051,7 +1051,8 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 	mpp_task = &task->mpp_task;
 	mpp_task_init(session, mpp_task);
 	mpp_task->hw_info = mpp->var->hw_info;
-	mpp_task->clbk_en = 1;
+	if (session->k_space)
+		mpp_task->clbk_en = 1;
 	task->hw_info = to_rkvenc_info(mpp_task->hw_info);
 	/* extract reqs for current task */
 	ret = rkvenc_extract_task_msg(session, task, msgs);
@@ -1122,6 +1123,8 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 
 			task->rec_fbc_dis = reg[RKVENC510_REG_ENC_PIC] & RKVENC2_BIT_REC_FBC_DIS;
 			reg[RKVENC510_REG_ENC_PIC] &= ~(RKVENC2_BIT_REC_FBC_DIS);
+			if (task->rec_fbc_dis)
+				mpp_task->clbk_en = 0;
 		}
 	}
 
