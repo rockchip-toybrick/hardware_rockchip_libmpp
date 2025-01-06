@@ -110,15 +110,35 @@ static MPP_RET jpege_proc_prep_cfg(MppEncPrepCfg *dst, MppEncPrepCfg *src)
 	mpp_assert(change);
 	if (change) {
 		MppEncPrepCfg bak = *dst;
+		RK_S32 mirroring;
+		RK_S32 rotation;
 
 		if (change & MPP_ENC_PREP_CFG_CHANGE_FORMAT)
 			dst->format = src->format;
 
 		if (change & MPP_ENC_PREP_CFG_CHANGE_ROTATION)
-			dst->rotation = src->rotation;
+			dst->rotation_ext = src->rotation_ext;
 
 		if (change & MPP_ENC_PREP_CFG_CHANGE_MIRRORING)
-			dst->mirroring = src->mirroring;
+			dst->mirroring_ext = src->mirroring_ext;
+
+		if (dst->rotation_ext >= MPP_ENC_ROT_BUTT || dst->rotation_ext < 0 ||
+			dst->mirroring_ext < 0 || dst->flip < 0) {
+			mpp_err("invalid trans: rotation %d, mirroring %d\n", dst->rotation_ext, dst->mirroring_ext);
+			ret = MPP_ERR_VALUE;
+		}
+
+		rotation = dst->rotation_ext;
+		mirroring = dst->mirroring_ext;
+
+		if (dst->flip) {
+			mirroring = !mirroring;
+			rotation += MPP_ENC_ROT_180;
+			rotation &= MPP_ENC_ROT_270;
+		}
+
+		dst->mirroring = mirroring;
+		dst->rotation = rotation;
 
 		/* jpeg encoder do not have mirring / denoise feature */
 
