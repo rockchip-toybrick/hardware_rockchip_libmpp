@@ -544,10 +544,7 @@ static MPP_RET hal_h264e_vepu510_get_task(void *hal, HalEncTask *task)
 	if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))
 		setup_hal_bufs(ctx);
 
-	// if (!frm_status->reencode && mpp_frame_has_meta(task->frame)) {
-	//     MppMeta meta = mpp_frame_get_meta(task->frame);
-	//     mpp_meta_get_ptr(meta, KEY_ROI_DATA, (void **)&ctx->roi_data);
-	// }
+	ctx->roi_data = mpp_frame_get_roi(task->frame);
 
 	if (!frm_status->reencode)
 		ctx->last_frame_fb = ctx->feedback;
@@ -711,7 +708,8 @@ static MPP_RET setup_vepu510_prep(HalVepu510RegSet *regs, MppEncPrepCfg *prep)
 	        mpp_err("Unsupported FBC format input.\n");
 
 	        return MPP_ERR_VALUE;
-	    } else if (prep->hor_stride) {
+	    } else */
+	    if (prep->hor_stride) {
 	        if (MPP_FRAME_FMT_IS_TILE(fmt)) {
 	            switch (fmt & MPP_FRAME_FMT_MASK) {
 	            case MPP_FMT_YUV400:
@@ -737,7 +735,7 @@ static MPP_RET setup_vepu510_prep(HalVepu510RegSet *regs, MppEncPrepCfg *prep)
 	        } else {
 	            y_stride = prep->hor_stride;
 	        }
-	    } else  */{
+	    } else {
 		if (hw_fmt == VEPU541_FMT_BGRA8888 )
 			y_stride = prep->width * 4;
 		else if (hw_fmt == VEPU541_FMT_BGR888 )

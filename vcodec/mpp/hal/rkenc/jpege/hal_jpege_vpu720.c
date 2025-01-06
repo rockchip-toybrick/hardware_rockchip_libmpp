@@ -188,7 +188,7 @@ static MPP_RET jpege_vpu720_setup_format(void *hal, HalEncTask *task)
 
     memset(fmt_cfg, 0, sizeof(JpegeVpu720FmtCfg));
 
-    if (0/* MPP_FRAME_FMT_IS_TILE(ctx->cfg->prep.format) */) {
+    if (MPP_FRAME_FMT_IS_TILE(ctx->cfg->prep.format)) {
         switch (in_fmt) {
         case MPP_FMT_YUV400:
             fmt_cfg->input_format = JPEGE_VPU720_IN_FMT_TILE_400;

@@ -1425,31 +1425,31 @@ static MPP_RET vepu510_h265_set_pp_regs(H265eV510RegSet *regs, VepuFmtCfg *fmt,
 	reg_frm->common.src_proc.tile4x4_en = 0;
 
 	if (prep_cfg->hor_stride) {
-		/*         if (MPP_FRAME_FMT_IS_TILE(prep_cfg->format)) {
-		            reg_frm->common.src_proc.tile4x4_en = 1;
+		if (MPP_FRAME_FMT_IS_TILE(prep_cfg->format)) {
+			reg_frm->common.src_proc.tile4x4_en = 1;
 
-		            switch (prep_cfg->format & MPP_FRAME_FMT_MASK) {
-		            case MPP_FMT_YUV400:
-		                stridey = prep_cfg->hor_stride * 4;
-		                break;
-		            case MPP_FMT_YUV420P:
-		            case MPP_FMT_YUV420SP:
-		                stridey = prep_cfg->hor_stride * 4 * 3 / 2;
-		                break;
-		            case MPP_FMT_YUV422P:
-		            case MPP_FMT_YUV422SP:
-		                stridey = prep_cfg->hor_stride * 4 * 2;
-		                break;
-		            case MPP_FMT_YUV444P:
-		            case MPP_FMT_YUV444SP:
-		                stridey = prep_cfg->hor_stride * 4 * 3;
-		                break;
-		            default:
-		                mpp_err("Unsupported input format 0x%08x, with TILE mask.\n", fmt);
-		                return MPP_ERR_VALUE;
-		                break;
-		            }
-		        } else  */{
+			switch (prep_cfg->format & MPP_FRAME_FMT_MASK) {
+			case MPP_FMT_YUV400:
+				stridey = prep_cfg->hor_stride * 4;
+			break;
+			case MPP_FMT_YUV420P:
+			case MPP_FMT_YUV420SP:
+				stridey = prep_cfg->hor_stride * 4 * 3 / 2;
+			break;
+			case MPP_FMT_YUV422P:
+			case MPP_FMT_YUV422SP:
+				stridey = prep_cfg->hor_stride * 4 * 2;
+			break;
+			case MPP_FMT_YUV444P:
+			case MPP_FMT_YUV444SP:
+				stridey = prep_cfg->hor_stride * 4 * 3;
+			break;
+			default:
+				mpp_err("Unsupported input format 0x%08x, with TILE mask.\n", prep_cfg->format);
+				return MPP_ERR_VALUE;
+			break;
+			}
+		} else {
 			stridey = prep_cfg->hor_stride;
 		}
 	} else {
@@ -2530,11 +2530,7 @@ MPP_RET hal_h265e_v510_get_task(void *hal, HalEncTask *task)
 		ctx->frame_type = INTER_P_FRAME;
 	}
 
-	// if (!frm_status->reencode && mpp_frame_has_meta(task->frame)) {
-	//     MppMeta meta = mpp_frame_get_meta(frame);
-
-	//     mpp_meta_get_ptr(meta, KEY_ROI_DATA, (void **)&ctx->roi_data);
-	// }
+	ctx->roi_data = mpp_frame_get_roi(task->frame);
 
 	// task->flags.reg_idx = ctx->task_idx;
 	ctx->ext_line_buf = ctx->ext_line_bufs[ctx->task_idx];
