@@ -164,6 +164,8 @@ typedef enum {
 
 #define MPP_FRAME_FBC_MASK          (0x00f00000)
 #define MPP_FRAME_FBC_NONE          (0x00000000)
+
+#define MPP_FRAME_TILE_FLAG         (0x02000000)
 /*
  * AFBC_V1 is for ISP output.
  * It has default payload offset to be calculated * from width and height:
@@ -191,6 +193,8 @@ typedef enum {
 
 #define MPP_FRAME_FMT_IS_LE(fmt)    ((fmt & MPP_FRAME_FMT_LE_MASK) == MPP_FRAME_FMT_LE_MASK)
 #define MPP_FRAME_FMT_IS_BE(fmt)    ((fmt & MPP_FRAME_FMT_LE_MASK) == 0)
+
+#define MPP_FRAME_FMT_IS_TILE(fmt)  (fmt & MPP_FRAME_TILE_FLAG)
 
 /* mpp color format index definition */
 typedef enum {
