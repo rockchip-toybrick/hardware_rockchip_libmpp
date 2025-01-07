@@ -348,8 +348,7 @@ MPP_RET h265e_set_sps(H265eCtx * ctx, h265_sps * sps, h265_vps * vps)
 	sps->num_long_term_ref_pic_sps = 0;
 	sps->long_term_ref_pics_present_flag = 0;
 	sps->sps_temporal_mvp_enable_flag = codec->tmvp_enable;
-	sps->sps_strong_intra_smoothing_enable_flag =
-		!codec->pu_cfg.strg_intra_smth_disable;
+	sps->sps_strong_intra_smoothing_enable_flag = codec->cu_cfg.strong_intra_smoothing_enabled_flag;
 	if (cpb_info->max_lt_cnt) {
 		sps->num_long_term_ref_pic_sps = cpb_info->max_lt_cnt;
 		sps->long_term_ref_pics_present_flag = 1;

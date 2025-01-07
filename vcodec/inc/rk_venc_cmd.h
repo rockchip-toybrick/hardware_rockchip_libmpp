@@ -975,7 +975,6 @@ typedef enum MppEncH265CfgChange_e {
 	MPP_ENC_H265_CFG_CHANGE_MAX_TID             = (1 << 27),
 	MPP_ENC_H265_CFG_CHANGE_MAX_LTR             = (1 << 28),
 	MPP_ENC_H265_CFG_CHANGE_BASE_LAYER_PID      = (1 << 29),
-	MPP_ENC_H265_CFG_PU_CHANGE                  = (1 << 30),
 	MPP_ENC_H265_CFG_CHANGE_ALL                 = (0xFFFFFFFF),
 } MppEncH265CfgChange;
 
@@ -1001,22 +1000,15 @@ typedef struct MppEncH265CuCfg_t {
 	RK_U32  cu4x4_en;                               /*default: 1 */
 
 	// intra pred
+	RK_U32  constrained_intra_pred_flag;            /*default: 0 */
+	RK_U32  strong_intra_smoothing_enabled_flag;    /*INTRA_SMOOTH*/
 	RK_U32  pcm_enabled_flag;                       /*default: 0, enable ipcm*/
 	RK_U32  pcm_loop_filter_disabled_flag;
-
 } MppEncH265CuCfg;
-
-typedef struct MppEncH265PuCfg_t {
-	// intra pred
-	RK_U32  constrained_intra_pred_flag;            /*default: 0 */
-	RK_U32  strg_intra_smth_disable;    /*INTRA_SMOOTH*/
-} MppEncH265PuCfg;
-
 
 typedef struct MppEncH265RefCfg_t {
 	RK_U32  num_lt_ref_pic;                         /*default: 0*/
 } MppEncH265RefCfg;
-
 
 typedef struct MppEncH265DblkCfg_t {
 	RK_U32  slice_deblocking_filter_disabled_flag;  /* default value: 0. {0,1} */
@@ -1100,7 +1092,6 @@ typedef struct MppEncH265Cfg_t {
 	RK_S32              depend_slice_arg;
 
 	MppEncH265CuCfg      cu_cfg;
-	MppEncH265PuCfg      pu_cfg;
 	MppEncH265SliceCfg   slice_cfg;
 	MppEncH265EntropyCfg entropy_cfg;
 	MppEncH265TransCfg   trans_cfg;

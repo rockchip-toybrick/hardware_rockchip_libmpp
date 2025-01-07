@@ -87,7 +87,7 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 	h265->sao_cfg.slice_sao_luma_disable = 1;
 	h265->sao_cfg.sao_bit_ratio = 5;
 	h265->dblk_cfg.slice_deblocking_filter_disabled_flag = 0;
-	h265->pu_cfg.strg_intra_smth_disable = 0;
+	h265->cu_cfg.strong_intra_smoothing_enabled_flag = 1;
 	h265->merge_cfg.max_mrg_cnd = 2;
 	h265->merge_cfg.merge_left_flag = 1;
 	h265->merge_cfg.merge_up_flag = 1;
@@ -470,9 +470,6 @@ static MPP_RET h265e_proc_h265_cfg(MppEncH265Cfg * dst, MppEncH265Cfg * src)
 	if (change & MPP_ENC_H265_CFG_CU_CHANGE)
 		memcpy(&dst->cu_cfg, &src->cu_cfg, sizeof(src->cu_cfg));
 
-	if (change & MPP_ENC_H265_CFG_PU_CHANGE)
-		memcpy(&dst->pu_cfg, &src->pu_cfg, sizeof(src->pu_cfg));
-
 	if (change & MPP_ENC_H265_CFG_DBLK_CHANGE)
 		memcpy(&dst->dblk_cfg, &src->dblk_cfg, sizeof(src->dblk_cfg));
 	if (change & MPP_ENC_H265_CFG_SAO_CHANGE)
@@ -646,7 +643,7 @@ static void h265e_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 		   chl_id, strof_bool(1 - h265->dblk_cfg.slice_deblocking_filter_disabled_flag),
 		   h265->dblk_cfg.slice_tc_offset_div2, h265->dblk_cfg.slice_beta_offset_div2,
 		   !h265->sao_cfg.slice_sao_luma_disable, !h265->sao_cfg.slice_sao_chroma_disable,
-		   !h265->pu_cfg.strg_intra_smth_disable, h265->trans_cfg.scaling_list_mode,
+		   !h265->cu_cfg.strong_intra_smoothing_enabled_flag, h265->trans_cfg.scaling_list_mode,
 		   h265->tmvp_enable);
 
 
