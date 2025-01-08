@@ -308,12 +308,7 @@ int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
 	enc_packet->u64pts = mpp_packet_get_pts(packet);
 	enc_packet->u64dts = mpp_packet_get_dts(packet);
 	enc_packet->data_num = 1;
-	enc_packet->u64priv_data = packet->buf.mpi_buf_id;
-	if (1 || packet->buf.mpi_buf_id == -1) {
-		struct dma_buf *dmabuf = mpp_buffer_get_dma(packet->buf.buf);
-		get_dma_buf(dmabuf);
-		enc_packet->u64priv_data = dma_buf_fd(dmabuf, 0);
-	}
+	enc_packet->u64priv_data = mpp_buffer_get_uaddr(packet->buf.buf);
 	enc_packet->offset = packet->buf.start_offset;
 	enc_packet->u64packet_addr = (uintptr_t )packet;
 	enc_packet->buf_size = mpp_buffer_get_size(packet->buf.buf);

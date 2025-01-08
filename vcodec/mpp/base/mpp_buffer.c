@@ -17,6 +17,7 @@
 #include <linux/of_platform.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
+#include <linux/mman.h>
 
 #include "mpp_log.h"
 #include "mpp_mem.h"
@@ -35,6 +36,7 @@ struct MppBufferImpl {
 	size_t offset;
 	RK_U32 cir_flag;
 	atomic_t ref_count;
+	RK_UL uaddr;
 };
 
 static MppMemPool g_mppbuf_pool = NULL;
@@ -170,9 +172,17 @@ MPP_RET mpp_buffer_put_with_caller(MppBuffer buffer, const char *caller)
 		return MPP_ERR_UNKNOW;
 	}
 	if (atomic_dec_and_test(&buf_impl->ref_count)) {
-		if (buf_impl->cir_flag) {
+		if (buf_impl->cir_flag && buf_impl->info.ptr) {
 			vunmap(buf_impl->info.ptr);
 			buf_impl->info.ptr = NULL;
+		}
+		if (buf_impl->uaddr) {
+			RK_U32 size = buf_impl->info.size;
+
+			if (buf_impl->cir_flag)
+				size *= 2;
+
+			vm_munmap(buf_impl->uaddr, size);
 		}
 		if (buf_impl->info.iova && buf_impl->info.attach)
 			mpp_buffer_dettach_dev(buffer, caller);
@@ -726,6 +736,51 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
 		return -1;
 
 	return p->info.iova;
+}
+
+RK_UL mpp_buffer_get_uaddr(MppBuffer buffer)
+{
+	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
+
+	if (NULL == p) {
+		mpp_err_f("mpp_buffer_get_offset invalid NULL input\n");
+		return -1;
+	}
+
+	if (!p->uaddr || IS_ERR_VALUE(p->uaddr)) {
+		void *file = p->info.dma_buf->file;
+		RK_U32 size = p->info.size;
+		RK_UL uaddr = 0;
+
+		if (p->cir_flag) {
+			uaddr = get_unmapped_area(file, 0, size * 2, 0, MAP_SHARED);
+			if (IS_ERR_VALUE(uaddr)) {
+				mpp_err_f("get_unmapped_area failed uaddr %lx\n", uaddr);
+				return 0;
+			}
+		}
+
+		uaddr = vm_mmap(file, uaddr, size, PROT_READ | PROT_WRITE, MAP_SHARED, 0);
+		if (IS_ERR_VALUE(uaddr)) {
+			mpp_err_f("vm_mmap failed uaddr %lx\n", uaddr);
+			return 0;
+		}
+
+		if (p->cir_flag) {
+			RK_UL uaddr1 = vm_mmap(file, uaddr + size, size,
+						PROT_READ | PROT_WRITE,
+						MAP_SHARED, 0);
+
+			if (IS_ERR_VALUE(uaddr1)) {
+				mpp_err_f("vm_mmap failed uaddr1 %lx\n", uaddr1);
+				vm_munmap(uaddr, size);
+				return 0;
+			}
+		}
+		p->uaddr = uaddr;
+	}
+
+	return p->uaddr;
 }
 
 EXPORT_SYMBOL(mpp_buffer_import_with_tag);
