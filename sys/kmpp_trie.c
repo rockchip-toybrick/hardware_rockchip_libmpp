@@ -142,7 +142,6 @@ static rk_s32 trie_get_node(KmppTrieImpl *trie, rk_s32 prev, rk_u64 key)
 rk_s32 kmpp_trie_init(KmppTrie *trie, const rk_u8 *name)
 {
     KmppTrieImpl *p;
-    rk_s32 name_len;
     rk_s32 ret = rk_nok;
 
     if (!trie) {
@@ -150,50 +149,59 @@ rk_s32 kmpp_trie_init(KmppTrie *trie, const rk_u8 *name)
         return ret;
     }
 
-    name_len = osal_strnlen(name, KMPP_TRIE_NAME_MAX) + 1;
-    p = kmpp_calloc(sizeof(KmppTrieImpl) + name_len);
-    if (!p) {
-        kmpp_loge_f("create trie impl failed\n");
-        goto DONE;
-    }
+    if (name) {
+        rk_s32 name_len = osal_strnlen(name, KMPP_TRIE_NAME_MAX) + 1;
 
-    p->name = (rk_u8 *)(p + 1);
-    p->name_len = name_len;
-    osal_strncpy(p->name, name, name_len);
+        p = kmpp_calloc(sizeof(KmppTrieImpl) + name_len);
+        if (!p) {
+            kmpp_loge_f("create trie impl %s failed\n", name);
+            goto done;
+        }
 
-    p->node_count = DEFAULT_NODE_COUNT;
-    p->nodes = kmpp_calloc(sizeof(KmppTrieNode) * p->node_count);
-    if (!p->nodes) {
-        kmpp_loge_f("create %d nodes failed\n", p->node_count);
-        goto DONE;
-    }
+        p->name = (rk_u8 *)(p + 1);
+        p->name_len = name_len;
+        osal_strncpy(p->name, name, name_len);
 
-    p->info_count = DEFAULT_INFO_COUNT;
-    p->info = kmpp_calloc(sizeof(KmppTrieInfoInt) * p->info_count);
-    if (!p->info) {
-        kmpp_loge_f("failed to alloc %d info\n", p->info_count);
-        goto DONE;
-    }
+        p->node_count = DEFAULT_NODE_COUNT;
+        p->nodes = kmpp_calloc(sizeof(KmppTrieNode) * p->node_count);
+        if (!p->nodes) {
+            kmpp_loge_f("create %d nodes failed\n", p->node_count);
+            goto done;
+        }
 
-    p->info_buf_size = 4096;
-    p->info_buf = kmpp_calloc(p->info_buf_size);
-    if (!p->info_buf) {
-        kmpp_loge_f("failed to alloc %d info buffer\n", p->info_buf_size);
-        goto DONE;
-    }
+        p->info_count = DEFAULT_INFO_COUNT;
+        p->info = kmpp_calloc(sizeof(KmppTrieInfoInt) * p->info_count);
+        if (!p->info) {
+            kmpp_loge_f("failed to alloc %d info\n", p->info_count);
+            goto done;
+        }
 
-    p->name_buf_size = 4096;
-    p->name_buf = kmpp_calloc(p->name_buf_size);
-    if (!p->name_buf) {
-        kmpp_loge_f("failed to alloc %d name buffer\n", p->name_buf_size);
-        goto DONE;
+        p->info_buf_size = 4096;
+        p->info_buf = kmpp_calloc(p->info_buf_size);
+        if (!p->info_buf) {
+            kmpp_loge_f("failed to alloc %d info buffer\n", p->info_buf_size);
+            goto done;
+        }
+
+        p->name_buf_size = 4096;
+        p->name_buf = kmpp_calloc(p->name_buf_size);
+        if (!p->name_buf) {
+            kmpp_loge_f("failed to alloc %d name buffer\n", p->name_buf_size);
+            goto done;
+        }
+    } else {
+        p = kmpp_calloc(sizeof(KmppTrieImpl));
+        if (!p) {
+            kmpp_loge_f("create trie impl failed\n");
+            goto done;
+        }
     }
 
     /* get node 0 as root node*/
     trie_get_node(p, -1, 0);
     ret = rk_ok;
 
-DONE:
+done:
     if (ret && p) {
         kmpp_free(p->info);
         kmpp_free(p->info_buf);
