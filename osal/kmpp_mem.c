@@ -172,6 +172,7 @@ EXPORT_SYMBOL(osal_kfree_f);
 
 void *osal_malloc_share_f(const char *func, rk_u32 size)
 {
+    size = PAGE_ALIGN(size);
     return vmalloc_user(size);
 }
 EXPORT_SYMBOL(osal_malloc_share_f);
