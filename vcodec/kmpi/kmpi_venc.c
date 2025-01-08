@@ -197,7 +197,7 @@ rk_s32 kmpp_venc_ctrl(KmppCtx ctx, rk_s32 cmd, void *arg)
     if (!chan->handle)
         return MPP_NOK;
 
-    if (cmd == MPP_ENC_SET_CHANGE_STREAM_TYPE) {
+    if (cmd == MPP_SET_VENC_INIT_KCFG) {
         //mpp_vcodec_chan_change_coding_type(chan_id, arg);
     } else {
         MppEncCfgImpl *cfg = (MppEncCfgImpl *)arg;

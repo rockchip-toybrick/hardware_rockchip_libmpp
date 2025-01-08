@@ -480,7 +480,7 @@ int mpp_vcodec_chan_control(int chan_id, MppCtxType type, int cmd, void *arg)
 		;
 	} break;
 	case MPP_CTX_ENC: {
-		if (cmd == MPP_ENC_SET_CHANGE_STREAM_TYPE) {
+		if (cmd == MPP_SET_VENC_INIT_KCFG) {
 			struct vcodec_attr *attr = NULL;
 			KmppObjShm *ioc = (KmppObjShm *)arg;
 			KmppShm shm = (KmppShm)ioc->kobj_kaddr;

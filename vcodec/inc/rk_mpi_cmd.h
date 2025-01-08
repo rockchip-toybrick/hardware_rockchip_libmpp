@@ -65,6 +65,9 @@ typedef enum {
 	 */
 	MPP_SET_INPUT_TIMEOUT,              /* parameter type RK_S64 */
 	MPP_SET_OUTPUT_TIMEOUT,             /* parameter type RK_S64 */
+	MPP_SET_DISABLE_THREAD,             /* MPP no thread mode and use external thread to decode */
+	MPP_SET_SELECT_TIMEOUT,             /* kmpp path select operation timeout */
+	MPP_SET_VENC_INIT_KCFG,             /* kmpp path venc init cfg set */
 	MPP_CMD_END,
 
 	MPP_CODEC_CMD_BASE                  = CMD_MODULE_CODEC,
@@ -120,7 +123,6 @@ typedef enum {
 	MPP_ENC_SET_ROI_CFG,                /* set MppEncROICfg structure */
 	MPP_ENC_SET_CTU_QP,                 /* for H265 Encoder,set CTU's size and QP */
 	MPP_ENC_GET_ROI_CFG,                /* get MppEncROICfg structure */
-	MPP_ENC_SET_CHANGE_STREAM_TYPE,     /* switch format for h265 or h264 */
 
 	/* User define rate control stategy API control */
 	MPP_ENC_CFG_RC_API                  = CMD_MODULE_CODEC | CMD_CTX_ID_ENC | CMD_ENC_CFG_RC_API,
