@@ -105,7 +105,7 @@ static rk_s32 trie_get_node(KmppTrieImpl *trie, rk_s32 prev, rk_u64 key)
 
     if (trie->node_used >= trie->node_count) {
         rk_s32 old_count = trie->node_count;
-        rk_s32 new_count = old_count * 2;
+        rk_s32 new_count = old_count ? old_count * 2 : DEFAULT_INFO_COUNT;
         KmppTrieNode *new_nodes = kmpp_realloc(trie->nodes, sizeof(KmppTrieNode) * old_count,
                                                sizeof(KmppTrieNode) * new_count);
 
@@ -189,6 +189,9 @@ rk_s32 kmpp_trie_init(KmppTrie *trie, const rk_u8 *name)
             kmpp_loge_f("failed to alloc %d name buffer\n", p->name_buf_size);
             goto done;
         }
+
+        /* get node 0 as root node*/
+        trie_get_node(p, -1, 0);
     } else {
         p = kmpp_calloc(sizeof(KmppTrieImpl));
         if (!p) {
@@ -197,8 +200,6 @@ rk_s32 kmpp_trie_init(KmppTrie *trie, const rk_u8 *name)
         }
     }
 
-    /* get node 0 as root node*/
-    trie_get_node(p, -1, 0);
     ret = rk_ok;
 
 done:
