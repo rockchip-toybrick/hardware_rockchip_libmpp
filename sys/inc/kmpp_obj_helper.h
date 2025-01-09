@@ -19,7 +19,7 @@
 #warning "option macro:"
 #warning "KMPP_OBJ_FUNC_EXPORT_ENABLE   - enable function EXPORT_SYMBOL"
 #warning "KMPP_OBJ_FUNC_STUB_ENABLE     - enable function stub mode by define empty function"
-#warning "KMPP_OBJ_SHM_ENABLE           - use /dev/kmpp_objs to share object to userspace"
+#warning "KMPP_OBJ_SHARE_ENABLE         - use /dev/kmpp_objs to share object to userspace"
 #warning "KMPP_OBJ_FUNC_PRESET          - add object preset function"
 #warning "KMPP_OBJ_FUNC_DUMP            - add object dump function"
 
@@ -109,10 +109,10 @@
 #define KMPP_OBJ_FUNC2(x, y)    x##_##y
 #define KMPP_OBJ_FUNC3(x, y, z) x##_##y##_##z
 
-#if defined(KMPP_OBJ_SHM_ENABLE)
-#define KMPP_OBJ_SHM_FUNC(x)    kmpp_objdef_bind_shm_mgr(x)
+#if defined(KMPP_OBJ_SHARE_ENABLE)
+#define KMPP_OBJ_SHARE_FUNC(x)  kmpp_objdef_share(x)
 #else
-#define KMPP_OBJ_SHM_FUNC(x)    rk_ok
+#define KMPP_OBJ_SHARE_FUNC(x)
 #endif
 
 #if defined(KMPP_OBJ_FUNC_PRESET)
@@ -169,7 +169,8 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
     KMPP_OBJ_ADD_PRESET(prefix); \
     KMPP_OBJ_ADD_DUMP(prefix); \
     KMPP_OBJ_ENTRY_TABLE(ENTRY_QUERY, prefix) \
-    return KMPP_OBJ_SHM_FUNC(KMPP_OBJ_DEF(prefix)); \
+    KMPP_OBJ_SHARE_FUNC(KMPP_OBJ_DEF(prefix)); \
+    return rk_ok; \
 } \
 rk_s32 KMPP_OBJ_FUNC2(prefix, deinit)(void) \
 { \
@@ -183,9 +184,9 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, get)(KMPP_OBJ_INTF_TYPE *obj) \
 { \
     return kmpp_obj_get((KmppObj *)obj, KMPP_OBJ_DEF(prefix)); \
 } \
-rk_s32 KMPP_OBJ_FUNC2(prefix, get_share)(KMPP_OBJ_INTF_TYPE *obj, KmppShmGrp grp) \
+rk_s32 KMPP_OBJ_FUNC2(prefix, get_share)(KMPP_OBJ_INTF_TYPE *obj, KmppShm shm) \
 { \
-    return kmpp_obj_get_share((KmppObj *)obj, KMPP_OBJ_DEF(prefix), grp); \
+    return kmpp_obj_get_share((KmppObj *)obj, KMPP_OBJ_DEF(prefix), shm); \
 } \
 rk_s32 KMPP_OBJ_FUNC2(prefix, assign)(KMPP_OBJ_INTF_TYPE *obj, void *buf, rk_s32 size) \
 { \
@@ -281,7 +282,7 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_FUNC_EXPORT_ENABLE
 #undef KMPP_OBJ_FUNC_PRESET
 #undef KMPP_OBJ_FUNC_DUMP
-#undef KMPP_OBJ_SHM_ENABLE
+#undef KMPP_OBJ_SHARE_ENABLE
 
 /* undef tmp macro */
 #undef FIELD_TO_LOCTBL_FLAG1
@@ -295,7 +296,7 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_FUNC3
 #undef KMPP_OBJ_ACCESSORS
 #undef KMPP_OBJ_EXPORT
-#undef KMPP_OBJ_SHM_FUNC
+#undef KMPP_OBJ_SHARE_FUNC
 #undef KMPP_OBJ_ADD_PRESET
 #undef KMPP_OBJ_ADD_DUMP
 

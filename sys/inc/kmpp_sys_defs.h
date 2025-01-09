@@ -29,8 +29,6 @@ typedef void* KmppObjDef;
 /* KmppObj - kmpp object for string name access and function access */
 typedef void* KmppObj;
 
-/* KmppShmMgr - fix size share memory manager for name and size */
-typedef void* KmppShmMgr;
 /* KmppShmGrp - share memory device for allocation and free */
 typedef void* KmppShmGrp;
 /* KmppShm - share memory for address access and read / write */

@@ -19,7 +19,7 @@
  * The kernel object is the actual object used by kernel and userspace.
  *
  * Normal kernel object can be shared between different kernel modules.
- * When KMPP_OBJ_SHM_ENABLE is defined before kmpp_obj_helper.h the kernel object
+ * When KMPP_OBJ_SHARE_ENABLE is defined before kmpp_obj_helper.h the kernel object
  * can be shared between kernel and userspace.
  *
  * Different kernel object creation methods:
@@ -44,6 +44,13 @@ typedef union KmppLocTbl_u {
     };
 } KmppLocTbl;
 
+typedef struct KmppObjDefSet_t {
+    KmppTrie            trie;
+    rk_s32              count;
+    rk_s32              buf_size;
+    KmppObjDef          defs[0];
+} KmppObjDefSet;
+
 typedef void (*KmppObjPreset)(void *obj);
 typedef rk_s32 (*KmppObjDump)(void *entry);
 
@@ -56,8 +63,6 @@ rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl **tbl
 rk_s32 kmpp_objdef_add_preset(KmppObjDef def, KmppObjPreset preset);
 rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump);
 
-/* Bind objdef to kmpp_objs */
-rk_s32 kmpp_objdef_bind_shm_mgr(KmppObjDef def);
 rk_s32 kmpp_objdef_dump(KmppObjDef def);
 void kmpp_objdef_dump_all(void);
 
@@ -67,12 +72,19 @@ rk_s32 kmpp_objdef_get_buf_size(KmppObjDef def);
 rk_s32 kmpp_objdef_get_entry_size(KmppObjDef def);
 KmppTrie kmpp_objdef_get_trie(KmppObjDef def);
 
+/* Allow objdef to be shared with userspace */
+rk_s32 kmpp_objdef_share(KmppObjDef def);
+/* create an objdef set for userspace sharing */
+rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs);
+/* destroy an objdef set */
+rk_s32 kmpp_objdef_put_shared(KmppObjDefSet *defs);
+
 /* normal kernel object allocator both object head and body */
 rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def);
 /* use external buffer for both object head and body */
 rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size);
 /* import external shared buffer for object body */
-rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, KmppShmGrp grp);
+rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, KmppShm shm);
 rk_s32 kmpp_obj_put(KmppObj obj);
 rk_s32 kmpp_obj_check(KmppObj obj, const rk_u8 *caller);
 
