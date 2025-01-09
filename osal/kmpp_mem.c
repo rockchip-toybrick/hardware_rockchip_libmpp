@@ -14,6 +14,13 @@
 #include "kmpp_log.h"
 #include "kmpp_atomic.h"
 
+#define MEM_DBG_DEBUG               (0x00000001)
+#define MEM_DBG_FLOW                (0x00000002)
+
+#define mem_dbg(flag, fmt, ...)     kmpp_dbg(kmem_debug, flag, fmt, ## __VA_ARGS__)
+
+#define mem_dbg_flow(fmt, ...)      mem_dbg(MEM_DBG_FLOW, fmt, ## __VA_ARGS__)
+
 #define MEM_NODE_FUNC_LEN 32
 
 typedef struct KmppMemNode_t {
@@ -44,12 +51,17 @@ static inline void *kmem_add(void *p, const char *func, rk_u32 size)
     KMPP_FETCH_ADD(&kmem_size, size);
     spin_unlock(&kmem_lock);
 
+    mem_dbg_flow("kmem_add %px size %d at %s\n", p, size, func);
+
     return node->ptr;
 }
 
 static inline void *kmem_del(void *p, const char *func)
 {
     KmppMemNode *node = (KmppMemNode *)((rk_u8 *)p - kmem_node_size);
+
+    mem_dbg_flow("kmem_del %px size %d at %s from %s\n",
+                 node, node->size, node->func, func);
 
     spin_lock(&kmem_lock);
     if (node->ptr != p)
