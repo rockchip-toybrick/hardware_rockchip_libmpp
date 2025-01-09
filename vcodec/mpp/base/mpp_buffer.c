@@ -176,7 +176,12 @@ MPP_RET mpp_buffer_put_with_caller(MppBuffer buffer, const char *caller)
 			vunmap(buf_impl->info.ptr);
 			buf_impl->info.ptr = NULL;
 		}
-		if (buf_impl->uaddr) {
+
+		/*
+		 * If the current process killed, the current mm will be recycle first,
+		 * so it does not need to vm_mnunmap uaddr here
+		 */
+		if (buf_impl->uaddr && current->mm) {
 			RK_U32 size = buf_impl->info.size;
 
 			if (buf_impl->cir_flag)
