@@ -365,7 +365,7 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	struct vcodec_threads *thd;
 	struct mpp_chan *chan_entry = NULL;
 	MppBufferInfo buf_info;
-	MppBuffer buffer;
+	MppBuffer buffer = NULL;
 	MppFrame frame = NULL;
 
 	chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
