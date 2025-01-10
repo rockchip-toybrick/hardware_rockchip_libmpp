@@ -9,7 +9,7 @@
 #include "rk_type.h"
 
 /* context pointer and integer id */
-typedef rk_s32 KmppId;
+typedef rk_s32 KmppChanId;
 typedef void* KmppCtx;
 
 /* data flow structure */

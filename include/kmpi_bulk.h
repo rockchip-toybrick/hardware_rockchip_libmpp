@@ -14,7 +14,7 @@ typedef void *KmppBulkTaskCfg;
 rk_s32 kmpp_bulk_task_init(KmppBulkTask *task, KmppBulkTaskCfg *cfg);
 rk_s32 kmpp_bulk_task_deinit(KmppBulkTask task);
 
-/* KmppId or KmppCtx */
+/* KmppChanId or KmppCtx */
 rk_s32 kmpp_dec_bulk_task_push(KmppBulkTask task, KmppCtx ctx, KmppPacket pkt);
 rk_s32 kmpp_enc_bulk_task_push(KmppBulkTask task, KmppCtx ctx, KmppFrame frm);
 rk_s32 kmpp_vsp_bulk_task_push(KmppBulkTask task, KmppCtx ctx, KmppFrame frm);
