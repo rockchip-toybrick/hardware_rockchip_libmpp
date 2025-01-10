@@ -100,18 +100,13 @@ rk_s32 kmpp_test_func(void *param)
         goto done;
     }
 
-    ret = kmpp_trie_init(&trie2, "trie_import_test");
+    ret = kmpp_trie_init_by_root(&trie2, root);
     if (ret) {
-        kmpp_loge("trie2 init failed\n");
+        kmpp_loge("trie2 init by root failed\n");
         goto done;
     }
 
-    ret = kmpp_trie_import(trie2, root);
-    if (ret) {
-        kmpp_loge("trie2 import failed\n");
-        goto done;
-    }
-
+    /* release trie2 but not release root */
     kmpp_trie_deinit(trie2);
 
     kmpp_obj_get(&obj, kmpp_obj_test_def);

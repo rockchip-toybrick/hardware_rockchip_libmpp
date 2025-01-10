@@ -585,23 +585,20 @@ rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs)
         rk_s32 trie_size = kmpp_trie_get_buf_size(trie);
         void *kbase;
 
-        ret = kmpp_trie_init(&new_trie, NULL);
-        size = trie_size + buf_size;
-        kbase = kmpp_malloc_share(size);
-
         obj_dbg_share("trie size %d buf size %d\n", trie_size, buf_size);
 
-        if (ret || !kbase || !new_trie) {
+        size = trie_size + buf_size;
+        kbase = kmpp_malloc_share(size);
+        if (!kbase) {
             kmpp_loge_f("new trie and share buffer create failed\n");
             goto done;
         }
 
         osal_memcpy(kbase, root, trie_size);
 
-        ret = kmpp_trie_import(new_trie, kbase);
-        if (ret) {
-            kmpp_loge_f("new trie import failed\n");
-            kmpp_trie_deinit(new_trie);
+        ret = kmpp_trie_init_by_root(&new_trie, kbase);
+        if (ret || !new_trie) {
+            kmpp_loge_f("new trie init by root failed\n");
             kmpp_free_share(kbase);
             goto done;
         }
