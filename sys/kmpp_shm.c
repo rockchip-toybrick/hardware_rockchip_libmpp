@@ -416,7 +416,7 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
             {
                 KmppShm shm = NULL;
 
-                shm = kmpp_obj_get_shm(obj);
+                shm = kmpp_obj_to_shm(obj);
                 ubase = kmpp_shm_get_ubase(shm);
                 kbase = kmpp_shm_get_kbase(shm);
             }

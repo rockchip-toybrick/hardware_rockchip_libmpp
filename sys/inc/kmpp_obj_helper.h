@@ -137,7 +137,7 @@
         if (tbl_##field) \
             ret = kmpp_obj_tbl_get_##ftype(s, tbl_##field, v); \
         else \
-            *v = ((KMPP_OBJ_IMPL_TYPE*)kmpp_obj_get_entry(s))->field; \
+            *v = ((KMPP_OBJ_IMPL_TYPE*)kmpp_obj_to_entry(s))->field; \
         return ret; \
     } \
     rk_s32 KMPP_OBJ_FUNC3(prefix, set, field)(KMPP_OBJ_INTF_TYPE s, type v) \
@@ -147,7 +147,7 @@
         if (tbl_##field) \
             ret = kmpp_obj_tbl_set_##ftype(s, tbl_##field, v); \
         else \
-            ((KMPP_OBJ_IMPL_TYPE*)kmpp_obj_get_entry(s))->field = v; \
+            ((KMPP_OBJ_IMPL_TYPE*)kmpp_obj_to_entry(s))->field = v; \
         return ret; \
     }
 

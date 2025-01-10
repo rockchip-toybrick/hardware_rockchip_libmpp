@@ -22,5 +22,7 @@ rk_s32 kmpp_obj_impl_set_fp(KmppLocTbl *tbl, void *cfg, void *val);
 rk_s32 kmpp_obj_impl_get_fp(KmppLocTbl *tbl, void *cfg, void **val);
 rk_s32 kmpp_obj_impl_set_st(KmppLocTbl *tbl, void *cfg, void *val);
 rk_s32 kmpp_obj_impl_get_st(KmppLocTbl *tbl, void *cfg, void *val);
+rk_s32 kmpp_obj_impl_set_shm(KmppLocTbl *tbl, void *cfg, KmppShmPtr *val);
+rk_s32 kmpp_obj_impl_get_shm(KmppLocTbl *tbl, void *cfg, KmppShmPtr *val);
 
 #endif /* __KMPP_OBJ_IMPL_H__ */

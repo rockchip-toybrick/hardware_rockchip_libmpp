@@ -88,8 +88,10 @@ rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, KmppShm shm);
 rk_s32 kmpp_obj_put(KmppObj obj);
 rk_s32 kmpp_obj_check(KmppObj obj, const rk_u8 *caller);
 
-void *kmpp_obj_get_entry(KmppObj obj);
-KmppShm kmpp_obj_get_shm(KmppObj obj);
+/* object implement element entry access */
+void *kmpp_obj_to_entry(KmppObj obj);
+/* object implement element shm access */
+KmppShm kmpp_obj_to_shm(KmppObj obj);
 
 rk_s32 kmpp_obj_set_s32(KmppObj obj, const rk_u8 *name, rk_s32 val);
 rk_s32 kmpp_obj_get_s32(KmppObj obj, const rk_u8 *name, rk_s32 *val);
@@ -105,6 +107,8 @@ rk_s32 kmpp_obj_set_fp(KmppObj obj, const rk_u8 *name, void *val);
 rk_s32 kmpp_obj_get_fp(KmppObj obj, const rk_u8 *name, void **val);
 rk_s32 kmpp_obj_set_st(KmppObj obj, const rk_u8 *name, void *val);
 rk_s32 kmpp_obj_get_st(KmppObj obj, const rk_u8 *name, void *val);
+rk_s32 kmpp_obj_set_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
+rk_s32 kmpp_obj_get_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
 
 rk_s32 kmpp_obj_tbl_set_s32(KmppObj obj, KmppLocTbl *tbl, rk_s32 val);
 rk_s32 kmpp_obj_tbl_get_s32(KmppObj obj, KmppLocTbl *tbl, rk_s32 *val);
@@ -120,6 +124,8 @@ rk_s32 kmpp_obj_tbl_set_fp(KmppObj obj, KmppLocTbl *tbl, void *val);
 rk_s32 kmpp_obj_tbl_get_fp(KmppObj obj, KmppLocTbl *tbl, void **val);
 rk_s32 kmpp_obj_tbl_set_st(KmppObj obj, KmppLocTbl *tbl, void *val);
 rk_s32 kmpp_obj_tbl_get_st(KmppObj obj, KmppLocTbl *tbl, void *val);
+rk_s32 kmpp_obj_tbl_set_shm(KmppObj obj, KmppLocTbl *tbl, KmppShmPtr *val);
+rk_s32 kmpp_obj_tbl_get_shm(KmppObj obj, KmppLocTbl *tbl, KmppShmPtr *val);
 
 /* run a callback function */
 rk_s32 kmpp_obj_run(KmppObj obj, const rk_u8 *name);

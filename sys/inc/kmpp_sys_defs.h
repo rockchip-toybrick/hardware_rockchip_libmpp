@@ -16,6 +16,7 @@ typedef enum EntryType_e {
     ENTRY_TYPE_ptr,
     ENTRY_TYPE_fp,      /* function poineter */
     ENTRY_TYPE_st,
+    ENTRY_TYPE_shm,     /* share memory between kernel and userspace */
     ENTRY_TYPE_BUTT,
 } EntryType;
 
@@ -33,5 +34,20 @@ typedef void* KmppObj;
 typedef void* KmppShmGrp;
 /* KmppShm - share memory for address access and read / write */
 typedef void* KmppShm;
+
+/* MUST be the same to the KmppObjShm in rk-mpp-kobj.h */
+typedef struct KmppShmAddr_t {
+    /* uaddr - the userspace base address for kernel access */
+    union {
+        rk_u64 uaddr;
+        void *uptr;
+    };
+    /* kaddr - the kernel base address for kernel access */
+    union {
+        rk_u64 kaddr;
+        void *kptr;
+    };
+    /* DO NOT access reserved data only used by kernel */
+} KmppShmPtr;
 
 #endif /* __KMPP_SYS_DEFS_H__ */
