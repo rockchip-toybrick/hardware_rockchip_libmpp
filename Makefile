@@ -10,6 +10,7 @@ OSTYPE=linux
 KMPP_SRC := kmpp
 MAKE_JOBS ?= $(shell echo `getconf _NPROCESSORS_ONLN`)
 KMPP_MAKE_JOBS := $(shell expr $(MAKE_JOBS) / 2)
+KMPP_TEST ?= n
 
 EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/inc
 EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/base/inc
@@ -50,7 +51,7 @@ VEPU_CORE := RKVEPU510
 endif
 
 BUILD_ONE_KO=y
-KMPP_TEST_ENABLE=n
+KMPP_TEST_ENABLE=${KMPP_TEST}
 
 ifeq ($(CPU_TYPE), arm64)
 	export PREB_KO := ./prebuild/ko_64
