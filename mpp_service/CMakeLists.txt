@@ -134,6 +134,7 @@ SET(KMPP_SRC
     ../vcodec/osal/allocator/allocator_mpibuf.c
     ../vcodec/mpp_vcodec_thread.c
     ../vcodec/kmpi/kmpi_venc.c
+    ../vcodec/kmpi/kmpi_venc_chan.c
     #mpp_av1dec.c
     mpp_iep2.c
     mpp_jpgdec.c
