@@ -87,9 +87,6 @@ MPP_RET mpp_dev_ioctl(MppDev ctx, RK_S32 cmd, void *param);
 RK_U32 mpp_dev_get_iova_address(MppDev ctx, MppBuffer mpp_buf,
 				RK_U32 reg_idx);
 
-RK_U32 mpp_dev_get_mpi_ioaddress(MppDev ctx, MpiBuf mpi_buf,
-				 RK_U32 offset);
-
 void mpp_dev_chnl_register(MppDev ctx, void *func, RK_S32 chan_id);
 
 struct device * mpp_get_dev(MppDev ctx);

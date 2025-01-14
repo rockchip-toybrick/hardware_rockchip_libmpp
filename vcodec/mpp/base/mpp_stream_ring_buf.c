@@ -40,7 +40,6 @@ MPP_RET ring_buf_init(ring_buf_pool *ctx, MppBuffer buf, RK_U32 max_strm_cnt)
 	ctx->max_use_len = 0;
 	ctx->buf_base = mpp_buffer_get_ptr(buf);
 	ctx->buf = buf;
-	ctx->mpi_buf_id = mpp_buffer_get_mpi_buf_id(buf);
 	ctx->init_done = 1;
 	ctx->min_buf_size = DEFAULT_MIN_ZISE;
 	ring_buf_dbg("ctx->len = %d, max_strm_cnt = %d, ctx->min_buf_size = %d", ctx->len,
@@ -160,7 +159,6 @@ MPP_RET ring_buf_get_free(ring_buf_pool *ctx, ring_buf *buf, RK_U32 align,
 		min_size = ctx->w_pos == ctx->r_pos ? DEFAULT_MIN_ZISE : ctx->min_buf_size;
 	w_pos = ctx->w_pos;
 	r_pos = ctx->r_pos;
-	buf->mpi_buf_id = ctx->mpi_buf_id;
 	buf->cir_flag = 1;
 
 	ring_buf_dbg("get free pool %p ctx->r_pos %d ctx->w_pos %d ctx->use_len %d\n", ctx,

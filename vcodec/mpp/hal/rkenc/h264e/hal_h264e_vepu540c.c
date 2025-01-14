@@ -1733,8 +1733,6 @@ static void setup_vepu540c_io_buf(HalH264eVepu540cCtx *ctx,
 	if (!buf_out->cir_flag) {
 		if (buf_out->buf)
 			regs->reg_base.bsbb_addr = mpp_dev_get_iova_address(dev, buf_out->buf, 173);
-		else
-			regs->reg_base.bsbb_addr = buf_out->mpi_buf_id;
 
 		regs->reg_base.bsbb_addr += buf_out->start_offset;
 		regs->reg_base.bsbr_addr = regs->reg_base.bsbb_addr;
@@ -1754,9 +1752,6 @@ static void setup_vepu540c_io_buf(HalH264eVepu540cCtx *ctx,
 	if (off_out && task->output->buf) {
 		task->output->use_len = off_out;
 		mpp_ring_buf_flush(task->output, 0);
-	} else if (off_out && task->output->mpi_buf_id) {
-		struct device *dev = mpp_get_dev(ctx->dev);
-		dma_sync_single_for_device(dev, task->output->mpi_buf_id, off_out, DMA_TO_DEVICE);
 	}
 	hal_h264e_dbg_func("leave\n");
 }

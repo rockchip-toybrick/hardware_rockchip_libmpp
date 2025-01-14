@@ -120,7 +120,6 @@ SET(KMPP_SRC
     ../vcodec/mpp_vcodec_flow.c
     ../vcodec/mpp_vcodec_driver.c
     ../vcodec/mpp_vcodec_base.c
-    ../vcodec/mpp_vcodec_rockit.c
     ../vcodec/osal/mpp_log.c
     ../vcodec/osal/mpp_time.c
     ../vcodec/osal/osal_mpp_service.c
@@ -130,7 +129,6 @@ SET(KMPP_SRC
     ../vcodec/osal/mpp_allocator.c
     ../vcodec/osal/allocator/allocator_dmaheap.c
     ../vcodec/osal/allocator/allocator_rkdmaheap.c
-    ../vcodec/osal/allocator/allocator_mpibuf.c
     ../vcodec/mpp_vcodec_thread.c
     ../vcodec/kmpi/kmpi_venc.c
     ../vcodec/kmpi/kmpi_venc_chan.c

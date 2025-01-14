@@ -14,14 +14,12 @@ ${KMPP_SRC}-objs += vcodec/mpp_vcodec_base.o \
                     vcodec/mpp_vcodec_chan.o \
                     vcodec/mpp_vcodec_flow.o \
                     vcodec/mpp_vcodec_thread.o \
-                    vcodec/mpp_vcodec_driver.o \
-                    vcodec/mpp_vcodec_rockit.o
+                    vcodec/mpp_vcodec_driver.o
 
 ${KMPP_SRC}-$(KMPP_TEST_ENABLE) += vcodec/mpp/base/mpp_trie.o \
                                    vcodec/mpp/base/mpp_enc_cfg.o \
                                    vcodec/mpp/base/mpp_cfg.o
 
-${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_mpibuf.o
 ${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_dmaheap.o
 ${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_rkdmaheap.o
 ${KMPP_SRC}-objs += vcodec/osal/mpp_log.o \

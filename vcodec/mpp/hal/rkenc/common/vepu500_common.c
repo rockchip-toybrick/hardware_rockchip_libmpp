@@ -267,8 +267,7 @@ MPP_RET vepu500_set_jpeg_reg(Vepu500JpegCfg * cfg)
 			RK_U32 out_addr = mpp_dev_get_iova_address(cfg->dev, task->output->buf, 257);
 
 			regs->adr_bsbb = out_addr + task->output->start_offset;
-		} else
-			regs->adr_bsbb = task->output->mpi_buf_id + task->output->start_offset;
+		}
 
 		regs->adr_bsbt = regs->adr_bsbb + task->output->size - 1;
 		regs->adr_bsbr = regs->adr_bsbb;

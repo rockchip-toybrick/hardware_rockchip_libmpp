@@ -28,8 +28,6 @@
 #include "mpp_packet.h"
 #include "mpp_2str.h"
 #include "rk_export_func.h"
-#include "mpp_vcodec_rockit.h"
-
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
 
@@ -702,13 +700,7 @@ MPP_RET mpp_enc_unref_osd_buf(MppEncOSDData3 *osd)
 MPP_RET mpp_enc_proc_export_osd_buf(MppEncOSDData3 *osd)
 {
 	RK_U32 i = 0;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
 	MppBufferInfo info;
-
-	if (!mpibuf_fn || !mpibuf_fn->dma_buf_import) {
-		mpp_err_f("mpibuf_ops get fail");
-		return -1;
-	}
 
 	for (i = 0; i < osd->num_region; i++) {
 		MppEncOSDRegion3 *rgn = &osd->region[i];
@@ -1317,35 +1309,13 @@ MPP_RET mpp_enc_alloc_output_from_bufpool(MppEncImpl *enc)
 			      (width * height);
 		MppPacketImpl *pkt = (MppPacketImpl *)enc->packet;
 		MppBuffer buffer = NULL;
-		struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
 
 		mpp_assert(size);
-		if (mpibuf_fn) {
-			if (!enc->strm_pool && mpibuf_fn->buf_pool_create) {
-				enc->strm_pool = mpibuf_fn->buf_pool_create(size, 2);
-			}
-			if (enc->strm_pool && mpibuf_fn->buf_pool_request_buf) {
-				MppBufferInfo info;
-				struct mpi_buf *buf = mpibuf_fn->buf_pool_request_buf(enc->strm_pool);
-
-				memset(&info, 0, sizeof(info));
-				if (buf) {
-					info.hnd = buf;
-					info.size = size;
-					mpp_buffer_import(&buffer, &info);
-					if (mpibuf_fn->buf_unref)
-						mpibuf_fn->buf_unref(buf);
-				}
-			}
-		}
-		if (!buffer)
-			mpp_buffer_get(NULL, &buffer, size);
+		mpp_buffer_get(NULL, &buffer, size);
 
 		mpp_assert(buffer);
-		// enc->pkt_buf = buffer;
 		enc->pkt_buf = &pkt->buf;
 		pkt->buf.buf = buffer;
-		pkt->buf.mpi_buf_id = mpp_buffer_get_mpi_buf_id(buffer);
 		pkt->buf.start_offset = 0;
 		pkt->buf.size = mpp_buffer_get_size(buffer);
 		pkt->data = mpp_buffer_get_ptr(buffer);
@@ -1389,7 +1359,7 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 		      (width * height / 2);
 	RK_U32 is_intra = mpp_enc_check_next_frm_type(enc);
 
-	if (enc->ring_pool && !enc->ring_pool->init_done && !get_vsm_ops()) {
+	if (enc->ring_pool && !enc->ring_pool->init_done) {
 		if (!enc->ring_buf_size)
 			enc->ring_buf_size = size;
 		enc->ring_buf_size = MPP_MAX(enc->ring_buf_size, SZ_16K);

@@ -90,89 +90,6 @@ MPP_RET mpp_packet_new(MppPacket * packet)
 	return MPP_OK;
 }
 
-static MPP_RET mpp_packet_vsm_buf_alloc (MppPacketImpl *p, RK_U32 type, RK_S32 chan_id)
-{
-	struct vsm_buf buf;
-	struct vcodec_vsm_buf_fn *vsm_fn = get_vsm_ops();
-	RK_S32 i;
-	RK_S32 page_count;
-	struct page **pages;
-	memset(&buf, 0, sizeof(struct vsm_buf));
-
-	if (!vsm_fn) {
-		mpp_err("vcodec_vsm_buf_fn is NULL");
-		return MPP_ERR_MALLOC;
-	}
-	if (vsm_fn->GetBuf) {
-		RK_U32 end = 0, start = 0;
-		if (vsm_fn->GetBuf(&buf, type, 0, chan_id) < 0)
-			return MPP_ERR_MALLOC;
-		// mpp_log("vsm_fn GetBuf phy = 0x%x, size %d", buf.phy_addr, buf.buf_size);
-		p->buf.start_offset = 0;
-
-		end = buf.phy_addr + buf.buf_size;
-		start = buf.phy_addr;
-		end = round_up(end, PAGE_SIZE);
-
-		page_count = ((end - start) >> PAGE_SHIFT) + 1;
-		pages = kmalloc_array(page_count, sizeof(*pages), GFP_KERNEL);
-		if (!pages) {
-
-			if (vsm_fn->FreeBuf)
-				vsm_fn->FreeBuf(&buf, chan_id);
-			return MPP_ERR_MALLOC;
-		}
-
-		i = 0;
-		while (start < end) {
-			mpp_assert(i < page_count);
-			pages[i++] = phys_to_page(start);
-			start += PAGE_SIZE;
-		}
-
-		p->buf.buf_start = vmap(pages, i, VM_MAP, PAGE_KERNEL);
-		p->buf.buf_start += (buf.phy_addr & 0xfff);
-		p->buf.mpi_buf_id = buf.phy_addr;
-		//mpp_log("vmap addr %p", p->buf.buf_start);
-		p->buf.size = buf.buf_size;
-		p->flag |= MPP_PACKET_FLAG_EXTERNAL;
-		kfree(pages);
-	} else
-		return MPP_ERR_MALLOC;
-	return MPP_OK;
-}
-
-static MPP_RET mpp_packet_vsm_buf_free(MppPacketImpl *p, RK_S32 chan_id)
-{
-	struct vsm_buf buf;
-	struct vcodec_vsm_buf_fn *vsm_fn = get_vsm_ops();
-	memset(&buf, 0, sizeof(struct vsm_buf));
-	if (!vsm_fn)
-		return MPP_NOK;
-
-	buf.phy_addr = p->buf.mpi_buf_id;
-	buf.buf_size = p->buf.size;
-
-	vunmap(p->buf.buf_start - (buf.phy_addr & 0xfff));
-
-	if (vsm_fn->PutBuf && p->length) {
-		struct venc_packet out_packet;
-		memset(&out_packet, 0, sizeof(struct venc_packet));
-		out_packet.u64pts = p->pts;
-		out_packet.temporal_id = p->temporal_id;
-		out_packet.len = p->length;
-		if (p->flag & MPP_PACKET_FLAG_INTRA)
-			out_packet.flag = 1;
-
-		//mpp_log("vsm put buf phy_addr 0x%x, stream len %d", buf.phy_addr, p->length);
-		vsm_fn->PutBuf(&buf, &out_packet, 0, chan_id);
-	} else if (vsm_fn->FreeBuf) {
-		//mpp_err("enc err free put buf phy_addr 0x%x", buf.phy_addr);
-		vsm_fn->FreeBuf(&buf, chan_id);
-	}
-	return MPP_OK;
-}
-
 MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, RK_U32 align,
 				size_t min_size, RK_U32 type, RK_S32 chan_id)
 {
@@ -199,11 +116,6 @@ MPP_RET mpp_packet_new_ring_buf(MppPacket *packet, ring_buf_pool *pool, RK_U32 a
 			mpp_mem_pool_put(g_packet_pool, p);
 			return MPP_ERR_MALLOC;
 		}
-	} else {
-		if (mpp_packet_vsm_buf_alloc(p, type, chan_id)) {
-			mpp_mem_pool_put(g_packet_pool, p);
-			return MPP_ERR_MALLOC;
-		}
 	}
 
 	p->data = p->pos = p->buf.buf_start;
@@ -227,15 +139,6 @@ MPP_RET mpp_packet_ring_buf_put_used(MppPacket packet, RK_S32 chan_id, MppDev de
 			return MPP_NOK;
 		}
 		ring_buf_put_use(p->ring_pool, &p->buf);
-	}
-
-	if (p->flag & MPP_PACKET_FLAG_EXTERNAL) {
-		if (p->length) {
-			struct device *dev = mpp_get_dev(dev_ctx);
-
-			dma_sync_single_for_device(dev, p->buf.mpi_buf_id, p->length, DMA_FROM_DEVICE);
-		}
-		mpp_packet_vsm_buf_free(p, chan_id);
 	}
 
 	return MPP_OK;

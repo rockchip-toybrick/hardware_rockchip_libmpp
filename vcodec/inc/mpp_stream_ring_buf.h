@@ -20,7 +20,6 @@ extern RK_U32 ring_buf_debug;
 
 typedef struct ring_buf_t {
 	MppBuffer buf;
-	RK_S32 mpi_buf_id;
 	void   *buf_start;
 	RK_U32 start_offset;
 	RK_U32 r_pos;
@@ -36,7 +35,6 @@ typedef struct ring_buf_pool_t {
 	RK_U32 use_len;
 	void *buf_base;
 	MppBuffer buf;
-	RK_S32 mpi_buf_id;
 	RK_U32 init_done;
 	RK_U32 min_buf_size;
 	RK_U32 l_r_pos;

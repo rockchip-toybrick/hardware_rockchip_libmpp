@@ -23,7 +23,6 @@
 #include "mpp_enc.h"
 #include "rk_export_func.h"
 #include "mpp_service.h"
-#include "mpp_vcodec_rockit.h"
 #include "mpp_buffer_impl.h"
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
@@ -142,8 +141,7 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 	atomic_set(&p->hw_run, 0);
 	p->rb_userdata.free_cnt = MAX_USRDATA_CNT;
 
-	if (!get_vsm_ops())
-		p->ring_pool = mpp_calloc(ring_buf_pool, 1);
+	p->ring_pool = mpp_calloc(ring_buf_pool, 1);
 	p->online = cfg->online;
 	p->shared_buf = cfg->shared_buf;
 	p->chan_id = cfg->chan_id;
@@ -230,12 +228,6 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 	enc->rc_cfg_size = 0;
 	enc->rc_cfg_length = 0;
 	up(&enc->enc_sem);
-	if (enc->strm_pool) {
-		mpp_log("buf_pool_destroy in");
-		vcodec_rockit_buf_pool_destroy(enc->strm_pool);
-		mpp_log("buf_pool_destroy out");
-		enc->strm_pool = NULL;
-	}
 	mpp_free(enc);
 
 	return ret;
@@ -272,18 +264,6 @@ MPP_RET mpp_enc_stop(MppEnc ctx)
 	return ret;
 
 }
-
-RK_S32 mpp_enc_check_pkt_pool(MppEnc ctx)
-{
-	MppEncImpl *enc = (MppEncImpl *) ctx;
-	RK_S32 num = 1;
-
-	if (enc->strm_pool)
-		return vcodec_rockit_buf_pool_get_free_num(enc->strm_pool);
-
-	return num;
-}
-
 
 MPP_RET mpp_enc_reset(MppEnc ctx)
 {

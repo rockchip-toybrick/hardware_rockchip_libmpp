@@ -118,7 +118,6 @@ typedef enum {
 typedef enum {
 	MPP_BUFFER_TYPE_DMAHEAP,
 	MPP_BUFFER_TYPE_RK_DMAHEAP,
-	MPP_BUFFER_TYPE_MPI_BUF,
 	MPP_BUFFER_TYPE_BUTT,
 } MppBufferType;
 

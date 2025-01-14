@@ -12,14 +12,12 @@
 #include "mpp_maths.h"
 #include "mpp_allocator_api.h"
 #include "mpp_allocator.h"
-#include "allocator_mpibuf.h"
 #include "allocator_dmaheap.h"
 #include "allocator_rkdmaheap.h"
 
 typedef enum MppAllocatorType_e {
         MPP_ALLOCATOR_DMABUF,
         MPP_ALLOCATOR_RK_DMABUF,
-        MPP_ALLOCATOR_MPI_BUF,
         MPP_ALLOCATOR_BUTT,
 } MppAllocatorType;
 
@@ -33,7 +31,6 @@ static AllocatorInfo infos[MPP_ALLOCATOR_BUTT];
 static mpp_allocator_api *apis[] = {
 	&dma_heap_allocator,
 	&rk_dma_heap_allocator,
-	&mpi_buf_allocator,
 };
 
 static mpp_allocator_api *get_allocator(MppBufferType type)

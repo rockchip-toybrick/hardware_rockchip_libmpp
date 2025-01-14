@@ -26,56 +26,10 @@
 #include "mpp_vcodec_debug.h"
 #include "mpp_packet_impl.h"
 #include "mpp_time.h"
-#include "mpp_vcodec_rockit.h"
-
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
 
 void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry, MppPacket packet);
-
-MPP_RET frame_add_osd(KmppFrame frame, MppEncOSDData3 *osd_data)
-{
-	RK_U32 i = 0;
-	void *mpi_buf = NULL;
-	MppBufferInfo info;
-
-	/* trasnfor mpi_buf to MppBuffer */
-	for (i = 0; i < osd_data->num_region; i++) {
-		mpi_buf = osd_data->region[i].osd_buf.buf;
-		if (mpi_buf) {
-			MppBuffer buf = NULL;
-
-			memset(&info, 0, sizeof(info));
-			info.hnd = mpi_buf;
-			info.type = MPP_BUFFER_TYPE_MPI_BUF;
-			mpp_buffer_import(&buf, &info);
-			vcodec_rockit_buf_unref(mpi_buf);
-			osd_data->region[i].osd_buf.buf = buf;
-		}
-
-		mpi_buf = osd_data->region[i].inv_cfg.inv_buf.buf;
-		if (mpi_buf) {
-			MppBuffer buf = NULL;
-
-			memset(&info, 0, sizeof(info));
-			info.hnd = mpi_buf;
-			info.type = MPP_BUFFER_TYPE_MPI_BUF;
-			mpp_buffer_import(&buf, &info);
-			vcodec_rockit_buf_unref(mpi_buf);
-			osd_data->region[i].inv_cfg.inv_buf.buf = buf;
-		}
-	}
-	kmpp_frame_add_osd(frame, (MppOsd)osd_data);
-	for (i = 0; i < osd_data->num_region; i++) {
-		if (osd_data->region[i].osd_buf.buf)
-			mpp_buffer_put(&osd_data->region[i].osd_buf);
-
-		if (osd_data->region[i].inv_cfg.inv_buf.buf)
-			mpp_buffer_put(&osd_data->region[i].inv_cfg.inv_buf);
-	}
-
-	return MPP_OK;
-}
 
 MPP_RET mpp_frame_init_with_frameinfo(KmppFrame *frame, struct mpp_frame_infos *info)
 {
@@ -104,8 +58,6 @@ MPP_RET mpp_frame_init_with_frameinfo(KmppFrame *frame, struct mpp_frame_infos *
 	kmpp_frame_set_pskip_request(p, info->pskip);
 	kmpp_frame_set_pskip_num(p, info->pskip_num);
 
-	if (info->osd_buf)
-		frame_add_osd(p, (MppEncOSDData3 *)info->osd_buf);
 	if (info->pp_info)
 		kmpp_frame_set_pp_info(p, (MppPpInfo*)info->pp_info);
 	*frame = p;
@@ -300,16 +252,13 @@ void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry,
 	MppPacketImpl *p = (MppPacketImpl *) packet;
 	unsigned long flags;
 
-	if (!get_vsm_ops()) {
-		spin_lock_irqsave(&chan_entry->stream_list_lock, flags);
-		list_add_tail(&p->list, &chan_entry->stream_done);
-		atomic_inc(&chan_entry->stream_count);
-		atomic_inc(&chan_entry->pkt_total_num);
-		chan_entry->seq_encoded = mpp_packet_get_dts(packet);
-		spin_unlock_irqrestore(&chan_entry->stream_list_lock, flags);
-		wake_up(&chan_entry->wait);
-	} else
-		mpp_packet_deinit(&packet);
+	spin_lock_irqsave(&chan_entry->stream_list_lock, flags);
+	list_add_tail(&p->list, &chan_entry->stream_done);
+	atomic_inc(&chan_entry->stream_count);
+	atomic_inc(&chan_entry->pkt_total_num);
+	chan_entry->seq_encoded = mpp_packet_get_dts(packet);
+	spin_unlock_irqrestore(&chan_entry->stream_list_lock, flags);
+	wake_up(&chan_entry->wait);
 
 	chan_entry->reenc = 0;
 }

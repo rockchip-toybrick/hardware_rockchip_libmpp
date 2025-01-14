@@ -1369,8 +1369,6 @@ static void setup_vepu500_io_buf(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 
 		if (buf_out->buf)
 			out_addr = mpp_dev_get_iova_address(dev, buf_out->buf, 173);
-		else
-			out_addr = buf_out->mpi_buf_id;
 
 		regs->reg_frm.bsbb_addr = out_addr + buf_out->start_offset;
 		regs->reg_frm.bsbr_addr = out_addr;
@@ -1381,9 +1379,6 @@ static void setup_vepu500_io_buf(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	if (off_out && task->output->buf) {
 		task->output->use_len = off_out;
 		mpp_ring_buf_flush(task->output, 0);
-	} else if (off_out && task->output->mpi_buf_id) {
-		struct device *dev = mpp_get_dev(ctx->dev);
-		dma_sync_single_for_device(dev, task->output->mpi_buf_id, off_out, DMA_TO_DEVICE);
 	}
 
 	hal_h264e_dbg_func("leave\n");

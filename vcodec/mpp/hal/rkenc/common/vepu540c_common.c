@@ -688,8 +688,7 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 		if (task->output->buf) {
 			regs->reg0257_adr_bsbb = mpp_dev_get_iova_address(cfg->dev, task->output->buf,
 									  257) + task->output->start_offset;
-		} else
-			regs->reg0257_adr_bsbb = task->output->mpi_buf_id + task->output->start_offset;
+		}
 
 		regs->reg0256_adr_bsbt = regs->reg0257_adr_bsbb + task->output->size - 1;
 		regs->reg0258_adr_bsbr = regs->reg0257_adr_bsbb;

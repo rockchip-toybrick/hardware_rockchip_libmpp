@@ -188,7 +188,6 @@ MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
 void mpp_enc_slice_info(MppEnc ctx, void *param, MppPacket *packet);
 MPP_RET mpp_enc_register_chl(MppEnc ctx, void *func, RK_S32 chan_id);
 void    mpp_enc_proc_debug(void *seq_file, MppEnc ctx, RK_U32 chl_id);
-RK_S32  mpp_enc_check_pkt_pool(MppEnc ctx);
 void mpp_enc_deinit_frame(MppEnc ctx);
 void mpp_enc_pkt_full_inc(MppEnc ctx);
 MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet);

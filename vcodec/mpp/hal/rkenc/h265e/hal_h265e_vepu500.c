@@ -1457,8 +1457,6 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 
 		if (enc_task->output->buf)
 			out_addr = mpp_dev_get_iova_address(ctx->dev, enc_task->output->buf, 174);
-		else
-			out_addr = enc_task->output->mpi_buf_id + enc_task->output->start_offset;
 
 		regs->reg0172_bsbt_addr = out_addr + enc_task->output->size - 1;
 		regs->reg0173_bsbb_addr = out_addr + enc_task->output->start_offset;
@@ -1474,10 +1472,6 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 	if (len && task->output->buf) {
 		task->output->use_len = len;
 		mpp_ring_buf_flush(task->output, 0);
-	} else if (len && task->output->mpi_buf_id) {
-		struct device *dev = mpp_get_dev(ctx->dev);
-
-		dma_sync_single_for_device(dev, task->output->mpi_buf_id, len, DMA_TO_DEVICE);
 	}
 
 	/*

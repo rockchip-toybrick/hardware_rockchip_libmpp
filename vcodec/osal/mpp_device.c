@@ -126,53 +126,12 @@ MPP_RET mpp_dev_ioctl(MppDev ctx, RK_S32 cmd, void *param)
 RK_U32 mpp_dev_get_iova_address(MppDev ctx, MppBuffer mpp_buf, RK_U32 reg_idx)
 {
 	MppDevImpl *p = (MppDevImpl *) ctx;
-	const MppDevApi *api = p->api;
-	void *impl_ctx = p->ctx;
-	struct dma_buf *dma_buf = NULL;
-	RK_S32 phy_addr = 0;
-	if (!mpp_buf) {
-		mpp_err_f("input NULL");
-		return -EINVAL;
-	}
 
-	phy_addr = mpp_buffer_get_phy(mpp_buf);
-	if (phy_addr == -1) {
-		dma_buf = mpp_buffer_get_dma(mpp_buf);
-		mpp_assert(dma_buf);
-		if (api->get_address)
-			phy_addr = api->get_address(impl_ctx, dma_buf, reg_idx);
+	if (NULL == p)
+		return 0;
 
-		if (phy_addr != -1)
-			mpp_buffer_set_phy(mpp_buf, phy_addr);
-	}
-	return (RK_U32)phy_addr;
-}
+	return mpp_buffer_get_iova(mpp_buf, ctx);
 
-RK_U32 mpp_dev_get_mpi_ioaddress(MppDev ctx, MpiBuf mpi_buf, RK_U32 offset)
-{
-	MppDevImpl *p = (MppDevImpl *) ctx;
-	const MppDevApi *api = p->api;
-	void *impl_ctx = p->ctx;
-	struct dma_buf *dma_buf = NULL;
-	RK_S32 phy_addr = -1;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
-
-	if (!mpi_buf) {
-		mpp_err_f("input NULL");
-		return -EINVAL;
-	}
-
-	if (mpibuf_fn && mpibuf_fn->buf_get_paddr)
-		phy_addr = mpibuf_fn->buf_get_paddr(mpi_buf);
-	if (phy_addr == -1) {
-		if (mpibuf_fn && mpibuf_fn->buf_get_dmabuf)
-			dma_buf = mpibuf_fn->buf_get_dmabuf(mpi_buf);
-		mpp_assert(dma_buf);
-		if (api->get_address)
-			return api->get_address(impl_ctx, dma_buf, offset);
-	}
-
-	return (RK_U32)phy_addr;
 }
 
 void mpp_dev_chnl_register(MppDev ctx, void *func, RK_S32 chan_id)
@@ -192,6 +151,7 @@ struct device * mpp_get_dev(MppDev ctx)
 	MppDevImpl *p = (MppDevImpl *) ctx;
 	const MppDevApi *api = p->api;
 	void *impl_ctx = p->ctx;
+
 	if (api->chnl_get_dev)
 		return api->chnl_get_dev(impl_ctx);
 	return NULL;

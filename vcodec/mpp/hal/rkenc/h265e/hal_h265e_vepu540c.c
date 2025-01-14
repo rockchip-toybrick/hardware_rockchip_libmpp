@@ -1982,8 +1982,7 @@ void vepu540c_h265_set_hw_address(H265eV540cHalContext *ctx,
 		if (enc_task->output->buf) {
 			regs->reg0174_bsbs_addr =
 				mpp_dev_get_iova_address(ctx->dev, enc_task->output->buf, 174) + enc_task->output->start_offset;
-		} else
-			regs->reg0174_bsbs_addr = enc_task->output->mpi_buf_id + enc_task->output->start_offset;
+		}
 
 		/* TODO: stream size relative with syntax */
 		regs->reg0172_bsbt_addr = regs->reg0174_bsbs_addr;
@@ -2003,9 +2002,6 @@ void vepu540c_h265_set_hw_address(H265eV540cHalContext *ctx,
 	if (len && task->output->buf) {
 		task->output->use_len = len;
 		mpp_ring_buf_flush(task->output, 0);
-	} else if (len && enc_task->output->mpi_buf_id) {
-		struct device *dev = mpp_get_dev(ctx->dev);
-		dma_sync_single_for_device(dev, enc_task->output->mpi_buf_id, len, DMA_TO_DEVICE);
 	}
 	kmpp_frame_get_offset_x(task->frame, &offset_x);
 	kmpp_frame_get_offset_y(task->frame, &offset_y);

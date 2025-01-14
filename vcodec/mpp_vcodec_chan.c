@@ -26,7 +26,6 @@
 #include "mpp_time.h"
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_mem.h"
-#include "mpp_vcodec_rockit.h"
 #include "mpp_buffer_impl.h"
 #include "kmpp_shm.h"
 #include "rk-mpp-kobj.h"
@@ -385,8 +384,6 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 
 		kmpp_frame_get(&comb_frame);
 		kmpp_frame_copy(comb_frame, frame);
-		if (info->jpg_combo_osd_buf)
-			frame_add_osd(comb_frame, (MppEncOSDData3 *)info->jpg_combo_osd_buf);
 		kmpp_frame_set_buffer(comb_frame, buffer);
 		kmpp_frame_set_chan_id(comb_frame, info->jpeg_chan_id);
 		kmpp_frame_set_combo_frame(frame, comb_frame);

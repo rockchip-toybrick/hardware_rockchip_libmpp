@@ -434,9 +434,6 @@ MPP_RET hal_jpege_v540c_gen_regs(void *hal, HalEncTask * task)
 	if (task->output->buf) {
 		task->output->use_len = task->length;
 		mpp_ring_buf_flush(task->output, 0);
-	} else {
-		struct device *dev = mpp_get_dev(ctx->dev);
-		dma_sync_single_for_device(dev, task->output->mpi_buf_id, task->length, DMA_TO_DEVICE);
 	}
 
 	reg_ctl->reg0004_enc_strt.lkt_num = 0;

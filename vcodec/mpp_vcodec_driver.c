@@ -396,15 +396,14 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 			seq_puts(seq,
 				 "\n--------venc chn runing status--------------------------------------------------------------------\n");
 
-			seq_printf(seq, "%8s|%8s|%10s|%10s|%10s|%10s|%10s|%14s|%15s|%15s|%11s\n",
+			seq_printf(seq, "%8s|%8s|%10s|%10s|%10s|%10s|%10s|%14s|%15s|%15s\n",
 				   "ID", "runing", "combo_run", "cfg_gap", "strm_cnt", "strm_out",
-				   "gap_time", "cb_gap_time", "last_cb_start", "last_cb_end", "queue_size");
+				   "gap_time", "cb_gap_time", "last_cb_start", "last_cb_end");
 
-			seq_printf(seq, "%8d|%8u|%10u|%10u|%10u|%10u|%10u|%14u|%15llu|%15llu%11u\n",
+			seq_printf(seq, "%8d|%8u|%10u|%10u|%10u|%10u|%10u|%14u|%15llu|%15llu\n",
 				   i, runing, comb_run, chan->last_cfg_time, atomic_read(&chan->stream_count),
 				   atomic_read(&chan->str_out_cnt),
-				   chan->gap_time, chan->combo_gap_time, chan->last_jeg_combo_start,  chan->last_jeg_combo_end,
-				   chan->queue_size);
+				   chan->gap_time, chan->combo_gap_time, chan->last_jeg_combo_start,  chan->last_jeg_combo_end);
 
 			seq_printf(seq, "%8s|%15s|%15s|%15s|%15s|%15s|%15s|%15s\n",
 				   "ID", "pkt_total_cnt", "pkt_user_get", "pkt_user_put", "seq_user_get", "seq_user_put",
@@ -547,74 +546,6 @@ static struct platform_driver vcodec_driver = {
 	},
 };
 #endif
-
-static struct vcodec_mpidev_fn *mpidev_ops = NULL;
-static struct vcodec_mpibuf_fn *mpibuf_ops = NULL;
-void vmpi_register_fn2vcocdec (struct vcodec_mpidev_fn *mpidev_fn,
-			       struct vcodec_mpibuf_fn *mpibuf_fn)
-{
-	mpidev_ops = mpidev_fn;
-	mpibuf_ops = mpibuf_fn;
-	if (mpidev_ops)
-		vcodec_create_mpi_dev();
-}
-EXPORT_SYMBOL(vmpi_register_fn2vcocdec);
-
-void vmpi_unregister_fn2vcocdec (void)
-{
-	mpp_vcodec_unregister_mpidev();
-	mpidev_ops = NULL;
-	mpibuf_ops = NULL;
-	return;
-}
-EXPORT_SYMBOL(vmpi_unregister_fn2vcocdec);
-
-static struct vcodec_vsm_buf_fn *vsm_buf_ops = NULL;
-
-void vsm_buf_register_fn2vcocdec(struct vcodec_vsm_buf_fn *vsm_fn)
-{
-	vsm_buf_ops = vsm_fn;
-	mpp_log("vsm_buf_register_function ok");
-	return;
-}
-
-EXPORT_SYMBOL(vsm_buf_register_fn2vcocdec);
-
-
-struct vcodec_mpidev_fn *get_mpidev_ops(void)
-{
-	if (!mpidev_ops)
-		return NULL;
-
-	if (mpidev_ops->get_struct_size) {
-		if (sizeof(struct vcodec_mpidev_fn) != mpidev_ops->get_struct_size()) {
-			mpp_err("struct vcodec_mpidev_fn mismatch!\n");
-			mpp_assert(0);
-		}
-	}
-
-	return mpidev_ops;
-}
-
-struct vcodec_mpibuf_fn *get_mpibuf_ops(void)
-{
-	if (!mpibuf_ops)
-		return NULL;
-
-	if (mpibuf_ops->get_struct_size) {
-		if (sizeof(struct vcodec_mpibuf_fn) != mpibuf_ops->get_struct_size()) {
-			mpp_err("struct vcodec_mpibuf_fn mismatch!\n");
-			mpp_assert(0);
-		}
-	}
-
-	return mpibuf_ops;
-}
-
-struct vcodec_vsm_buf_fn *get_vsm_ops(void)
-{
-	return vsm_buf_ops ? vsm_buf_ops : NULL;
-}
 
 extern struct platform_driver mpp_service_driver;
 

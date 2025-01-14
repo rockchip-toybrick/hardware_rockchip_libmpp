@@ -29,7 +29,6 @@
 #include "kmpp_frame.h"
 #include "hal_bufs.h"
 #include "mpp_maths.h"
-#include "mpp_vcodec_rockit.h"
 
 #include "kmpp_frame.h"
 #include "kmpp_meta.h"
@@ -44,152 +43,6 @@ int max_stream_cnt = 0;
 module_param(max_stream_cnt, int, 0644);
 
 static struct vcodec_entry g_vcodec_entry;
-
-static void *mpp_vcodec_bind(void *out_param)
-{
-	struct mpp_chan *entry = NULL;
-	int id = -1;
-	MppCtxType type = MPP_CTX_ENC;
-	struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
-
-	if ( !mpidev_fn) {
-		mpp_err("get_mpidev_ops fail");
-		return NULL;
-	}
-	if (mpidev_fn->get_chnl_id)
-		id = mpidev_fn->get_chnl_id(out_param);
-
-	if (mpidev_fn->get_chnl_type)
-		type = (MppCtxType) mpidev_fn->get_chnl_type(out_param);
-
-	entry = mpp_vcodec_get_chan_entry(id, type);
-	if (!entry->handle) {
-		mpp_err("type %d chnl %d is no create", type, id);
-		return NULL;
-	}
-
-	return &entry->yuv_queue;
-}
-
-static int mpp_vcodec_unbind(void *ctx)
-{
-	return 0;
-}
-
-static struct mpp_chan *mpp_vcodec_get_chn_handle(struct mpi_obj *obj)
-{
-	void *ctx = NULL;
-	struct mpp_chan *entry = NULL;
-	struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
-
-	if (!mpidev_fn) {
-		mpp_err("get_mpidev_ops fail");
-		return NULL;
-	}
-
-	if (mpidev_fn->get_chnl_ctx)
-		ctx = mpidev_fn->get_chnl_ctx(obj);
-
-
-	if (ctx)
-		entry = container_of(ctx, struct mpp_chan, yuv_queue);
-
-	return entry;
-}
-
-static int mpp_vcodec_msg_handle(struct mpi_obj *obj, int event, void *args)
-{
-	int ret = -1;
-	struct vcodec_threads *thd;
-	struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
-	struct mpp_chan *entry = NULL;
-
-	if (!mpidev_fn) {
-		mpp_err("get_mpidev_ops fail");
-		return -1;
-	}
-
-	entry = mpp_vcodec_get_chn_handle(obj);
-	if (!entry)
-		return -1;
-
-	spin_lock(&entry->chan_lock);
-	switch (entry->type) {
-	case MPP_CTX_ENC: {
-		thd = g_vcodec_entry.venc.thd;
-	} break;
-	default: {
-		mpp_err("MppCtxType error %d", entry->type);
-	} break;
-	}
-
-	if (mpidev_fn->handle_message)
-		ret = mpidev_fn->handle_message(obj, event, args);
-
-	spin_unlock(&entry->chan_lock);
-
-	if (ret == 1 && thd) {
-		struct mpi_buf *buf = NULL;
-
-		buf = vcodec_rockit_buf_queue_pop(entry->yuv_queue);
-		if (buf) {
-			struct mpp_frame_infos frm_info;
-			MppBufferInfo buf_info;
-			MppBuffer buffer = NULL;
-			KmppFrame frame = NULL;
-
-			memset(&frm_info, 0, sizeof(frm_info));
-			if (vcodec_rockit_get_buf_frm_info(buf, &frm_info, entry->chan_id)) {
-				vcodec_rockit_buf_unref(buf);
-				return MPP_NOK;
-			}
-			memset(&buf_info, 0, sizeof(buf_info));
-			buf_info.hnd = buf;
-			buf_info.type = MPP_BUFFER_TYPE_MPI_BUF;
-			mpp_buffer_import(&buffer, &buf_info);
-			mpp_frame_init_with_frameinfo(&frame, &frm_info);
-			if (frm_info.jpeg_chan_id > 0) {
-				KmppFrame comb_frame = NULL;
-
-				kmpp_frame_get(&comb_frame);
-				kmpp_frame_copy(comb_frame, frame);
-				if (frm_info.jpg_combo_osd_buf)
-					frame_add_osd(comb_frame, (MppEncOSDData3 *)frm_info.jpg_combo_osd_buf);
-				kmpp_frame_set_buffer(comb_frame, buffer);
-				kmpp_frame_set_chan_id(comb_frame, frm_info.jpeg_chan_id);
-				kmpp_frame_set_combo_frame(frame, comb_frame);
-			}
-			kmpp_frame_set_buffer(frame, buffer);
-			entry->frame = frame;
-			vcodec_rockit_buf_unref(buf);
-			mpp_buffer_put(buffer);
-		}
-		vcodec_thread_trigger(thd);
-		ret = 0;
-	}
-
-	return ret;
-}
-
-struct vcodec_set_dev_fn gdev_fn = {
-	.bind = mpp_vcodec_bind,
-	.unbind = mpp_vcodec_unbind,
-	.msg_callback = mpp_vcodec_msg_handle,
-};
-
-int vcodec_create_mpi_dev(void)
-{
-	struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
-	struct venc_module *venc = &g_vcodec_entry.venc;
-
-	if (mpidev_fn->create_dev && !venc->dev)
-		venc->dev = mpidev_fn->create_dev(venc->name, &gdev_fn);
-
-	if (!venc->dev)
-		mpp_err("creat mpi dev & register fail \n");
-
-	return 0;
-}
 
 static int mpp_enc_module_init(void)
 {
@@ -492,19 +345,17 @@ MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_att
 		entry->max_lt_cnt = attr->max_lt_cnt;
 
 	}
-	if (!get_vsm_ops()) {
-		if (attr->buf_size > entry->ring_buf_size) {
-			struct hal_shared_buf *ctx = &entry->shared_buf;
-			RK_U32 buf_size = MPP_MAX(attr->buf_size, SZ_16K);
-			if (ctx->stream_buf) {
-				mpp_buffer_put(ctx->stream_buf);
-				ctx->stream_buf = NULL;
-			}
-			if (mpp_ring_buffer_get(NULL, &ctx->stream_buf, MPP_ALIGN(buf_size, SZ_4K)))
-				goto fail;
-
-			entry->ring_buf_size = buf_size;
+	if (attr->buf_size > entry->ring_buf_size) {
+		struct hal_shared_buf *ctx = &entry->shared_buf;
+		RK_U32 buf_size = MPP_MAX(attr->buf_size, SZ_16K);
+		if (ctx->stream_buf) {
+			mpp_buffer_put(ctx->stream_buf);
+			ctx->stream_buf = NULL;
 		}
+		if (mpp_ring_buffer_get(NULL, &ctx->stream_buf, MPP_ALIGN(buf_size, SZ_4K)))
+			goto fail;
+
+		entry->ring_buf_size = buf_size;
 	}
 
 	return MPP_OK;
@@ -519,7 +370,6 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 			       MppCodingType coding, void *handle)
 {
 	unsigned long lock_flag;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
 
 	spin_lock_irqsave(&entry->chan_lock, lock_flag);
 	entry->handle = handle;
@@ -542,17 +392,6 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 	init_waitqueue_head(&entry->wait);
 	init_waitqueue_head(&entry->stop_wait);
 
-	if (mpibuf_fn && mpibuf_fn->buf_queue_create && !entry->yuv_queue) {
-		unsigned int queue_size = CHAN_MAX_YUV_POOL_SIZE;
-
-		if (mpibuf_fn->buf_queue_size)
-			queue_size = mpibuf_fn->buf_queue_size(entry->chan_id);
-		if (!queue_size)
-			queue_size = CHAN_MAX_YUV_POOL_SIZE;
-		entry->queue_size = queue_size;
-		entry->yuv_queue = mpibuf_fn->buf_queue_create(queue_size);
-	}
-
 	entry->state = CHAN_STATE_SUSPEND_PENDING;
 	spin_unlock_irqrestore(&entry->chan_lock, lock_flag);
 
@@ -562,8 +401,6 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 {
 	unsigned long lock_flag;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
-	struct mpi_queue *queue = NULL;
 
 	spin_lock_irqsave(&entry->chan_lock, lock_flag);
 	if (entry->pskip_frame) {
@@ -576,10 +413,6 @@ int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 	entry->binder_chan_id = -1;
 	entry->master_chan_id = -1;
 	spin_unlock_irqrestore(&entry->chan_lock, lock_flag);
-
-	queue = cmpxchg(&entry->yuv_queue, entry->yuv_queue, NULL);
-	if (queue && mpibuf_fn && mpibuf_fn->buf_queue_destroy)
-		mpibuf_fn->buf_queue_destroy(queue);
 
 	atomic_set(&entry->runing, 0);
 
@@ -733,21 +566,6 @@ int mpp_vcodec_init(void)
     mpp_enc_module_init();
 
     return 0;
-}
-
-int mpp_vcodec_unregister_mpidev(void)
-{
-	struct vcodec_mpidev_fn *mpidev_fn = get_mpidev_ops();
-
-	if (!mpidev_fn)
-		return -1;
-
-	if (mpidev_fn->destory_dev && g_vcodec_entry.venc.dev) {
-		mpidev_fn->destory_dev(g_vcodec_entry.venc.dev);
-		g_vcodec_entry.venc.dev = NULL;
-	}
-
-	return 0;
 }
 
 int mpp_vcodec_deinit(void)

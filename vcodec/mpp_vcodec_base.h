@@ -51,8 +51,6 @@ struct mpp_chan {
 	/* protect debug info when destory channel */
 	struct mutex chan_debug_lock;
 	void *handle;
-	struct mpi_queue *yuv_queue;
-	RK_U32 queue_size;
 	wait_queue_head_t wait;
 	wait_queue_head_t stop_wait;
 	spinlock_t stream_list_lock;
@@ -94,7 +92,6 @@ struct stream_packet {
 struct venc_module {
 	void *check;
 	const char *name;
-	struct mpi_dev *dev;
 	struct mpp_chan mpp_enc_chan_entry[MAX_ENC_NUM];
 	RK_U32 num_enc;
 	spinlock_t enc_lock;
@@ -118,7 +115,6 @@ void enc_chan_update_chan_prior_tab(void);
 MPP_RET enc_chan_update_tab_after_enc(RK_U32 curr_chan);
 void enc_chan_get_high_prior_chan(void);
 int mpp_vcodec_init(void);
-int mpp_vcodec_unregister_mpidev(void);
 int mpp_vcodec_deinit(void);
 int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 			       MppCodingType coding, void *handle);
@@ -127,9 +123,7 @@ struct stream_packet *stream_packet_alloc(void);
 void stream_packet_free(struct kref *ref);
 void mpp_vcodec_stream_clear(struct mpp_chan *entry);
 int mpp_vcodec_get_free_chan(MppCtxType type);
-int vcodec_create_mpi_dev(void);
 void enc_test(void);
 MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_attr *attr);
-MPP_RET mpp_frame_init_with_frameinfo(KmppFrame *frame, struct mpp_frame_infos *info);
 
 #endif

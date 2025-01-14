@@ -103,38 +103,6 @@ struct vcodec_mpibuf_fn {
 	int (*get_struct_size)(void);
 };
 
-struct vcodec_set_dev_fn {
-	void *(*bind) (void *out_param);
-	int (*unbind) (void *ctx);
-	int (*msg_callback)(struct mpi_obj *obj, int event, void *args);
-
-};
-
-enum notify_cmd {
-	NOTIFY_ENC_TASK_READY,
-	NOTIFY_ENC_GET_TASK_PIPE_ID,
-	NOTIFY_ENC_GET_TASK_FRAME_ID,
-	NOTIFY_ENC_SOURCE_ID_MISMATCH,
-};
-
-enum venc_drop_frm_type {
-	VENC_DROP_CFG_FAILED,
-	VENC_DROP_ENC_FAILED,
-};
-
-struct vcodec_mpidev_fn {
-	struct mpi_dev *(*create_dev)(const char *name, struct vcodec_set_dev_fn *dev_fn);
-	int (*destory_dev)(struct mpi_dev *dev);
-	int (*handle_message)(struct mpi_obj *obj, int event, void *args);
-	void *(*get_chnl_ctx)(struct mpi_obj *obj);
-	int (*get_chnl_id)(void *out_parm);
-	int (*get_chnl_type)(void *out_parm);
-	int (*set_intra_info)(RK_S32 chn_id, RK_U64 dts, RK_U64 pts, RK_U32 is_intra);
-	int (*notify_drop_frm)(RK_S32 chn_id, RK_U64 dts, enum venc_drop_frm_type type);
-	int (*notify)(RK_S32 chn_id, int cmd, void *arg);
-	int (*get_struct_size)(void);
-};
-
 struct vcodec_mppdev_svr_fn {
 	struct mpp_session *(*chnl_open)(int client_type);
 	int (*chnl_register)(struct mpp_session *session, void *fun, unsigned int chn_id);
@@ -173,28 +141,6 @@ struct venc_packet {
 	struct venc_pack_info       packet[8];
 };
 
-struct vsm_buf {
-	unsigned int phy_addr;
-	void *vir_addr;
-	int buf_size;
-};
-
-struct vcodec_vsm_buf_fn {
-	int (*GetBuf) (struct vsm_buf *buf, int type, int flag, int chan_id);
-	int (*PutBuf)(struct vsm_buf *buf, struct venc_packet *packet, int flag, int chan_id);
-	int (*FreeBuf)(struct vsm_buf *buf, int chan_id);
-};
-
-extern void vsm_buf_register_fn2vcocdec (struct vcodec_vsm_buf_fn *vsm_fn);
-
-
-struct vcodec_mpidev_fn *get_mpidev_ops(void);
-struct vcodec_mpibuf_fn *get_mpibuf_ops(void);
-struct vcodec_vsm_buf_fn *get_vsm_ops(void);
-
-extern void vmpi_register_fn2vcocdec (struct vcodec_mpidev_fn *mpidev_fn,
-				      struct vcodec_mpibuf_fn *mpibuf_f);
-extern void vmpi_unregister_fn2vcocdec(void);
 extern struct vcodec_mppdev_svr_fn *get_mppdev_svr_ops(void);
 extern RK_U32 mpp_srv_get_phy(struct dma_buf *buf);
 

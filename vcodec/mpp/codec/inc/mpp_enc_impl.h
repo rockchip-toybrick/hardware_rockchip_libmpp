@@ -113,7 +113,6 @@ typedef struct MppEncImpl_t {
 	RK_U32   online;
 	RK_U32   ref_buf_shared;
 	struct semaphore enc_sem;
-	struct mpi_buf_pool *strm_pool;
 	MppEncROICfg cur_roi;
 	MppEncOSDData3 cur_osd;
 	MppUserDataRb rb_userdata;

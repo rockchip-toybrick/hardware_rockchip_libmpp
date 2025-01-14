@@ -209,7 +209,7 @@ void *mpp_buffer_map_ring_ptr(struct MppBufferImpl *p)
 	RK_S32 i = 0;
 	struct page **pages;
 	RK_S32 page_count;
-	RK_S32 phy_addr = mpp_buffer_get_phy(p);
+	RK_S32 phy_addr = p->iova;
 
 	if (phy_addr == -1)
 		phy_addr = mpp_srv_get_phy(p->info.dma_buf);
@@ -604,74 +604,6 @@ MPP_RET mpp_buffer_flush_for_device_partial_with_caller(MppBuffer buffer, RK_U32
 	return MPP_OK;
 }
 
-
-RK_S32 mpp_buffer_get_mpi_buf_id_with_caller(MppBuffer buffer,
-					     const char *caller)
-{
-	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
-	struct mpp_frame_infos frm_info;
-
-	if (!mpibuf_fn) {
-		// mpp_err_f("mpibuf_ops get fail");
-		return -1;
-	}
-
-	if (NULL == buffer) {
-		mpp_err("mpp_buffer_get_mpi_buf_id invalid input buffer %p from %s\n",
-			buffer, caller);
-		return MPP_ERR_UNKNOW;
-	}
-	memset(&frm_info, 0, sizeof(frm_info));
-	if (mpibuf_fn->get_buf_frm_info) {
-		if (mpibuf_fn->get_buf_frm_info(p->info.hnd, &frm_info, -1))
-			return -1;
-	} else {
-		mpp_err("get buf info fail");
-		return -1;
-	}
-
-	return frm_info.mpi_buf_id;
-}
-
-void mpp_buffer_set_phy_caller(MppBuffer buffer, RK_U32 phy_addr, const char *caller)
-{
-	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-
-	if (NULL == p) {
-		mpp_err("mpp_buffer_get_offset invalid NULL input from %s\n",
-			caller);
-		return;
-	}
-	p->phy_flg = 1;
-	p->phy_addr = phy_addr;
-
-	return;
-}
-RK_S32 mpp_buffer_get_phy_caller(MppBuffer buffer, const char *caller)
-{
-	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-	struct vcodec_mpibuf_fn *mpibuf_fn = get_mpibuf_ops();
-	RK_S32 phy_addr = -1;
-
-	if (NULL == p) {
-		mpp_err("mpp_buffer_get_offset invalid NULL input from %s\n", caller);
-		return -1;
-	}
-
-	if (p->phy_flg)
-		phy_addr = (RK_S32)p->phy_addr;
-	else if (mpibuf_fn && mpibuf_fn->buf_get_paddr) {
-		phy_addr = mpibuf_fn->buf_get_paddr(p->info.hnd);
-		if (phy_addr != -1) {
-			p->phy_addr = phy_addr;
-			p->phy_flg = 1;
-		}
-	}
-
-	return phy_addr;
-}
-
 RK_S32 mpp_buffer_attach_dev(MppBuffer buffer, MppDev dev, const char *caller)
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
@@ -809,9 +741,6 @@ EXPORT_SYMBOL(mpp_buffer_flush_for_cpu_with_caller);
 EXPORT_SYMBOL(mpp_buffer_flush_for_device_with_caller);
 EXPORT_SYMBOL(mpp_buffer_flush_for_cpu_partial_with_caller);
 EXPORT_SYMBOL(mpp_buffer_flush_for_device_partial_with_caller);
-EXPORT_SYMBOL(mpp_buffer_get_mpi_buf_id_with_caller);
-EXPORT_SYMBOL(mpp_buffer_set_phy_caller);
-EXPORT_SYMBOL(mpp_buffer_get_phy_caller);
 EXPORT_SYMBOL(mpp_buffer_attach_dev);
 EXPORT_SYMBOL(mpp_buffer_dettach_dev);
 EXPORT_SYMBOL(mpp_buffer_get_iova_f);
