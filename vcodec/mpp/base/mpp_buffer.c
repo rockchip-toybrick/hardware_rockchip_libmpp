@@ -10,7 +10,7 @@
 #define MODULE_TAG "mpp_buffer"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
+#include <linux/dma-buf-cache.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
