@@ -91,13 +91,14 @@ const rk_u8 *strof_entry_type(EntryType type)
         "rk_s64",
         "rk_u64",
         "void *",
+        "func_ptr",
         "struct",
         "share_mem"
-        "invalid"
     };
+    static const rk_u8 *invalid_type_str = "invalid";
 
-    if (type < 0 || type >= ENTRY_TYPE_BUTT)
-        type = ENTRY_TYPE_BUTT;
+    if (type < 0 || type > ENTRY_TYPE_BUTT)
+        return invalid_type_str;
 
     return entry_type_names[type];
 }

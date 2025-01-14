@@ -17,7 +17,7 @@ typedef enum EntryType_e {
     ENTRY_TYPE_fp,      /* function poineter */
     ENTRY_TYPE_st,
     ENTRY_TYPE_shm,     /* share memory between kernel and userspace */
-    ENTRY_TYPE_BUTT,
+    ENTRY_TYPE_BUTT     = ENTRY_TYPE_shm,
 } EntryType;
 
 /*
