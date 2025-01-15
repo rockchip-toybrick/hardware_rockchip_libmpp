@@ -1944,8 +1944,8 @@ static void vepu500_h265_set_atr_regs(H265eV500HalContext *ctx)
 {
 	H265eV500RegSet *regs = ctx->regs;
 	HevcVepu500Sqi *s = &regs->reg_sqi;
-	RK_U32 str = (ctx->frame_type == INTRA_FRAME) ?
-		     ctx->cfg->tune.atr_str : 0; //TODO: atr_str_i/atr_str_p
+	RK_U32 str = ctx->frame_type == INTRA_FRAME ?
+		     ctx->cfg->tune.atr_str_i : ctx->cfg->tune.atr_str_p;
 
 	/* 0 - disable; 1 - weak; 2 - medium; 3 - strong */
 	if (str == 0) {

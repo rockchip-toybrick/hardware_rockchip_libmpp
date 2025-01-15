@@ -769,11 +769,19 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			ret = MPP_ERR_VALUE;
 		}
 
-		if (change & MPP_ENC_TUNE_CFG_CHANGE_ATR_STR)
-			dst->atr_str = src->atr_str;
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_ATR_STR_I)
+			dst->atr_str_i = src->atr_str_i;
 
-		if (dst->atr_str < 0 || dst->atr_str > 3) {
-			mpp_err("invalid anti ring strength not in range [0 : 3]\n");
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_ATR_STR_P)
+			dst->atr_str_p = src->atr_str_p;
+
+		if (dst->atr_str_i < 0 || dst->atr_str_i > 3) {
+			mpp_err("invalid anti ring strength of I frame not in range [0 : 3]\n");
+			ret = MPP_ERR_VALUE;
+		}
+
+		if (dst->atr_str_p < 0 || dst->atr_str_p > 3) {
+			mpp_err("invalid anti ring strength of P frame not in range [0 : 3]\n");
 			ret = MPP_ERR_VALUE;
 		}
 
@@ -1110,7 +1118,8 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	cfg->scene_mode = cfg_set->tune.scene_mode;
 	cfg->motion_static_switch_enable = cfg_set->tune.motion_static_switch_enable;
 	cfg->deblur_str = cfg_set->tune.deblur_str;
-	cfg->atr_str = cfg_set->tune.atr_str;
+	cfg->atr_str_i = cfg_set->tune.atr_str_i;
+	cfg->atr_str_p = cfg_set->tune.atr_str_p;
 	cfg->atl_str = cfg_set->tune.atl_str;
 	cfg->lambda_idx_p = cfg_set->tune.lambda_idx_p;
 	cfg->lambda_idx_i = cfg_set->tune.lambda_idx_i;
@@ -2441,12 +2450,13 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 
 		seq_puts(seq,
 			 "\n--------fine tuning param------------------------------------------------------------------------\n");
-		seq_printf(seq, "%8s|%12s|%12s|%12s|%10s|%10s|%12s|%12s|%12s\n", "ID",
-			   "scene_mode", "md_swth_en", "deblur_str", "atr_str", "atl_str", "lambda_idx_p", "lambda_idx_i",
-			   "atf_str");
-		seq_printf(seq, "%8u|%12d|%12d|%12d|%10d|%10d|%12d|%12d|%12d\n", chl_id,
-			   tune->scene_mode, tune->motion_static_switch_enable, tune->deblur_str, tune->atr_str,
-			   tune->atl_str, tune->lambda_idx_p, tune->lambda_idx_i, tune->atf_str);
+		seq_printf(seq, "%8s|%12s|%12s|%12s|%12s|%10s|%10s|%12s|%12s|%12s\n", "ID",
+			   "scene_mode", "md_swth_en", "deblur_str", "atr_str_i", "atr_str_p",
+			   "atl_str", "lambda_idx_p", "lambda_idx_i", "atf_str");
+		seq_printf(seq, "%8u|%12d|%12d|%12d|%12d|%10d|%10d|%12d|%12d|%12d\n", chl_id,
+			   tune->scene_mode, tune->motion_static_switch_enable, tune->deblur_str,
+			   tune->atr_str_i, tune->atr_str_p, tune->atl_str, tune->lambda_idx_p,
+			   tune->lambda_idx_i, tune->atf_str);
 
 #ifdef RKVEPU500_SUPPORT
 		seq_printf(seq, "%8s|%14s|%12s|%12s|%12s|%12s\n", "ID",

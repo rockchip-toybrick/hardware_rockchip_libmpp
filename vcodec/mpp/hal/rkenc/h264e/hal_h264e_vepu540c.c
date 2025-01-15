@@ -1235,7 +1235,7 @@ static void setup_vepu540c_rdo_pred(HalH264eVepu540cCtx *ctx, H264eSps *sps,
 	base->rdo_cfg.ccwa_e = 1;
 	base->rdo_cfg.scl_lst_sel = pps->scaling_list_mode;
 	base->rdo_cfg.atf_e = ctx->cfg->tune.atf_str > 0;
-	base->rdo_cfg.atr_e = ctx->cfg->tune.atr_str > 0;
+	base->rdo_cfg.atr_e = ctx->cfg->tune.atr_str_i > 0;
 	base->rdo_cfg.intra_mode_cost_e = 1;
 	base->iprd_csts.rdo_mark_mode = 0;
 

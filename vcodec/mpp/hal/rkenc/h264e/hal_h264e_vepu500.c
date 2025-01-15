@@ -1168,7 +1168,7 @@ static void setup_vepu500_rdo_pred(HalH264eVepu500Ctx *ctx, H264eSps *sps,
 	regs->reg_frm.rdo_cfg.ccwa_e         = 1;
 	regs->reg_frm.rdo_cfg.scl_lst_sel    = pps->scaling_list_mode;
 	regs->reg_frm.rdo_cfg.atf_e          = ctx->cfg->tune.atf_str > 0;
-	regs->reg_frm.rdo_cfg.atr_e          = ctx->cfg->tune.atr_str > 0;
+	regs->reg_frm.rdo_cfg.atr_e          = ctx->cfg->tune.atr_str_i > 0;
 	regs->reg_frm.rdo_cfg.atr_mult_sel_e = 1;
 	regs->reg_frm.rdo_mark_mode.rdo_mark_mode = 0;
 

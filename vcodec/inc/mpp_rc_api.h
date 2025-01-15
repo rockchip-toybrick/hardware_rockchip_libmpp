@@ -183,7 +183,8 @@ typedef struct RcCfg_s {
 	RK_S32          scene_mode;
 	RK_S32          motion_static_switch_enable;
 	RK_S32          deblur_str;
-	RK_S32          atr_str;
+	RK_S32          atr_str_i;
+	RK_S32          atr_str_p;
 	RK_S32          atl_str;
 	RK_S32          lambda_idx_p;
 	RK_S32          lambda_idx_i;

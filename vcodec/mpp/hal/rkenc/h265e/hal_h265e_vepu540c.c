@@ -686,7 +686,8 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	RK_S32 flg2 = 0;
 	RK_S32 flg3 = 0;
 	RK_S32 atl_str = ctx->cfg->tune.atl_str;
-	RK_S32 atr_str = ctx->cfg->tune.atr_str;
+	RK_S32 atr_str = ctx->frame_type == INTRA_FRAME ?
+			 ctx->cfg->tune.atr_str_i : ctx->cfg->tune.atr_str_p;
 	RK_S32 smear_multi16[4] = {9, 12, 16, 16};
 	RK_S32 smear_multi8[4] = {8, 12, 16, 16};
 
