@@ -14,6 +14,7 @@
 
 #include "kmpp_sym.h"
 #include "kmpp_shm.h"
+#include "kmpp_meta.h"
 #include "kmpp_frame.h"
 #include "kmpp_venc_objs.h"
 
@@ -108,6 +109,7 @@ int sys_init(void)
     }
 
     kmpp_shm_init();
+    kmpp_meta_init();
     kmpp_frame_init();
     kmpp_venc_init_cfg_init();
 
@@ -120,6 +122,7 @@ void sys_exit(void)
 
     kmpp_venc_init_cfg_deinit();
     kmpp_frame_deinit();
+    kmpp_meta_deinit();
     kmpp_shm_deinit();
 
     if (sys_sym) {

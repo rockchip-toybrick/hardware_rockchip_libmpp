@@ -6,18 +6,42 @@
 #ifndef __KMPP_SYS_DEFS_H__
 #define __KMPP_SYS_DEFS_H__
 
-#include "rk_type.h"
+#include "kmpi_defs.h"
 
 typedef enum EntryType_e {
-    ENTRY_TYPE_s32,
-    ENTRY_TYPE_u32,
-    ENTRY_TYPE_s64,
-    ENTRY_TYPE_u64,
-    ENTRY_TYPE_ptr,
-    ENTRY_TYPE_fp,      /* function poineter */
-    ENTRY_TYPE_st,
-    ENTRY_TYPE_shm,     /* share memory between kernel and userspace */
-    ENTRY_TYPE_BUTT     = ENTRY_TYPE_shm,
+    /* commaon fix size value */
+    ENTRY_TYPE_FIX      = 0x0,
+    ENTRY_TYPE_s32      = (ENTRY_TYPE_FIX + 0),
+    ENTRY_TYPE_u32      = (ENTRY_TYPE_FIX + 1),
+    ENTRY_TYPE_s64      = (ENTRY_TYPE_FIX + 2),
+    ENTRY_TYPE_u64      = (ENTRY_TYPE_FIX + 3),
+    /* value only structure */
+    ENTRY_TYPE_st       = (ENTRY_TYPE_FIX + 4),
+
+    /* kernel and userspace share data */
+    ENTRY_TYPE_SHARE    = 0x6,
+    /* share memory between kernel and userspace */
+    ENTRY_TYPE_shm      = (ENTRY_TYPE_SHARE + 0),
+
+    /* kernel access only data */
+    ENTRY_TYPE_KERNEL   = 0x8,
+    /* kenrel object poineter */
+    ENTRY_TYPE_kobj     = (ENTRY_TYPE_KERNEL + 0),
+    /* kenrel normal data poineter */
+    ENTRY_TYPE_kptr     = (ENTRY_TYPE_KERNEL + 1),
+    /* kernel function poineter */
+    ENTRY_TYPE_kfp      = (ENTRY_TYPE_KERNEL + 2),
+
+    /* userspace access only data */
+    ENTRY_TYPE_USER     = 0xc,
+    /* userspace object poineter */
+    ENTRY_TYPE_uobj     = (ENTRY_TYPE_USER + 0),
+    /* userspace normal data poineter */
+    ENTRY_TYPE_uptr     = (ENTRY_TYPE_USER + 1),
+    /* userspace function poineter */
+    ENTRY_TYPE_ufp      = (ENTRY_TYPE_USER + 2),
+
+    ENTRY_TYPE_BUTT     = 0xf,
 } EntryType;
 
 /*
@@ -34,20 +58,5 @@ typedef void* KmppObj;
 typedef void* KmppShmGrp;
 /* KmppShm - share memory for address access and read / write */
 typedef void* KmppShm;
-
-/* MUST be the same to the KmppObjShm in rk-mpp-kobj.h */
-typedef struct KmppShmAddr_t {
-    /* uaddr - the userspace base address for kernel access */
-    union {
-        rk_u64 uaddr;
-        void *uptr;
-    };
-    /* kaddr - the kernel base address for kernel access */
-    union {
-        rk_u64 kaddr;
-        void *kptr;
-    };
-    /* DO NOT access reserved data only used by kernel */
-} KmppShmPtr;
 
 #endif /* __KMPP_SYS_DEFS_H__ */

@@ -10,14 +10,18 @@
 #include "kmpp_log.h"
 
 #include "kmpp_obj.h"
+#include "kmpp_meta.h"
 
 #define KMPP_FRAME_KOBJ_IMPL
 #include "kmpp_frame.h"
 
-static void kmpp_frame_impl_preset(void *entry)
+static rk_u32 kmpp_frame_debug = 0;
+
+static rk_s32 kmpp_frame_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
 {
     if (entry) {
         KmppFrameImpl *impl = (KmppFrameImpl*)entry;
+        KmppMeta meta = NULL;
 
         impl->width = 1280;
         impl->height = 720;
@@ -28,7 +32,39 @@ static void kmpp_frame_impl_preset(void *entry)
         impl->offset_y = 0;
         impl->fmt = 0;
         impl->fd = -1;
+
+        if (file)
+            kmpp_meta_get_share(&meta, file, caller);
+        else
+            kmpp_meta_get(&meta, caller);
+
+        kmpp_obj_to_shmptr(meta, &impl->meta);
+
+        if (kmpp_frame_debug)
+            kmpp_logi_f("frame %px meta %px : sptr %#llx:%#llx\n",
+                        impl, meta, impl->meta.uaddr, impl->meta.kaddr);
     }
+
+    return rk_ok;
+}
+
+static rk_s32 kmpp_frame_impl_deinit(void *entry, const rk_u8 *caller)
+{
+    if (entry) {
+        KmppFrameImpl *impl = (KmppFrameImpl*)entry;
+        KmppMeta meta = NULL;
+
+        kmpp_obj_from_shmptr(&meta, &impl->meta);
+
+        if (kmpp_frame_debug)
+            kmpp_logi_f("meta %px : sptr %#llx:%#llx\n",
+                        meta, impl->meta.uaddr, impl->meta.kaddr);
+
+        if (meta)
+            kmpp_meta_put_f(meta);
+    }
+
+    return rk_ok;
 }
 
 static rk_s32 kmpp_frame_impl_dump(void *entry)
@@ -49,6 +85,7 @@ static rk_s32 kmpp_frame_impl_dump(void *entry)
     kmpp_logi("offset_y         %d\n", impl->offset_y);
     kmpp_logi("fmt              %d\n", impl->fmt);
     kmpp_logi("fd               %d\n", impl->fd);
+    kmpp_logi("meta [u:k]       %#llx:%#llx\n", impl->meta.uaddr, impl->meta.kaddr);
 
     return rk_ok;
 }
@@ -56,8 +93,10 @@ static rk_s32 kmpp_frame_impl_dump(void *entry)
 #define KMPP_OBJ_NAME               kmpp_frame
 #define KMPP_OBJ_INTF_TYPE          KmppFrame
 #define KMPP_OBJ_IMPL_TYPE          KmppFrameImpl
-#define KMPP_OBJ_ENTRY_TABLE        ENTRY_TABLE_KMPP_FRAME
-#define KMPP_OBJ_FUNC_PRESET        kmpp_frame_impl_preset
+#define KMPP_OBJ_ENTRY_TABLE        KMPP_FRAME_ENTRY_TABLE
+#define KMPP_OBJ_STRUCT_TABLE       KMPP_FRAME_STRUCT_TABLE
+#define KMPP_OBJ_FUNC_INIT          kmpp_frame_impl_init
+#define KMPP_OBJ_FUNC_DEINIT        kmpp_frame_impl_deinit
 #define KMPP_OBJ_FUNC_DUMP          kmpp_frame_impl_dump
 #define KMPP_OBJ_FUNC_EXPORT_ENABLE
 #define KMPP_OBJ_SHARE_ENABLE

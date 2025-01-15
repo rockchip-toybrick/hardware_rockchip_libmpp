@@ -15,7 +15,7 @@
 #define KMPP_VENC_OBJS_KOBJ_IMPL
 #include "kmpp_venc_objs.h"
 
-static void kmpp_venc_init_cfg_impl_preset(void *entry)
+static rk_s32 kmpp_venc_init_cfg_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
 {
     if (entry) {
         KmppVencInitCfgImpl *impl = (KmppVencInitCfgImpl*)entry;
@@ -36,6 +36,8 @@ static void kmpp_venc_init_cfg_impl_preset(void *entry)
         impl->tmvp_enable = 0;
         impl->only_smartp = 0;
     }
+
+    return rk_ok;
 }
 
 static rk_s32 kmpp_venc_init_cfg_impl_dump(void *entry)
@@ -70,7 +72,7 @@ static rk_s32 kmpp_venc_init_cfg_impl_dump(void *entry)
 #define KMPP_OBJ_INTF_TYPE          KmppVencInitCfg
 #define KMPP_OBJ_IMPL_TYPE          KmppVencInitCfgImpl
 #define KMPP_OBJ_ENTRY_TABLE        ENTRY_TABLE_KMPP_VENC_INIT_CFG
-#define KMPP_OBJ_FUNC_PRESET        kmpp_venc_init_cfg_impl_preset
+#define KMPP_OBJ_FUNC_INIT          kmpp_venc_init_cfg_impl_init
 #define KMPP_OBJ_FUNC_DUMP          kmpp_venc_init_cfg_impl_dump
 #define KMPP_OBJ_FUNC_EXPORT_ENABLE
 #define KMPP_OBJ_SHARE_ENABLE

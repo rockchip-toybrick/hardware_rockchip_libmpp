@@ -112,9 +112,8 @@ typedef struct KmppShmImpl_t {
 
     void            *priv;
     void            *kbase;
-    void            *kaddr;
-    rk_ul           ubase;
-    rk_u64          uaddr;
+    rk_u64          upriv;
+    rk_u64          ubase;
 } KmppShmImpl;
 
 static KmppShmClsImpl *kmpp_shm_cls = NULL;
@@ -381,7 +380,6 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
         for (i = 0; i < ioc.count; i++, arg += sizeof(rk_u64)) {
             rk_u8 name[64];
             KmppShmGrpImpl *grp = NULL;
-            KmppShm shm = NULL;
             KmppObj obj = NULL;
             void *kbase = NULL;
             rk_u64 ubase = 0;
@@ -399,14 +397,7 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
                 break;
             }
 
-            ret = kmpp_shm_get(&shm, file, name);
-            if (ret || !shm) {
-                kmpp_loge_f("slot %d kmpp_shm_get %s failed ret %d\n", i, name, ret);
-                ret = rk_nok;
-                break;
-            }
-
-            ret = kmpp_obj_get_share(&obj, grp->def, shm);
+            ret = kmpp_obj_get_share_f(&obj, grp->def, file);
             if (ret || !obj)
                 kmpp_loge_f("slot %d kmpp_obj_get_share fail ret %d\n", i, ret);
 
@@ -467,8 +458,10 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
             }
 
             impl = (KmppShmImpl *)shm.kobj_kaddr;
-            if (!impl || impl != impl->kbase) {
-                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM invalid shm %px\n", i, impl);
+            if (!impl || impl != impl->kbase || impl->ubase != shm.kobj_uaddr) {
+                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM invalid shm %px - kbase %px ubase %#llx - %#llx\n",
+                            i, impl, impl ? impl->kbase : NULL,
+                            impl ? impl->ubase : 0, shm.kobj_uaddr);
                 break;
             }
 
@@ -478,7 +471,7 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
                 if (kmpp_shm_debug & SHM_DBG_DUMP)
                     kmpp_obj_dump(impl->priv, "KMPP_SHM_IOC_PUT_SHM");
 
-                ret = kmpp_obj_put(impl->priv);
+                ret = kmpp_obj_put_f(impl->priv);
             } else {
                 ret = kmpp_shm_put(impl);
             }
@@ -702,7 +695,20 @@ rk_s32 kmpp_shm_deinit(void)
     return rk_ok;
 }
 
-rk_s32 kmpp_shm_entry_offset(void)
+rk_s32 kmpp_shm_add_trie_info(KmppTrie trie)
+{
+    rk_s32 val = sizeof(KmppShmImpl);
+
+    kmpp_trie_add_info(trie, "__offset", &val, sizeof(val));
+
+    /* add userspace private info position */
+    val = offsetof(KmppShmImpl, upriv);
+    kmpp_trie_add_info(trie, "__priv", &val, sizeof(val));
+
+    return rk_ok;
+}
+
+static inline rk_s32 kmpp_shm_entry_offset(void)
 {
     return sizeof(KmppShmImpl);
 }
@@ -720,7 +726,7 @@ rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
 {
     KmppShmGrpImpl *grp = get_shm_grp(file, name, __func__);;
     KmppShmImpl *impl;
-    rk_s32 entry_offset;
+    rk_s32 entry_offset = kmpp_shm_entry_offset();
     rk_s32 shm_size;
     rk_s32 ret = rk_nok;
 
@@ -730,7 +736,6 @@ rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
     }
 
     *shm = NULL;
-    entry_offset = kmpp_shm_entry_offset();
     shm_size = entry_offset + grp->size;
     impl = kmpp_malloc_share(shm_size);
     if (!impl) {
@@ -750,16 +755,14 @@ rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
     impl->grp = grp;
     impl->priv = NULL;
     impl->kbase = impl;
-    impl->kaddr = (void *)(impl + 1);
     impl->ubase = impl->vm_shm->uaddr;
-    impl->uaddr = impl->ubase + entry_offset;
 
-    impl->ioc.kobj_uaddr = impl->uaddr;
+    impl->ioc.kobj_uaddr = impl->ubase;
     impl->ioc.kobj_kaddr = (__u64)impl;
 
     shm_dbg_detail("shm %px kaddr [%px:%px] uaddr [%#lx:%#llx]\n",
-                   impl, impl->kbase, impl->kaddr,
-                   impl->ubase, impl->uaddr);
+                   impl, impl->kbase, impl->kbase + kmpp_shm_entry_offset(),
+                   impl->ubase, impl->ubase + kmpp_shm_entry_offset());
 
     osal_spin_lock(grp->lock);
     osal_list_add_tail(&impl->list_grp, &grp->list_shm);
@@ -787,8 +790,8 @@ rk_s32 kmpp_shm_put(KmppShm shm)
     osal_spin_unlock(root->lock);
 
     shm_dbg_detail("shm %px kaddr [%px:%px] uaddr [%#lx:%#llx]\n",
-                   impl, impl->kbase, impl->kaddr,
-                   impl->ubase, impl->uaddr);
+                   impl, impl->kbase, impl->kbase + kmpp_shm_entry_offset(),
+                   impl->ubase, impl->ubase + kmpp_shm_entry_offset());
 
     /* NOTE: when fd is closing do on munmap shm memory again */
     ret = osal_fs_vm_munmap(impl->vm_shm);
@@ -804,6 +807,21 @@ rk_s32 kmpp_shm_put(KmppShm shm)
     return rk_ok;
 }
 
+KmppShmPtr *kmpp_shm_to_shmptr(KmppShm shm)
+{
+    KmppShmImpl *impl = (KmppShmImpl *)shm;
+
+    shm_dbg_detail("shm %px to shmptr [u:k] %#lx:%#llx\n",
+                   impl, impl->ioc.kobj_uaddr, impl->ioc.kobj_kaddr);
+
+    return impl ? (KmppShmPtr *)&impl->ioc : NULL;
+}
+
+KmppShm kmpp_shm_from_shmptr(KmppShmPtr *sptr)
+{
+    return sptr ? (KmppShm)sptr->kptr : NULL;
+}
+
 void *kmpp_shm_get_kbase(KmppShm shm)
 {
     KmppShmImpl *impl = (KmppShmImpl *)shm;
@@ -815,7 +833,7 @@ void *kmpp_shm_get_kaddr(KmppShm shm)
 {
     KmppShmImpl *impl = (KmppShmImpl *)shm;
 
-    return impl ? impl->kaddr : NULL;
+    return impl && impl->kbase ? impl->kbase + kmpp_shm_entry_offset() : NULL;
 }
 
 rk_ul kmpp_shm_get_ubase(KmppShm shm)
@@ -829,7 +847,7 @@ rk_u64 kmpp_shm_get_uaddr(KmppShm shm)
 {
     KmppShmImpl *impl = (KmppShmImpl *)shm;
 
-    return impl ? impl->uaddr : 0;
+    return impl && impl->kbase ? impl->ubase + kmpp_shm_entry_offset() : 0;
 }
 
 rk_s32 kmpp_shm_set_priv(KmppShm shm, void *priv)
@@ -867,6 +885,9 @@ rk_s32 kmpp_shm_get_entry_size(KmppShm shm)
 
 EXPORT_SYMBOL(kmpp_shm_get);
 EXPORT_SYMBOL(kmpp_shm_put);
+
+EXPORT_SYMBOL(kmpp_shm_to_shmptr);
+EXPORT_SYMBOL(kmpp_shm_from_shmptr);
 
 EXPORT_SYMBOL(kmpp_shm_get_kbase);
 EXPORT_SYMBOL(kmpp_shm_get_kaddr);

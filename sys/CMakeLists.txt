@@ -6,6 +6,7 @@ INCLUDE_DIRECTORIES(${KMPP_TOP}/sys/inc)
 
 SET(KMPP_SYS_SRC
     objs/kmpp_venc_objs.c
+    objs/kmpp_meta.c
     kmpp_sys.c
     kmpp_trie.c
     kmpp_dq.c

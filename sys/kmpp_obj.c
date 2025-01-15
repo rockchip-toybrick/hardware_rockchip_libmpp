@@ -36,10 +36,11 @@
 #define ENTRY_TO_u32_PTR(tbl, entry)    ((rk_u32 *)ENTRY_TO_PTR(tbl, entry))
 #define ENTRY_TO_s64_PTR(tbl, entry)    ((rk_s64 *)ENTRY_TO_PTR(tbl, entry))
 #define ENTRY_TO_u64_PTR(tbl, entry)    ((rk_u64 *)ENTRY_TO_PTR(tbl, entry))
-#define ENTRY_TO_ptr_PTR(tbl, entry)    ((void **)ENTRY_TO_PTR(tbl, entry))
-#define ENTRY_TO_fp_PTR(tbl, entry)     ((void **)ENTRY_TO_PTR(tbl, entry))
 #define ENTRY_TO_st_PTR(tbl, entry)     ((void *)ENTRY_TO_PTR(tbl, entry))
 #define ENTRY_TO_shm_PTR(tbl, entry)    ((void *)ENTRY_TO_PTR(tbl, entry))
+#define ENTRY_TO_kobj_PTR(tbl, entry)   ((KmppObj *)ENTRY_TO_PTR(tbl, entry))
+#define ENTRY_TO_kptr_PTR(tbl, entry)   ((void **)ENTRY_TO_PTR(tbl, entry))
+#define ENTRY_TO_kfp_PTR(tbl, entry)    ((void **)ENTRY_TO_PTR(tbl, entry))
 
 #define ENTRY_TO_FLAG_PTR(tbl, entry)   ((rk_u16 *)((rk_u8 *)entry + tbl->flag_offset))
 
@@ -59,7 +60,8 @@ typedef struct KmppObjDefImpl_t {
     rk_s32 buf_size;
     KmppTrie trie;
     rk_s32 shared;
-    KmppObjPreset preset;
+    KmppObjInit init;
+    KmppObjDeinit deinit;
     KmppObjDump dump;
     const rk_u8 *name_check;            /* for object name address check */
     rk_u8 *name;
@@ -86,21 +88,25 @@ static rk_s32 kmpp_objdef_count = 0;
 const rk_u8 *strof_entry_type(EntryType type)
 {
     static const rk_u8 *entry_type_names[] = {
-        "rk_s32",
-        "rk_u32",
-        "rk_s64",
-        "rk_u64",
-        "void *",
-        "func_ptr",
-        "struct",
-        "share_mem"
+        [ENTRY_TYPE_s32]    = "s32",
+        [ENTRY_TYPE_u32]    = "u32",
+        [ENTRY_TYPE_s64]    = "s64",
+        [ENTRY_TYPE_u64]    = "u64",
+        [ENTRY_TYPE_st]     = "struct",
+        [ENTRY_TYPE_shm]    = "shm_ptr",
+        [ENTRY_TYPE_kobj]   = "kobj",
+        [ENTRY_TYPE_kptr]   = "kptr",
+        [ENTRY_TYPE_kfp]    = "kfunc_ptr",
+        [ENTRY_TYPE_uobj]   = "uobj",
+        [ENTRY_TYPE_uptr]   = "uptr",
+        [ENTRY_TYPE_ufp]    = "ufunc_ptr",
     };
     static const rk_u8 *invalid_type_str = "invalid";
 
-    if (type < 0 || type > ENTRY_TYPE_BUTT)
+    if (type & (~ENTRY_TYPE_BUTT))
         return invalid_type_str;
 
-    return entry_type_names[type];
+    return entry_type_names[type] ? entry_type_names[type] : invalid_type_str;
 }
 
 #define KMPP_OBJ_ACCESS_IMPL(type, base_type, log_str) \
@@ -109,12 +115,12 @@ const rk_u8 *strof_entry_type(EntryType type)
         base_type *dst = ENTRY_TO_##type##_PTR(tbl, entry); \
         base_type old = dst[0]; \
         dst[0] = val; \
-        if (!tbl->flag_type) { \
+        if (!tbl->flag_value) { \
             obj_dbg_set("%px + %x set " #type " change " #log_str " -> " #log_str "\n", entry, tbl->data_offset, old, val); \
         } else { \
             if (old != val) { \
                 obj_dbg_set("%px + %x set " #type " update " #log_str " -> " #log_str " flag %d|%x\n", \
-                                entry, tbl->data_offset, old, val, tbl->flag_offset, tbl->flag_value); \
+                            entry, tbl->data_offset, old, val, tbl->flag_offset, tbl->flag_value); \
                 ENTRY_TO_FLAG_PTR(tbl, entry)[0] |= tbl->flag_value; \
             } else { \
                 obj_dbg_set("%px + %x set " #type " keep   " #log_str "\n", entry, tbl->data_offset, old); \
@@ -137,14 +143,15 @@ KMPP_OBJ_ACCESS_IMPL(s32, rk_s32, %d)
 KMPP_OBJ_ACCESS_IMPL(u32, rk_u32, %u)
 KMPP_OBJ_ACCESS_IMPL(s64, rk_s64, %llx)
 KMPP_OBJ_ACCESS_IMPL(u64, rk_u64, %llx)
-KMPP_OBJ_ACCESS_IMPL(ptr, void *, %px)
-KMPP_OBJ_ACCESS_IMPL(fp, void *, %px)
+KMPP_OBJ_ACCESS_IMPL(kobj, KmppObj, %px)
+KMPP_OBJ_ACCESS_IMPL(kptr, void *, %px)
+KMPP_OBJ_ACCESS_IMPL(kfp, void *, %px)
 
 #define KMPP_OBJ_ACCESS_IMPL_ST(type, base_type) \
     rk_s32 kmpp_obj_impl_set_##type(KmppLocTbl *tbl, void *entry, base_type *val) \
     { \
         rk_u8 *dst = ENTRY_TO_##type##_PTR(tbl, entry); \
-        if (!tbl->flag_type) { \
+        if (!tbl->flag_value) { \
             /* simple copy */ \
             obj_dbg_set("%px + %x set " #type " change %px -> %px\n", \
                         entry, tbl->data_offset, dst, val); \
@@ -178,79 +185,6 @@ KMPP_OBJ_ACCESS_IMPL(fp, void *, %px)
 KMPP_OBJ_ACCESS_IMPL_ST(st, void)
 KMPP_OBJ_ACCESS_IMPL_ST(shm, KmppShmPtr)
 
-static void show_entry_tbl_err(KmppLocTbl *tbl, EntryType type, const rk_u8 *func, const rk_u8 *name)
-{
-    kmpp_loge("%s entry %s expect %s input NOT %s\n", func, name,
-              strof_entry_type(tbl->data_type), strof_entry_type(type));
-}
-
-rk_s32 check_entry_tbl(KmppLocTbl *tbl, const rk_u8 *name, EntryType type,
-                     const rk_u8 *func)
-{
-    EntryType entry_type;
-    rk_s32 entry_size;
-    rk_s32 ret;
-
-    if (!tbl) {
-        kmpp_loge("%s: entry %s is invalid\n", func, name);
-        return rk_nok;
-    }
-
-    entry_type = tbl->data_type;
-    entry_size = tbl->data_size;
-    ret = rk_ok;
-
-    switch (type) {
-    case ENTRY_TYPE_st : {
-        if (entry_type != type) {
-            show_entry_tbl_err(tbl, type, func, name);
-            ret = rk_nok;
-        }
-        if (entry_size <= 0) {
-            kmpp_loge("%s: entry %s found invalid size %d\n", func, name, entry_size);
-            ret = rk_nok;
-        }
-    } break;
-    case ENTRY_TYPE_shm : {
-        if (entry_type != type) {
-            show_entry_tbl_err(tbl, type, func, name);
-            ret = rk_nok;
-        }
-        if (entry_size != sizeof(KmppShmPtr)) {
-            kmpp_loge("%s: entry %s found invalid size %d\n", func, name, entry_size);
-            ret = rk_nok;
-        }
-    } break;
-    case ENTRY_TYPE_ptr :
-    case ENTRY_TYPE_fp : {
-        if (entry_type != type) {
-            show_entry_tbl_err(tbl, type, func, name);
-            ret = rk_nok;
-        }
-    } break;
-    case ENTRY_TYPE_s32 :
-    case ENTRY_TYPE_u32 : {
-        if (entry_size != sizeof(rk_s32)) {
-            show_entry_tbl_err(tbl, type, func, name);
-            ret = rk_nok;
-        }
-    } break;
-    case ENTRY_TYPE_s64 :
-    case ENTRY_TYPE_u64 : {
-        if (entry_size != sizeof(rk_s64)) {
-            show_entry_tbl_err(tbl, type, func, name);
-            ret = rk_nok;
-        }
-    } break;
-    default : {
-        kmpp_loge("%s: entry %s found invalid type %d\n", func, name, type);
-        ret = rk_nok;
-    } break;
-    }
-
-    return ret;
-}
-
 rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
 {
     KmppObjDefImpl *impl = NULL;
@@ -277,8 +211,6 @@ rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
     osal_strncpy(impl->name, name, len);
 
     kmpp_trie_init(&impl->trie, name);
-    /* record object impl size */
-    kmpp_trie_add_info(impl->trie, "__size", &size, sizeof(size));
 
     OSAL_INIT_LIST_HEAD(&impl->list);
     osal_list_add_tail(&impl->list, &kmpp_objdef_list);
@@ -330,7 +262,7 @@ rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name)
         if (osal_strcmp(impl->name, name) == 0) {
             rk_s32 old = KMPP_FETCH_ADD(&impl->ref_cnt, 1);
             obj_dbg_flow("kmpp_objdef_find %s - %px %d->%d\n",
-                        impl->name, impl, old, impl->ref_cnt);
+                         impl->name, impl, old, impl->ref_cnt);
             *def = impl;
             return rk_ok;
         }
@@ -347,8 +279,18 @@ rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl)
     KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
     rk_s32 ret = rk_nok;
 
-    if (impl->trie)
-        ret = kmpp_trie_add_info(impl->trie, name, tbl, sizeof(*tbl));
+    if (impl->trie) {
+        KmppTrie trie = impl->trie;
+
+        if (name) {
+            ret = kmpp_trie_add_info(trie, name, tbl, tbl ? sizeof(*tbl) : 0);
+        } else {
+            /* record object impl size */
+            ret = kmpp_trie_add_info(trie, "__size", &impl->entry_size, sizeof(rk_s32));
+            ret |= kmpp_trie_add_info(trie, NULL, NULL, 0);
+        }
+
+    }
 
     if (ret)
         kmpp_loge_f("class %s add entry %s failed ret %d\n",
@@ -357,6 +299,45 @@ rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl)
     return ret;
 }
 EXPORT_SYMBOL(kmpp_objdef_add_entry);
+
+rk_s32 kmpp_objdef_add_init(KmppObjDef def, KmppObjInit init)
+{
+    if (def) {
+        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+
+        impl->init = init;
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(kmpp_objdef_add_init);
+
+rk_s32 kmpp_objdef_add_deinit(KmppObjDef def, KmppObjDeinit deinit)
+{
+    if (def) {
+        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+
+        impl->deinit = deinit;
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(kmpp_objdef_add_deinit);
+
+rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump)
+{
+    if (def) {
+        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+
+        impl->dump = dump;
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(kmpp_objdef_add_dump);
 
 rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl **tbl)
 {
@@ -380,31 +361,40 @@ rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl **tbl
 }
 EXPORT_SYMBOL(kmpp_objdef_get_entry);
 
-rk_s32 kmpp_objdef_add_preset(KmppObjDef def, KmppObjPreset preset)
+rk_s32 kmpp_objdef_get_index(KmppObjDef def, const rk_u8 *name)
 {
-    if (def) {
-        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+    KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+    rk_s32 index = -1;
 
-        impl->preset = preset;
-        return rk_ok;
+    if (impl->trie) {
+        KmppTrieInfo *info = kmpp_trie_get_info(impl->trie, name);
+
+        index = info ? info->index : -1;
     }
 
-    return rk_nok;
+    return index;
 }
-EXPORT_SYMBOL(kmpp_objdef_add_preset);
+EXPORT_SYMBOL(kmpp_objdef_get_index);
 
-rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump)
+rk_s32 kmpp_objdef_get_offset(KmppObjDef def, const rk_u8 *name)
 {
-    if (def) {
-        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+    KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+    rk_s32 offset = -1;
 
-        impl->dump = dump;
-        return rk_ok;
+    if (impl->trie) {
+        KmppTrieInfo *info = kmpp_trie_get_info(impl->trie, name);
+
+        if (info) {
+            KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
+
+            if (tbl)
+                offset = tbl->data_offset;
+        }
     }
 
-    return rk_nok;
+    return offset;
 }
-EXPORT_SYMBOL(kmpp_objdef_add_dump);
+EXPORT_SYMBOL(kmpp_objdef_get_offset);
 
 rk_s32 kmpp_objdef_dump(KmppObjDef def)
 {
@@ -421,12 +411,23 @@ rk_s32 kmpp_objdef_dump(KmppObjDef def)
         info = kmpp_trie_get_info_first(trie);
         while (info) {
             name = kmpp_trie_info_name(info);
-            if (!osal_strstr(name, "__")) {
-                KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
+            if (!kmpp_trie_info_name_is_self(name)) {
                 rk_s32 idx = i++;
 
-                kmpp_logi("%-2d - %-16s offset %4d size %d\n", idx,
-                          name, tbl->data_offset, tbl->data_size);
+                if (info->ctx_len) {
+                    KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
+
+                    kmpp_logi("%-2d - %-16s offset %4d size %d\n", idx,
+                              name, tbl->data_offset, tbl->data_size);
+                } else {
+                    /* meta key */
+                    if (idx != info->index)
+                        kmpp_logi("%-2d - key - %c%c%c%c - index %d mismatch\n",
+                                  idx, name[3], name[2], name[1], name[0], info->index);
+                    else
+                        kmpp_logi("%-2d - key - %c%c%c%c\n",
+                                  idx, name[3], name[2], name[1], name[0]);
+                }
             }
             info = kmpp_trie_get_info_next(trie, info);
         }
@@ -434,7 +435,7 @@ rk_s32 kmpp_objdef_dump(KmppObjDef def)
         info = kmpp_trie_get_info_first(trie);
         while (info) {
             name = kmpp_trie_info_name(info);
-            if (osal_strstr(name, "__")) {
+            if (kmpp_trie_info_name_is_self(name)) {
                 void *p = kmpp_trie_info_ctx(info);
                 rk_s32 idx = i++;
 
@@ -579,9 +580,8 @@ rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs)
 
     /* Add objdef count */
     kmpp_trie_add_info(trie, "__count", &share_count, sizeof(share_count));
-    /* Add KmppShmImpl size for offset */
-    size = kmpp_shm_entry_offset();
-    kmpp_trie_add_info(trie, "__offset", &size, sizeof(size));
+    /* Add KmppShm private info and shm header size info to trie */
+    kmpp_shm_add_trie_info(trie);
     /* End trie define and compress trie */
     kmpp_trie_add_info(trie, NULL, NULL, 0);
 
@@ -669,7 +669,7 @@ rk_s32 kmpp_objdef_put_shared(KmppObjDefSet *defs)
 }
 EXPORT_SYMBOL(kmpp_objdef_put_shared);
 
-rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def)
+rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def, const rk_u8 *caller)
 {
     KmppObjDefImpl *def_impl;
     KmppObjImpl *impl;
@@ -694,8 +694,8 @@ rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def)
     impl->shm = NULL;
     impl->entry = (void *)(impl + 1);
 
-    if (def_impl->preset)
-        def_impl->preset(impl->entry);
+    if (def_impl->init)
+        def_impl->init(impl->entry, NULL, caller);
 
     *obj = impl;
 
@@ -703,7 +703,7 @@ rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def)
 }
 EXPORT_SYMBOL(kmpp_obj_get);
 
-rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size)
+rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size, const rk_u8 *caller)
 {
     KmppObjImpl *impl;
     KmppObjDefImpl *def_impl;
@@ -726,8 +726,8 @@ rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size)
     impl->shm = NULL;
     impl->entry = (void *)(impl + 1);
 
-    if (def_impl->preset)
-        def_impl->preset(impl->entry);
+    if (def_impl->init)
+        def_impl->init(impl->entry, NULL, caller);
 
     *obj = impl;
 
@@ -735,20 +735,22 @@ rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size)
 }
 EXPORT_SYMBOL(kmpp_obj_assign);
 
-rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, KmppShm shm)
+rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, osal_fs_dev *file, const rk_u8 *caller)
 {
     KmppObjDefImpl *impl_def = (KmppObjDefImpl *)def;
     KmppObjImpl *impl = NULL;
+    KmppShm shm = NULL;
 
-    if (!obj || !def || !shm) {
-        kmpp_loge_f("invalid param obj %p def %p shm %px\n", obj, def, shm);
+    if (!obj || !def || !file) {
+        kmpp_loge_f("invalid param obj %p def %p file %px\n", obj, def, file);
         return rk_nok;
     }
 
     *obj = NULL;
-    if (impl_def->entry_size != kmpp_shm_get_entry_size(shm)) {
-        kmpp_loge_f("mismatch entry size objdef %d shm %d\n",
-                    impl_def->entry_size, kmpp_shm_get_entry_size(shm));
+
+    kmpp_shm_get(&shm, file, impl_def->name);
+    if (!shm) {
+        kmpp_loge_f("kmpp_shm_get %s failed\n", impl_def->name);
         return rk_nok;
     }
 
@@ -765,10 +767,13 @@ rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, KmppShm shm)
     impl->shm = shm;
     impl->entry = kmpp_shm_get_kaddr(shm);
 
+    obj_dbg_share("obj %s get share %px [u:k] %#llx:%#llx\n", impl_def->name,
+                  shm, kmpp_shm_get_uaddr(shm), kmpp_shm_get_kaddr(shm));
+
     kmpp_shm_set_priv(shm, impl);
 
-    if (impl_def->preset)
-        impl_def->preset(impl->entry);
+    if (impl_def->init)
+        impl_def->init(impl->entry, file, caller);
 
     *obj = impl;
 
@@ -776,10 +781,17 @@ rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, KmppShm shm)
 }
 EXPORT_SYMBOL(kmpp_obj_get_share);
 
-rk_s32 kmpp_obj_put(KmppObj obj)
+rk_s32 kmpp_obj_put(KmppObj obj, const rk_u8 *caller)
 {
     if (obj) {
         KmppObjImpl *impl = (KmppObjImpl *)obj;
+        KmppObjDefImpl *def = impl->def;
+
+        /* handle object implement reference here */
+        if (def->deinit) {
+            if (def->deinit(impl->entry, caller))
+                return rk_ok;
+        }
 
         if (impl->shm) {
             kmpp_shm_set_priv(impl->shm, NULL);
@@ -833,6 +845,57 @@ KmppShm kmpp_obj_to_shm(KmppObj obj)
 }
 EXPORT_SYMBOL(kmpp_obj_to_shm);
 
+rk_s32 kmpp_obj_to_shmptr(KmppObj obj, KmppShmPtr *sptr)
+{
+    KmppObjImpl *impl = (KmppObjImpl *)obj;
+
+    if (!sptr)
+        return rk_nok;
+
+    if (!impl) {
+        sptr->uaddr = 0;
+        sptr->kaddr = 0;
+        return rk_ok;
+    }
+
+    if (impl->shm) {
+        KmppShmPtr *p = kmpp_shm_to_shmptr(impl->shm);
+
+        sptr->uaddr = p->uaddr;
+        sptr->kaddr = p->kaddr;
+    } else {
+        sptr->uaddr = 0;
+        sptr->kaddr = (rk_u64)impl;
+    }
+
+    return rk_ok;
+}
+EXPORT_SYMBOL(kmpp_obj_to_shmptr);
+
+rk_s32 kmpp_obj_from_shmptr(KmppObj *obj, KmppShmPtr *sptr)
+{
+    KmppObj ret;
+
+    if (!obj || !sptr || !sptr->kptr) {
+        kmpp_loge("invalid input obj %px sptr %px shm %px\n",
+                  obj, sptr, sptr ? sptr->kptr : NULL);
+        return rk_nok;
+    }
+
+    if (sptr->uaddr) {
+        KmppShm shm = sptr->kptr;
+
+        ret = kmpp_shm_get_priv(shm);
+    } else {
+        ret = (KmppObj)(sptr->kptr);
+    }
+
+    *obj = ret;
+
+    return ret ? rk_ok : rk_nok;
+}
+EXPORT_SYMBOL(kmpp_obj_from_shmptr);
+
 #define KMPP_OBJ_ACCESS(type, base_type) \
     rk_s32 kmpp_obj_set_##type(KmppObj obj, const rk_u8 *name, base_type val) \
     { \
@@ -873,52 +936,48 @@ KMPP_OBJ_ACCESS(s32, rk_s32)
 KMPP_OBJ_ACCESS(u32, rk_u32)
 KMPP_OBJ_ACCESS(s64, rk_s64)
 KMPP_OBJ_ACCESS(u64, rk_u64)
-KMPP_OBJ_ACCESS(ptr, void *)
-KMPP_OBJ_ACCESS(fp, void *)
+KMPP_OBJ_ACCESS(kobj, KmppObj)
+KMPP_OBJ_ACCESS(kptr, void *)
+KMPP_OBJ_ACCESS(kfp, void *)
 
-rk_s32 kmpp_obj_set_st(KmppObj obj, const rk_u8 *name, void *val)
-{
-    KmppObjImpl *impl = (KmppObjImpl *)obj;
-    rk_s32 ret = rk_nok;
+#define KMPP_OBJ_ACCESS_ST(type, base_type) \
+    rk_s32 kmpp_obj_set_##type(KmppObj obj, const rk_u8 *name, base_type *val) \
+    { \
+        KmppObjImpl *impl = (KmppObjImpl *)obj; \
+        rk_s32 ret = rk_nok; \
+        if (impl->trie) { \
+            KmppTrieInfo *info = kmpp_trie_get_info(impl->trie, name); \
+            if (info) { \
+                KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info); \
+                ret = kmpp_obj_impl_set_##type(tbl, impl->entry, val); \
+            } \
+        } \
+        if (ret) \
+            kmpp_loge("obj %s set %s " #type " failed ret %d\n", \
+                    impl ? impl->def ? impl->def->name : NULL : NULL, name, ret); \
+        return rk_nok; \
+    } \
+    EXPORT_SYMBOL(kmpp_obj_set_##type); \
+    rk_s32 kmpp_obj_get_##type(KmppObj obj, const rk_u8 *name, base_type *val) \
+    { \
+        KmppObjImpl *impl = (KmppObjImpl *)obj; \
+        rk_s32 ret = rk_nok; \
+        if (impl->trie) { \
+            KmppTrieInfo *info = kmpp_trie_get_info(impl->trie, name); \
+            if (info) { \
+                KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info); \
+                ret = kmpp_obj_impl_get_##type(tbl, impl->entry, val); \
+            } \
+        } \
+        if (ret) \
+            kmpp_loge("obj %s get %s " #type " failed ret %d\n", \
+                    impl ? impl->def ? impl->def->name : NULL : NULL, name, ret); \
+        return rk_nok; \
+    } \
+    EXPORT_SYMBOL(kmpp_obj_get_##type);
 
-    if (impl->trie) {
-        KmppTrieInfo *info = kmpp_trie_get_info(impl->trie, name);
-
-        if (info) {
-            KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
-            ret = kmpp_obj_impl_set_st(tbl, impl->entry, val);
-        }
-    }
-
-    if (ret)
-        kmpp_loge("obj %s set %s st failed ret %d\n",
-                impl ? impl->def ? impl->def->name : NULL : NULL, name, ret);
-
-    return rk_nok;
-}
-EXPORT_SYMBOL(kmpp_obj_set_st);
-
-rk_s32 kmpp_obj_get_st(KmppObj obj, const rk_u8 *name, void *val)
-{
-    KmppObjImpl *impl = (KmppObjImpl *)obj;
-    rk_s32 ret = rk_nok;
-
-    if (impl->trie) {
-        KmppTrieInfo *info = kmpp_trie_get_info(impl->trie, name);
-
-        if (info) {
-            KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
-            ret = kmpp_obj_impl_get_st(tbl, impl->entry, val);
-        }
-    }
-
-    if (ret)
-        kmpp_loge("obj %s get %s st failed ret %d\n",
-                impl ? impl->def ? impl->def->name : NULL : NULL, name, ret);
-
-    return rk_nok;
-}
-EXPORT_SYMBOL(kmpp_obj_get_st);
+KMPP_OBJ_ACCESS_ST(st, void)
+KMPP_OBJ_ACCESS_ST(shm, KmppShmPtr)
 
 #define KMPP_OBJ_TBL_ACCESS(type, base_type) \
     rk_s32 kmpp_obj_tbl_set_##type(KmppObj obj, KmppLocTbl *tbl, base_type val) \
@@ -950,8 +1009,9 @@ KMPP_OBJ_TBL_ACCESS(s32, rk_s32)
 KMPP_OBJ_TBL_ACCESS(u32, rk_u32)
 KMPP_OBJ_TBL_ACCESS(s64, rk_s64)
 KMPP_OBJ_TBL_ACCESS(u64, rk_u64)
-KMPP_OBJ_TBL_ACCESS(ptr, void *)
-KMPP_OBJ_TBL_ACCESS(fp, void *)
+KMPP_OBJ_TBL_ACCESS(kobj, KmppObj)
+KMPP_OBJ_TBL_ACCESS(kptr, void *)
+KMPP_OBJ_TBL_ACCESS(kfp, void *)
 
 #define KMPP_OBJ_TBL_ACCESS_ST(type, base_type) \
     rk_s32 kmpp_obj_tbl_set_##type(KmppObj obj, KmppLocTbl *tbl, base_type *val) \
@@ -999,7 +1059,7 @@ rk_s32 kmpp_obj_run(KmppObj obj, const rk_u8 *name)
         if (info) {
             KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
 
-            ret = kmpp_obj_impl_get_fp(tbl, impl->entry, &val);
+            ret = kmpp_obj_impl_get_kfp(tbl, impl->entry, &val);
         }
 
         if (val)

@@ -8,7 +8,7 @@
 
 #include "kmpi_defs.h"
 
-#define ENTRY_TABLE_KMPP_FRAME(ENTRY, prefix) \
+#define KMPP_FRAME_ENTRY_TABLE(ENTRY, prefix) \
     ENTRY(prefix, u32, rk_u32, width) \
     ENTRY(prefix, u32, rk_u32, height) \
     ENTRY(prefix, u32, rk_u32, hor_stride) \
@@ -19,9 +19,13 @@
     ENTRY(prefix, u32, rk_u32, fmt) \
     ENTRY(prefix, s32, rk_s32, fd)
 
+#define KMPP_FRAME_STRUCT_TABLE(ENTRY, prefix) \
+    ENTRY(prefix, shm, KmppShmPtr, meta)
+
 #define KMPP_OBJ_NAME           kmpp_frame
 #define KMPP_OBJ_INTF_TYPE      KmppFrame
-#define KMPP_OBJ_ENTRY_TABLE    ENTRY_TABLE_KMPP_FRAME
+#define KMPP_OBJ_ENTRY_TABLE    KMPP_FRAME_ENTRY_TABLE
+#define KMPP_OBJ_STRUCT_TABLE   KMPP_FRAME_STRUCT_TABLE
 #include "kmpp_obj_func.h"
 
 #define kmpp_frame_dump_f(frame) kmpp_frame_dump(frame, __FUNCTION__)

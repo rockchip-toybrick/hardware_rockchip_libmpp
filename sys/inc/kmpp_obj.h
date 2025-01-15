@@ -6,6 +6,8 @@
 #ifndef __KMPP_OBJ_H__
 #define __KMPP_OBJ_H__
 
+#include "kmpp_cls.h"
+
 #include "kmpp_sys_defs.h"
 #include "kmpp_trie.h"
 
@@ -37,8 +39,7 @@ typedef union KmppLocTbl_u {
     struct {
         rk_u16          data_offset;
         rk_u16          data_size       : 12;
-        EntryType       data_type       : 3;
-        rk_u16          flag_type       : 1;
+        EntryType       data_type       : 4;
         rk_u16          flag_offset;
         rk_u16          flag_value;
     };
@@ -51,17 +52,31 @@ typedef struct KmppObjDefSet_t {
     KmppObjDef          defs[0];
 } KmppObjDefSet;
 
-typedef void (*KmppObjPreset)(void *obj);
+typedef rk_s32 (*KmppObjInit)(void *entry, osal_fs_dev *file, const rk_u8 *caller);
+typedef rk_s32 (*KmppObjDeinit)(void *entry, const rk_u8 *caller);
 typedef rk_s32 (*KmppObjDump)(void *entry);
 
 rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name);
 rk_s32 kmpp_objdef_put(KmppObjDef def);
 rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name);
 
+/*
+ * object define info register function
+ * if KmppLocTbl tbl is valid, the entry offset / size will be added to the trie
+ * if KmppLocTbl tbl is NULL, the entry is a array object and name is just for index
+ */
 rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl);
-rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl **tbl);
-rk_s32 kmpp_objdef_add_preset(KmppObjDef def, KmppObjPreset preset);
+/* object init function register default object is all zero */
+rk_s32 kmpp_objdef_add_init(KmppObjDef def, KmppObjInit init);
+/* object deinit function register */
+rk_s32 kmpp_objdef_add_deinit(KmppObjDef def, KmppObjDeinit deinit);
+/* object dump function register */
 rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump);
+
+/* NOTE: get entry / index / offset by name can only used for non __xxxx elements */
+rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl **tbl);
+rk_s32 kmpp_objdef_get_index(KmppObjDef def, const rk_u8 *name);
+rk_s32 kmpp_objdef_get_offset(KmppObjDef def, const rk_u8 *name);
 
 rk_s32 kmpp_objdef_dump(KmppObjDef def);
 void kmpp_objdef_dump_all(void);
@@ -79,20 +94,28 @@ rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs);
 /* destroy an objdef set */
 rk_s32 kmpp_objdef_put_shared(KmppObjDefSet *defs);
 
+#define kmpp_obj_get_f(obj, def)                kmpp_obj_get(obj, def, __FUNCTION__)
+#define kmpp_obj_assign_f(obj, def, buf, size)  kmpp_obj_assign(obj, def, buf, size, __FUNCTION__)
+#define kmpp_obj_get_share_f(obj, def, file)    kmpp_obj_get_share(obj, def, file, __FUNCTION__)
+#define kmpp_obj_put_f(obj)                     kmpp_obj_put(obj, __FUNCTION__)
+
 /* normal kernel object allocator both object head and body */
-rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def);
+rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def, const rk_u8 *caller);
 /* use external buffer for both object head and body */
-rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size);
+rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size, const rk_u8 *caller);
 /* import external shared buffer for object body */
-rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, KmppShm shm);
-rk_s32 kmpp_obj_put(KmppObj obj);
+rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, osal_fs_dev *file, const rk_u8 *caller);
+rk_s32 kmpp_obj_put(KmppObj obj, const rk_u8 *caller);
 rk_s32 kmpp_obj_check(KmppObj obj, const rk_u8 *caller);
 
 /* object implement element entry access */
 void *kmpp_obj_to_entry(KmppObj obj);
 /* object implement element shm access */
 KmppShm kmpp_obj_to_shm(KmppObj obj);
+rk_s32 kmpp_obj_to_shmptr(KmppObj obj, KmppShmPtr *sptr);
+rk_s32 kmpp_obj_from_shmptr(KmppObj *obj, KmppShmPtr *sptr);
 
+/* value access function */
 rk_s32 kmpp_obj_set_s32(KmppObj obj, const rk_u8 *name, rk_s32 val);
 rk_s32 kmpp_obj_get_s32(KmppObj obj, const rk_u8 *name, rk_s32 *val);
 rk_s32 kmpp_obj_set_u32(KmppObj obj, const rk_u8 *name, rk_u32 val);
@@ -101,15 +124,8 @@ rk_s32 kmpp_obj_set_s64(KmppObj obj, const rk_u8 *name, rk_s64 val);
 rk_s32 kmpp_obj_get_s64(KmppObj obj, const rk_u8 *name, rk_s64 *val);
 rk_s32 kmpp_obj_set_u64(KmppObj obj, const rk_u8 *name, rk_u64 val);
 rk_s32 kmpp_obj_get_u64(KmppObj obj, const rk_u8 *name, rk_u64 *val);
-rk_s32 kmpp_obj_set_ptr(KmppObj obj, const rk_u8 *name, void *val);
-rk_s32 kmpp_obj_get_ptr(KmppObj obj, const rk_u8 *name, void **val);
-rk_s32 kmpp_obj_set_fp(KmppObj obj, const rk_u8 *name, void *val);
-rk_s32 kmpp_obj_get_fp(KmppObj obj, const rk_u8 *name, void **val);
 rk_s32 kmpp_obj_set_st(KmppObj obj, const rk_u8 *name, void *val);
 rk_s32 kmpp_obj_get_st(KmppObj obj, const rk_u8 *name, void *val);
-rk_s32 kmpp_obj_set_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
-rk_s32 kmpp_obj_get_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
-
 rk_s32 kmpp_obj_tbl_set_s32(KmppObj obj, KmppLocTbl *tbl, rk_s32 val);
 rk_s32 kmpp_obj_tbl_get_s32(KmppObj obj, KmppLocTbl *tbl, rk_s32 *val);
 rk_s32 kmpp_obj_tbl_set_u32(KmppObj obj, KmppLocTbl *tbl, rk_u32 val);
@@ -118,12 +134,26 @@ rk_s32 kmpp_obj_tbl_set_s64(KmppObj obj, KmppLocTbl *tbl, rk_s64 val);
 rk_s32 kmpp_obj_tbl_get_s64(KmppObj obj, KmppLocTbl *tbl, rk_s64 *val);
 rk_s32 kmpp_obj_tbl_set_u64(KmppObj obj, KmppLocTbl *tbl, rk_u64 val);
 rk_s32 kmpp_obj_tbl_get_u64(KmppObj obj, KmppLocTbl *tbl, rk_u64 *val);
-rk_s32 kmpp_obj_tbl_set_ptr(KmppObj obj, KmppLocTbl *tbl, void *val);
-rk_s32 kmpp_obj_tbl_get_ptr(KmppObj obj, KmppLocTbl *tbl, void **val);
-rk_s32 kmpp_obj_tbl_set_fp(KmppObj obj, KmppLocTbl *tbl, void *val);
-rk_s32 kmpp_obj_tbl_get_fp(KmppObj obj, KmppLocTbl *tbl, void **val);
 rk_s32 kmpp_obj_tbl_set_st(KmppObj obj, KmppLocTbl *tbl, void *val);
 rk_s32 kmpp_obj_tbl_get_st(KmppObj obj, KmppLocTbl *tbl, void *val);
+
+/* kernel access only function */
+rk_s32 kmpp_obj_set_kobj(KmppObj obj, const rk_u8 *name, KmppObj val);
+rk_s32 kmpp_obj_get_kobj(KmppObj obj, const rk_u8 *name, KmppObj *val);
+rk_s32 kmpp_obj_set_kptr(KmppObj obj, const rk_u8 *name, void *val);
+rk_s32 kmpp_obj_get_kptr(KmppObj obj, const rk_u8 *name, void **val);
+rk_s32 kmpp_obj_set_kfp(KmppObj obj, const rk_u8 *name, void *val);
+rk_s32 kmpp_obj_get_kfp(KmppObj obj, const rk_u8 *name, void **val);
+rk_s32 kmpp_obj_tbl_set_kobj(KmppObj obj, KmppLocTbl *tbl, KmppObj val);
+rk_s32 kmpp_obj_tbl_get_kobj(KmppObj obj, KmppLocTbl *tbl, KmppObj *val);
+rk_s32 kmpp_obj_tbl_set_kptr(KmppObj obj, KmppLocTbl *tbl, void *val);
+rk_s32 kmpp_obj_tbl_get_kptr(KmppObj obj, KmppLocTbl *tbl, void **val);
+rk_s32 kmpp_obj_tbl_set_kfp(KmppObj obj, KmppLocTbl *tbl, void *val);
+rk_s32 kmpp_obj_tbl_get_kfp(KmppObj obj, KmppLocTbl *tbl, void **val);
+
+/* share access function */
+rk_s32 kmpp_obj_set_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
+rk_s32 kmpp_obj_get_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
 rk_s32 kmpp_obj_tbl_set_shm(KmppObj obj, KmppLocTbl *tbl, KmppShmPtr *val);
 rk_s32 kmpp_obj_tbl_get_shm(KmppObj obj, KmppLocTbl *tbl, KmppShmPtr *val);
 

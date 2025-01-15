@@ -13,6 +13,7 @@
 #include "kmpp_obj.h"
 #include "kmpp_shm.h"
 #include "kmpp_frame.h"
+#include "kmpp_meta.h"
 
 static osal_worker *test_worker = NULL;
 static osal_work *test_work = NULL;
@@ -25,10 +26,10 @@ typedef struct KmppCallback_t {
 } KmppCallback;
 
 #define ENTRY_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, ptr, void *, arg0) \
+    ENTRY(prefix, kptr, void *, arg0) \
     ENTRY(prefix, u32, rk_u32, arg1) \
     ENTRY(prefix, u64, rk_u64, arg2) \
-    ENTRY(prefix, fp,  void *, func)
+    ENTRY(prefix, kfp, void *, func)
 
 static rk_s32 kmpp_obj_test_impl_dump(void *param)
 {
@@ -41,7 +42,7 @@ static rk_s32 kmpp_obj_test_impl_dump(void *param)
     return 0;
 }
 
- static void kmpp_obj_test_impl_preset(void *obj)
+ static rk_s32 kmpp_obj_test_impl_init(void *obj, osal_fs_dev *file, const rk_u8 *caller)
  {
     KmppCallback *cb = (KmppCallback *)obj;
 
@@ -49,13 +50,15 @@ static rk_s32 kmpp_obj_test_impl_dump(void *param)
     cb->arg1 = 1234;
     cb->arg2 = 5678;
     cb->func = kmpp_obj_test_impl_dump;
+
+    return rk_ok;
  }
 
 #define KMPP_OBJ_NAME           kmpp_obj_test
 #define KMPP_OBJ_INTF_TYPE      MppFrame
 #define KMPP_OBJ_IMPL_TYPE      KmppCallback
 #define KMPP_OBJ_ENTRY_TABLE    ENTRY_TABLE
-#define KMPP_OBJ_FUNC_PRESET    kmpp_obj_test_impl_preset
+#define KMPP_OBJ_FUNC_INIT      kmpp_obj_test_impl_init
 #define KMPP_OBJ_FUNC_DUMP      kmpp_obj_test_impl_dump
 #include "kmpp_obj_helper.h"
 
@@ -68,6 +71,8 @@ rk_s32 kmpp_test_func(void *param)
     MppFrame frame;
     KmppTrie trie1;
     KmppTrie trie2;
+    KmppMeta meta = NULL;
+    KmppShmPtr sptr;
     void *root;
 
     kmpp_objdef_dump_all();
@@ -76,6 +81,13 @@ rk_s32 kmpp_test_func(void *param)
     kmpp_logi_f("get frame %px ret %d\n", frame, ret);
     if (ret)
         goto done;
+
+    kmpp_frame_get_meta(frame, &sptr);
+    meta = sptr.kptr;
+
+    kmpp_logi_f("get meta ret %px\n", meta);
+
+    kmpp_meta_dump(meta);
 
     kmpp_frame_dump_f(frame);
 
@@ -109,18 +121,18 @@ rk_s32 kmpp_test_func(void *param)
     /* release trie2 but not release root */
     kmpp_trie_deinit(trie2);
 
-    kmpp_obj_get(&obj, kmpp_obj_test_def);
+    kmpp_obj_get_f(&obj, kmpp_obj_test_def);
 
-    kmpp_obj_set_ptr(obj, "arg0", NULL);
+    kmpp_obj_set_kptr(obj, "arg0", NULL);
     kmpp_obj_set_s32(obj, "arg1", 1);
     kmpp_obj_set_u64(obj, "arg2", 2);
-    kmpp_obj_set_ptr(obj, "func", kmpp_obj_test_impl_dump);
+    kmpp_obj_set_kfp(obj, "func", kmpp_obj_test_impl_dump);
 
     kmpp_logi_f("kmpp_show %px\n", kmpp_obj_test_impl_dump);
 
     kmpp_obj_run(obj, "func");
 
-    kmpp_obj_put(obj);
+    kmpp_obj_put_f(obj);
 
     kmpp_objdef_find(&test_def, "kmpp_call");
 
@@ -129,10 +141,10 @@ rk_s32 kmpp_test_func(void *param)
     if (test_def) {
         kmpp_logi_f("found kmpp_call\n");
 
-        kmpp_obj_get(&obj, test_def);
+        kmpp_obj_get_f(&obj, test_def);
         kmpp_logi_f("get kmpp_call ret %px\n", obj);
         kmpp_obj_run(obj, "func");
-        kmpp_obj_put(obj);
+        kmpp_obj_put_f(obj);
 
         kmpp_objdef_put(test_def);
 

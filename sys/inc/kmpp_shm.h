@@ -8,6 +8,7 @@
 
 #include "kmpp_cls.h"
 
+#include "kmpp_trie.h"
 #include "kmpp_sys_defs.h"
 
 /*
@@ -35,18 +36,22 @@
 /* global init / exit funciton on module init / exit */
 rk_s32 kmpp_shm_init(void);
 rk_s32 kmpp_shm_deinit(void);
-rk_s32 kmpp_shm_entry_offset(void);
+
+rk_s32 kmpp_shm_add_trie_info(KmppTrie trie);
 
 rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name);
 rk_s32 kmpp_shm_put(KmppShm shm);
+
+KmppShmPtr *kmpp_shm_to_shmptr(KmppShm shm);
+KmppShm kmpp_shm_from_shmptr(KmppShmPtr *shmptr);
 
 void *kmpp_shm_get_kbase(KmppShm shm);
 void *kmpp_shm_get_kaddr(KmppShm shm);
 rk_ul kmpp_shm_get_ubase(KmppShm shm);
 rk_u64 kmpp_shm_get_uaddr(KmppShm shm);
 
-void *kmpp_shm_get_kbase(KmppShm shm);
 rk_s32 kmpp_shm_set_priv(KmppShm shm, void *priv);
+void *kmpp_shm_get_priv(KmppShm shm);
 rk_s32 kmpp_shm_get_entry_size(KmppShm shm);
 
 #endif /* __KMPP_SHM_H__ */

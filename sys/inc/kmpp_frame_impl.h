@@ -8,7 +8,7 @@
 
 #ifdef KMPP_FRAME_KOBJ_IMPL
 
-#include "rk_type.h"
+#include "kmpp_sys_defs.h"
 
 typedef struct KmppFrameImpl_t {
 	rk_u32  width;
@@ -36,6 +36,8 @@ typedef struct KmppFrameImpl_t {
 	rk_u32  eos;
 	rk_u32  pskip;
 	rk_u32  idr_request;
+
+	KmppShmPtr meta;
 } KmppFrameImpl;
 
 #endif /* KMPP_FRAME_KOBJ_IMPL */
