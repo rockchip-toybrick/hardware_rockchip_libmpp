@@ -994,7 +994,7 @@ MPP_RET mpp_enc_proc_cfg(MppEncImpl *enc, MpiCmd cmd, void *param)
 		MppEncCfgSet *cfg = &enc->cfg;
 		memcpy(&cfg->roi, param, sizeof(cfg->roi));
 	} break;
-	case MPP_ENC_INSRT_USERDATA: {
+	case MPP_ENC_SET_USERDATA: {
 		ret = mpp_enc_proc_user_data(enc, param);
 	} break;
 	default: {
