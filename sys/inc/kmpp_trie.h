@@ -6,7 +6,7 @@
 #ifndef __KMPP_TRIE_H__
 #define __KMPP_TRIE_H__
 
-#include "rk_type.h"
+#include "kmpp_string.h"
 
 typedef void* KmppTrie;
 
@@ -55,6 +55,16 @@ static inline const rk_u8 *kmpp_trie_info_name(KmppTrieInfo *info)
 static inline void *kmpp_trie_info_ctx(KmppTrieInfo *info)
 {
     return (info) ? (void *)((rk_u8 *)(info + 1) + info->str_len) : NULL;
+}
+
+static inline rk_s32 kmpp_trie_info_is_self(KmppTrieInfo *info)
+{
+    return (info) ? !!osal_strstr((const rk_u8 *)(info + 1), "__") : 0;
+}
+
+static inline rk_s32 kmpp_trie_info_name_is_self(const rk_u8 *name)
+{
+    return (name) ? !!osal_strstr(name, "__") : 0;
 }
 
 /* trie lookup function */
