@@ -866,6 +866,84 @@ rk_s32 kmpp_sym_run_f(KmppSym sym, void *arg, rk_s32 *ret, const rk_u8 *caller)
     return ret_flow;
 }
 
+static void dump_sym_node(KmppSymNode *node)
+{
+    KmppTrie trie = NULL;
+    KmppTrieInfo *info;
+    const rk_u8 *name;
+
+    kmpp_trie_init_by_root(&trie, node->root);
+
+    info = kmpp_trie_get_info_first(trie);
+    do {
+        if (!info)
+            break;
+
+        name = kmpp_trie_info_name(info);
+        if (!name)
+            break;
+
+        if (!kmpp_trie_info_name_is_self(name))
+            kmpp_logi("symbol %2d - %s\n", info->index, name);
+
+        info = kmpp_trie_get_info_next(trie, info);
+    } while (info);
+
+    kmpp_trie_deinit(trie);
+}
+
+void kmpp_syms_dump(KmppSyms syms, const rk_u8 *caller)
+{
+    KmppSymsImpl *impl = (KmppSymsImpl *)syms;
+    KmppSymNodes *nodes = impl ? impl->nodes : NULL;
+
+    if (!impl || !nodes) {
+        kmpp_loge_f("invalid param sym %px nodes %px\n", impl, nodes);
+        return;
+    }
+
+    kmpp_logi("dump %s start at %s\n", impl->name, caller);
+
+    if (nodes && nodes->working)
+        dump_sym_node(nodes->working);
+
+    kmpp_logi("dump %s end\n", impl->name);
+}
+
+void kmpp_syms_dump_all(const rk_u8 *caller)
+{
+    KmppSymMgr *mgr = kmpp_sym_mgr;
+    KmppSymNodes *nodes, *n;
+    rk_s32 i;
+
+    if (!mgr) {
+        kmpp_loge_f("invalid param mgr %px at %s\n", mgr, caller);
+        return;
+    }
+
+    kmpp_logi_f("total %d symbol define at %s\n", mgr->symdef_count, caller);
+
+    i = 0;
+
+    osal_spin_lock(mgr->lock);
+
+    osal_list_for_each_entry_safe(nodes, n, &mgr->list_nodes, KmppSymNodes, list_mgr) {
+        osal_spin_unlock(mgr->lock);
+
+        kmpp_logi("symdef %2d - %s total %d using\n",
+                  i, nodes->name, nodes->syms_count);
+        i++;
+
+        if (nodes->working)
+            dump_sym_node(nodes->working);
+
+        osal_spin_lock(mgr->lock);
+    }
+    osal_spin_unlock(mgr->lock);
+
+    kmpp_logi_f("end\n");
+}
+
 EXPORT_SYMBOL(kmpp_symdef_get_f);
 EXPORT_SYMBOL(kmpp_symdef_put_f);
 EXPORT_SYMBOL(kmpp_symdef_add);
@@ -876,3 +954,5 @@ EXPORT_SYMBOL(kmpp_syms_put_f);
 EXPORT_SYMBOL(kmpp_sym_get);
 EXPORT_SYMBOL(kmpp_sym_put);
 EXPORT_SYMBOL(kmpp_sym_run_f);
+EXPORT_SYMBOL(kmpp_syms_dump);
+EXPORT_SYMBOL(kmpp_syms_dump_all);

@@ -45,4 +45,9 @@ rk_u32 kmpp_sym_put(KmppSym sym);
 rk_s32 kmpp_sym_run_f(KmppSym sym, void *arg, rk_s32 *ret, const rk_u8 *caller);
 #define kmpp_sym_run(sym, arg, ret) kmpp_sym_run_f(sym, arg, ret, __FUNCTION__)
 
+void kmpp_syms_dump(KmppSyms syms, const rk_u8 *caller);
+void kmpp_syms_dump_all(const rk_u8 *caller);
+#define kmpp_syms_dump_f(syms) kmpp_syms_dump(syms, __FUNCTION__)
+#define kmpp_syms_dump_all_f() kmpp_syms_dump_all(__FUNCTION__)
+
 #endif /* __KMPP_SYM_H__ */
