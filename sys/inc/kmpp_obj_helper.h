@@ -77,7 +77,7 @@
 
 #define ENTRY_QUERY(prefix, ftype, type, f1) \
     do { \
-        kmpp_objdef_get_entry(KMPP_OBJ_DEF(prefix), #f1, &tbl_##f1); \
+        kmpp_objdef_get_entry(KMPP_OBJ_DEF(prefix), #f1, &tbl_##prefix##_##f1); \
     } while (0);
 
 #define FIELD_TO_LOCTBL_FLAG2(f1, f2, ftype, field_flag, flag_value) \
@@ -129,13 +129,13 @@
 
 #if !defined(KMPP_OBJ_FUNC_STUB_ENABLE)
 #define KMPP_OBJ_ACCESSORS(prefix, ftype, type, field) \
-    static KmppLocTbl *tbl_##field = NULL; \
+    static KmppLocTbl *tbl_##prefix##_##field = NULL; \
     rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
     { \
         rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
         if (ret) return ret; \
-        if (tbl_##field) \
-            ret = kmpp_obj_tbl_get_##ftype(s, tbl_##field, v); \
+        if (tbl_##prefix##_##field) \
+            ret = kmpp_obj_tbl_get_##ftype(s, tbl_##prefix##_##field, v); \
         else \
             *v = ((KMPP_OBJ_IMPL_TYPE*)kmpp_obj_to_entry(s))->field; \
         return ret; \
@@ -144,8 +144,8 @@
     { \
         rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
         if (ret) return ret; \
-        if (tbl_##field) \
-            ret = kmpp_obj_tbl_set_##ftype(s, tbl_##field, v); \
+        if (tbl_##prefix##_##field) \
+            ret = kmpp_obj_tbl_set_##ftype(s, tbl_##prefix##_##field, v); \
         else \
             ((KMPP_OBJ_IMPL_TYPE*)kmpp_obj_to_entry(s))->field = v; \
         return ret; \
