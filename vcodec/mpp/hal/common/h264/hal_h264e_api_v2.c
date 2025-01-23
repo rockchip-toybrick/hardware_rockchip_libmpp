@@ -37,6 +37,10 @@
 #include "hal_h264e_vepu510.h"
 #endif
 
+#ifdef RKVEPU511_H264
+#include "hal_h264e_vepu511.h"
+#endif
+
 typedef struct HalH264eCtx_t {
 	const MppEncHalApi *api;
 	void *hw_ctx;
@@ -68,6 +72,10 @@ static MPP_RET hal_h264e_init(void *hal, MppEncHalCfg * cfg)
 
 #ifdef RKVEPU510_H264
 	api = &hal_h264e_vepu510;
+#endif
+
+#ifdef RKVEPU511_H264
+	api = &hal_h264e_vepu511;
 #endif
 
 	mpp_assert(api);

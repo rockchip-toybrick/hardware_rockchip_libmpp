@@ -30,6 +30,10 @@
 #ifdef RKVEPU510_JPEG
 #include "hal_jpege_vpu720.h"
 #endif
+
+#ifdef RKVEPU511_JPEG
+#include "hal_jpege_vepu511.h"
+#endif
 typedef struct HaljpegeCtx_t {
 	const MppEncHalApi *api;
 	void *hw_ctx;
@@ -53,6 +57,10 @@ static MPP_RET hal_jpege_init(void *hal, MppEncHalCfg * cfg)
 
 #ifdef RKVEPU510_JPEG
 	api = &hal_jpege_vpu720;
+#endif
+
+#ifdef RKVEPU511_JPEG
+	api = &hal_jpege_vepu511;
 #endif
 
 	mpp_assert(api);

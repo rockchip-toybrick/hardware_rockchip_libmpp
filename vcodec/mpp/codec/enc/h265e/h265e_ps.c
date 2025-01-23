@@ -242,10 +242,8 @@ MPP_RET h265e_set_sps(H265eCtx * ctx, h265_sps * sps, h265_vps * vps)
 	minCUDepth = (codec->max_cu_size >> (maxCUDepth - 1));
 
 	tuQTMaxLog2Size = convertToBit[codec->max_cu_size] + 2 - 1;
-#ifdef RKVEPU500_HEVC
-	tuQTMaxLog2Size += 1;
-#endif
-#ifdef RKVEPU510_HEVC
+
+#if defined(RKVEPU500_HEVC) || defined(RKVEPU510_HEVC) || defined(RKVEPU511_HEVC)
 	tuQTMaxLog2Size += 1;
 #endif
 	addCUDepth = 0;

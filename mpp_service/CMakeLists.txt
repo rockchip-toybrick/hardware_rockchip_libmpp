@@ -6,6 +6,8 @@ add_definitions(-DHAVE_H264E)
 add_definitions(-DHAVE_H265E)
 add_definitions(-DRKVEPU510_H264)
 add_definitions(-DRKVEPU510_HEVC)
+add_definitions(-DRKVEPU511_H264)
+add_definitions(-DRKVEPU511_HEVC)
 
 INCLUDE_DIRECTORIES(${KMPP_TOP}/include)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/osal)
@@ -58,18 +60,22 @@ SET(KMPP_SRC
     ../vcodec/mpp/hal/rkenc/h264e/hal_h264e_scaling_list.c
     #../vcodec/mpp/hal/rkenc/h264e/hal_h264e_vepu580.c
     ../vcodec/mpp/hal/rkenc/h264e/hal_h264e_vepu510.c
+    ../vcodec/mpp/hal/rkenc/h264e/hal_h264e_vepu511.c
     #../vcodec/mpp/hal/rkenc/h264e/hal_h264e_vepu540c.c
     ../vcodec/mpp/hal/rkenc/common/vepu510_common.c
+    ../vcodec/mpp/hal/rkenc/common/vepu511_common.c
     ../vcodec/mpp/hal/rkenc/common/vepu5xx_common.c
     ../vcodec/mpp/hal/rkenc/common/vepu540c_common.c
     ../vcodec/mpp/hal/rkenc/common/vepu500_common.c
     #../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu580.c
     ../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu510.c
+    ../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu511.c
     #../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu541.c
     ../vcodec/mpp/hal/rkenc/h265e/hal_h265e_scaling_list.c
     #../vcodec/mpp/hal/rkenc/h265e/hal_h265e_vepu540c.c
     #../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vepu540c.c
     #../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vepu500.c
+    ../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vepu511.c
     ../vcodec/mpp/hal/rkenc/jpege/hal_jpege_vpu720.c
     ../vcodec/mpp/hal/common/h264/hal_h264e_api_v2.c
     ../vcodec/mpp/hal/common/h265/hal_h265e_api_v2.c

@@ -90,6 +90,7 @@ enum RKVENC_VEPU_TYPE {
 	RKVENC_VEPU_580		= 0,
 	RKVENC_VEPU_540C	= 1,
 	RKVENC_VEPU_510		= 2,
+	RKVENC_VEPU_511		= 3,
 	RKVENC_VEPU_BUTT,
 };
 
@@ -184,7 +185,7 @@ union rkvenc2_dual_core_handshake_id {
 #define RKVENC2_REG_EXT_LINE_BUF_BASE	(22)
 
 #define RKVENC2_REG_ENC_PIC		(32)
-#define RKVENC510_REG_ENC_PIC		(36)
+#define RKVENC51x_REG_ENC_PIC		(36)
 #define RKVENC2_BIT_ENC_STND		BIT(0)
 #define RKVENC2_BIT_VAL_H264		0
 #define RKVENC2_BIT_VAL_H265		1
@@ -561,6 +562,81 @@ static struct rkvenc_hw_info rkvenc_540c_hw_info = {
 	.dcsh_class_ofst = 0,
 	.vepu_type = RKVENC_VEPU_540C,
 };
+
+static struct rkvenc_hw_info rkvenc_511_hw_info = {
+	.hw = {
+		.reg_num = 254,
+		.reg_id = 0,
+		.reg_en = 4,
+		.reg_start = 160,
+		.reg_end = 253,
+	},
+	.reg_class = RKVENC_CLASS_BUTT,
+	.reg_msg[RKVENC_CLASS_BASE] = {
+		.base_s = 0x0000,
+		.base_e = 0x0120,
+	},
+	.reg_msg[RKVENC_CLASS_PIC] = {
+		.base_s = 0x0270,
+		.base_e = 0x0538,
+	},
+	.reg_msg[RKVENC_CLASS_RC] = {
+		.base_s = 0x1000,
+		.base_e = 0x1160,
+	},
+	.reg_msg[RKVENC_CLASS_PAR] = {
+		.base_s = 0x1700,
+		.base_e = 0x19cc,
+	},
+	.reg_msg[RKVENC_CLASS_SQI] = {
+		.base_s = 0x2000,
+		.base_e = 0x216c,
+	},
+	.reg_msg[RKVENC_CLASS_SCL] = {
+		.base_s = 0x2200,
+		.base_e = 0x2e40,
+	},
+	.reg_msg[RKVENC_CLASS_OSD] = {
+		.base_s = 0x3000,
+		.base_e = 0x3264,
+	},
+	.reg_msg[RKVENC_CLASS_ST] = {
+		.base_s = 0x4000,
+		.base_e = 0x424c,
+	},
+	.reg_msg[RKVENC_CLASS_DEBUG] = {
+		.base_s = 0x5000,
+		.base_e = 0x523c,
+	},
+	.fd_class = RKVENC_CLASS_FD_BUTT,
+	.fd_reg[RKVENC_CLASS_FD_BASE] = {
+		.class = RKVENC_CLASS_PIC,
+		.base_fmt = RKVENC_FMT_BASE,
+	},
+	.fd_reg[RKVENC_CLASS_FD_OSD] = {
+		.class = RKVENC_CLASS_OSD,
+		.base_fmt = RKVENC_FMT_OSD_BASE,
+	},
+	.fmt_reg = {
+		.class = RKVENC_CLASS_PIC,
+		.base = 0x0300,
+		.bitpos = 0,
+		.bitlen = 2,
+	},
+	.enc_start_base = 0x0010,
+	.enc_clr_base = 0x0014,
+	.int_en_base = 0x0020,
+	.int_mask_base = 0x0024,
+	.int_clr_base = 0x0028,
+	.int_sta_base = 0x002c,
+	.enc_wdg_base = 0x0038,
+
+	.err_mask = 0x27d0,
+	.enc_rsl = 0x0310,
+	.dcsh_class_ofst = 0,
+	.vepu_type =  RKVENC_VEPU_511,
+};
+
 /*
  * file handle translate information for v2
  */
@@ -649,6 +725,33 @@ static struct mpp_trans_info trans_rkvenc_v2[] = {
 };
 
 static struct mpp_trans_info trans_rkvenc_540c[] = {
+	[RKVENC_FMT_H264E] = {
+		.count = ARRAY_SIZE(trans_tbl_h264e_540c),
+		.table = trans_tbl_h264e_540c,
+	},
+	[RKVENC_FMT_H264E_OSD] = {
+		.count = ARRAY_SIZE(trans_tbl_h264e_540c_osd),
+		.table = trans_tbl_h264e_540c_osd,
+	},
+	[RKVENC_FMT_H265E] = {
+		.count = ARRAY_SIZE(trans_tbl_h265e_540c),
+		.table = trans_tbl_h265e_540c,
+	},
+	[RKVENC_FMT_H265E_OSD] = {
+		.count = ARRAY_SIZE(trans_tbl_h265e_540c_osd),
+		.table = trans_tbl_h265e_540c_osd,
+	},
+	[RKVENC_FMT_JPEGE] = {
+		.count = ARRAY_SIZE(trans_tbl_jpege),
+		.table = trans_tbl_jpege,
+	},
+	[RKVENC_FMT_JPEGE_OSD] = {
+		.count = ARRAY_SIZE(trans_tbl_jpege_osd),
+		.table = trans_tbl_jpege_osd,
+	},
+};
+
+static struct mpp_trans_info trans_rkvenc_511[] = {
 	[RKVENC_FMT_H264E] = {
 		.count = ARRAY_SIZE(trans_tbl_h264e_540c),
 		.table = trans_tbl_h264e_540c,
@@ -1003,7 +1106,7 @@ static void rkvenc2_check_split_task(struct mpp_dev *mpp, struct rkvenc_task *ta
 	u32 reg_slt_split	= 0;
 
 	if (hw->vepu_type == RKVENC_VEPU_510) {
-		reg_enc_pic = RKVENC510_REG_ENC_PIC;
+		reg_enc_pic = RKVENC51x_REG_ENC_PIC;
 		reg_slt_split = RKVENC510_REG_SLI_SPLIT;
 	} else {
 		reg_enc_pic = RKVENC2_REG_ENC_PIC;
@@ -1041,6 +1144,7 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 	struct rkvenc_task *task;
 	struct mpp_task *mpp_task;
 	struct mpp_dev *mpp = session->mpp;
+	u32 reg_enc_pic = 0;
 
 	mpp_debug_enter();
 
@@ -1117,15 +1221,19 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 	rkvenc2_check_split_task(mpp, task);
 
 	/* check whether the current task is rec_fbc_dis = 1 */
-	if (task->hw_info->vepu_type == RKVENC_VEPU_510) {
-		if (task->reg[RKVENC_CLASS_PIC].valid) {
-			u32 *reg = task->reg[RKVENC_CLASS_PIC].data;
+	if (task->hw_info->vepu_type == RKVENC_VEPU_510 || task->hw_info->vepu_type == RKVENC_VEPU_511)
+		reg_enc_pic = RKVENC51x_REG_ENC_PIC;
+	else
+		reg_enc_pic = RKVENC2_REG_ENC_PIC;
 
-			task->rec_fbc_dis = reg[RKVENC510_REG_ENC_PIC] & RKVENC2_BIT_REC_FBC_DIS;
-			reg[RKVENC510_REG_ENC_PIC] &= ~(RKVENC2_BIT_REC_FBC_DIS);
-			if (task->rec_fbc_dis)
-				mpp_task->clbk_en = 0;
-		}
+	if (task->reg[RKVENC_CLASS_PIC].valid) {
+		u32 *reg = task->reg[RKVENC_CLASS_PIC].data;
+
+		task->rec_fbc_dis = reg[reg_enc_pic] & RKVENC2_BIT_REC_FBC_DIS;
+		if (task->hw_info->vepu_type == RKVENC_VEPU_510)
+			reg[reg_enc_pic] &= ~(RKVENC2_BIT_REC_FBC_DIS);
+		if (task->rec_fbc_dis)
+			mpp_task->clbk_en = 0;
 	}
 
 	mpp_debug_leave();
@@ -1373,7 +1481,8 @@ static void rkvenc2_calc_timeout_thd(struct mpp_dev *mpp)
 	else
 		timeout_thd |= timeout_ms * clk_get_rate(enc->core_clk_info.clk) / 1024000;
 
-	mpp_write(mpp, RKVENC_WDG, timeout_thd);
+	// disable hw timeout watchdog for fpga test
+	mpp_write(mpp, RKVENC_WDG, 0);
 }
 
 static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
@@ -2512,6 +2621,14 @@ static const struct mpp_dev_var rkvenc_510_data = {
 	.dev_ops = &rkvenc_dev_ops_v2,
 };
 
+static const struct mpp_dev_var rkvenc_511_data = {
+	.device_type = MPP_DEVICE_RKVENC,
+	.hw_info = &rkvenc_511_hw_info.hw,
+	.trans_info = trans_rkvenc_511,
+	.hw_ops = &rkvenc_hw_ops,
+	.dev_ops = &rkvenc_dev_ops_v2,
+};
+
 static const struct mpp_dev_var rkvenc_ccu_data = {
 	.device_type = MPP_DEVICE_RKVENC,
 	.hw_info = &rkvenc_v2_hw_info.hw,
@@ -2565,6 +2682,12 @@ static const struct of_device_id mpp_rkvenc_dt_match[] = {
 	},
 	{
 		.compatible = "rockchip,rkv-encoder-v2-ccu",
+	},
+#endif
+#ifdef CONFIG_CPU_RV1126B
+	{
+		.compatible = "rockchip,rkv-encoder-rv1126b",
+		.data = &rkvenc_511_data,
 	},
 #endif
 	{},
