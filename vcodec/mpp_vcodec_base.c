@@ -728,10 +728,11 @@ int mpp_vcodec_init(void)
     kmpp_meta_init();
     kmpp_frame_init();
     kmpp_venc_init_cfg_init();
+    kmpp_venc_ntfy_init();
 
-	mpp_enc_module_init();
+    mpp_enc_module_init();
 
-	return 0;
+    return 0;
 }
 
 int mpp_vcodec_unregister_mpidev(void)
