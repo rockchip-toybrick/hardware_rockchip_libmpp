@@ -770,7 +770,7 @@ rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, osal_fs_dev *file, const
     obj_dbg_share("obj %s get share %px [u:k] %#llx:%#llx\n", impl_def->name,
                   shm, kmpp_shm_get_uaddr(shm), kmpp_shm_get_kaddr(shm));
 
-    kmpp_shm_set_priv(shm, impl);
+    kmpp_shm_set_kpriv(shm, impl);
 
     if (impl_def->init)
         impl_def->init(impl->entry, file, caller);
@@ -794,7 +794,7 @@ rk_s32 kmpp_obj_put(KmppObj obj, const rk_u8 *caller)
         }
 
         if (impl->shm) {
-            kmpp_shm_set_priv(impl->shm, NULL);
+            kmpp_shm_set_kpriv(impl->shm, NULL);
             kmpp_shm_put(impl->shm);
             impl->shm = NULL;
         }
@@ -885,7 +885,7 @@ rk_s32 kmpp_obj_from_shmptr(KmppObj *obj, KmppShmPtr *sptr)
     if (sptr->uaddr) {
         KmppShm shm = sptr->kptr;
 
-        ret = kmpp_shm_get_priv(shm);
+        ret = kmpp_shm_get_kpriv(shm);
     } else {
         ret = (KmppObj)(sptr->kptr);
     }
@@ -1075,8 +1075,13 @@ rk_s32 kmpp_obj_dump(KmppObj obj, const rk_u8 *caller)
     KmppObjImpl *impl = (KmppObjImpl *)obj;
 
     if (impl && impl->def && impl->def->dump) {
-        kmpp_logi_f("%s obj %px entry %px from %s\n",
-                  impl->def->name, impl, impl->entry, caller);
+        kmpp_logi_f("%s obj from %s\n", impl->def->name, caller);
+        kmpp_logi_f("object - [k:u] %px : %#llx\n",
+                    impl, kmpp_shm_get_upriv(impl->shm));
+        if (impl->shm)
+            kmpp_logi_f("entry  - [k:u] %px : %#llx\n",
+                        kmpp_shm_get_kaddr(impl->shm),
+                        kmpp_shm_get_uaddr(impl->shm));
         return impl->def->dump(impl->entry);
     }
 

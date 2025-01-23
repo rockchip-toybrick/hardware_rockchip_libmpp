@@ -110,7 +110,7 @@ typedef struct KmppShmImpl_t {
     osal_list_head  list_grp;
     KmppShmGrpImpl  *grp;
 
-    void            *priv;
+    void            *kpriv;
     void            *kbase;
     rk_u64          upriv;
     rk_u64          ubase;
@@ -467,11 +467,11 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
 
             shm_dbg_ioctl("slot %d put shm k:%px u:%#llx\n", i, impl->kbase, impl->ubase);
 
-            if (impl->priv) {
+            if (impl->kpriv) {
                 if (kmpp_shm_debug & SHM_DBG_DUMP)
-                    kmpp_obj_dump(impl->priv, "KMPP_SHM_IOC_PUT_SHM");
+                    kmpp_obj_dump(impl->kpriv, "KMPP_SHM_IOC_PUT_SHM");
 
-                ret = kmpp_obj_put_f(impl->priv);
+                ret = kmpp_obj_put_f(impl->kpriv);
             } else {
                 ret = kmpp_shm_put(impl);
             }
@@ -491,8 +491,8 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
                 break;
             }
 
-            if (impl->priv)
-                ret = kmpp_obj_dump(impl->priv, "KMPP_SHM_IOC_DUMP");
+            if (impl->kpriv)
+                ret = kmpp_obj_dump(impl->kpriv, "KMPP_SHM_IOC_DUMP");
         }
     } break;
     default : {
@@ -753,7 +753,7 @@ rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
 
     OSAL_INIT_LIST_HEAD(&impl->list_grp);
     impl->grp = grp;
-    impl->priv = NULL;
+    impl->kpriv = NULL;
     impl->kbase = impl;
     impl->ubase = impl->vm_shm->uaddr;
 
@@ -850,23 +850,30 @@ rk_u64 kmpp_shm_get_uaddr(KmppShm shm)
     return impl && impl->kbase ? impl->ubase + kmpp_shm_entry_offset() : 0;
 }
 
-rk_s32 kmpp_shm_set_priv(KmppShm shm, void *priv)
+rk_s32 kmpp_shm_set_kpriv(KmppShm shm, void *kpriv)
 {
     KmppShmImpl *impl = (KmppShmImpl *)shm;
 
     if (impl) {
-        impl->priv = priv;
+        impl->kpriv = kpriv;
         return rk_ok;
     }
 
     return rk_nok;
 }
 
-void *kmpp_shm_get_priv(KmppShm shm)
+void *kmpp_shm_get_kpriv(KmppShm shm)
 {
     KmppShmImpl *impl = (KmppShmImpl *)shm;
 
-    return impl ? impl->priv : NULL;
+    return impl ? impl->kpriv : NULL;
+}
+
+rk_u64 kmpp_shm_get_upriv(KmppShm shm)
+{
+    KmppShmImpl *impl = (KmppShmImpl *)shm;
+
+    return impl ? (rk_u64)impl->upriv : 0;
 }
 
 rk_s32 kmpp_shm_get_entry_size(KmppShm shm)
@@ -894,6 +901,7 @@ EXPORT_SYMBOL(kmpp_shm_get_kaddr);
 EXPORT_SYMBOL(kmpp_shm_get_ubase);
 EXPORT_SYMBOL(kmpp_shm_get_uaddr);
 
-EXPORT_SYMBOL(kmpp_shm_set_priv);
-EXPORT_SYMBOL(kmpp_shm_get_priv);
+EXPORT_SYMBOL(kmpp_shm_set_kpriv);
+EXPORT_SYMBOL(kmpp_shm_get_kpriv);
+EXPORT_SYMBOL(kmpp_shm_get_upriv);
 EXPORT_SYMBOL(kmpp_shm_get_entry_size);

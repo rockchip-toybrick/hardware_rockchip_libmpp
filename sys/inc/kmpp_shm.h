@@ -50,8 +50,9 @@ void *kmpp_shm_get_kaddr(KmppShm shm);
 rk_ul kmpp_shm_get_ubase(KmppShm shm);
 rk_u64 kmpp_shm_get_uaddr(KmppShm shm);
 
-rk_s32 kmpp_shm_set_priv(KmppShm shm, void *priv);
-void *kmpp_shm_get_priv(KmppShm shm);
+rk_s32 kmpp_shm_set_kpriv(KmppShm shm, void *priv);
+void *kmpp_shm_get_kpriv(KmppShm shm);
+rk_u64 kmpp_shm_get_upriv(KmppShm shm);
 rk_s32 kmpp_shm_get_entry_size(KmppShm shm);
 
 #endif /* __KMPP_SHM_H__ */
