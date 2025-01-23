@@ -23,7 +23,6 @@
 #include "mpp_mem.h"
 #include "mpp_buffer.h"
 #include "rk_export_func.h"
-#include "mpp_frame.h"
 #include "mpp_mem_pool.h"
 #include "mpp_maths.h"
 #include "mpp_allocator.h"

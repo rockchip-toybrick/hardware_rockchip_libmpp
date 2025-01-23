@@ -12,7 +12,7 @@
 
 #include "mpp_mem.h"
 #include "mpp_maths.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "hal_jpege_debug.h"
 #include "jpege_syntax.h"
 #include "hal_bufs.h"
@@ -225,14 +225,15 @@ MPP_RET hal_jpege_vepu500_set_osd(JpegeV500HalContext *ctx)
 	MppEncOSDRegion3 *tmp = region;
 	HalEncTask *task = (HalEncTask *) jpeg_cfg->enc_task;
 	JpegeSyntax *syn = (JpegeSyntax *) task->syntax.data;
-	MppFrame frame = task->frame;
+	KmppFrame frame = task->frame;
 	RK_U32 width = syn->width;
 	RK_U32 height = syn->height;
-	RK_U32 slice_en = (mpp_frame_get_height(frame) < height) && syn->restart_ri;
+	RK_U32 slice_en;
 	RK_U32 num;
 	RK_U32 i = 0;
 	RK_U32 cur_lt_x, cur_lt_y;
 	RK_U32 cur_rb_x, cur_rb_y;
+	RK_U32 frame_height;
 
 	if (!osd || osd->num_region == 0)
 		return MPP_OK;
@@ -243,7 +244,8 @@ MPP_RET hal_jpege_vepu500_set_osd(JpegeV500HalContext *ctx)
 		mpp_assert(osd->num_region <= 8);
 		return MPP_NOK;
 	}
-
+	kmpp_frame_get_height(frame, &frame_height);
+	slice_en = (frame_height < height) && syn->restart_ri;
 	if (slice_en) {
 		RK_U32 mcu_w = MPP_ALIGN(width, 16) / 16;
 		RK_U32 slice_height = syn->restart_ri / mcu_w * 16;
@@ -609,7 +611,8 @@ MPP_RET hal_jpege_v500_get_task(void *hal, HalEncTask * task)
 	ctx->last_frame_type = ctx->frame_type;
 	ctx->online = task->online;
 
-	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
+	kmpp_frame_get_osd(task->frame, (MppOsd*)&ctx->osd_cfg.osd_data3);
+
 	if (ctx->cfg->rc.rc_mode != MPP_ENC_RC_MODE_FIXQP) {
 		if (!ctx->hal_rc.q_factor) {
 			task->rc_task->info.quality_target = syntax->q_factor ? (100 - syntax->q_factor) : 80;

@@ -6,6 +6,7 @@
 #ifndef __RK_DEFS_H__
 #define __RK_DEFS_H__
 
+#include "kmpi_defs.h"
 /**
  * @ingroup rk_mpi
  * @brief The type of mpp context

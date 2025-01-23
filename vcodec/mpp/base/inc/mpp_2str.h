@@ -12,7 +12,6 @@
 
 #include "rk_type.h"
 #include "rk_venc_rc.h"
-#include "mpp_frame.h"
 #include "rk_venc_cmd.h"
 
 #ifdef  __cplusplus

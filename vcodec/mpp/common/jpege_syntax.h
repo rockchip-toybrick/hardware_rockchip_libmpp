@@ -10,7 +10,6 @@
 #ifndef __JPEGE_SYNTAX_H__
 #define __JPEGE_SYNTAX_H__
 
-#include "mpp_frame.h"
 #include "rk_venc_cmd.h"
 
 #define QUANTIZE_TABLE_SIZE 64

@@ -11,8 +11,8 @@
 #ifndef __RK_VENC_CMD_H__
 #define __RK_VENC_CMD_H__
 
-#include "mpp_frame.h"
 #include "rk_venc_rc.h"
+#include "kmpp_frame.h"
 
 /*
  * Configure of encoder is very complicated. So we divide configures into
@@ -21,7 +21,7 @@
  * 1. Rate control parameter
  *    This is quality and bitrate request from user.
  *
- * 2. Data source MppFrame parameter
+ * 2. Data source KmppFrame parameter
  *    This is data source buffer information.
  *    Now it is PreP config
  *    PreP  : Encoder Preprocess configuration
@@ -54,7 +54,7 @@
  *                 |    |         |   |   |          |     |
  * +----------+    |    |         |   |   |       syntax   |
  * |          |    |    |         |   |   |          |     |
- * | MppFrame +--------->  MppEnc +---+   |          |   result
+ * | KmppFrame+--------->  MppEnc +---+   |          |   result
  * |          |    |    |         |   |   |          |     |
  * +----------+    |    |         |   |   |          |     |
  *                 |    |         |   |   |       +--v-----+--+
@@ -1373,7 +1373,7 @@ typedef struct MppEncOSDData2_t {
 
 typedef struct MppOsdBuf_t {
 	RK_S32 fd;
-	MpiBuf buf;
+	MppBuffer buf;
 } MppOsdBuf;
 
 typedef struct EncOSDInvCfg_t {

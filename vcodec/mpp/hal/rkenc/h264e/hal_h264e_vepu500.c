@@ -9,7 +9,7 @@
 #include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "mpp_packet_impl.h"
 #include "mpp_maths.h"
 
@@ -617,8 +617,8 @@ static MPP_RET hal_h264e_vepu500_get_task(void *hal, HalEncTask *task)
 	hal_h264e_dbg_func("enter %p\n", hal);
 
 	ctx->online = task->online;
-	ctx->roi_data = mpp_frame_get_roi(task->frame);
-	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
+	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
+	kmpp_frame_get_osd(task->frame, (MppOsd*)&ctx->osd_cfg.osd_data3);
 
 	if (!frm_status->reencode) {
 		if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))
@@ -1282,18 +1282,23 @@ static void setup_vepu500_io_buf(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 {
 	HalVepu500RegSet *regs = ctx->regs_set;
 	MppDev dev = ctx->dev;
-	MppFrame frm = task->frame;
+	KmppFrame frm = task->frame;
 	MppPacket pkt = task->packet;
-	MppBuffer buf_in = mpp_frame_get_buffer(frm);
+	MppBuffer buf_in = NULL;
 	ring_buf *buf_out = task->output;
-	MppFrameFormat fmt = mpp_frame_get_fmt(frm);
-	RK_S32 hor_stride = mpp_frame_get_hor_stride(frm);
-	RK_S32 ver_stride = mpp_frame_get_ver_stride(frm);
+	MppFrameFormat fmt;
+	RK_S32 hor_stride, ver_stride;
 	RK_U32 off_in[2] = {0};
 	RK_U32 off_out = mpp_packet_get_length(pkt);
-	RK_U32 is_phys = mpp_frame_get_is_full(task->frame);
+	RK_U32 is_phys = 0;
 
 	hal_h264e_dbg_func("enter\n");
+
+	kmpp_frame_get_hor_stride(frm, &hor_stride);
+	kmpp_frame_get_ver_stride(frm, &ver_stride);
+	kmpp_frame_get_fmt(frm, &fmt);
+	kmpp_frame_get_buffer(frm, &buf_in);
+	kmpp_frame_get_is_full(frm, &is_phys);
 
 	if (MPP_FRAME_FMT_IS_YUV(fmt)) {
 		VepuFmtCfg cfg;
@@ -2489,6 +2494,7 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	EncRcTask *rc_task = task->rc_task;
 	EncFrmStatus *frm = &rc_task->frm;
 	MPP_RET ret = MPP_OK;
+	RK_U32 offset_x, offset_y;
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 
@@ -2517,8 +2523,10 @@ static MPP_RET hal_h264e_vepu500_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu500_io_buf(ctx, task);
 	setup_vepu500_recn_refr(ctx, regs);
 
-	regs->reg_frm.pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
-	regs->reg_frm.pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	regs->reg_frm.pic_ofst.pic_ofst_y = offset_y;
+	regs->reg_frm.pic_ofst.pic_ofst_x = offset_x;
 
 	setup_vepu500_split(regs, cfg);
 	setup_vepu500_me(ctx);

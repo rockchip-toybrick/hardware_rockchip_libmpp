@@ -11,6 +11,7 @@
 #include "mpp_buffer.h"
 #include "mpp_enc.h"
 
+#include "kmpp_frame.h"
 #include "kmpp_osal.h"
 #include "kmpi_venc.h"
 
@@ -227,7 +228,7 @@ void enc_test(void)
     MppEncInitCfg cfg;
     RK_U32 frame_count = 0;
     MppBuffer buffer;
-    MppFrame frame = NULL;
+    KmppFrame frame = NULL;
 
     memset(&cfg, 0, sizeof(cfg));
     mpp_enc_cfg_api_init();
@@ -260,13 +261,13 @@ void enc_test(void)
 
         mpp_buffer_get(NULL, &buffer, size);
 
-        mpp_frame_init(&frame);
-        mpp_frame_set_width(frame, width);
-        mpp_frame_set_height(frame, height);
-        mpp_frame_set_hor_stride(frame, hor_stride);
-        mpp_frame_set_ver_stride(frame, ver_stride);
-        mpp_frame_set_fmt(frame, 0);
-        mpp_frame_set_buffer(frame, buffer);
+        kmpp_frame_get(&frame);
+        kmpp_frame_set_width(frame, width);
+        kmpp_frame_set_height(frame, height);
+        kmpp_frame_set_hor_stride(frame, hor_stride);
+        kmpp_frame_set_ver_stride(frame, ver_stride);
+        kmpp_frame_set_fmt(frame, 0);
+        kmpp_frame_set_buffer(frame, buffer);
         mpp_buffer_put(buffer);
 
         kmpp_venc_put_frm(ctx, frame);

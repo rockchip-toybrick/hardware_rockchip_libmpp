@@ -9,7 +9,7 @@
 #include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "mpp_packet_impl.h"
 #include "mpp_maths.h"
 #include "mpp_buffer.h"
@@ -544,7 +544,7 @@ static MPP_RET hal_h264e_vepu510_get_task(void *hal, HalEncTask *task)
 	if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))
 		setup_hal_bufs(ctx);
 
-	ctx->roi_data = mpp_frame_get_roi(task->frame);
+	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
 
 	if (!frm_status->reencode)
 		ctx->last_frame_fb = ctx->feedback;
@@ -1269,15 +1269,14 @@ static void setup_vepu510_rc_base(HalVepu510RegSet *regs, HalH264eVepu510Ctx *ct
 static void setup_vepu510_io_buf(HalVepu510RegSet *regs, HalH264eVepu510Ctx *ctx,
 				 HalEncTask *task)
 {
-	MppFrame frm = task->frame;
+	KmppFrame frm = task->frame;
 	MppPacket pkt = task->packet;
-	MppBuffer buf_in = mpp_frame_get_buffer(frm);
+	MppBuffer buf_in = NULL;
 	ring_buf *buf_out = task->output;
-	MppFrameFormat fmt = mpp_frame_get_fmt(frm);
+	MppFrameFormat fmt;
 	H264eVepu510Frame *reg_frm = &regs->reg_frm;
-	RK_S32 hor_stride = mpp_frame_get_hor_stride(frm);
-	RK_S32 ver_stride = mpp_frame_get_ver_stride(frm);
-	RK_S32 fd_in = mpp_buffer_get_iova(buf_in, ctx->dev);
+	RK_S32 hor_stride, ver_stride;
+	RK_S32 iova_in;
 	RK_U32 off_in[2] = {0};
 	RK_U32 off_out = mpp_packet_get_length(pkt);
 	size_t size_out = mpp_buffer_get_size(buf_out->buf);
@@ -1285,6 +1284,12 @@ static void setup_vepu510_io_buf(HalVepu510RegSet *regs, HalH264eVepu510Ctx *ctx
 
 	hal_h264e_dbg_func("enter\n");
 
+	kmpp_frame_get_fmt(frm, &fmt);
+	kmpp_frame_get_hor_stride(frm, &hor_stride);
+	kmpp_frame_get_ver_stride(frm, &ver_stride);
+	kmpp_frame_get_buffer(frm, &buf_in);
+
+	iova_in = mpp_buffer_get_iova(buf_in, ctx->dev);
 	reg_frm->common.rfpt_h_addr = 0xffffffff;
 	reg_frm->common.rfpb_h_addr = 0;
 	reg_frm->common.rfpt_b_addr = 0xffffffff;
@@ -1339,9 +1344,9 @@ static void setup_vepu510_io_buf(HalVepu510RegSet *regs, HalH264eVepu510Ctx *ctx
 		task->output->use_len = off_out;
 		mpp_ring_buf_flush(task->output, 0);
 	}
-	reg_frm->common.adr_src0 = fd_in;
-	reg_frm->common.adr_src1 = fd_in + off_in[0];
-	reg_frm->common.adr_src2 = fd_in + off_in[1];
+	reg_frm->common.adr_src0 = iova_in;
+	reg_frm->common.adr_src1 = iova_in + off_in[0];
+	reg_frm->common.adr_src2 = iova_in + off_in[1];
 
 	reg_frm->common.bsbt_addr  = fd_out + size_out;
 	reg_frm->common.bsbb_addr  = fd_out;
@@ -2144,7 +2149,7 @@ static MPP_RET hal_h264e_vepu510_gen_regs(void *hal, HalEncTask *task)
 	EncRcTask *rc_task = task->rc_task;
 	EncFrmStatus *frm = &rc_task->frm;
 	MPP_RET ret = MPP_OK;
-	// EncFrmStatus *frm_status = &task->rc_task->frm;
+	RK_U32 offset_x, offset_y;
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 	hal_h264e_dbg_detail("frame %d generate regs now", ctx->frms->seq_idx);
@@ -2174,8 +2179,10 @@ static MPP_RET hal_h264e_vepu510_gen_regs(void *hal, HalEncTask *task)
 	reg_frm->common.meiw_addr = 0;//task->md_info ? mpp_buffer_get_fd(task->md_info) : 0;
 	reg_frm->common.enc_pic.mei_stor = 0;
 
-	reg_frm->common.pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
-	reg_frm->common.pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	reg_frm->common.pic_ofst.pic_ofst_y = offset_y;
+	reg_frm->common.pic_ofst.pic_ofst_x = offset_x;
 
 	setup_vepu510_split(regs, cfg);
 	setup_vepu510_me(ctx);

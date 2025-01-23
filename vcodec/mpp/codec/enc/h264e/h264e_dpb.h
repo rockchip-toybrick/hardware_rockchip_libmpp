@@ -57,7 +57,7 @@ typedef struct  H264eDpbFrm_t {
 	RK_S32              lt_idx;
 	/* poc from H264eSlice */
 	RK_S32              poc;
-	/* pts from input MppFrame */
+	/* pts from input KmppFrame */
 	RK_S64              pts;
 } H264eDpbFrm;
 

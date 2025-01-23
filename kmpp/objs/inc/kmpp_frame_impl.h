@@ -7,38 +7,91 @@
 #define __KMPP_FRAME_IMPL_H__
 
 #include "kmpp_frame.h"
+#include "legacy_rockit.h"
 
 typedef struct KmppFrameImpl_t {
-	rk_u32  width;
-	rk_u32  height;
-	rk_u32  hor_stride;
-	rk_u32  ver_stride;
-	rk_u32  hor_stride_pixel;
-	rk_u32  offset_x;
-	rk_u32  offset_y;
-	rk_u32  fmt;
-	rk_u32  fd;
-	rk_u64  pts;
-	rk_s32  jpeg_chan_id;
-	rk_s32  mpi_buf_id;
+    const char *name;
 
-	void    *osd_buf;
-	void    *jpg_combo_osd_buf;
-	rk_u32  is_gray;
-	rk_u32  is_full;
-	rk_u32  phy_addr;
-	rk_u64  dts;
-	void    *pp_info;
-	/* num of pskip need to gen after normal frame */
-	rk_u32	pskip_num;
-	rk_u32  eos;
-	rk_u32  pskip;
-	rk_u32  idr_request;
+    /*
+     * dimension parameter for display
+     */
+    RK_U32 width;
+    RK_U32 height;
+    RK_U32 hor_stride;
+    RK_U32 ver_stride;
+    RK_U32 hor_stride_pixel;
+    RK_U32 offset_x;
+    RK_U32 offset_y;
 
-	KmppShmPtr meta;
+    /*
+     * poc - picture order count
+     */
+    RK_U32 poc;
+    /*
+     * pts - display time stamp
+     * dts - decode time stamp
+     */
+    RK_S64 pts;
+    RK_S64 dts;
 
-	/* hook callback element */
-	KmppShmPtr buffer;
+    /*
+        * eos - end of stream
+        * info_change - set when buffer resized or frame infomation changed
+        */
+    RK_U32 eos;
+    MppFrameColorRange color_range;
+    MppFrameColorPrimaries color_primaries;
+    MppFrameColorTransferCharacteristic color_trc;
+
+    /**
+     * YUV colorspace type.
+     * It must be accessed using av_frame_get_colorspace() and
+     * av_frame_set_colorspace().
+     * - encoding: Set by user
+     * - decoding: Set by libavcodec
+     */
+    MppFrameColorSpace colorspace;
+    MppFrameChromaLocation chroma_location;
+
+    MppFrameFormat fmt;
+
+    MppFrameRational sar;
+
+    /*
+     * buffer information
+     * NOTE: buf_size only access internally
+     */
+    KmppBuffer buffer;
+    size_t buf_size;
+    /*
+     * frame buffer compression (FBC) information
+     *
+     * NOTE: some constraint on fbc data
+     * 1. FBC config need two addresses but only one buffer.
+     *    The second address should be represented by base + offset form.
+     * 2. FBC has header address and payload address
+     *    Both addresses should be 4K aligned.
+     * 3. The header section size is default defined by:
+     *    header size = aligned(aligned(width, 16) * aligned(height, 16) / 16, 4096)
+     * 4. The stride in header section is defined by:
+     *    stride = aligned(width, 16)
+     */
+    RK_U32 fbc_offset;
+
+    MppRoi   roi;
+    MppOsd   osd;
+    RK_U32   is_gray;
+    RK_U32   is_full;
+    RK_U32   phy_addr;
+    MppPpInfo pp_info;
+
+    RK_U32 idr_request;
+    RK_U32 pskip_request;
+    RK_U32 pskip_num;
+    KmppFrame combo_frame;
+    RK_U32 chan_id;
+
+    KmppShmPtr meta;
 } KmppFrameImpl;
 
 #endif /* __KMPP_FRAME_IMPL_H__ */

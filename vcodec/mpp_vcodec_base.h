@@ -13,10 +13,7 @@
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 
-#include"rk_type.h"
-#include "mpp_err.h"
 #include "mpp_packet.h"
-#include "mpp_frame.h"
 #include "rk_export_func.h"
 
 #define MAX_ENC_NUM 16
@@ -84,8 +81,8 @@ struct mpp_chan {
 	RK_U32 shared_buf_release;
 	RK_U32 max_lt_cnt;
 	RK_S64 pts_diff;
-	MppFrame pskip_frame;
-	MppFrame frame;
+	KmppFrame pskip_frame;
+	KmppFrame frame;
 };
 
 struct stream_packet {
@@ -133,6 +130,6 @@ int mpp_vcodec_get_free_chan(MppCtxType type);
 int vcodec_create_mpi_dev(void);
 void enc_test(void);
 MPP_RET mpp_vcodec_chan_setup_hal_bufs(struct mpp_chan *entry, struct vcodec_attr *attr);
-MPP_RET mpp_frame_init_with_frameinfo(MppFrame *frame, struct mpp_frame_infos *info);
+MPP_RET mpp_frame_init_with_frameinfo(KmppFrame *frame, struct mpp_frame_infos *info);
 
 #endif

@@ -9,7 +9,7 @@
 #include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "mpp_packet_impl.h"
 #include "mpp_maths.h"
 #include "mpp_buffer.h"
@@ -1647,6 +1647,7 @@ void vepu510_h265_set_hw_address(H265eV510HalContext *ctx, H265eVepu510Frame *re
 	MppBuffer md_info_buf = NULL;//enc_task->md_info;
 	Vepu510H265eFrmCfg *frm = ctx->frm;
 	H265eSyntax_new *syn = ctx->syn;
+	RK_U32 offset_x, offset_y;
 
 	hal_h265e_enter();
 
@@ -1696,8 +1697,10 @@ void vepu510_h265_set_hw_address(H265eV510HalContext *ctx, H265eVepu510Frame *re
 		}
 	}
 
-	regs->common.pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
-	regs->common.pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	regs->common.pic_ofst.pic_ofst_y = offset_y;
+	regs->common.pic_ofst.pic_ofst_x = offset_x;
 
 	/* smear bufs */
 	regs->common.adr_smear_rd = mpp_buffer_get_iova(ref_buf->buf[3], ctx->dev);
@@ -2502,7 +2505,7 @@ MPP_RET hal_h265e_v510_get_task(void *hal, HalEncTask *task)
 {
 	H265eV510HalContext *ctx = (H265eV510HalContext *)hal;
 	Vepu510H265eFrmCfg *frm_cfg = NULL;
-	// MppFrame frame = task->frame;
+	// KmppFrame frame = task->frame;
 	EncFrmStatus  *frm_status = &task->rc_task->frm;
 	RK_S32 task_idx = 0;//ctx->task_idx;
 
@@ -2530,7 +2533,7 @@ MPP_RET hal_h265e_v510_get_task(void *hal, HalEncTask *task)
 		ctx->frame_type = INTER_P_FRAME;
 	}
 
-	ctx->roi_data = mpp_frame_get_roi(task->frame);
+	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
 
 	// task->flags.reg_idx = ctx->task_idx;
 	ctx->ext_line_buf = ctx->ext_line_bufs[ctx->task_idx];

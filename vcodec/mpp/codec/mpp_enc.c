@@ -163,7 +163,8 @@ void mpp_enc_deinit_frame(MppEnc ctx)
 	atomic_set(&enc->hw_run, 0);
 	mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
 	mpp_packet_deinit(&enc->packet);
-	mpp_frame_deinit(&enc->frame);
+	kmpp_frame_put(enc->frame);
+	enc->frame = NULL;
 }
 
 MPP_RET mpp_enc_deinit(MppEnc ctx)
@@ -288,7 +289,7 @@ MPP_RET mpp_enc_reset(MppEnc ctx)
 	return MPP_OK;
 }
 
-MPP_RET mpp_enc_oneframe(MppEnc ctx, MppFrame frame, MppPacket * packet)
+MPP_RET mpp_enc_oneframe(MppEnc ctx, KmppFrame frame, MppPacket * packet)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
@@ -313,7 +314,7 @@ MPP_RET mpp_enc_online_task_failed(MppEnc ctx)
 	return mpp_dev_chnl_control(enc->dev, MPP_CMD_VEPU_CONNECT_DVBM, &connect);
 }
 
-MPP_RET mpp_enc_force_pskip(MppEnc ctx, MppFrame frame, MppPacket *packet)
+MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
@@ -337,7 +338,7 @@ MPP_RET mpp_enc_force_pskip(MppEnc ctx, MppFrame frame, MppPacket *packet)
 	return ret;
 }
 
-MPP_RET mpp_enc_cfg_reg(MppEnc ctx, MppFrame frame)
+MPP_RET mpp_enc_cfg_reg(MppEnc ctx, KmppFrame frame)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
@@ -390,8 +391,9 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 
 	if (MPP_OK == ret) {
 		if (enc->online) {
-			RK_U64 dts = mpp_frame_get_dts(enc->frame);
+			RK_U64 dts = 0;
 
+			kmpp_frame_get_dts(enc->frame, &dts);
 			vcodec_rockit_notify(enc->chan_id, NOTIFY_ENC_TASK_READY, &dts);
 		}
 		atomic_set(&enc->hw_run, 1);
@@ -432,8 +434,8 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 		mpp_packet_set_dts(enc->packet, dts);
 	}
 	if (enc->frame) {
-		mpp_frame_set_pts(enc->frame, pts);
-		mpp_frame_set_dts(enc->frame, dts);
+		kmpp_frame_set_pts(enc->frame, pts);
+		kmpp_frame_set_dts(enc->frame, dts);
 	}
 
 	{

@@ -16,7 +16,7 @@
 //#include "mpp_soc.h"
 //#include "mpp_common.h"
 #include "mpp_packet.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "mpp_maths.h"
 
 #include "h264e_sps.h"
@@ -1183,18 +1183,23 @@ static void setup_vepu580_rc_base(HalVepu580RegSet * regs, H264eSps * sps,
 static void setup_vepu580_io_buf(HalVepu580RegSet * regs, MppDev dev,
 				 HalEncTask * task)
 {
-	MppFrame frm = task->frame;
+	KmppFrame frm = task->frame;
 	MppPacket pkt = task->packet;
-	MppBuffer buf_in = mpp_frame_get_buffer(frm);
+	MppBuffer buf_in;
 	ring_buf *buf_out = task->output;
-	MppFrameFormat fmt = mpp_frame_get_fmt(frm);
-	RK_S32 hor_stride = mpp_frame_get_hor_stride(frm);
-	RK_S32 ver_stride = mpp_frame_get_ver_stride(frm);
+	MppFrameFormat fmt;
+	RK_S32 hor_stride;
+	RK_S32 ver_stride;
 	RK_U32 off_in[2] = { 0 };
 	RK_U32 off_out = mpp_packet_get_length(pkt);
 	size_t siz_out = buf_out->size;
 
 	hal_h264e_dbg_func("enter\n");
+
+	kmpp_frame_get_hor_stride(frm, &hor_stride);
+	kmpp_frame_get_ver_stride(frm, &ver_stride);
+	kmpp_frame_get_fmt(frm, &fmt);
+	kmpp_frame_get_buffer(frm, &buf_in);
 
 	regs->reg_base.adr_src0 = mpp_dev_get_iova_address(dev, buf_in, 160);
 	regs->reg_base.adr_src1 = regs->reg_base.adr_src0;
@@ -1206,7 +1211,7 @@ static void setup_vepu580_io_buf(HalVepu580RegSet * regs, MppDev dev,
 	regs->reg_base.bsbt_addr = regs->reg_base.bsbb_addr;
 
 	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
-		off_in[0] = mpp_frame_get_fbc_offset(frm);;
+		kmpp_frame_get_fbc_offset(task->frame, &off_in[0]);
 		off_in[1] = 0;
 	} else if (MPP_FRAME_FMT_IS_YUV(fmt)) {
 		VepuFmtCfg cfg;
@@ -1788,6 +1793,7 @@ static MPP_RET hal_h264e_vepu580_gen_regs(void *hal, HalEncTask * task)
 	H264ePps *pps = ctx->pps;
 	H264eSlice *slice = ctx->slice;
 	MPP_RET ret = MPP_OK;
+	RK_U32 offset_x, offset_y;
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 	hal_h264e_dbg_detail("frame %d generate regs now", ctx->frms->seq_idx);
@@ -1814,10 +1820,10 @@ static MPP_RET hal_h264e_vepu580_gen_regs(void *hal, HalEncTask * task)
 		task->mv_info ? mpp_dev_get_iova_address(ctx->dev, task->mv_info,
 							 0) : 0;
 
-	regs->reg_base.pic_ofst.pic_ofst_y =
-		mpp_frame_get_offset_y(task->frame);
-	regs->reg_base.pic_ofst.pic_ofst_x =
-		mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	regs->reg_base.pic_ofst.pic_ofst_x = offset_x;
+	regs->reg_base.pic_ofst.pic_ofst_y = offset_y;
 
 	setup_vepu580_split(regs, &cfg->split);
 	setup_vepu580_me(regs, sps, slice);

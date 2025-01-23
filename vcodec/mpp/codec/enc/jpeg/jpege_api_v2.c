@@ -25,6 +25,7 @@
 #include "jpege_syntax.h"
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_bitwrite.h"
+#include "kmpp_frame.h"
 
 typedef struct {
 	MppEncCfgSet    *cfg;
@@ -451,7 +452,7 @@ static MPP_RET jpege_start(void *ctx, HalEncTask *task)
 static MPP_RET jpege_proc_hal(void *ctx, HalEncTask *task)
 {
 	JpegeCtx *p = (JpegeCtx *)ctx;
-	MppFrame frame = task->frame;
+	KmppFrame frame = task->frame;
 	JpegeSyntax *syntax = &p->syntax;
 	MppEncCfgSet *cfg = p->cfg;
 	MppEncPrepCfg *prep = &cfg->prep;
@@ -470,8 +471,6 @@ static MPP_RET jpege_proc_hal(void *ctx, HalEncTask *task)
 	syntax->color       = prep->color;
 	syntax->rotation    = prep->rotation;
 	syntax->mirroring   = prep->mirroring;
-	syntax->offset_x    = mpp_frame_get_offset_x(frame);
-	syntax->offset_y    = mpp_frame_get_offset_y(frame);
 	syntax->quality     = codec->jpeg.quant;
 	syntax->q_factor    = codec->jpeg.q_factor;
 	syntax->qf_min      = codec->jpeg.qf_min;
@@ -481,6 +480,8 @@ static MPP_RET jpege_proc_hal(void *ctx, HalEncTask *task)
 	syntax->part_rows   = 0;
 	syntax->restart_ri  = 0;
 	syntax->low_delay   = 0;
+	kmpp_frame_get_offset_y(frame, &syntax->offset_y);
+	kmpp_frame_get_offset_x(frame, &syntax->offset_x);
 
 	if (split->split_mode) {
 		RK_U32 mb_h = MPP_ALIGN(prep->height, 16) / 16;

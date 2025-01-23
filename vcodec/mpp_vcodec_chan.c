@@ -29,6 +29,7 @@
 #include "mpp_vcodec_rockit.h"
 #include "kmpp_shm.h"
 #include "rk-mpp-kobj.h"
+#include "kmpp_frame.h"
 
 int mpp_vcodec_schedule(void)
 {
@@ -366,7 +367,7 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	struct mpp_chan *chan_entry = NULL;
 	MppBufferInfo buf_info;
 	MppBuffer buffer = NULL;
-	MppFrame frame = NULL;
+	KmppFrame frame = NULL;
 
 	chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
 	venc = mpp_vcodec_get_enc_module_entry();
@@ -379,17 +380,17 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	}
 	mpp_frame_init_with_frameinfo(&frame, info);
 	if (info->jpeg_chan_id > 0) {
-		MppFrame comb_frame = NULL;
+		KmppFrame comb_frame = NULL;
 
-		mpp_frame_init(&comb_frame);
-		mpp_frame_copy(comb_frame, frame);
+		kmpp_frame_get(&comb_frame);
+		kmpp_frame_copy(comb_frame, frame);
 		if (info->jpg_combo_osd_buf)
 			frame_add_osd(comb_frame, (MppEncOSDData3 *)info->jpg_combo_osd_buf);
-		mpp_frame_set_buffer(comb_frame, buffer);
-		mpp_frame_set_chan_id(comb_frame, info->jpeg_chan_id);
-		mpp_frame_set_combo_frame(frame, comb_frame);
+		kmpp_frame_set_buffer(comb_frame, buffer);
+		kmpp_frame_set_chan_id(comb_frame, info->jpeg_chan_id);
+		kmpp_frame_set_combo_frame(frame, comb_frame);
 	}
-	mpp_frame_set_buffer(frame, buffer);
+	kmpp_frame_set_buffer(frame, buffer);
 	mpp_buffer_put(buffer);
 	chan_entry->frame = frame;
 

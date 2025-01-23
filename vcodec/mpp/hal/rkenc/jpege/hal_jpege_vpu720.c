@@ -12,7 +12,7 @@
 #include "mpp_maths.h"
 #include "mpp_buffer.h"
 #include "mpp_enc_hal.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "mpp_packet.h"
 #include "mpp_device.h"
 
@@ -181,10 +181,12 @@ static MPP_RET jpege_vpu720_setup_format(void *hal, HalEncTask *task)
     JpegeVpu720FmtCfg *fmt_cfg = &ctx->fmt_cfg;
     // JpegeSyntax *syntax = &ctx->syntax;
     // MppFrameChromaFormat out_fmt = syntax->format_out;
-    RK_U32 hor_stride = mpp_frame_get_hor_stride(task->frame);
-    RK_U32 ver_stride = mpp_frame_get_ver_stride(task->frame);
+    RK_U32 hor_stride, ver_stride;
 
     hal_jpege_enter();
+
+    kmpp_frame_get_hor_stride(task->frame, &hor_stride);
+    kmpp_frame_get_ver_stride(task->frame, &ver_stride);
 
     memset(fmt_cfg, 0, sizeof(JpegeVpu720FmtCfg));
 
@@ -372,6 +374,7 @@ MPP_RET hal_jpege_vpu720_gen_regs(void *hal, HalEncTask *task)
     RK_S32 bitpos;
     RK_U32 i, j;
     RK_U32 iova;
+    RK_U32 offset_x, offset_y;
 
     hal_jpege_enter();
 
@@ -471,8 +474,10 @@ MPP_RET hal_jpege_vpu720_gen_regs(void *hal, HalEncTask *task)
             reg_base->reg032_sw_src_fmt.src_range_trns_sel = JPEG_VPU720_COLOR_RANGE_FULL_TO_LIMIT;
     }
 
-    reg_base->reg033_sw_pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
-    reg_base->reg033_sw_pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
+    kmpp_frame_get_offset_x(task->frame, &offset_x);
+    kmpp_frame_get_offset_y(task->frame, &offset_y);
+    reg_base->reg033_sw_pic_ofst.pic_ofst_x = offset_x;
+    reg_base->reg033_sw_pic_ofst.pic_ofst_y = offset_y;
 
     reg_base->reg034_sw_src_strd_0.src_strd_0 = ctx->fmt_cfg.y_stride;
     reg_base->reg035_sw_src_strd_1.src_strd_1 = ctx->fmt_cfg.uv_stride;

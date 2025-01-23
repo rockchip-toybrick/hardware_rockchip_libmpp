@@ -185,7 +185,7 @@ typedef struct EncRcTask_s {
 	EncFrmStatus    frm;
 	EncRcTaskInfo   info;
 	EncRcForceCfg   force;
-	MppFrame        frame;
+	KmppFrame       frame;
 	RK_U32          qp_out;
 } EncRcTask;
 

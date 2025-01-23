@@ -15,7 +15,6 @@
 #include "mpp_maths.h"
 
 #include "mpp_enc_hal.h"
-#include "mpp_frame_impl.h"
 #include "hal_h265e_api_v2.h"
 #include "hal_h264e_api_v2.h"
 #include "hal_jpege_api_v2.h"

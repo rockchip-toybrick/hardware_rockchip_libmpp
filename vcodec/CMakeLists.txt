@@ -63,7 +63,6 @@ SET(VCODEC_SRC
     mpp/hal/common/jpeg/hal_jpege_api_v2.c
     mpp/hal/common/jpeg/hal_jpege_hdr.c
     mpp/base/mpp_enc_refs.c
-    mpp/base/mpp_frame.c
     mpp/base/mpp_trie.c
     mpp/base/mpp_enc_cfg.c
     mpp/base/mpp_packet.c

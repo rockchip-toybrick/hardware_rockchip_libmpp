@@ -15,7 +15,7 @@
 
 #include "mpp_mem.h"
 #include "mpp_maths.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 
 #include "h264e_sps.h"
 #include "h264e_pps.h"
@@ -714,8 +714,8 @@ static MPP_RET hal_h264e_vepu540c_get_task(void *hal, HalEncTask *task)
 
 	ctx->osd_cfg.reg_base = &ctx->regs_set->reg_osd_cfg.osd_comb_cfg;
 
-	ctx->roi_data = mpp_frame_get_roi(task->frame);
-	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
+	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
+	kmpp_frame_get_osd(task->frame, (MppOsd*)&ctx->osd_cfg.osd_data3);
 
 	if (!frm_status->reencode) {
 		if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))
@@ -1270,7 +1270,9 @@ static void setup_vepu540c_rdo_cfg(HalH264eVepu540cCtx *ctx, HalEncTask *task)
 	RK_S32 flg2 = 0;
 	RK_S32 flg3 = 0;
 	RK_S32 smear_multi[4] = {9, 12, 16, 16};
-	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
+	VepuPpInfo *ppinfo;
+
+	kmpp_frame_get_pp_info(task->frame, &ppinfo);
 
 	hal_h264e_dbg_func("enter\n");
 
@@ -1643,22 +1645,27 @@ static void setup_vepu540c_io_buf(HalH264eVepu540cCtx *ctx,
 {
 	HalVepu540cRegSet *regs = ctx->regs_set;
 	MppDev dev = ctx->dev;
-	MppFrame frm = task->frame;
+	KmppFrame frm = task->frame;
 	MppPacket pkt = task->packet;
-	MppBuffer buf_in = mpp_frame_get_buffer(frm);
+	MppBuffer buf_in;
 	ring_buf *buf_out = task->output;
-	MppFrameFormat fmt = mpp_frame_get_fmt(frm);
-	RK_S32 hor_stride = mpp_frame_get_hor_stride(frm);
-	RK_S32 ver_stride = mpp_frame_get_ver_stride(frm);
+	MppFrameFormat fmt;
+	RK_S32 hor_stride, ver_stride;
 	RK_U32 off_in[2] = { 0 };
 	RK_U32 off_out = mpp_packet_get_length(pkt);
 	size_t siz_out = buf_out->size;
-	RK_U32 is_phys = mpp_frame_get_is_full(task->frame);
+	RK_U32 is_phys;
 
 	hal_h264e_dbg_func("enter\n");
 
+	kmpp_frame_get_hor_stride(frm, &hor_stride);
+	kmpp_frame_get_ver_stride(frm, &ver_stride);
+	kmpp_frame_get_fmt(frm, &fmt);
+	kmpp_frame_get_buffer(frm, &buf_in);
+	kmpp_frame_get_is_full(frm, &is_phys);
+
 	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
-		off_in[0] = mpp_frame_get_fbc_offset(frm);;
+		kmpp_frame_get_fbc_offset(task->frame, &off_in[0]);
 		off_in[1] = 0;
 	} else if (MPP_FRAME_FMT_IS_YUV(fmt)) {
 		VepuFmtCfg cfg;
@@ -2320,10 +2327,11 @@ static void setup_vepu540c_dvbm(HalVepu540cRegSet *regs, HalH264eVepu540cCtx *ct
 static MPP_RET setup_vepu540c_dvbm(HalVepu540cRegSet *regs, HalH264eVepu540cCtx *ctx,
 				   HalEncTask *task)
 {
-	MppFrame frame = task->frame;
-	RK_U32 is_full = mpp_frame_get_is_full(frame);
+	KmppFrame frame = task->frame;
+	RK_U32 is_full = 0;
 	(void)ctx;
 
+	kmpp_frame_get_is_full(frame, &is_full);
 	if (!is_full) {
 		regs->reg_ctl.dvbm_cfg.dvbm_en = 1;
 		regs->reg_ctl.dvbm_cfg.src_badr_sel = 1;
@@ -2338,11 +2346,14 @@ static MPP_RET setup_vepu540c_dvbm(HalVepu540cRegSet *regs, HalH264eVepu540cCtx 
 		regs->reg_base.dvbm_id.frame_id = 0;
 		regs->reg_base.dvbm_id.vrsp_rtn_en = 1;
 	} else {
-		RK_U32 phy_addr = mpp_frame_get_phy_addr(frame);
-		RK_S32 hor_stride = mpp_frame_get_hor_stride(frame);
-		RK_S32 ver_stride = mpp_frame_get_ver_stride(frame);
+		RK_U32 phy_addr;
+		RK_S32 hor_stride;
+		RK_S32 ver_stride;
 		RK_U32 off_in[2] = { 0 };
 
+		kmpp_frame_get_phy_addr(frame, &phy_addr);
+		kmpp_frame_get_hor_stride(frame, &hor_stride);
+		kmpp_frame_get_ver_stride(frame, &ver_stride);
 		if (!phy_addr) {
 			mpp_err("online case set full frame err");
 			return MPP_NOK;
@@ -2397,7 +2408,10 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 	MPP_RET ret = MPP_OK;
 	RK_U32 is_gray = 0;
 	vepu540c_rdo_cfg *reg_rdo = &ctx->regs_set->reg_rdo;
-	RK_U32 is_phys = mpp_frame_get_is_full(task->frame);
+	RK_U32 is_phys;
+	RK_U32 offset_x, offset_y;
+
+	kmpp_frame_get_is_full(task->frame, &is_phys);
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 	hal_h264e_dbg_detail("frame %d generate regs now", ctx->frms->seq_idx);
@@ -2422,10 +2436,10 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 	}
 	setup_vepu540c_recn_refr(ctx, regs, task);
 
-	regs->reg_base.pic_ofst.pic_ofst_y =
-		mpp_frame_get_offset_y(task->frame);
-	regs->reg_base.pic_ofst.pic_ofst_x =
-		mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	regs->reg_base.pic_ofst.pic_ofst_x = offset_x;
+	regs->reg_base.pic_ofst.pic_ofst_y = offset_y;
 
 	setup_vepu540c_split(regs, &cfg->split);
 	setup_vepu540c_me(regs, sps, slice);
@@ -2475,7 +2489,7 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 		vepu540c_set_roi(&ctx->regs_set->reg_rc_roi.roi_cfg,
 				 (MppEncROICfg *)ctx->roi_data, prep->width, prep->height);
 
-	is_gray = mpp_frame_get_is_gray(task->frame);
+	kmpp_frame_get_is_gray(task->frame, &is_gray);
 	if (ctx->is_gray != is_gray) {
 		if (ctx->is_gray) {
 			//mpp_log("gray to color.\n");

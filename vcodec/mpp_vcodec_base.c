@@ -26,7 +26,7 @@
 #include "rk_export_func.h"
 #include "mpp_packet_impl.h"
 #include "mpp_mem_pool.h"
-#include "mpp_frame.h"
+#include "kmpp_frame.h"
 #include "hal_bufs.h"
 #include "mpp_maths.h"
 #include "mpp_vcodec_rockit.h"
@@ -136,7 +136,7 @@ static int mpp_vcodec_msg_handle(struct mpi_obj *obj, int event, void *args)
 			struct mpp_frame_infos frm_info;
 			MppBufferInfo buf_info;
 			MppBuffer buffer = NULL;
-			MppFrame frame = NULL;
+			KmppFrame frame = NULL;
 
 			memset(&frm_info, 0, sizeof(frm_info));
 			if (vcodec_rockit_get_buf_frm_info(buf, &frm_info, entry->chan_id)) {
@@ -149,17 +149,17 @@ static int mpp_vcodec_msg_handle(struct mpi_obj *obj, int event, void *args)
 			mpp_buffer_import(&buffer, &buf_info);
 			mpp_frame_init_with_frameinfo(&frame, &frm_info);
 			if (frm_info.jpeg_chan_id > 0) {
-				MppFrame comb_frame = NULL;
+				KmppFrame comb_frame = NULL;
 
-				mpp_frame_init(&comb_frame);
-				mpp_frame_copy(comb_frame, frame);
+				kmpp_frame_get(&comb_frame);
+				kmpp_frame_copy(comb_frame, frame);
 				if (frm_info.jpg_combo_osd_buf)
 					frame_add_osd(comb_frame, (MppEncOSDData3 *)frm_info.jpg_combo_osd_buf);
-				mpp_frame_set_buffer(comb_frame, buffer);
-				mpp_frame_set_chan_id(comb_frame, frm_info.jpeg_chan_id);
-				mpp_frame_set_combo_frame(frame, comb_frame);
+				kmpp_frame_set_buffer(comb_frame, buffer);
+				kmpp_frame_set_chan_id(comb_frame, frm_info.jpeg_chan_id);
+				kmpp_frame_set_combo_frame(frame, comb_frame);
 			}
-			mpp_frame_set_buffer(frame, buffer);
+			kmpp_frame_set_buffer(frame, buffer);
 			entry->frame = frame;
 			vcodec_rockit_buf_unref(buf);
 			mpp_buffer_put(buffer);
@@ -216,7 +216,6 @@ static int mpp_enc_module_init(void)
 	vcodec_thread_set_count(thds, 1);
 	vcodec_thread_set_callback(thds, mpp_vcodec_enc_routine, (void*)venc);
 	mpp_packet_pool_init(max_stream_cnt);
-	mpp_frame_pool_init(max_stream_cnt);
 	mpp_buffer_pool_init(max_stream_cnt);
 	vcodec_thread_start(thds);
 
@@ -567,8 +566,10 @@ int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 	struct mpi_queue *queue = NULL;
 
 	spin_lock_irqsave(&entry->chan_lock, lock_flag);
-	if (entry->pskip_frame)
-		mpp_frame_deinit(&entry->pskip_frame);
+	if (entry->pskip_frame) {
+		kmpp_frame_put(entry->pskip_frame);
+		entry->pskip_frame = NULL;
+	}
 	entry->handle = NULL;
 	entry->state = CHAN_STATE_NULL;
 	entry->reenc = 0;
@@ -765,7 +766,6 @@ int mpp_vcodec_deinit(void)
 		venc->thd = NULL;
 	}
 	mpp_packet_pool_deinit();
-	mpp_frame_pool_deinit();
 	mpp_buffer_pool_deinit();
 
     kmpp_venc_init_cfg_deinit();

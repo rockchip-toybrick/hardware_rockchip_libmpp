@@ -15,7 +15,6 @@
 //#include "mpp_soc.h"
 #include "mpp_maths.h"
 #include "mpp_packet.h"
-#include "mpp_frame_impl.h"
 
 #include "h265e_syntax_new.h"
 #include "hal_h265e_debug.h"
@@ -774,9 +773,12 @@ vepu541_h265_uv_address(H265eV541RegSet * regs, H265eSyntax_new * syn,
 	RK_U32 frame_size = hor_stride * ver_stride;
 	RK_U32 u_offset = 0, v_offset = 0;
 	MPP_RET ret = MPP_OK;
+	RK_U32 fmt;
 
-	if (MPP_FRAME_FMT_IS_FBC(mpp_frame_get_fmt(task->frame))) {
-		u_offset = mpp_frame_get_fbc_offset(task->frame);
+	kmpp_frame_get_fmt(task->frame, &fmt);
+
+	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
+		kmpp_frame_get_fbc_offset(task->frame, &u_offset);
 		v_offset = 0;
 	} else {
 		switch (input_fmt) {
@@ -1380,6 +1382,7 @@ void vepu54x_h265_set_hw_address(H265eV541HalContext * ctx,
 	MppBuffer mv_info_buf = enc_task->mv_info;
 	H265eSyntax_new *syn = (H265eSyntax_new *) enc_task->syntax.data;
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
+	RK_U32 offset_x, offset_y;
 
 	hal_h265e_enter();
 	regs->adr_srcy_hevc =
@@ -1450,8 +1453,10 @@ void vepu54x_h265_set_hw_address(H265eV541HalContext * ctx,
 	regs->bsbw_addr_hevc =
 		regs->bsbb_addr_hevc + mpp_packet_get_length(task->packet);
 
-	regs->pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
-	regs->pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	regs->pic_ofst.pic_ofst_y = offset_x;
+	regs->pic_ofst.pic_ofst_x = offset_y;
 }
 
 MPP_RET hal_h265e_v541_gen_regs(void *hal, HalEncTask * task)
@@ -1960,7 +1965,7 @@ MPP_RET hal_h265e_v541_wait(void *hal, HalEncTask * task)
 MPP_RET hal_h265e_v541_get_task(void *hal, HalEncTask * task)
 {
 	H265eV541HalContext *ctx = (H265eV541HalContext *) hal;
-	//  MppFrame frame = task->frame;
+	//  KmppFrame frame = task->frame;
 	EncFrmStatus *frm_status = &task->rc_task->frm;
 
 	hal_h265e_enter();

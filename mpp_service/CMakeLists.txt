@@ -77,7 +77,6 @@ SET(KMPP_SRC
     ../vcodec/mpp/hal/common/jpeg/hal_jpege_api_v2.c
     ../vcodec/mpp/hal/common/jpeg/hal_jpege_hdr.c
     ../vcodec/mpp/base/mpp_enc_refs.c
-    ../vcodec/mpp/base/mpp_frame.c
     ../vcodec/mpp/base/mpp_trie.c
     ../vcodec/mpp/base/mpp_enc_cfg.c
     ../vcodec/mpp/base/mpp_packet.c

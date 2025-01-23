@@ -21,7 +21,7 @@
  *    This is quality and bitrate request from user.
  *    For controller only
  *
- * 2. Data source MppFrame parameter
+ * 2. Data source KmppFrame parameter
  *    This is data source buffer information.
  *    For both controller and hal
  *
@@ -53,7 +53,7 @@
  *                 |    |         |   |   |           |     |
  * +----------+    |    |         |   |   |        syntax   |
  * |          |    |    |         |   |   |           |     |
- * | MppFrame +--------->  MppEnc +---+   |           |   result
+ * | KmppFrame+--------->  MppEnc +---+   |           |   result
  * |          |    |    |         |   |   |           |     |
  * +----------+    |    |         |   |   |           |     |
  *                 |    |         |   |   |       +---v-----+--+
@@ -177,9 +177,9 @@ MPP_RET mpp_enc_set_online_mode(MppEnc ctx, RK_U32 mode);
 MPP_RET mpp_enc_control(MppEnc ctx, MpiCmd cmd, void *param);
 MPP_RET mpp_enc_notify(MppEnc ctx, RK_U32 flag);
 MPP_RET mpp_enc_reset(MppEnc ctx);
-MPP_RET mpp_enc_oneframe(MppEnc ctx, MppFrame frame,
+MPP_RET mpp_enc_oneframe(MppEnc ctx, KmppFrame frame,
 			 MppPacket * packet);
-MPP_RET mpp_enc_cfg_reg(MppEnc ctx, MppFrame frame);	//no block
+MPP_RET mpp_enc_cfg_reg(MppEnc ctx, KmppFrame frame);	//no block
 MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx);	//no block
 
 MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
@@ -190,7 +190,7 @@ void    mpp_enc_proc_debug(void *seq_file, MppEnc ctx, RK_U32 chl_id);
 RK_S32  mpp_enc_check_pkt_pool(MppEnc ctx);
 void mpp_enc_deinit_frame(MppEnc ctx);
 void mpp_enc_pkt_full_inc(MppEnc ctx);
-MPP_RET mpp_enc_force_pskip(MppEnc ctx, MppFrame frame, MppPacket *packet);
+MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet);
 RK_S32 mpp_enc_get_fps_out(MppEnc ctx);
 
 #ifdef __cplusplus

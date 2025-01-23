@@ -28,10 +28,11 @@
 #include "mpp_packet_impl.h"
 #include "mpp_time.h"
 #include "mpp_vcodec_rockit.h"
+#include "kmpp_frame.h"
 
 void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry, MppPacket packet);
 
-MPP_RET frame_add_osd(MppFrame frame, MppEncOSDData3 *osd_data)
+MPP_RET frame_add_osd(KmppFrame frame, MppEncOSDData3 *osd_data)
 {
 	RK_U32 i = 0;
 	void *mpi_buf = NULL;
@@ -63,7 +64,7 @@ MPP_RET frame_add_osd(MppFrame frame, MppEncOSDData3 *osd_data)
 			osd_data->region[i].inv_cfg.inv_buf.buf = buf;
 		}
 	}
-	mpp_frame_add_osd(frame, (MppOsd)osd_data);
+	kmpp_frame_add_osd(frame, (MppOsd)osd_data);
 	for (i = 0; i < osd_data->num_region; i++) {
 		if (osd_data->region[i].osd_buf.buf)
 			mpp_buffer_put(&osd_data->region[i].osd_buf);
@@ -75,37 +76,37 @@ MPP_RET frame_add_osd(MppFrame frame, MppEncOSDData3 *osd_data)
 	return MPP_OK;
 }
 
-MPP_RET mpp_frame_init_with_frameinfo(MppFrame *frame, struct mpp_frame_infos *info)
+MPP_RET mpp_frame_init_with_frameinfo(KmppFrame *frame, struct mpp_frame_infos *info)
 {
-	MppFrame p = NULL;
+	KmppFrame p = NULL;
 
 	if (NULL == frame) {
 		mpp_err_f("invalid NULL pointer input\n");
 		return MPP_ERR_NULL_PTR;
 	}
 
-	mpp_frame_init(&p);
-	mpp_frame_set_width(p, info->width);
-	mpp_frame_set_height(p, info->height);
-	mpp_frame_set_hor_stride(p, info->hor_stride);
-	mpp_frame_set_ver_stride(p, info->ver_stride);
-	mpp_frame_set_pts(p, info->pts);
-	mpp_frame_set_dts(p, info->dts);
-	mpp_frame_set_fmt(p, info->fmt);
-	mpp_frame_set_offset_x(p, info->offset_x);
-	mpp_frame_set_offset_y(p, info->offset_y);
-	mpp_frame_set_is_gray(p, info->is_gray);
-	mpp_frame_set_is_full(p, info->is_full);
-	mpp_frame_set_phy_addr(p, info->phy_addr);
-	mpp_frame_set_idr_request(p, info->idr_request);
-	mpp_frame_set_eos(p, info->eos);
-	mpp_frame_set_pskip_request(p, info->pskip);
-	mpp_frame_set_pskip_num(p, info->pskip_num);
+	kmpp_frame_get(&p);
+	kmpp_frame_set_width(p, info->width);
+	kmpp_frame_set_height(p, info->height);
+	kmpp_frame_set_hor_stride(p, info->hor_stride);
+	kmpp_frame_set_ver_stride(p, info->ver_stride);
+	kmpp_frame_set_pts(p, info->pts);
+	kmpp_frame_set_dts(p, info->dts);
+	kmpp_frame_set_fmt(p, info->fmt);
+	kmpp_frame_set_offset_x(p, info->offset_x);
+	kmpp_frame_set_offset_y(p, info->offset_y);
+	kmpp_frame_set_is_gray(p, info->is_gray);
+	kmpp_frame_set_is_full(p, info->is_full);
+	kmpp_frame_set_phy_addr(p, info->phy_addr);
+	kmpp_frame_set_idr_request(p, info->idr_request);
+	kmpp_frame_set_eos(p, info->eos);
+	kmpp_frame_set_pskip_request(p, info->pskip);
+	kmpp_frame_set_pskip_num(p, info->pskip_num);
 
 	if (info->osd_buf)
 		frame_add_osd(p, (MppEncOSDData3 *)info->osd_buf);
 	if (info->pp_info)
-		mpp_frame_add_ppinfo(p, (MppPpInfo*)info->pp_info);
+		kmpp_frame_set_pp_info(p, (MppPpInfo*)info->pp_info);
 	*frame = p;
 
 	return MPP_OK;
@@ -115,10 +116,11 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 {
 	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
 	struct mpp_chan *comb_chan = NULL;
-	MppFrame frame = NULL;
-	MppFrame comb_frame = NULL;
+	KmppFrame frame = NULL;
+	KmppFrame comb_frame = NULL;
 	unsigned long lock_flag;
 	RK_U64 cfg_start = 0, cfg_end = 0;
+	RK_U64 dts = 0;
 
 	if (!chan_entry) {
 		mpp_err_f("chan_entry is NULL\n");
@@ -146,9 +148,11 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		chan_entry->frame = NULL;
 		chan_entry->gap_time = (RK_S32)(mpp_time() - chan_entry->last_yuv_time);
 		chan_entry->last_yuv_time = mpp_time();
-		comb_frame = mpp_frame_get_combo_frame(frame);
+		kmpp_frame_get_combo_frame(frame, &comb_frame);
 		if (comb_frame) {
-			RK_U32 jpeg_chan_id = mpp_frame_get_chan_id(comb_frame);
+			RK_U32 jpeg_chan_id = 0;
+
+			kmpp_frame_get_chan_id(comb_frame, &jpeg_chan_id);
 
 			mpp_vcodec_jpegcomb("attach jpeg id %d\n", jpeg_chan_id);
 			comb_chan = mpp_vcodec_get_chan_entry(jpeg_chan_id, MPP_CTX_ENC);
@@ -171,10 +175,12 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 
 	if (frame != NULL || chan_entry->reenc) {
 		MPP_RET ret = MPP_OK;
+		RK_U32 pskip = 0;
 
+		kmpp_frame_get_pskip_request(frame, &pskip);
 		cfg_start = mpp_time();
 		atomic_inc(&chan_entry->runing);
-		if (frame && mpp_frame_get_pskip_request(frame)) {
+		if (frame && pskip) {
 			MppPacket packet = NULL;
 			struct venc_module *venc = NULL;
 
@@ -182,21 +188,26 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			ret = mpp_enc_force_pskip(chan_entry->handle, frame, &packet);
 			if (packet)
 				mpp_vcodec_enc_add_packet_list(chan_entry, packet);
-			mpp_frame_deinit(&frame);
+			kmpp_frame_put(frame);
+			frame = NULL;
 			atomic_dec(&chan_entry->runing);
 			wake_up(&chan_entry->stop_wait);
 			vcodec_thread_trigger(venc->thd);
 			goto __RETURN;
 		} else {
+			RK_U32 pskip_num = 0;
+
+			kmpp_frame_get_pskip_num(frame, &pskip_num);
 			ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
 
-			if (frame && mpp_frame_get_pskip_num(frame) > 0) {
-				mpp_frame_init(&chan_entry->pskip_frame);
-				mpp_frame_copy(chan_entry->pskip_frame, frame);
+			if (frame && pskip_num > 0) {
+				kmpp_frame_get(&chan_entry->pskip_frame);
+				kmpp_frame_copy(chan_entry->pskip_frame, frame);
 			}
 		}
 
-		chan_entry->seq_encoding = mpp_frame_get_dts(frame);
+		kmpp_frame_get_dts(frame, &dts);
+		chan_entry->seq_encoding = dts;
 		if (MPP_OK == ret) {
 			if (comb_chan && comb_chan->handle) {
 				atomic_inc(&comb_chan->runing);
@@ -218,10 +229,12 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 					atomic_dec(&comb_chan->runing);
 					atomic_dec(&chan_entry->cfg.comb_runing);
 					wake_up(&comb_chan->stop_wait);
-					vcodec_rockit_notify_drop_frm(comb_chan->chan_id, mpp_frame_get_dts(comb_frame),
+					vcodec_rockit_notify_drop_frm(comb_chan->chan_id, dts,
 								      VENC_DROP_CFG_FAILED);
-					if (comb_frame)
-						mpp_frame_deinit(&comb_frame);
+					if (comb_frame) {
+						kmpp_frame_put(comb_frame);
+						comb_frame = NULL;
+					}
 					ret = mpp_enc_hw_start( (MppEnc)chan_entry->handle, NULL);
 				}
 			} else
@@ -235,13 +248,15 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			atomic_dec(&chan_entry->runing);
 			wake_up(&chan_entry->stop_wait);
 			if (frame) {
-				vcodec_rockit_notify_drop_frm(chan_entry->chan_id, mpp_frame_get_dts(frame), VENC_DROP_CFG_FAILED);
-				mpp_frame_deinit(&frame);
+				vcodec_rockit_notify_drop_frm(chan_entry->chan_id, dts, VENC_DROP_CFG_FAILED);
+				kmpp_frame_put(frame);
+				frame = NULL;
 			}
 			if (comb_frame) {
-				vcodec_rockit_notify_drop_frm(comb_chan->chan_id, mpp_frame_get_dts(comb_frame),
+				vcodec_rockit_notify_drop_frm(comb_chan->chan_id, dts,
 							      VENC_DROP_CFG_FAILED);
-				mpp_frame_deinit(&comb_frame);
+				kmpp_frame_put(comb_frame);
+				comb_frame = NULL;
 			}
 			if (chan_entry->cfg.online)
 				mpp_enc_online_task_failed(chan_entry->handle);
@@ -320,19 +335,22 @@ static void mpp_vcodec_event_frame(int chan_id)
 	if (chan_entry->pskip_frame) {
 		RK_U32 i;
 		MPP_RET ret;
-		RK_U32 pskip_num = mpp_frame_get_pskip_num(chan_entry->pskip_frame);
-		RK_S64 pts = mpp_frame_get_pts(chan_entry->pskip_frame);
+		RK_U32 pskip_num;
+		RK_S64 pts;
 		RK_S64 pts_diff = 1000000 / mpp_enc_get_fps_out(chan_entry->handle);
 
+		kmpp_frame_get_pts(chan_entry->pskip_frame, &pts);
+		kmpp_frame_get_pskip_num(chan_entry->pskip_frame, &pskip_num);
 		for (i = 0; i < pskip_num; i++) {
 			packet = NULL;
-			mpp_frame_set_pts(chan_entry->pskip_frame, pts + i * pts_diff);
+			kmpp_frame_set_pts(chan_entry->pskip_frame, pts + i * pts_diff);
 			ret = mpp_enc_force_pskip(chan_entry->handle, chan_entry->pskip_frame, &packet);
 			if (packet)
 				mpp_vcodec_enc_add_packet_list(chan_entry, packet);
 		}
 
-		mpp_frame_deinit(&chan_entry->pskip_frame);
+		kmpp_frame_put(chan_entry->pskip_frame);
+		chan_entry->pskip_frame = NULL;
 	}
 
 	if (ret)

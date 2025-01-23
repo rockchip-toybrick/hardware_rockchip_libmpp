@@ -96,9 +96,7 @@ rk_s32 kmpp_test_func(void *param)
 
     kmpp_meta_dump(meta);
 
-    osal_memset(&sptr, 0, sizeof(sptr));
-    ret = kmpp_frame_get_buffer(frame, &sptr);
-    buffer = sptr.kptr;
+    ret = kmpp_frame_get_buffer(frame, &buffer);
 
     kmpp_logi_f("get buffer %px ret %d\n", buffer, ret);
 

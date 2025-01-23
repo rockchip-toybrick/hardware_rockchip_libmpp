@@ -14,7 +14,7 @@
 
 #include "mpp_mem.h"
 #include "mpp_packet.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "mpp_maths.h"
 
 #include "hal_h265e_debug.h"
@@ -675,7 +675,7 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 	rdo_noskip_par *p_rdo_noskip = NULL;
 	pre_cst_par *p_pre_cst = NULL;
 	RK_S32 delta_qp = 0;
-	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
+	VepuPpInfo *ppinfo = NULL;
 	vepu540c_h265_fbk *last_fb = &ctx->last_frame_fb;
 	RK_U32 *smear_cnt = last_fb->st_smear_cnt;
 	RK_U32 mb_cnt = last_fb->st_mb_num;
@@ -690,6 +690,8 @@ static void vepu540c_h265_rdo_cfg(H265eV540cHalContext *ctx, vepu540c_rdo_cfg *r
 			 ctx->cfg->tune.atr_str_i : ctx->cfg->tune.atr_str_p;
 	RK_S32 smear_multi16[4] = {9, 12, 16, 16};
 	RK_S32 smear_multi8[4] = {8, 12, 16, 16};
+
+	kmpp_frame_get_pp_info(task->frame, &ppinfo);
 
 	if (ctx->frame_type != INTRA_FRAME && atl_str == 3)
 		atl_str = 0;
@@ -1321,9 +1323,12 @@ vepu540c_h265_uv_address(hevc_vepu540c_base *reg_base, H265eSyntax_new *syn,
 	RK_U32 frame_size = hor_stride * ver_stride;
 	RK_U32 u_offset = 0, v_offset = 0;
 	MPP_RET ret = MPP_OK;
+	RK_U32 fmt;
 
-	if (MPP_FRAME_FMT_IS_FBC(mpp_frame_get_fmt(task->frame))) {
-		u_offset = mpp_frame_get_fbc_offset(task->frame);
+	kmpp_frame_get_fmt(task->frame, &fmt);
+
+	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
+		kmpp_frame_get_fbc_offset(task->frame, &u_offset);
 		v_offset = 0;
 	} else {
 		switch (input_fmt) {
@@ -1900,7 +1905,10 @@ void vepu540c_h265_set_hw_address(H265eV540cHalContext *ctx,
 	H265eSyntax_new *syn = (H265eSyntax_new *) enc_task->syntax.data;
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
 	RK_U32 len = mpp_packet_get_length(task->packet);
-	RK_U32 is_phys = mpp_frame_get_is_full(task->frame);
+	RK_U32 is_phys;
+	RK_U32 offset_x, offset_y;
+
+	kmpp_frame_get_is_full(task->frame, &is_phys);
 
 	hal_h265e_enter();
 
@@ -1999,8 +2007,10 @@ void vepu540c_h265_set_hw_address(H265eV540cHalContext *ctx,
 		struct device *dev = mpp_get_dev(ctx->dev);
 		dma_sync_single_for_device(dev, enc_task->output->mpi_buf_id, len, DMA_TO_DEVICE);
 	}
-	regs->reg0204_pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
-	regs->reg0204_pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	regs->reg0204_pic_ofst.pic_ofst_x = offset_x;
+	regs->reg0204_pic_ofst.pic_ofst_y = offset_y;
 }
 
 static MPP_RET vepu540c_h265e_save_pass1_patch(H265eV540cRegSet *regs, H265eV540cHalContext *ctx)
@@ -2075,8 +2085,10 @@ static MPP_RER vepu540c_h265_set_dvbm(H265eV540cRegSet *regs, HalEncTask *task)
 #else
 static MPP_RET vepu540c_h265_set_dvbm(H265eV540cRegSet *regs, HalEncTask *task)
 {
-	MppFrame frame = task->frame;
-	RK_U32 is_full = mpp_frame_get_is_full(frame);
+	KmppFrame frame = task->frame;
+	RK_U32 is_full;
+
+	kmpp_frame_get_is_full(frame, &is_full);
 
 	if (!is_full) {
 		regs->reg_ctl.reg0024_dvbm_cfg.dvbm_en = 1;
@@ -2092,11 +2104,14 @@ static MPP_RET vepu540c_h265_set_dvbm(H265eV540cRegSet *regs, HalEncTask *task)
 		regs->reg_base.reg0194_dvbm_id.frame_id = 0;
 		regs->reg_base.reg0194_dvbm_id.vrsp_rtn_en = 1;
 	} else {
-		RK_U32 phy_addr = mpp_frame_get_phy_addr(frame);
-		RK_S32 hor_stride = mpp_frame_get_hor_stride(frame);
-		RK_S32 ver_stride = mpp_frame_get_ver_stride(frame);
+		RK_U32 phy_addr;
+		RK_S32 hor_stride;
+		RK_S32 ver_stride;
 		RK_U32 off_in[2] = { 0 };
 
+		kmpp_frame_get_phy_addr(frame, &phy_addr);
+		kmpp_frame_get_hor_stride(frame, &hor_stride);
+		kmpp_frame_get_ver_stride(frame, &ver_stride);
 		if (!phy_addr) {
 			mpp_err("online case set full frame err");
 			return MPP_NOK;
@@ -2153,7 +2168,9 @@ static MPP_RET hal_h265e_v540c_gen_regs(void *hal, HalEncTask *task)
 	EncFrmStatus *frm = &task->rc_task->frm;
 	RK_U32 is_gray = 0;
 	rdo_noskip_par *p_rdo_intra = NULL;
-	RK_U32 is_phys = mpp_frame_get_is_full(task->frame);
+	RK_U32 is_phys;
+
+	kmpp_frame_get_is_full(task->frame, &is_phys);
 
 	hal_h265e_enter();
 	pic_width_align8 = (syn->pp.pic_width + 7) & (~7);
@@ -2330,7 +2347,7 @@ static MPP_RET hal_h265e_v540c_gen_regs(void *hal, HalEncTask *task)
 	/*paramet cfg */
 	vepu540c_h265_global_cfg_set(ctx, regs, task);
 
-	is_gray = mpp_frame_get_is_gray(task->frame);
+	kmpp_frame_get_is_gray(task->frame, &is_gray);
 	if (ctx->is_gray != is_gray) {
 		if (ctx->is_gray) {
 			//mpp_log("gray to color.\n");
@@ -2866,9 +2883,9 @@ static MPP_RET hal_h265e_v540c_get_task(void *hal, HalEncTask *task)
 
 	hal_h265e_enter();
 
-	ctx->roi_data = mpp_frame_get_roi(task->frame);
+	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
+	kmpp_frame_get_osd(task->frame, (MppOsd*)&ctx->osd_cfg.osd_data3);
 
-	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
 	ctx->frame_type = frm_status->is_intra ? INTRA_FRAME : INTER_P_FRAME;
 
 	if (!task->rc_task->frm.reencode) {

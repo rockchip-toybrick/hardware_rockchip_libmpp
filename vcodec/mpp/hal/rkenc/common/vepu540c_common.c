@@ -21,7 +21,7 @@
 #include "vepu5xx_common.h"
 #include "vepu540c_common.h"
 #include "hal_enc_task.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "mpp_packet.h"
 #include "rk-dvbm.h"
 
@@ -577,18 +577,26 @@ static MPP_RET
 vepu540c_jpeg_set_uv_offset(Vepu540cJpegReg * regs, JpegeSyntax * syn,
 			    VepuFmt input_fmt, HalEncTask * task)
 {
-	RK_U32 hor_stride = mpp_frame_get_hor_stride(task->frame) ?
-			    mpp_frame_get_hor_stride(task->frame) :
-			    mpp_frame_get_width(task->frame);
-	RK_U32 ver_stride = mpp_frame_get_ver_stride(task->frame) ?
-			    mpp_frame_get_ver_stride(task->frame) :
-			    mpp_frame_get_height(task->frame);
-	RK_U32 frame_size = hor_stride * ver_stride;
+	RK_U32 hor_stride = 0;
+	RK_U32 ver_stride = 0;
+	RK_U32 frame_size = 0;
 	RK_U32 u_offset = 0, v_offset = 0;
 	MPP_RET ret = MPP_OK;
+	RK_U32 fmt;
 
-	if (MPP_FRAME_FMT_IS_FBC(mpp_frame_get_fmt(task->frame))) {
-		u_offset = mpp_frame_get_fbc_offset(task->frame);
+	kmpp_frame_get_hor_stride(task->frame, &hor_stride);
+	kmpp_frame_get_ver_stride(task->frame, &ver_stride);
+
+	if (hor_stride == 0 || ver_stride == 0) {
+		kmpp_frame_get_width(task->frame, &hor_stride);
+		kmpp_frame_get_height(task->frame, &ver_stride);
+	}
+
+	frame_size = hor_stride * ver_stride;
+
+	kmpp_frame_get_fmt(task->frame, &fmt);
+	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
+		kmpp_frame_get_fbc_offset(task->frame, &u_offset);
 		v_offset = 0;
 		mpp_log("fbc case u_offset = %d", u_offset);
 	} else {
@@ -648,14 +656,19 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	VepuFmtCfg *fmt = (VepuFmtCfg *) cfg->input_fmt;
 	RK_S32 stridey = 0;
 	RK_S32 stridec = 0;
-	MppFrame frame = task->frame;
+	KmppFrame frame = task->frame;
 	RK_U32 width = syn->width;
 	RK_U32 height = syn->height;
-	RK_U32 slice_en = (mpp_frame_get_height(frame) < height) && syn->restart_ri;
+	RK_U32 slice_en = 0;
+	RK_U32 frame_height = 0;
+	RK_U32 offset_x, offset_y;
+
+	kmpp_frame_get_height(frame, &frame_height);
+	slice_en = (frame_height < height) && syn->restart_ri;
 
 	if (slice_en) {
-		width = mpp_frame_get_width(frame);
-		height = mpp_frame_get_height(frame);
+		kmpp_frame_get_width(frame, &width);
+		kmpp_frame_get_height(frame, &height);
 		/* if not first marker, do not write header */
 		if (cfg->rst_marker) {
 			task->length = 0;
@@ -743,8 +756,10 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	}
 	regs->reg0281_src_strd0.src_strd0 = stridey;
 	regs->reg0282_src_strd1.src_strd1 = stridec;
-	regs->reg0280_pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
-	regs->reg0280_pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	regs->reg0280_pic_ofst.pic_ofst_y = offset_y;
+	regs->reg0280_pic_ofst.pic_ofst_x = offset_x;
 	//to be done
 
 	regs->reg0283_src_flt.pp_corner_filter_strength = 0;
@@ -759,7 +774,10 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	regs->reg0287_base_cfg.jpeg_out_mode = 0;
 	regs->reg0287_base_cfg.jpeg_start_rst_m = cfg->rst_marker & 0x7;
 	if (slice_en) {
-		if (mpp_frame_get_eos(frame)) {
+		RK_U32 eos = 0;
+
+		kmpp_frame_get_eos(frame, &eos);
+		if (eos) {
 			regs->reg0287_base_cfg.jpeg_pic_last_ecs = 1;
 			cfg->rst_marker = 0;
 		} else {
@@ -777,10 +795,14 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	regs->reg0288_uvc_cfg.uvc_skip_len = 0;
 
 	if (cfg->online) {
-		RK_U32 is_full = mpp_frame_get_is_full(task->frame);
+		RK_U32 is_full;
+
+		kmpp_frame_get_is_full(task->frame, &is_full);
 
 		if (is_full) {
-			RK_U32 phy_addr = mpp_frame_get_phy_addr(task->frame);
+			RK_U32 phy_addr;
+
+			kmpp_frame_get_phy_addr(task->frame, &phy_addr);
 
 			if (!phy_addr) {
 				mpp_err("online case set full frame err");

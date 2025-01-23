@@ -65,7 +65,7 @@ typedef struct MppEncImpl_t {
 	/*
 	 * thread input / output context
 	 */
-	MppFrame frame;
+	KmppFrame frame;
 	MppPacket packet;
 	RK_U32 low_delay_part_mode;
 
@@ -147,7 +147,7 @@ enum enc_status {
 #ifdef __cplusplus
 extern "C" {
 #endif
-MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, MppFrame frame);
+MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, KmppFrame frame);
 MPP_RET mpp_enc_proc_cfg(MppEncImpl * enc, MpiCmd cmd, void *param);
 MPP_RET mpp_enc_impl_alloc_task(MppEncImpl * enc);
 MPP_RET mpp_enc_impl_free_task(MppEncImpl * enc);
@@ -158,7 +158,7 @@ MPP_RET mpp_enc_impl_hw_start(MppEnc ctx, MppEnc jpeg_ctx);
 void    mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id);
 MPP_RET mpp_enc_unref_osd_buf(MppEncOSDData3 *osd);
 void mpp_enc_impl_pkt_full_inc(MppEnc ctx);
-MPP_RET mpp_enc_impl_force_pskip(MppEnc ctx, MppFrame frame, MppPacket *packet);
+MPP_RET mpp_enc_impl_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet);
 extern int mpp_show_session_info(struct seq_file *seq, u32 chan_id);
 #ifdef __cplusplus
 }

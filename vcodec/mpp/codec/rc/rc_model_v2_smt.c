@@ -27,6 +27,7 @@
 #include "rc_debug.h"
 #include "rc_ctx.h"
 #include "rc_model_v2.h"
+#include "kmpp_frame.h"
 
 #define LOW_QP 34
 #define LOW_LOW_QP 35
@@ -484,7 +485,7 @@ static MPP_RET calc_smt_debreath_qp(RcModelV2SmtCtx * ctx)
 static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 				 RK_S32 *fm_min_pqp, RK_S32 *fm_max_iqp, RK_S32 *fm_max_pqp)
 {
-	VepuPpInfo *ppinfo = (VepuPpInfo *)mpp_frame_get_ppinfo(task->frame);
+	VepuPpInfo *ppinfo = NULL;
 	EncFrmStatus *frm = &task->frm;
 	RcModelV2SmtCtx *p = (RcModelV2SmtCtx *) ctx;
 	EncRcTaskInfo *info = &task->info;
@@ -492,6 +493,8 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 	RK_S32 fps_out = fps->fps_out_num / fps->fps_out_denom;
 	RK_S32 b_min = p->usr_cfg.bps_min;
 	RK_S32 b_max = p->usr_cfg.bps_max;
+
+	kmpp_frame_get_pp_info(task->frame, (MppPpInfo*)&ppinfo);
 	if (ppinfo) {
 		RK_S32 wp_en = ppinfo->wp_out_par_y & 0x1;
 		RK_S32 wp_weight = (ppinfo->wp_out_par_y >> 4) & 0x1FF;

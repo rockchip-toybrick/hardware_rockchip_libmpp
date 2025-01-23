@@ -12,7 +12,7 @@
 #include <mpp_maths.h>
 
 #include "mpp_mem.h"
-#include "mpp_frame_impl.h"
+#include "kmpp_frame.h"
 #include "mpp_packet.h"
 
 #include "hal_h265e_debug.h"
@@ -611,9 +611,11 @@ static MPP_RET vepu500_h265_uv_address(HevcVepu500Frame *regs, H265eSyntax_new *
 	RK_U32 frame_size = hor_stride * ver_stride;
 	RK_U32 u_offset = 0, v_offset = 0;
 	MPP_RET ret = MPP_OK;
+	RK_U32 fmt;
 
-	if (MPP_FRAME_FMT_IS_FBC(mpp_frame_get_fmt(task->frame))) {
-		u_offset = mpp_frame_get_fbc_offset(task->frame);
+	kmpp_frame_get_fmt(task->frame, &fmt);
+	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
+		kmpp_frame_get_fbc_offset(task->frame, &u_offset);
 		v_offset = 0;
 	} else {
 		switch (input_fmt) {
@@ -1401,6 +1403,7 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 	H265eSyntax_new *syn = (H265eSyntax_new *)enc_task->syntax.data;
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
 	RK_U32 len = mpp_packet_get_length(task->packet);
+	RK_U32 offset_x, offset_y;
 
 	hal_h265e_enter();
 
@@ -1463,8 +1466,10 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 		regs->reg0174_bsbs_addr = out_addr + len;
 	}
 
-	regs->reg0204_pic_ofst.pic_ofst_y = mpp_frame_get_offset_y(task->frame);
-	regs->reg0204_pic_ofst.pic_ofst_x = mpp_frame_get_offset_x(task->frame);
+	kmpp_frame_get_offset_x(task->frame, &offset_x);
+	kmpp_frame_get_offset_y(task->frame, &offset_y);
+	regs->reg0204_pic_ofst.pic_ofst_x = offset_x;
+	regs->reg0204_pic_ofst.pic_ofst_y = offset_y;
 
 	if (len && task->output->buf) {
 		task->output->use_len = len;
@@ -3112,9 +3117,8 @@ MPP_RET hal_h265e_v500_get_task(void *hal, HalEncTask *task)
 	hal_h265e_enter();
 
 	ctx->online = task->online;
-	ctx->roi_data = mpp_frame_get_roi(task->frame);
-	ctx->osd_cfg.osd_data3 = mpp_frame_get_osd(task->frame);
-
+	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
+	kmpp_frame_get_osd(task->frame, (MppOsd*)&ctx->osd_cfg.osd_data3);
 	ctx->frame_type = frm_status->is_intra ? INTRA_FRAME : INTER_P_FRAME;
 
 	if (!task->rc_task->frm.reencode) {

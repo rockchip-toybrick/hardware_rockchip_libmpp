@@ -420,7 +420,6 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 	}
 	mpp_packet_pool_info_show(seq);
 	mpp_buf_pool_info_show(seq);
-	mpp_frame_pool_info_show(seq);
 	return 0;
 }
 

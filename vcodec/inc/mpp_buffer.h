@@ -207,7 +207,7 @@ typedef struct MppBufferInfo_t {
  * mpp_buffer_import usage:
  *
  * Transfer a external buffer info to MppBuffer but it is not expected to attached to certain
- * buffer group. So the group is set to NULL. Then this buffer can be used for MppFrame/MppPacket.
+ * buffer group. So the group is set to NULL. Then this buffer can be used for KmppFrame/MppPacket.
  * Typical usage is for image processing. Image processing normally will be a oneshot operation
  * It does not need complicated group management. But in other hand mpp still need to know the
  * imported buffer is leak or not and trace its usage inside mpp process. So we attach this kind
