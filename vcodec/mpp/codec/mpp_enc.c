@@ -25,6 +25,9 @@
 #include "mpp_service.h"
 #include "mpp_vcodec_rockit.h"
 
+#include "kmpp_obj.h"
+#include "kmpp_venc_objs_impl.h"
+
 RK_U32 mpp_enc_debug = 0;
 module_param(mpp_enc_debug, uint, 0644);
 MODULE_PARM_DESC(mpp_enc_debug, "bits mpp_enc debug information");
@@ -145,6 +148,8 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 	p->shared_buf = cfg->shared_buf;
 	p->chan_id = cfg->chan_id;
 	p->ref_buf_shared = cfg->ref_buf_shared;
+	kmpp_venc_ntfy_get(&p->venc_notify);
+
 	*enc = p;
 
 	return ret;
@@ -215,6 +220,10 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 				mpp_buffer_put(enc->ring_pool->buf);
 		}
 		MPP_FREE(enc->ring_pool);
+	}
+	if (enc->venc_notify) {
+		kmpp_venc_ntfy_put(enc->venc_notify);
+		enc->venc_notify = NULL;
 	}
 	mpp_enc_unref_osd_buf(&enc->cur_osd);
 	MPP_FREE(enc->rc_cfg_info);
@@ -391,10 +400,13 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 
 	if (MPP_OK == ret) {
 		if (enc->online) {
-			RK_U64 dts = 0;
+			KmppVencNtfy ntfy = enc->venc_notify;
+			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
-			kmpp_frame_get_dts(enc->frame, &dts);
-			vcodec_rockit_notify(enc->chan_id, NOTIFY_ENC_TASK_READY, &dts);
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_WRAP_TASK_READY;
+			ntfy_impl->chan_id = enc->chan_id;
+			ntfy_impl->frame = enc->frame;
+			kmpp_venc_notify(ntfy);
 		}
 		atomic_set(&enc->hw_run, 1);
 	}
@@ -439,10 +451,16 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 	}
 
 	{
-		RK_U32 chan_id = enc->chan_id;
+		KmppVencNtfy ntfy = enc->venc_notify;
+		KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
-		vcodec_rockit_notify(chan_id, NOTIFY_ENC_GET_TASK_PIPE_ID, &info.pipe_id);
-		vcodec_rockit_notify(chan_id, NOTIFY_ENC_GET_TASK_FRAME_ID, &info.frame_id);
+		ntfy_impl->cmd = KMPP_NOTIFY_VENC_GET_WRAP_TASK_ID;
+		ntfy_impl->chan_id = enc->chan_id;
+		ntfy_impl->frame = enc->frame;
+		kmpp_venc_notify(ntfy);
+
+		kmpp_venc_ntfy_get_pipe_id(ntfy, &info.pipe_id);
+		kmpp_venc_ntfy_get_frame_id(ntfy, &info.frame_id);
 	}
 
 	info.width = MPP_ALIGN(enc->cfg.prep.width, align);
@@ -719,4 +737,16 @@ RK_S32 mpp_enc_get_fps_out(MppEnc ctx)
 		fps_out = enc->cfg.rc.fps_out_num / enc->cfg.rc.fps_out_denom;
 
 	return fps_out;
+}
+
+KmppVencNtfy mpp_enc_get_notify(MppEnc ctx)
+{
+	MppEncImpl *enc = (MppEncImpl *) ctx;
+
+	if (NULL == enc) {
+		mpp_err_f("found NULL input enc\n");
+		return NULL;
+	}
+
+	return enc->venc_notify;
 }

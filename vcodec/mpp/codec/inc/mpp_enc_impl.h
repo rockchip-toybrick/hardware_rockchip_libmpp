@@ -18,6 +18,8 @@
 #include "rc.h"
 #define  MAX_USRDATA_CNT 4
 
+#include "kmpp_venc_objs.h"
+
 typedef union MppEncHeaderStatus_u {
 	RK_U32 val;
 	struct {
@@ -127,6 +129,7 @@ typedef struct MppEncImpl_t {
 	RK_U32 qp_out;
 	RK_U32 chan_id;
 	RK_S32 last_scene_mode;
+	KmppVencNtfy venc_notify;
 } MppEncImpl;
 
 enum enc_status {

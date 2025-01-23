@@ -30,6 +30,9 @@
 #include "rk_export_func.h"
 #include "mpp_vcodec_rockit.h"
 
+#include "kmpp_obj.h"
+#include "kmpp_venc_objs_impl.h"
+
 typedef union EncTaskWait_u {
 	RK_U32 val;
 	struct {
@@ -2093,6 +2096,8 @@ static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, MppPacket *packet)
 	MppEncHal hal = enc->enc_hal;
 	RK_U64 dts = 0, pts = 0;
 	RK_U32 eos = 0;
+	KmppVencNtfy ntfy = enc->venc_notify;
+	KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
 	hal_task->length -= hal_task->hw_length;
 	ret = mpp_enc_hal_ret_task(hal, hal_task, NULL);
@@ -2110,8 +2115,6 @@ static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, MppPacket *packet)
 	kmpp_frame_get_dts(hal_task->frame, &dts);
 	kmpp_frame_get_pts(hal_task->frame, &pts);
 
-	vcodec_rockit_set_intra_info(enc->chan_id, dts, pts, 1);
-
 	if (enc->dev && enc->time_base && enc->time_end &&
 	    ((enc->time_end - enc->time_base) >= (RK_S64)(1000 * 1000)))
 		update_hal_info_fps(enc);
@@ -2120,16 +2123,25 @@ static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, MppPacket *packet)
 	frm->reencode_times = 0;
 TASK_DONE:
 
+	ntfy_impl->chan_id = enc->chan_id;
+	ntfy_impl->frame = enc->frame;
 	/* setup output packet and meta data */
 	if (ret) {
+		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+		ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
+		kmpp_venc_notify(ntfy);
+
 		if (ret == MPP_ERR_INT_BS_OVFL && enc->ring_pool)
 			ring_buf_update_min_size(enc->ring_pool, enc->pkt_buf->size);
 		enc->frame_force_drop++;
 		mpp_packet_set_length(enc->packet, 0);
 		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
 		mpp_packet_deinit(&enc->packet);
-		vcodec_rockit_notify_drop_frm(enc->chan_id, dts, VENC_DROP_ENC_FAILED);
 	} else {
+		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
+		ntfy_impl->is_intra = 1;
+		kmpp_venc_notify(ntfy);
+
 		mpp_packet_set_length(enc->packet, hal_task->length);
 		if (frm->is_intra)
 			mpp_packet_set_flag(enc->packet, MPP_PACKET_FLAG_INTRA); //set as key frame
@@ -2284,17 +2296,29 @@ TASK_DONE:
 		MppEncCfgSet *cfg = &enc->cfg;
 		RK_U32 is_intra = (cfg->codec.coding == MPP_VIDEO_CodingMJPEG || frm->is_intra);
 		RK_U64 dts = 0, pts = 0;
+		KmppVencNtfy ntfy = enc->venc_notify;
+		KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
 		kmpp_frame_get_dts(hal_task->frame, &dts);
 		kmpp_frame_get_pts(hal_task->frame, &pts);
 
-		if (ret == MPP_ERR_INT_SOURCE_MIS)
-			vcodec_rockit_notify(enc->chan_id, NOTIFY_ENC_SOURCE_ID_MISMATCH, &dts);
+		ntfy_impl->chan_id = enc->chan_id;
+		ntfy_impl->frame = enc->frame;
 
-		if (ret)
-			vcodec_rockit_notify_drop_frm(enc->chan_id, dts, VENC_DROP_ENC_FAILED);
-		else
-			vcodec_rockit_set_intra_info(enc->chan_id, dts, pts, is_intra);
+		if (ret == MPP_ERR_INT_SOURCE_MIS) {
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_SOURCE_ID_MISMATCH;
+			kmpp_venc_notify(ntfy);
+		}
+
+		if (ret) {
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+			ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
+			kmpp_venc_notify(ntfy);
+		} else {
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
+			ntfy_impl->is_intra = is_intra;
+			kmpp_venc_notify(ntfy);
+		}
 	}
 
 	if (enc->frame) {

@@ -13,6 +13,7 @@
 #include "rk_type.h"
 #include "mpp_err.h"
 #include "rk_mpi_cmd.h"
+#include "kmpp_venc_objs.h"
 
 /*
  * Configure of encoder is separated into four parts.
@@ -192,6 +193,7 @@ void mpp_enc_deinit_frame(MppEnc ctx);
 void mpp_enc_pkt_full_inc(MppEnc ctx);
 MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet);
 RK_S32 mpp_enc_get_fps_out(MppEnc ctx);
+KmppVencNtfy mpp_enc_get_notify(MppEnc ctx);
 
 #ifdef __cplusplus
 }

@@ -16,7 +16,6 @@
 #include <linux/sched.h>
 #include <linux/module.h>
 
-#include "rk_type.h"
 #include "mpp_vcodec_flow.h"
 #include "mpp_vcodec_base.h"
 #include "mpp_vcodec_thread.h"
@@ -28,7 +27,9 @@
 #include "mpp_packet_impl.h"
 #include "mpp_time.h"
 #include "mpp_vcodec_rockit.h"
-#include "kmpp_frame.h"
+
+#include "kmpp_obj.h"
+#include "kmpp_venc_objs_impl.h"
 
 void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry, MppPacket packet);
 
@@ -225,12 +226,19 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 						comb_chan->master_chan_id = chan_entry->chan_id;
 
 				} else {
+					KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
+					KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
 					mpp_err("combo cfg fail \n");
 					atomic_dec(&comb_chan->runing);
 					atomic_dec(&chan_entry->cfg.comb_runing);
 					wake_up(&comb_chan->stop_wait);
-					vcodec_rockit_notify_drop_frm(comb_chan->chan_id, dts,
-								      VENC_DROP_CFG_FAILED);
+
+					ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+					ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+					ntfy_impl->chan_id = comb_chan->chan_id;
+					ntfy_impl->frame = comb_frame;
+					kmpp_venc_notify(ntfy);
 					if (comb_frame) {
 						kmpp_frame_put(comb_frame);
 						comb_frame = NULL;
@@ -248,13 +256,26 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			atomic_dec(&chan_entry->runing);
 			wake_up(&chan_entry->stop_wait);
 			if (frame) {
-				vcodec_rockit_notify_drop_frm(chan_entry->chan_id, dts, VENC_DROP_CFG_FAILED);
+				KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
+				KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+				ntfy_impl->chan_id = chan_entry->chan_id;
+				ntfy_impl->frame = frame;
+				kmpp_venc_notify(ntfy);
 				kmpp_frame_put(frame);
 				frame = NULL;
 			}
 			if (comb_frame) {
-				vcodec_rockit_notify_drop_frm(comb_chan->chan_id, dts,
-							      VENC_DROP_CFG_FAILED);
+				KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
+				KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+				ntfy_impl->chan_id = comb_chan->chan_id;
+				ntfy_impl->frame = comb_frame;
+				kmpp_venc_notify(ntfy);
 				kmpp_frame_put(comb_frame);
 				comb_frame = NULL;
 			}
