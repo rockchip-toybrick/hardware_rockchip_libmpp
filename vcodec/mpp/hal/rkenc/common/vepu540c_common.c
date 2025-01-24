@@ -24,6 +24,7 @@
 #include "kmpp_frame.h"
 #include "mpp_packet.h"
 #include "rk-dvbm.h"
+#include "mpp_buffer_impl.h"
 
 MPP_RET vepu540c_set_roi(void *roi_reg_base, MppEncROICfg * roi,
 			 RK_S32 w, RK_S32 h)

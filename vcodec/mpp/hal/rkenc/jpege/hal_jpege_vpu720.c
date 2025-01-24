@@ -10,7 +10,7 @@
 
 #include "mpp_mem.h"
 #include "mpp_maths.h"
-#include "mpp_buffer.h"
+#include "mpp_buffer_impl.h"
 #include "mpp_enc_hal.h"
 #include "kmpp_frame.h"
 #include "mpp_packet.h"

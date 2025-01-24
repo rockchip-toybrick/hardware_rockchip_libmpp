@@ -11,7 +11,7 @@
 #ifndef __HAL_BUFS_H__
 #define __HAL_BUFS_H__
 
-#include "mpp_buffer.h"
+#include "mpp_buffer_impl.h"
 
 /* HalBuf buffer set allocater */
 typedef struct HalBuf_t {

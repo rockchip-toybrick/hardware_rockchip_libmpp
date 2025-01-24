@@ -27,6 +27,7 @@
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_mem.h"
 #include "mpp_vcodec_rockit.h"
+#include "mpp_buffer_impl.h"
 #include "kmpp_shm.h"
 #include "rk-mpp-kobj.h"
 #include "kmpp_frame.h"

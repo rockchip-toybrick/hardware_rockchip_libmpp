@@ -17,7 +17,7 @@
 #include "mpp_err.h"
 #include "mpp_mem.h"
 #include "mpp_maths.h"
-#include "mpp_buffer.h"
+#include "mpp_buffer_impl.h"
 #include "mpp_stream_ring_buf.h"
 
 RK_U32 ring_buf_debug = 0;

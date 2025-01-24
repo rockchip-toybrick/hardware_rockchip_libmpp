@@ -12,8 +12,6 @@
 
 #include "rk_type.h"
 #include "mpp_err.h"
-#include "mpp_stream_ring_buf.h"
-#include "mpp_device.h"
 #include "rk_export_func.h"
 
 /*
@@ -173,11 +171,6 @@ typedef struct MppBufferInfo_t {
 	RK_S32          fd;
 	struct dma_buf  *dma_buf;
 	int             index;
-	RK_U32          phy_flg;
-	RK_U32          phy_addr;
-        RK_U32          iova;
-        struct sg_table *sgt;
-        struct dma_buf_attachment *attach;
 } MppBufferInfo;
 
 #define BUFFER_GROUP_SIZE_DEFAULT           (SZ_1M*80)
@@ -279,21 +272,6 @@ typedef struct MppBufferInfo_t {
 #define mpp_buffer_flush_for_device_partial(buffer, offset, len) \
         mpp_buffer_flush_for_device_partial_with_caller(buffer, offset, len, __FUNCTION__)
 
-#define mpp_buffer_get_mpi_buf_id(buffer) \
-        mpp_buffer_get_mpi_buf_id_with_caller(buffer, __FUNCTION__)
-
-#define mpp_ring_buffer_get(group, buffer, size) \
-        mpp_ring_buffer_get_with_tag(group, buffer, size, MODULE_TAG, __FUNCTION__)
-
-#define mpp_buffer_set_phy(buffer, phy_addr) \
-        mpp_buffer_set_phy_caller(buffer, phy_addr, __FUNCTION__)
-
-#define mpp_buffer_get_phy(buffer) \
-        mpp_buffer_get_phy_caller(buffer, __FUNCTION__)
-
-#define mpp_buffer_get_iova(buffer, dev) \
-        mpp_buffer_get_iova_f(buffer, dev, __FUNCTION__)
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -346,35 +324,6 @@ MPP_RET mpp_buffer_flush_for_cpu_partial_with_caller(MppBuffer buffer, RK_U32 of
 						     const char *caller);
 MPP_RET mpp_buffer_flush_for_device_partial_with_caller(MppBuffer buffer, RK_U32 offset, RK_U32 len,
 							const char *caller);
-RK_U32 mpp_buffer_get_iova_f(MppBuffer buffe, MppDev dev, const char *caller);
-RK_S32 mpp_buffer_attach_dev(MppBuffer buffer, MppDev dev, const char *caller);
-RK_S32 mpp_buffer_dettach_dev(MppBuffer buffer, const char *caller);
-
-RK_S32 mpp_buffer_get_mpi_buf_id_with_caller(MppBuffer buffer, const char *caller);
-
-void mpp_buffer_set_phy_caller(MppBuffer buffer, RK_U32 phy_addr, const char *caller);
-RK_S32 mpp_buffer_get_phy_caller(MppBuffer buffer, const char *caller);
-void *mpp_buffer_map_ring_buffer(MppBuffer buffer);
-
-/* mpp buffer pool */
-MPP_RET mpp_buffer_pool_init(RK_U32 max_cnt);
-MPP_RET mpp_buffer_pool_deinit(void);
-void mpp_buf_pool_info_show(void *seq_file);
-RK_UL mpp_buffer_get_uaddr(MppBuffer buffer);
-
-/*
- * size  : 0 - no limit, other - max buffer size
- * count : 0 - no limit, other - max buffer count
- */
-MPP_RET mpp_buffer_group_limit_config(MppBufferGroup group, size_t size, RK_S32 count);
-
-#ifndef CONFIG_DMABUF_PARTIAL
-#define dma_buf_begin_cpu_access_partial(dma_buf, dir, offset, size) \
-	dma_buf_begin_cpu_access(dma_buf, dir)
-
-#define dma_buf_end_cpu_access_partial(dma_buf, dir, offset, size) \
-	dma_buf_end_cpu_access(dma_buf, dir)
-#endif
 
 #ifdef __cplusplus
 }

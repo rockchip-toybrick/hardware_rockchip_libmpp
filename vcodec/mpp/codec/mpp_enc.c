@@ -24,7 +24,7 @@
 #include "rk_export_func.h"
 #include "mpp_service.h"
 #include "mpp_vcodec_rockit.h"
-
+#include "mpp_buffer_impl.h"
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
 

@@ -14,7 +14,7 @@
 
 #include "mpp_log.h"
 #include "mpp_mem.h"
-#include "mpp_buffer.h"
+#include "mpp_buffer_impl.h"
 //#include "mpp_device_debug.h"
 #include "mpp_service_api.h"
 #include "rk_export_func.h"

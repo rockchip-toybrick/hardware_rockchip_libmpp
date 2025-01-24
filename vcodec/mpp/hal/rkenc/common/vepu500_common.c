@@ -16,6 +16,7 @@
 #include "hal_enc_task.h"
 #include "kmpp_frame.h"
 #include "mpp_packet.h"
+#include "mpp_buffer_impl.h"
 
 MPP_RET vepu500_set_roi(Vepu500RoiCfg *roi_reg_base, MppEncROICfg * roi, RK_S32 w, RK_S32 h)
 {

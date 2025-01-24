@@ -21,7 +21,7 @@
 #include "mpp_vcodec_thread.h"
 #include "mpp_enc.h"
 #include "mpp_log.h"
-#include "mpp_buffer.h"
+#include "mpp_buffer_impl.h"
 #include "mpp_packet.h"
 #include "mpp_vcodec_debug.h"
 #include "mpp_packet_impl.h"

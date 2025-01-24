@@ -17,7 +17,7 @@
 #include "mpp_time.h"
 #include "mpp_maths.h"
 #include "mpp_mem.h"
-#include "mpp_buffer.h"
+#include "mpp_buffer_impl.h"
 
 #include "kmpp_frame.h"
 #include "mpp_packet_impl.h"

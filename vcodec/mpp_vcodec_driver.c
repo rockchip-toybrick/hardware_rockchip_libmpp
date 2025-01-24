@@ -26,6 +26,7 @@
 
 #include "mpp_log.h"
 #include "mpp_enc.h"
+#include "mpp_buffer_impl.h"
 #include "mpp_vcodec_thread.h"
 #include "rk_venc_cfg.h"
 #include "rk_export_func.h"

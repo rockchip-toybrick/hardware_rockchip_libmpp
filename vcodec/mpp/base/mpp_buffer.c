@@ -21,7 +21,7 @@
 
 #include "mpp_log.h"
 #include "mpp_mem.h"
-#include "mpp_buffer.h"
+#include "mpp_buffer_impl.h"
 #include "rk_export_func.h"
 #include "mpp_mem_pool.h"
 #include "mpp_maths.h"
@@ -31,11 +31,16 @@
 
 static const char *module_name = MODULE_TAG;
 struct MppBufferImpl {
-	MppBufferInfo info;
-	size_t offset;
-	RK_U32 cir_flag;
-	atomic_t ref_count;
-	RK_UL uaddr;
+	MppBufferInfo   info;
+	size_t          offset;
+	RK_U32          cir_flag;
+	atomic_t        ref_count;
+	RK_UL           uaddr;
+	RK_U32          phy_flg;
+	RK_U32          phy_addr;
+	RK_U32          iova;
+	struct sg_table *sgt;
+	struct dma_buf_attachment *attach;
 };
 
 static MppMemPool g_mppbuf_pool = NULL;
@@ -188,7 +193,7 @@ MPP_RET mpp_buffer_put_with_caller(MppBuffer buffer, const char *caller)
 
 			vm_munmap(buf_impl->uaddr, size);
 		}
-		if (buf_impl->info.iova && buf_impl->info.attach)
+		if (buf_impl->iova && buf_impl->attach)
 			mpp_buffer_dettach_dev(buffer, caller);
 		mpp_allocator_free(&buf_impl->info, caller);
 
@@ -252,13 +257,13 @@ void *mpp_buffer_map_ring_buffer(MppBuffer buffer)
 		return NULL;
 	}
 
-	if (!p->info.sgt) {
+	if (!p->sgt) {
 		mpp_err_f("invalid sgt NULL\n");
 		return NULL;
 	}
 
 	{
-		struct sg_table *table = p->info.sgt;
+		struct sg_table *table = p->sgt;
 		int npages = PAGE_ALIGN(p->info.size) / PAGE_SIZE;
 		struct page **pages = vmalloc(sizeof(struct page *) * npages * 2);
 		struct page **tmp = pages;
@@ -272,7 +277,7 @@ void *mpp_buffer_map_ring_buffer(MppBuffer buffer)
 			// WARN_ON(tmp - pages >= npages);
 			*tmp++ = sg_page_iter_page(&piter);
 		}
-		table = p->info.sgt;
+		table = p->sgt;
 		for_each_sgtable_page(table, &piter, 0) {
 			// WARN_ON(tmp - pages >= npages);
 			*tmp++ = sg_page_iter_page(&piter);
@@ -638,8 +643,8 @@ void mpp_buffer_set_phy_caller(MppBuffer buffer, RK_U32 phy_addr, const char *ca
 			caller);
 		return;
 	}
-	p->info.phy_flg = 1;
-	p->info.phy_addr = phy_addr;
+	p->phy_flg = 1;
+	p->phy_addr = phy_addr;
 
 	return;
 }
@@ -654,13 +659,13 @@ RK_S32 mpp_buffer_get_phy_caller(MppBuffer buffer, const char *caller)
 		return -1;
 	}
 
-	if (p->info.phy_flg)
-		phy_addr = (RK_S32)p->info.phy_addr;
+	if (p->phy_flg)
+		phy_addr = (RK_S32)p->phy_addr;
 	else if (mpibuf_fn && mpibuf_fn->buf_get_paddr) {
 		phy_addr = mpibuf_fn->buf_get_paddr(p->info.hnd);
 		if (phy_addr != -1) {
-			p->info.phy_addr = phy_addr;
-			p->info.phy_flg = 1;
+			p->phy_addr = phy_addr;
+			p->phy_flg = 1;
 		}
 	}
 
@@ -692,9 +697,9 @@ RK_S32 mpp_buffer_attach_dev(MppBuffer buffer, MppDev dev, const char *caller)
 		mpp_err_f("dma_buf_map_attachment failed(%d) caller %s\n", ret, caller);
 		goto fail_map;
 	}
-	p->info.iova = sg_dma_address(sgt->sgl);
-	p->info.sgt = sgt;
-	p->info.attach = attach;
+	p->iova = sg_dma_address(sgt->sgl);
+	p->sgt = sgt;
+	p->attach = attach;
 
 	return 0;
 fail_map:
@@ -711,11 +716,11 @@ RK_S32 mpp_buffer_dettach_dev(MppBuffer buffer, const char *caller)
 		return MPP_ERR_NULL_PTR;
 	}
 
-	dma_buf_unmap_attachment(p->info.attach, p->info.sgt, DMA_BIDIRECTIONAL);
-	dma_buf_detach(p->info.dma_buf, p->info.attach);
-	p->info.iova = 0;
-	p->info.attach = NULL;
-	p->info.sgt = NULL;
+	dma_buf_unmap_attachment(p->attach, p->sgt, DMA_BIDIRECTIONAL);
+	dma_buf_detach(p->info.dma_buf, p->attach);
+	p->iova = 0;
+	p->attach = NULL;
+	p->sgt = NULL;
 
 	return 0;
 }
@@ -730,8 +735,8 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
 		return -1;
 	}
 
-	if (p->info.iova) {
-		return (RK_U32)p->info.iova;
+	if (p->iova) {
+		return (RK_U32)p->iova;
 	}
 
 	ret = mpp_buffer_attach_dev(buffer, dev, caller);
@@ -739,7 +744,7 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
 	if (ret)
 		return -1;
 
-	return p->info.iova;
+	return p->iova;
 }
 
 RK_UL mpp_buffer_get_uaddr(MppBuffer buffer)
