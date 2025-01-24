@@ -6,8 +6,6 @@
 #ifndef __KMPP_OBJ_HERLPER_H__
 #define __KMPP_OBJ_HERLPER_H__
 
-#include "kmpp_string.h"
-
 #if !defined(KMPP_OBJ_NAME) || \
     !defined(KMPP_OBJ_INTF_TYPE) || \
     !defined(KMPP_OBJ_IMPL_TYPE) || \
@@ -138,6 +136,8 @@
 #endif
 
 #if !defined(KMPP_OBJ_FUNC_STUB_ENABLE)
+#include "kmpp_string.h"
+
 #define KMPP_OBJ_ENTRY_FUNC(prefix, ftype, type, field) \
     static KmppLocTbl *tbl_##prefix##_##field = NULL; \
     rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
