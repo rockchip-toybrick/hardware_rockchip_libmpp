@@ -1921,7 +1921,9 @@ static int mpp_chnl_add_req(struct mpp_session *session,  void *reqs)
 
 				/* online task trigger by user */
 				if (!session->online) {
+					mutex_lock(&queue->pending_lock);
 					list_add_tail(&task->queue_link, &queue->pending_list);
+					mutex_unlock(&queue->pending_lock);
 					mpp_taskqueue_trigger_work(mpp);
 				}
 			}
