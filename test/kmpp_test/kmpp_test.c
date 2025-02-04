@@ -22,7 +22,7 @@ typedef struct KmppCallback_t {
     void *arg0;
     rk_u32 arg1;
     rk_u64 arg2;
-    rk_s32 (*func)(void *param);
+    rk_s32 (*func)(void *ctx, void *arg);
 } KmppCallback;
 
 #define ENTRY_TABLE(ENTRY, prefix) \
@@ -31,15 +31,20 @@ typedef struct KmppCallback_t {
     ENTRY(prefix, u64, rk_u64, arg2) \
     ENTRY(prefix, kfp, void *, func)
 
-static rk_s32 kmpp_obj_test_impl_dump(void *param)
+static rk_s32 kmpp_obj_test_impl_show(void *ctx, void *arg)
 {
-    KmppCallback *cb = (KmppCallback *)param;
+    KmppCallback *cb = (KmppCallback *)ctx;
 
     kmpp_log_f("arg0 %px\n", cb->arg0);
     kmpp_log_f("arg1 %d\n", cb->arg1);
     kmpp_log_f("arg2 %lld\n", cb->arg2);
 
     return 0;
+}
+
+static rk_s32 kmpp_obj_test_impl_dump(void *ctx)
+{
+    return kmpp_obj_test_impl_show(ctx, NULL);
 }
 
  static rk_s32 kmpp_obj_test_impl_init(void *obj, osal_fs_dev *file, const rk_u8 *caller)
@@ -49,7 +54,7 @@ static rk_s32 kmpp_obj_test_impl_dump(void *param)
     cb->arg0 = NULL;
     cb->arg1 = 1234;
     cb->arg2 = 5678;
-    cb->func = kmpp_obj_test_impl_dump;
+    cb->func = kmpp_obj_test_impl_show;
 
     return rk_ok;
  }
@@ -72,6 +77,7 @@ rk_s32 kmpp_test_func(void *param)
     KmppTrie trie1;
     KmppTrie trie2;
     KmppMeta meta = NULL;
+    KmppBuffer buffer = NULL;
     KmppShmPtr sptr;
     void *root;
 
@@ -82,12 +88,19 @@ rk_s32 kmpp_test_func(void *param)
     if (ret)
         goto done;
 
-    kmpp_frame_get_meta(frame, &sptr);
+    osal_memset(&sptr, 0, sizeof(sptr));
+    ret = kmpp_frame_get_meta(frame, &sptr);
     meta = sptr.kptr;
 
-    kmpp_logi_f("get meta ret %px\n", meta);
+    kmpp_logi_f("get meta %px ret %d\n", meta, ret);
 
     kmpp_meta_dump(meta);
+
+    osal_memset(&sptr, 0, sizeof(sptr));
+    ret = kmpp_frame_get_buffer(frame, &sptr);
+    buffer = sptr.kptr;
+
+    kmpp_logi_f("get buffer %px ret %d\n", buffer, ret);
 
     kmpp_frame_dump_f(frame);
 
@@ -130,7 +143,7 @@ rk_s32 kmpp_test_func(void *param)
 
     kmpp_logi_f("kmpp_show %px\n", kmpp_obj_test_impl_dump);
 
-    kmpp_obj_run(obj, "func");
+    kmpp_obj_run(obj, "func", NULL);
 
     kmpp_obj_put_f(obj);
 
@@ -143,7 +156,7 @@ rk_s32 kmpp_test_func(void *param)
 
         kmpp_obj_get_f(&obj, test_def);
         kmpp_logi_f("get kmpp_call ret %px\n", obj);
-        kmpp_obj_run(obj, "func");
+        kmpp_obj_run(obj, "func", NULL);
         kmpp_obj_put_f(obj);
 
         kmpp_objdef_put(test_def);

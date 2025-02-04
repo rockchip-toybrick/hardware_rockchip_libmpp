@@ -38,6 +38,9 @@ typedef struct KmppFrameImpl_t {
 	rk_u32  idr_request;
 
 	KmppShmPtr meta;
+
+	/* hook callback element */
+	KmppShmPtr buffer;
 } KmppFrameImpl;
 
 #endif /* KMPP_FRAME_KOBJ_IMPL */

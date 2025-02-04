@@ -55,6 +55,7 @@ typedef struct KmppObjDefSet_t {
 typedef rk_s32 (*KmppObjInit)(void *entry, osal_fs_dev *file, const rk_u8 *caller);
 typedef rk_s32 (*KmppObjDeinit)(void *entry, const rk_u8 *caller);
 typedef rk_s32 (*KmppObjDump)(void *entry);
+typedef rk_s32 (*KmppObjHook)(void *entry, void *arg, const rk_u8 *caller);
 
 rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name);
 rk_s32 kmpp_objdef_put(KmppObjDef def);
@@ -66,6 +67,11 @@ rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name);
  * if KmppLocTbl tbl is NULL, the entry is a array object and name is just for index
  */
 rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl);
+/*
+ * object hook handler register function
+ * the hook will be registered to a defferent trie in objdef for fast indexing.
+ */
+rk_s32 kmpp_objdef_add_hook(KmppObjDef def, const rk_u8 *name, KmppObjHook hook);
 /* object init function register default object is all zero */
 rk_s32 kmpp_objdef_add_init(KmppObjDef def, KmppObjInit init);
 /* object deinit function register */
@@ -77,6 +83,7 @@ rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump);
 rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl **tbl);
 rk_s32 kmpp_objdef_get_index(KmppObjDef def, const rk_u8 *name);
 rk_s32 kmpp_objdef_get_offset(KmppObjDef def, const rk_u8 *name);
+rk_s32 kmpp_objdef_get_hook(KmppObjDef def, const rk_u8 *name);
 
 rk_s32 kmpp_objdef_dump(KmppObjDef def);
 void kmpp_objdef_dump_all(void);
@@ -157,8 +164,18 @@ rk_s32 kmpp_obj_get_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
 rk_s32 kmpp_obj_tbl_set_shm(KmppObj obj, KmppLocTbl *tbl, KmppShmPtr *val);
 rk_s32 kmpp_obj_tbl_get_shm(KmppObj obj, KmppLocTbl *tbl, KmppShmPtr *val);
 
-/* run a callback function */
-rk_s32 kmpp_obj_run(KmppObj obj, const rk_u8 *name);
+/* run callback function */
+
+/* run function pointer callback in object as element with name */
+rk_s32 kmpp_obj_run(KmppObj obj, const rk_u8 *name, void *arg);
+/* run function pointer callback in object as element with location table */
+rk_s32 kmpp_obj_tbl_run(KmppObj obj, KmppLocTbl *tbl, void *arg);
+/*
+ * run function pointer callback in object define with function register index
+ * which is kmpp_objdef_get_hook return value
+ */
+rk_s32 kmpp_obj_idx_run(KmppObj obj, rk_s32 idx, void *arg, const rk_u8 *caller);
+
 rk_s32 kmpp_obj_dump(KmppObj obj, const rk_u8 *caller);
 #define kmpp_obj_dump_f(obj) kmpp_obj_dump(obj, __FUNCTION__)
 

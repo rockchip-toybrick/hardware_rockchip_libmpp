@@ -90,11 +90,24 @@ static rk_s32 kmpp_frame_impl_dump(void *entry)
     return rk_ok;
 }
 
+static rk_s32 kmpp_frame_impl_set_buffer(void *entry, void *arg, const rk_u8 *caller)
+{
+    kmpp_logi_f("entry %px, arg %px caller %s\n", entry, arg, caller);
+    return rk_ok;
+}
+
+static rk_s32 kmpp_frame_impl_get_buffer(void *entry, void *arg, const rk_u8 *caller)
+{
+    kmpp_logi_f("entry %px, arg %px caller %s\n", entry, arg, caller);
+    return rk_ok;
+}
+
 #define KMPP_OBJ_NAME               kmpp_frame
 #define KMPP_OBJ_INTF_TYPE          KmppFrame
 #define KMPP_OBJ_IMPL_TYPE          KmppFrameImpl
 #define KMPP_OBJ_ENTRY_TABLE        KMPP_FRAME_ENTRY_TABLE
 #define KMPP_OBJ_STRUCT_TABLE       KMPP_FRAME_STRUCT_TABLE
+#define KMPP_OBJ_HOOK_TABLE         KMPP_FRAME_HOOK_TABLE
 #define KMPP_OBJ_FUNC_INIT          kmpp_frame_impl_init
 #define KMPP_OBJ_FUNC_DEINIT        kmpp_frame_impl_deinit
 #define KMPP_OBJ_FUNC_DUMP          kmpp_frame_impl_dump

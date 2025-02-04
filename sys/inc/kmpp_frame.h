@@ -22,10 +22,14 @@
 #define KMPP_FRAME_STRUCT_TABLE(ENTRY, prefix) \
     ENTRY(prefix, shm, KmppShmPtr, meta)
 
+#define KMPP_FRAME_HOOK_TABLE(ENTRY, prefix) \
+    ENTRY(prefix, shm, KmppShmPtr, buffer)
+
 #define KMPP_OBJ_NAME           kmpp_frame
 #define KMPP_OBJ_INTF_TYPE      KmppFrame
 #define KMPP_OBJ_ENTRY_TABLE    KMPP_FRAME_ENTRY_TABLE
 #define KMPP_OBJ_STRUCT_TABLE   KMPP_FRAME_STRUCT_TABLE
+#define KMPP_OBJ_HOOK_TABLE     KMPP_FRAME_HOOK_TABLE
 #include "kmpp_obj_func.h"
 
 #define kmpp_frame_dump_f(frame) kmpp_frame_dump(frame, __FUNCTION__)
