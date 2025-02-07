@@ -576,6 +576,7 @@ rk_s32 kmpp_objdef_share(KmppObjDef def)
 
     return rk_ok;
 }
+EXPORT_SYMBOL(kmpp_objdef_share);
 
 rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs)
 {

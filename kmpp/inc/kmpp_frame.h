@@ -37,6 +37,4 @@
 
 #define kmpp_frame_dump_f(frame) kmpp_frame_dump(frame, __FUNCTION__)
 
-#include "kmpp_frame_impl.h"
-
 #endif /*__KMPP_FRAME_H__*/

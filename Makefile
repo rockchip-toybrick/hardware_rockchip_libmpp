@@ -79,6 +79,7 @@ endif
 -include $(TOP)/mpp_osal/Makefile
 -include $(TOP)/osal/Makefile
 -include $(TOP)/sys/Makefile
+-include $(TOP)/kmpp/Makefile
 -include $(TOP)/vproc/Makefile
 -include $(TOP)/mpp_service/Makefile
 -include $(TOP)/vcodec/Makefile

@@ -12,6 +12,8 @@ INCLUDE_DIRECTORIES(${KMPP_TOP}/osal/inc)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_osal)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service/hack)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/kmpp/inc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/kmpp/objs/inc)
 
 # kmpp header
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec)
@@ -153,6 +155,9 @@ SET(KMPP_SRC
     hack/mpp_hack_rk3576.c
     hack/mpp_rkvdec2_hack_rk3568.c
     hack/mpp_rkvdec2_link_hack_rk3568.c
+    ../kmpp/objs/kmpp_frame.c
+    ../kmpp/objs/kmpp_meta.c
+    ../kmpp/objs/kmpp_venc_objs.c
 )
 
 ADD_KBUILD(kmpp SRC ${KMPP_SRC} DEPS osal sys)

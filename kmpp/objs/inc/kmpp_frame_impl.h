@@ -6,9 +6,7 @@
 #ifndef __KMPP_FRAME_IMPL_H__
 #define __KMPP_FRAME_IMPL_H__
 
-#ifdef KMPP_FRAME_KOBJ_IMPL
-
-#include "kmpp_sys_defs.h"
+#include "kmpp_frame.h"
 
 typedef struct KmppFrameImpl_t {
 	rk_u32  width;
@@ -42,7 +40,5 @@ typedef struct KmppFrameImpl_t {
 	/* hook callback element */
 	KmppShmPtr buffer;
 } KmppFrameImpl;
-
-#endif /* KMPP_FRAME_KOBJ_IMPL */
 
 #endif /* __KMPP_FRAME_IMPL_H__ */

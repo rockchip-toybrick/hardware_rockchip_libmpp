@@ -12,8 +12,7 @@
 #include "kmpp_obj.h"
 #include "kmpp_shm.h"
 
-#define KMPP_VENC_OBJS_KOBJ_IMPL
-#include "kmpp_venc_objs.h"
+#include "kmpp_venc_objs_impl.h"
 
 static rk_s32 kmpp_venc_init_cfg_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
 {

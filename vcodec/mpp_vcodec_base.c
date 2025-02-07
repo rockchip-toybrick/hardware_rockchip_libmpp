@@ -31,6 +31,10 @@
 #include "mpp_maths.h"
 #include "mpp_vcodec_rockit.h"
 
+#include "kmpp_frame.h"
+#include "kmpp_meta.h"
+#include "kmpp_venc_objs.h"
+
 RK_U32 mpp_vcodec_debug = 0;
 
 #define CHAN_MAX_YUV_POOL_SIZE  1
@@ -720,6 +724,9 @@ void enc_chan_get_high_prior_chan(void)
 
 int mpp_vcodec_init(void)
 {
+    kmpp_meta_init();
+    kmpp_frame_init();
+    kmpp_venc_init_cfg_init();
 
 	mpp_enc_module_init();
 
@@ -760,6 +767,10 @@ int mpp_vcodec_deinit(void)
 	mpp_packet_pool_deinit();
 	mpp_frame_pool_deinit();
 	mpp_buffer_pool_deinit();
+
+    kmpp_venc_init_cfg_deinit();
+    kmpp_frame_deinit();
+    kmpp_meta_deinit();
 
 	return 0;
 }

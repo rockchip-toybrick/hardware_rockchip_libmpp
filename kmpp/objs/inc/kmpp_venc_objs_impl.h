@@ -6,9 +6,7 @@
 #ifndef __KMPP_VENC_OBJS_IMPL_H__
 #define __KMPP_VENC_OBJS_IMPL_H__
 
-#include "rk_type.h"
-
-#ifdef KMPP_VENC_OBJS_KOBJ_IMPL
+#include "kmpp_venc_objs.h"
 
 typedef struct KmppVencInitCfgImpl_t {
     MppCtxType      type;
@@ -27,7 +25,5 @@ typedef struct KmppVencInitCfgImpl_t {
     rk_u32          tmvp_enable;
     rk_u32          only_smartp;
 } KmppVencInitCfgImpl;
-
-#endif /* KMPP_VENC_OBJS_KOBJ_IMPL */
 
 #endif /* __KMPP_VENC_OBJS_IMPL_H__ */

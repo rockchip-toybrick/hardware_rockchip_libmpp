@@ -12,8 +12,7 @@
 #include "kmpp_obj.h"
 #include "kmpp_meta.h"
 
-#define KMPP_FRAME_KOBJ_IMPL
-#include "kmpp_frame.h"
+#include "kmpp_frame_impl.h"
 
 static rk_u32 kmpp_frame_debug = 0;
 
