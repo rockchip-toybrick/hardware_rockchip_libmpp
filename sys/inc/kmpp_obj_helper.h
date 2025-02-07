@@ -18,7 +18,8 @@
 #warning "option macro:"
 #warning "KMPP_OBJ_ENTRY_TABLE          - object element value / pointer entry table"
 #warning "KMPP_OBJ_STRUCT_TABLE         - object element structure / array / share memory table"
-#warning "KMPP_OBJ_HOOK_TABLE           - object element hook function table"
+#warning "KMPP_OBJ_ENTRY_HOOK           - object element value hook function table"
+#warning "KMPP_OBJ_STRUCT_HOOK          - object element structure hook function table"
 #warning "KMPP_OBJ_FUNC_EXPORT_ENABLE   - enable function EXPORT_SYMBOL"
 #warning "KMPP_OBJ_FUNC_STUB_ENABLE     - enable function stub mode by define empty function"
 #warning "KMPP_OBJ_SHARE_ENABLE         - use /dev/kmpp_objs to share object to userspace"
@@ -48,8 +49,11 @@
 #ifndef KMPP_OBJ_STRUCT_TABLE
 #define KMPP_OBJ_STRUCT_TABLE(ENTRY, prefix)
 #endif
-#ifndef KMPP_OBJ_HOOK_TABLE
-#define KMPP_OBJ_HOOK_TABLE(ENTRY, prefix)
+#ifndef KMPP_OBJ_ENTRY_HOOK
+#define KMPP_OBJ_ENTRY_HOOK(ENTRY, prefix)
+#endif
+#ifndef KMPP_OBJ_STRUCT_HOOK
+#define KMPP_OBJ_STRUCT_HOOK(ENTRY, prefix)
 #endif
 
 /*
@@ -208,7 +212,28 @@
         return ret; \
     }
 
-#define KMPP_OBJ_HOOK_FUNC(prefix, ftype, type, field) \
+#define KMPP_OBJ_ENTRY_HOOK_FUNC(prefix, ftype, type, field) \
+    static rk_s32 KMPP_OBJ_HOOK3(prefix, get, field) = -1; \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
+    { \
+        rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
+        if (ret) return ret; \
+        kmpp_logi_f("func index %d\n", KMPP_OBJ_HOOK3(prefix, get, field)); \
+        if (KMPP_OBJ_HOOK3(prefix, get, field) >= 0) \
+            ret = kmpp_obj_idx_run(s, KMPP_OBJ_HOOK3(prefix, get, field), (void *)v, __FUNCTION__); \
+        return ret; \
+    } \
+    static rk_s32 KMPP_OBJ_HOOK3(prefix, set, field) = -1; \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, set, field)(KMPP_OBJ_INTF_TYPE s, type v) \
+    { \
+        rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
+        if (ret) return ret; \
+        if (KMPP_OBJ_HOOK3(prefix, set, field) >= 0) \
+            ret = kmpp_obj_idx_run(s, KMPP_OBJ_HOOK3(prefix, set, field), (void *)&v, __FUNCTION__); \
+        return ret; \
+    }
+
+#define KMPP_OBJ_STRUCT_HOOK_FUNC(prefix, ftype, type, field) \
     static rk_s32 KMPP_OBJ_HOOK3(prefix, get, field) = -1; \
     rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
     { \
@@ -233,7 +258,8 @@
 static KmppObjDef KMPP_OBJ_DEF(prefix) = NULL; \
 KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_ENTRY_FUNC, prefix) \
 KMPP_OBJ_STRUCT_TABLE(KMPP_OBJ_STRUCT_FUNC, prefix) \
-KMPP_OBJ_HOOK_TABLE(KMPP_OBJ_HOOK_FUNC, prefix) \
+KMPP_OBJ_ENTRY_HOOK(KMPP_OBJ_ENTRY_HOOK_FUNC, prefix) \
+KMPP_OBJ_STRUCT_HOOK(KMPP_OBJ_STRUCT_HOOK_FUNC, prefix) \
 rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
 { \
     rk_s32 impl_size = sizeof(KMPP_OBJ_IMPL_TYPE); \
@@ -244,7 +270,8 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
     } \
     KMPP_OBJ_ENTRY_TABLE(ENTRY_TO_TRIE1, prefix) \
     KMPP_OBJ_STRUCT_TABLE(ENTRY_TO_TRIE1, prefix) \
-    KMPP_OBJ_HOOK_TABLE(HOOK_TO_TRIE1, prefix) \
+    KMPP_OBJ_ENTRY_HOOK(HOOK_TO_TRIE1, prefix) \
+    KMPP_OBJ_STRUCT_HOOK(HOOK_TO_TRIE1, prefix) \
     kmpp_objdef_add_entry(KMPP_OBJ_DEF(prefix), NULL, NULL); \
     kmpp_objdef_add_hook(KMPP_OBJ_DEF(prefix), NULL, NULL); \
     KMPP_OBJ_ADD_INIT(prefix); \
@@ -252,7 +279,8 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
     KMPP_OBJ_ADD_DUMP(prefix); \
     KMPP_OBJ_ENTRY_TABLE(ENTRY_QUERY, prefix) \
     KMPP_OBJ_STRUCT_TABLE(ENTRY_QUERY, prefix) \
-    KMPP_OBJ_HOOK_TABLE(HOOK_QUERY, prefix) \
+    KMPP_OBJ_ENTRY_HOOK(HOOK_QUERY, prefix) \
+    KMPP_OBJ_STRUCT_HOOK(HOOK_QUERY, prefix) \
     KMPP_OBJ_SHARE_FUNC(KMPP_OBJ_DEF(prefix)); \
     return rk_ok; \
 } \
@@ -314,7 +342,21 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
         return rk_ok; \
     }
 
-#define KMPP_OBJ_HOOK_FUNC(prefix, ftype, type, field) \
+#define KMPP_OBJ_ENTRY_HOOK_FUNC(prefix, ftype, type, field) \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
+    { \
+        (void) s; \
+        (void) v; \
+        return rk_ok; \
+    } \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, set, field)(KMPP_OBJ_INTF_TYPE s, type v) \
+    { \
+        (void) s; \
+        (void) v; \
+        return rk_ok; \
+    }
+
+#define KMPP_OBJ_STRUCT_HOOK_FUNC(prefix, ftype, type, field) \
     rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
     { \
         (void) s; \
@@ -331,7 +373,8 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
 #define KMPP_OBJS_USAGE_SET(prefix) \
 KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_ENTRY_FUNC, prefix) \
 KMPP_OBJ_STRUCT_TABLE(KMPP_OBJ_STRUCT_FUNC, prefix) \
-KMPP_OBJ_HOOK_TABLE(KMPP_OBJ_HOOK_FUNC, prefix) \
+KMPP_OBJ_ENTRY_HOOK(KMPP_OBJ_ENTRY_HOOK_FUNC, prefix) \
+KMPP_OBJ_STRUCT_HOOK(KMPP_OBJ_STRUCT_HOOK_FUNC, prefix) \
 rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
 { \
     return rk_ok; \
@@ -382,7 +425,8 @@ EXPORT_SYMBOL(KMPP_OBJ_FUNC2(prefix, put)); \
 EXPORT_SYMBOL(KMPP_OBJ_FUNC2(prefix, dump)); \
 KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_EXPORT, prefix) \
 KMPP_OBJ_STRUCT_TABLE(KMPP_OBJ_EXPORT, prefix) \
-KMPP_OBJ_HOOK_TABLE(KMPP_OBJ_EXPORT, prefix)
+KMPP_OBJ_ENTRY_HOOK(KMPP_OBJ_EXPORT, prefix) \
+KMPP_OBJ_STRUCT_HOOK(KMPP_OBJ_EXPORT, prefix)
 
 #ifdef KMPP_OBJ_FUNC_EXPORT_ENABLE
 KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
@@ -395,6 +439,9 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_INTF_TYPE
 #undef KMPP_OBJ_IMPL_TYPE
 #undef KMPP_OBJ_ENTRY_TABLE
+#undef KMPP_OBJ_STRUCT_TABLE
+#undef KMPP_OBJ_ENTRY_HOOK
+#undef KMPP_OBJ_STRUCT_HOOK
 #undef KMPP_OBJ_FUNC_EXPORT_ENABLE
 #undef KMPP_OBJ_FUNC_INIT
 #undef KMPP_OBJ_FUNC_DEINIT
