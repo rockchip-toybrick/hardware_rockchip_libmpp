@@ -8,6 +8,7 @@ add_definitions(-DRKVEPU510_H264)
 add_definitions(-DRKVEPU510_HEVC)
 
 INCLUDE_DIRECTORIES(${KMPP_TOP}/include)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/osal)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/osal/inc)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_osal)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service)
@@ -160,4 +161,10 @@ SET(KMPP_SRC
     ../kmpp/objs/kmpp_venc_objs.c
 )
 
-ADD_KBUILD(kmpp SRC ${KMPP_SRC} DEPS osal sys)
+IF(${BUILD_MULTI_KO})
+    ADD_KBUILD(kmpp SRC ${KMPP_SRC} DEPS osal sys)
+ELSE()
+    ADD_KMPP_SRC(${KMPP_SRC})
+    GET_PROPERTY(ko_src GLOBAL PROPERTY "KMPP_KO_SRC")
+    ADD_KBUILD(kmpp SRC ${ko_src})
+ENDIF()

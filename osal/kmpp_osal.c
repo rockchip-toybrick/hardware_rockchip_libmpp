@@ -5,9 +5,6 @@
 
 #define MODULE_TAG "kmpp_osal"
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-
 #include "version.h"
 
 #include "kmpp_osal.h"
@@ -83,7 +80,9 @@ void osal_exit(void)
     kmpp_logi("osal exit\n");
 }
 
-#ifndef BUILD_ONE_KO
+#ifdef BUILD_MULTI_KO
+#include <linux/module.h>
+
 module_init(osal_init);
 module_exit(osal_exit);
 

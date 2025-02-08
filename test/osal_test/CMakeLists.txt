@@ -5,4 +5,8 @@ SET(OSAL_TEST_SRC
     osal_test.c
 )
 
-ADD_KBUILD(osal_test SRC ${OSAL_TEST_SRC} DEPS osal)
+IF(${BUILD_MULTI_KO})
+    ADD_KBUILD(osal_test SRC ${OSAL_TEST_SRC} DEPS osal)
+ELSE()
+    ADD_KBUILD(osal_test SRC ${OSAL_TEST_SRC} DEPS kmpp)
+ENDIF()

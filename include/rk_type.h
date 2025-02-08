@@ -76,15 +76,6 @@ typedef unsigned long           size_t;
 typedef long                    ssize_t;
 #endif
 
-#ifndef offsetof
-#define offsetof(type, member)  ((size_t) &((type *)0)->member)
-#endif
-
-#ifndef container_of
-#define container_of(ptr, type, member) \
-        (type *)((rk_u8 *)(ptr) - offsetof(type, member))
-#endif
-
 #define RK_RET                  RK_S32
 #define RK_NULL                 0L
 #define RK_OK                   0

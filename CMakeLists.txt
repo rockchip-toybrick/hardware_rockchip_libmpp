@@ -46,12 +46,42 @@ INCLUDE_DIRECTORIES(${KERNEL_DIR}/drivers/iommu)
 SET(ENV{PATH} "${TOOLCHAIN_DIR}:$ENV{PATH}")
 SET(KMPP_TOP ${PROJECT_SOURCE_DIR})
 
-optiON(BUILD_KMPP_OSAL "Build kernel osal modules" ON)
+# ----------------------------------------------------------------------------
+# check ko compile mode
+# ----------------------------------------------------------------------------
+IF(NOT MODULE_BUILD_MODE)
+    SET(MODULE_BUILD_MODE "multi_ko")
+ENDIF()
+
+OPTION(BUILD_MULTI_KO   "Build multiple ko"         OFF)
+OPTION(BUILD_ONE_KO     "Build single ko"           OFF)
+OPTION(BUILD_NO_KO      "Build no ko and builtin"   OFF)
+
+SET_PROPERTY(GLOBAL PROPERTY KMPP_KO_SRC "")
+
+IF(${MODULE_BUILD_MODE} STREQUAL "multi")
+    SET(BUILD_MULTI_KO ON)
+    ADD_DEFINITIONS(-DBUILD_MULTI_KO)
+ELSEIF(${MODULE_BUILD_MODE} STREQUAL "one")
+    SET(BUILD_ONE_KO ON)
+    ADD_DEFINITIONS(-DBUILD_ONE_KO)
+ELSEIF(${MODULE_BUILD_MODE} STREQUAL "builtin")
+    SET(BUILD_NO_KO ON)
+    ADD_DEFINITIONS(-DBUILD_NO_KO)
+ELSE()
+    MESSAGE(STATUS "invalid build mode - ${MODULE_BUILD_MODE}")
+ENDIF()
+MESSAGE(STATUS "module build mode - ${MODULE_BUILD_MODE}")
+
+# ----------------------------------------------------------------------------
+# Add all modules
+# ----------------------------------------------------------------------------
+OPTION(BUILD_KMPP_OSAL "Build kernel osal modules" ON)
 IF(${BUILD_KMPP_OSAL})
     ADD_SUBDIRECTORY(osal)
 ENDIF(${BUILD_KMPP_OSAL})
 
-optioN(BUILD_KMPP_SYS "Build kernel system modules" ON)
+OPTION(BUILD_KMPP_SYS "Build kernel system modules" ON)
 IF(${BUILD_KMPP_SYS})
     ADD_SUBDIRECTORY(sys)
 ENDIF(${BUILD_KMPP_SYS})

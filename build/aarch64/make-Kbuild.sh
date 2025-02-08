@@ -1,5 +1,6 @@
 #!/bin/bash
 BUILD_TYPE="Release"
+MODULE_TYPE="multi"
 VERBOSE_MAKEFILE="OFF"
 
 for ARG in "$@"; do
@@ -27,6 +28,7 @@ ${CMAKE_PROGRAM} \
     -DARCH_TYPE=arm64 \
     -DCMAKE_MAKE_PROGRAM=${MAKE_PROGRAM} \
     -DCMAKE_VERBOSE_MAKEFILE=${VERBOSE_MAKEFILE} \
+    -DMODULE_BUILD_MODE=${MODULE_TYPE} \
     ../../
 
 if [ "${CMAKE_PARALLEL_ENABLE}" = "0" ]; then

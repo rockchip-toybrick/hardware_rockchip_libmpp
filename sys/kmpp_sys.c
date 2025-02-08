@@ -5,18 +5,12 @@
 
 #define MODULE_TAG "kmpp_sys"
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-
 #include "version.h"
 
 #include "kmpp_osal.h"
-
-#include "kmpp_sym.h"
-#include "kmpp_shm.h"
+#include "kmpp_sys.h"
 
 KmppEnvGrp kmpp_env_sys;
-EXPORT_SYMBOL(kmpp_env_sys);
 
 static KmppSym sys_sym = NULL;
 
@@ -125,7 +119,12 @@ void sys_exit(void)
 
     sys_env_deinit();
 }
-#ifndef BUILD_ONE_KO
+
+#ifdef BUILD_MULTI_KO
+#include <linux/module.h>
+
+EXPORT_SYMBOL(kmpp_env_sys);
+
 module_init(sys_init);
 module_exit(sys_exit);
 

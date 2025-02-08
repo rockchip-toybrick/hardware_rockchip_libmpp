@@ -13,4 +13,8 @@ SET(KMPP_SYS_SRC
     kmpp_sym.c
 )
 
-ADD_KBUILD(sys SRC ${KMPP_SYS_SRC} DEPS osal)
+IF(${BUILD_MULTI_KO})
+    ADD_KBUILD(sys SRC ${KMPP_SYS_SRC} DEPS osal)
+ELSE()
+    ADD_KMPP_SRC(${KMPP_SYS_SRC})
+ENDIF()

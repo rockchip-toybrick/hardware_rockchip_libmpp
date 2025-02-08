@@ -29,10 +29,6 @@
 #include "mpp_vcodec_thread.h"
 #include "rk_venc_cfg.h"
 #include "rk_export_func.h"
-#ifdef BUILD_ONE_KO
-#include "kmpp_osal.h"
-#include "kmpp_sys.h"
-#endif
 
 #include "kmpp_obj.h"
 #include "kmpp_sys_defs.h"
@@ -622,15 +618,12 @@ struct vcodec_vsm_buf_fn *get_vsm_ops(void)
 
 extern struct platform_driver mpp_service_driver;
 
-static int __init vcodec_init(void)
+int vcodec_init(void)
 {
 	int ret;
 
-	pr_info("init new\n");
-#ifdef BUILD_ONE_KO
-	osal_init();
-	sys_init();
-#endif
+	pr_info("init\n");
+
 	ret = platform_driver_register(&mpp_service_driver);
 	if (ret != 0) {
 		printk(KERN_ERR "mpp_service_driver device register failed (%d).\n", ret);
@@ -647,20 +640,44 @@ static int __init vcodec_init(void)
 	return 0;
 }
 
-static void __exit vcodec_exit(void)
+void vcodec_exit(void)
 {
 
 	mpp_vcodec_deinit();
 	platform_driver_unregister(&vcodec_driver);
 	platform_driver_unregister(&mpp_service_driver);
-#ifdef BUILD_ONE_KO
-	sys_exit();
-	osal_exit();
-#endif
+
 	pr_info("exit\n");
 }
 
+#include "kmpp_osal.h"
+#include "kmpp_sys.h"
+
+int kmpp_init(void)
+{
+#ifdef BUILD_MULTI_KO
+	return vcodec_init();
+#else
+	osal_init();
+	sys_init();
+	return vcodec_init();
+#endif
+}
+
+void kmpp_exit(void)
+{
+#ifdef BUILD_MULTI_KO
+	vcodec_exit();
+#else
+	vcodec_exit();
+	sys_exit();
+	osal_exit();
+#endif
+}
+
+#if defined(BUILD_MULTI_KO) || defined(BUILD_ONE_KO)
 MODULE_LICENSE("GPL");
-module_init(vcodec_init);
+module_init(kmpp_init);
+module_exit(kmpp_exit);
 MODULE_IMPORT_NS(DMA_BUF);
-module_exit(vcodec_exit);
+#endif

@@ -11,7 +11,9 @@ while [ $# -gt 0 ]; do
             echo "  use --kernel to set KERNEL_DIR"
             echo "  use --ndk to set ANDROID_NDK"
             echo "  use --debug to enable debug build"
-            echo "  use --rebuild to rebuild after clean"
+            echo "  use --one_ko to enable one ko build"
+            echo "  use --trace to enable verbose make process log"
+            echo "  use -B or --rebuild to rebuild after clean"
             exit 1
             ;;
         --cmake)
@@ -32,6 +34,9 @@ while [ $# -gt 0 ]; do
             ;;
         --debug)
             BUILD_TYPE="Debug"
+            ;;
+        --one_ko)
+            MODULE_TYPE="one"
             ;;
         --trace)
             VERBOSE_MAKEFILE="ON"

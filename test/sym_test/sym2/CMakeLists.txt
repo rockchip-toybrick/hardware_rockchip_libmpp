@@ -6,4 +6,8 @@ SET(SYM2_SRC
     sym2.c
 )
 
-ADD_KBUILD(sym2 SRC ${SYM2_SRC} DEPS osal sys)
+IF(BUILD_MULTI_KO)
+    ADD_KBUILD(sym2 SRC ${SYM2_SRC} DEPS sys osal)
+ELSE()
+    ADD_KBUILD(sym2 SRC ${SYM2_SRC} DEPS kmpp)
+ENDIF()

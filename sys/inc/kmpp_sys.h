@@ -6,11 +6,9 @@
 #ifndef __KMPP_SYS_H__
 #define __KMPP_SYS_H__
 
-#include "rk_type.h"
-
 #include "kmpp_obj.h"
+#include "kmpp_sym.h"
 #include "kmpp_shm.h"
-#include "kmpp_frame.h"
 
 rk_s32 sys_init(void);
 void sys_exit(void);

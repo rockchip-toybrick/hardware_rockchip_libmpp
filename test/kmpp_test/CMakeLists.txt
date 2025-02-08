@@ -8,4 +8,8 @@ SET(KMPP_TEST_SRC
     kmpp_test.c
 )
 
-ADD_KBUILD(kmpp_test SRC ${KMPP_TEST_SRC} DEPS osal sys kmpp)
+IF(BUILD_MULTI_KO)
+    ADD_KBUILD(kmpp_test SRC ${KMPP_TEST_SRC} DEPS kmpp sys osal)
+ELSE()
+    ADD_KBUILD(kmpp_test SRC ${KMPP_TEST_SRC} DEPS kmpp)
+ENDIF()
