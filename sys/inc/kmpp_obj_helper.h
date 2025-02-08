@@ -218,7 +218,6 @@
     { \
         rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
         if (ret) return ret; \
-        kmpp_logi_f("func index %d\n", KMPP_OBJ_HOOK3(prefix, get, field)); \
         if (KMPP_OBJ_HOOK3(prefix, get, field) >= 0) \
             ret = kmpp_obj_idx_run(s, KMPP_OBJ_HOOK3(prefix, get, field), (void *)v, __FUNCTION__); \
         return ret; \
@@ -239,7 +238,6 @@
     { \
         rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
         if (ret) return ret; \
-        kmpp_logi_f("func index %d\n", KMPP_OBJ_HOOK3(prefix, get, field)); \
         if (KMPP_OBJ_HOOK3(prefix, get, field) >= 0) \
             ret = kmpp_obj_idx_run(s, KMPP_OBJ_HOOK3(prefix, get, field), (void *)v, __FUNCTION__); \
         return ret; \
