@@ -332,11 +332,11 @@ int mpp_vcodec_chan_put_stream(int chan_id, MppCtxType type,
 	spin_lock_irqsave(&chan_entry->stream_list_lock, flags);
 	list_for_each_entry_safe(packet, n, &chan_entry->stream_remove, list) {
 		if ((uintptr_t)packet == enc_packet->u64packet_addr) {
+			chan_entry->seq_user_put = mpp_packet_get_dts(packet);
 			list_del_init(&packet->list);
 			kref_put(&packet->ref, stream_packet_free);
 			atomic_dec(&chan_entry->str_out_cnt);
 			atomic_inc(&chan_entry->pkt_user_put);
-			chan_entry->seq_user_put = mpp_packet_get_dts(packet);
 			venc = mpp_vcodec_get_enc_module_entry();
 			vcodec_thread_trigger(venc->thd);
 			found = 1;
