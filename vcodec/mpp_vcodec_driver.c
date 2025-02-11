@@ -29,7 +29,6 @@
 #include "mpp_buffer_impl.h"
 #include "mpp_vcodec_thread.h"
 #include "rk_venc_cfg.h"
-#include "rk_export_func.h"
 
 #include "kmpp_obj.h"
 #include "kmpp_sys_defs.h"

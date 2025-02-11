@@ -142,7 +142,6 @@ struct venc_packet {
 };
 
 extern struct vcodec_mppdev_svr_fn *get_mppdev_svr_ops(void);
-extern RK_U32 mpp_srv_get_phy(struct dma_buf *buf);
 
 extern int mpp_vcodec_clear_buf_resource(void);
 extern int mpp_vcodec_run_task(RK_U32 chan_id, RK_S64 pts, RK_S64 dts);

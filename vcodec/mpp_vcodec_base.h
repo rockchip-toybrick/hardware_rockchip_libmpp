@@ -14,7 +14,6 @@
 #include <linux/workqueue.h>
 
 #include "mpp_packet.h"
-#include "rk_export_func.h"
 
 #define MAX_ENC_NUM 16
 

@@ -27,7 +27,7 @@
 #include "mpp_enc_impl.h"
 #include "mpp_packet.h"
 #include "mpp_2str.h"
-#include "rk_export_func.h"
+
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
 

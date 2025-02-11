@@ -22,7 +22,6 @@
 #include "mpp_log.h"
 #include "mpp_mem.h"
 #include "mpp_buffer_impl.h"
-#include "rk_export_func.h"
 #include "mpp_mem_pool.h"
 #include "mpp_maths.h"
 #include "mpp_allocator.h"
@@ -202,6 +201,8 @@ MPP_RET mpp_buffer_put_with_caller(MppBuffer buffer, const char *caller)
 
 	return MPP_OK;
 }
+
+extern u32 mpp_srv_get_phy(struct dma_buf *buf);
 
 void *mpp_buffer_map_ring_ptr(struct MppBufferImpl *p)
 {

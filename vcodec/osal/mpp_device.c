@@ -17,7 +17,6 @@
 #include "mpp_buffer_impl.h"
 //#include "mpp_device_debug.h"
 #include "mpp_service_api.h"
-#include "rk_export_func.h"
 #include "mpp_service.h"
 
 typedef struct MppDevImpl_t {

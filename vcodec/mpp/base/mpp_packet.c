@@ -21,7 +21,6 @@
 #include "mpp_packet_impl.h"
 #include "mpp_buffer_impl.h"
 #include "mpp_maths.h"
-#include "rk_export_func.h"
 #include "mpp_mem_pool.h"
 
 static const char *module_name = MODULE_TAG;

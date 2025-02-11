@@ -21,7 +21,6 @@
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_enc_impl.h"
 #include "mpp_enc.h"
-#include "rk_export_func.h"
 #include "mpp_service.h"
 #include "mpp_buffer_impl.h"
 #include "kmpp_obj.h"

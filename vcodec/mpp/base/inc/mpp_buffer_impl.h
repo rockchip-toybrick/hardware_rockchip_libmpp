@@ -6,12 +6,9 @@
 #ifndef __MPP_BUFFER_IMPL_H__
 #define __MPP_BUFFER_IMPL_H__
 
-#include "rk_type.h"
-#include "mpp_err.h"
 #include "mpp_stream_ring_buf.h"
 #include "mpp_device.h"
 #include "mpp_buffer.h"
-#include "rk_export_func.h"
 
 #define mpp_ring_buffer_get(group, buffer, size) \
         mpp_ring_buffer_get_with_tag(group, buffer, size, MODULE_TAG, __FUNCTION__)

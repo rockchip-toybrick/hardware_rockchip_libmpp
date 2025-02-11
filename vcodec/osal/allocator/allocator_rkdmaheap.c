@@ -14,7 +14,6 @@
 #include "mpp_log.h"
 #include "mpp_buffer.h"
 #include "mpp_mem.h"
-#include "rk_export_func.h"
 #include "allocator_dmaheap.h"
 
 struct mpi_buf;

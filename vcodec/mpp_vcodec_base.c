@@ -23,7 +23,6 @@
 #include "mpp_log.h"
 #include "mpp_vcodec_thread.h"
 #include "mpp_buffer_impl.h"
-#include "rk_export_func.h"
 #include "mpp_packet_impl.h"
 #include "mpp_mem_pool.h"
 #include "kmpp_frame.h"

@@ -1993,8 +1993,6 @@ u32 mpp_srv_get_phy(struct dma_buf *buf)
 	return mpp_dma_get_iova(buf, g_srv->dev);
 }
 
-EXPORT_SYMBOL(mpp_srv_get_phy);
-
 struct vcodec_mppdev_svr_fn {
 	struct mpp_session *(*chnl_open)(int client_type);
 	int (*chnl_register)(struct mpp_session *session, void *fun, unsigned int chn_id);

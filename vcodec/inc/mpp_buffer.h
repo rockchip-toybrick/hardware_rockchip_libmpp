@@ -12,7 +12,6 @@
 
 #include "rk_type.h"
 #include "mpp_err.h"
-#include "rk_export_func.h"
 
 /*
  * MppBuffer module has several functions:
