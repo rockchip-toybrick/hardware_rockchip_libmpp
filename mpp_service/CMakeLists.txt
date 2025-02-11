@@ -132,6 +132,7 @@ SET(KMPP_SRC
     ../vcodec/mpp_vcodec_thread.c
     ../vcodec/kmpi/kmpi_venc.c
     ../vcodec/kmpi/kmpi_venc_chan.c
+    ../vcodec/kmpi/kmpi_vsp.c
     #mpp_av1dec.c
     mpp_iep2.c
     mpp_jpgdec.c
