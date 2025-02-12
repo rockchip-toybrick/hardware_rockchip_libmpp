@@ -30,7 +30,7 @@
 #include "mpp_maths.h"
 
 #include "kmpp_frame.h"
-#include "kmpp_meta.h"
+#include "kmpp_meta_impl.h"
 #include "kmpp_venc_objs.h"
 
 RK_U32 mpp_vcodec_debug = 0;

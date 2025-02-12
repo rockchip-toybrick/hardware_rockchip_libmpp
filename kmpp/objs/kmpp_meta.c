@@ -316,7 +316,6 @@ rk_s32 kmpp_meta_dump(KmppMeta meta)
 {
     return kmpp_obj_dump_f(meta);
 }
-EXPORT_SYMBOL(kmpp_meta_dump);
 
 #define KMPP_META_ACCESSOR(func_type, arg_type, key_type, key_field)  \
     rk_s32 kmpp_meta_set_##func_type(KmppMeta meta, KmppMetaKey key, arg_type val) \
@@ -331,6 +330,7 @@ EXPORT_SYMBOL(kmpp_meta_dump);
         KMPP_FETCH_OR(&meta_val->state, META_VAL_READY); \
         return rk_ok; \
     } \
+    EXPORT_SYMBOL(kmpp_meta_set_##func_type); \
     rk_s32 kmpp_meta_get_##func_type(KmppMeta meta, KmppMetaKey key, arg_type *val) \
     { \
         KmppMetaImpl *impl = (KmppMetaImpl *)meta; \
@@ -344,6 +344,7 @@ EXPORT_SYMBOL(kmpp_meta_dump);
         } \
         return rk_nok; \
     } \
+    EXPORT_SYMBOL(kmpp_meta_get_##func_type); \
     rk_s32 kmpp_meta_get_##func_type##_d(KmppMeta meta, KmppMetaKey key, arg_type *val, arg_type def) \
     { \
         KmppMetaImpl *impl = (KmppMetaImpl *)meta; \
@@ -357,7 +358,8 @@ EXPORT_SYMBOL(kmpp_meta_dump);
             *val = def; \
         } \
         return rk_ok; \
-    }
+    } \
+    EXPORT_SYMBOL(kmpp_meta_get_##func_type##_d);
 
 KMPP_META_ACCESSOR(s32, rk_s32, TYPE_VAL_32, val_s32)
 KMPP_META_ACCESSOR(s64, rk_s64, TYPE_VAL_64, val_s64)
@@ -426,3 +428,12 @@ rk_s32 kmpp_meta_get_obj_d(KmppMeta meta, KmppMetaKey key, KmppObj *val, KmppObj
 
     return rk_ok;
 }
+
+EXPORT_SYMBOL(kmpp_meta_get);
+EXPORT_SYMBOL(kmpp_meta_get_share);
+EXPORT_SYMBOL(kmpp_meta_put);
+EXPORT_SYMBOL(kmpp_meta_size);
+EXPORT_SYMBOL(kmpp_meta_dump);
+EXPORT_SYMBOL(kmpp_meta_set_obj);
+EXPORT_SYMBOL(kmpp_meta_get_obj);
+EXPORT_SYMBOL(kmpp_meta_get_obj_d);

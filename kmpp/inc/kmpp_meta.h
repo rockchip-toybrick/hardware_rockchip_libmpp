@@ -118,9 +118,6 @@ typedef enum KmppMetaKey_e {
     KEY_DEC_TBN_UV_OFFSET       = FOURCC_META('t', 'b', 'c', 'o'),
 } KmppMetaKey;
 
-void kmpp_meta_init(void);
-void kmpp_meta_deinit(void);
-
 #define kmpp_meta_get_f(meta)               kmpp_meta_get(meta, __FUNCTION__)
 #define kmpp_meta_get_share_f(meta, file)   kmpp_meta_get_share(meta, file, __FUNCTION__)
 #define kmpp_meta_put_f(meta)               kmpp_meta_put(meta, __FUNCTION__)

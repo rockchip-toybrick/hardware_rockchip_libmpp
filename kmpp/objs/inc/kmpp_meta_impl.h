@@ -93,6 +93,8 @@ typedef struct __attribute__((packed)) KmppMetaImpl_t {
 extern "C" {
 #endif
 
+void kmpp_meta_init(void);
+void kmpp_meta_deinit(void);
 MPP_RET kmpp_meta_inc_ref(KmppMeta meta);
 
 #ifdef __cplusplus
