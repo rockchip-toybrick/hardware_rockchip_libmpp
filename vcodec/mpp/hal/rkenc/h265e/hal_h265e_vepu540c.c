@@ -1905,14 +1905,11 @@ void vepu540c_h265_set_hw_address(H265eV540cHalContext *ctx,
 	H265eSyntax_new *syn = (H265eSyntax_new *) enc_task->syntax.data;
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
 	RK_U32 len = mpp_packet_get_length(task->packet);
-	RK_U32 is_phys;
 	RK_U32 offset_x, offset_y;
-
-	kmpp_frame_get_is_full(task->frame, &is_phys);
 
 	hal_h265e_enter();
 
-	if (!ctx->online && !is_phys) {
+	if (!ctx->online) {
 		regs->reg0160_adr_src0 =
 			mpp_dev_get_iova_address(ctx->dev, enc_task->input, 160);
 		regs->reg0161_adr_src1 = regs->reg0160_adr_src0;
@@ -2081,44 +2078,18 @@ static MPP_RER vepu540c_h265_set_dvbm(H265eV540cRegSet *regs, HalEncTask *task)
 #else
 static MPP_RET vepu540c_h265_set_dvbm(H265eV540cRegSet *regs, HalEncTask *task)
 {
-	KmppFrame frame = task->frame;
-	RK_U32 is_full;
+	regs->reg_ctl.reg0024_dvbm_cfg.dvbm_en = 1;
+	regs->reg_ctl.reg0024_dvbm_cfg.src_badr_sel = 1;
+	regs->reg_ctl.reg0024_dvbm_cfg.vinf_frm_match = 0;
+	regs->reg_ctl.reg0024_dvbm_cfg.vrsp_half_cycle = 8;
 
-	kmpp_frame_get_is_full(frame, &is_full);
+	regs->reg_ctl.reg0006_vs_ldly.dvbm_ack_sel = 1;
+	regs->reg_ctl.reg0006_vs_ldly.dvbm_ack_soft = 1;
+	regs->reg_ctl.reg0006_vs_ldly.dvbm_inf_sel = 1;
 
-	if (!is_full) {
-		regs->reg_ctl.reg0024_dvbm_cfg.dvbm_en = 1;
-		regs->reg_ctl.reg0024_dvbm_cfg.src_badr_sel = 1;
-		regs->reg_ctl.reg0024_dvbm_cfg.vinf_frm_match = 0;
-		regs->reg_ctl.reg0024_dvbm_cfg.vrsp_half_cycle = 8;
-
-		regs->reg_ctl.reg0006_vs_ldly.dvbm_ack_sel = 1;
-		regs->reg_ctl.reg0006_vs_ldly.dvbm_ack_soft = 1;
-		regs->reg_ctl.reg0006_vs_ldly.dvbm_inf_sel = 1;
-
-		regs->reg_base.reg0194_dvbm_id.ch_id = 1;
-		regs->reg_base.reg0194_dvbm_id.frame_id = 0;
-		regs->reg_base.reg0194_dvbm_id.vrsp_rtn_en = 1;
-	} else {
-		RK_U32 phy_addr;
-		RK_S32 hor_stride;
-		RK_S32 ver_stride;
-		RK_U32 off_in[2] = { 0 };
-
-		kmpp_frame_get_phy_addr(frame, &phy_addr);
-		kmpp_frame_get_hor_stride(frame, &hor_stride);
-		kmpp_frame_get_ver_stride(frame, &ver_stride);
-		if (!phy_addr) {
-			mpp_err("online case set full frame err");
-			return MPP_NOK;
-		}
-
-		off_in[0] = hor_stride * ver_stride;
-		off_in[1] = hor_stride * ver_stride;
-		regs->reg_base.reg0160_adr_src0 = phy_addr;
-		regs->reg_base.reg0161_adr_src1 = phy_addr + off_in[0];
-		regs->reg_base.reg0162_adr_src2 = phy_addr +  off_in[1];
-	}
+	regs->reg_base.reg0194_dvbm_id.ch_id = 1;
+	regs->reg_base.reg0194_dvbm_id.frame_id = 0;
+	regs->reg_base.reg0194_dvbm_id.vrsp_rtn_en = 1;
 
 	return MPP_OK;
 }
@@ -2164,9 +2135,6 @@ static MPP_RET hal_h265e_v540c_gen_regs(void *hal, HalEncTask *task)
 	EncFrmStatus *frm = &task->rc_task->frm;
 	RK_U32 is_gray = 0;
 	rdo_noskip_par *p_rdo_intra = NULL;
-	RK_U32 is_phys;
-
-	kmpp_frame_get_is_full(task->frame, &is_phys);
 
 	hal_h265e_enter();
 	pic_width_align8 = (syn->pp.pic_width + 7) & (~7);
@@ -2287,7 +2255,7 @@ static MPP_RET hal_h265e_v540c_gen_regs(void *hal, HalEncTask *task)
 		reg_base->reg0236_synt_nal.nal_unit_type = i_nal_type;
 	}
 
-	if (ctx->online || is_phys) {
+	if (ctx->online) {
 		if (vepu540c_h265_set_dvbm(regs, task))
 			return MPP_NOK;
 	}

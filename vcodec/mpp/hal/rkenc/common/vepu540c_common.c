@@ -794,26 +794,5 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	regs->reg0288_uvc_cfg.uvc_partition_len = 0;
 	regs->reg0288_uvc_cfg.uvc_skip_len = 0;
 
-	if (cfg->online) {
-		RK_U32 is_full;
-
-		kmpp_frame_get_is_full(task->frame, &is_full);
-
-		if (is_full) {
-			RK_U32 phy_addr;
-
-			kmpp_frame_get_phy_addr(task->frame, &phy_addr);
-
-			if (!phy_addr) {
-				mpp_err("online case set full frame err");
-				return MPP_NOK;
-			}
-			regs->reg0264_adr_src0 = phy_addr;
-			regs->reg0265_adr_src1 = regs->reg0264_adr_src0;
-			regs->reg0266_adr_src2 = regs->reg0264_adr_src0;
-			vepu540c_jpeg_set_uv_offset(regs, syn, (VepuFmt) fmt->format, task);
-		}
-	}
-
 	return MPP_OK;
 }

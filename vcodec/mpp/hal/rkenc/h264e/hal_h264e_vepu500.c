@@ -1290,7 +1290,6 @@ static void setup_vepu500_io_buf(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	RK_S32 hor_stride, ver_stride;
 	RK_U32 off_in[2] = {0};
 	RK_U32 off_out = mpp_packet_get_length(pkt);
-	RK_U32 is_phys = 0;
 
 	hal_h264e_dbg_func("enter\n");
 
@@ -1298,7 +1297,6 @@ static void setup_vepu500_io_buf(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 	kmpp_frame_get_ver_stride(frm, &ver_stride);
 	kmpp_frame_get_fmt(frm, &fmt);
 	kmpp_frame_get_buffer(frm, &buf_in);
-	kmpp_frame_get_is_full(frm, &is_phys);
 
 	if (MPP_FRAME_FMT_IS_YUV(fmt)) {
 		VepuFmtCfg cfg;
@@ -1346,7 +1344,7 @@ static void setup_vepu500_io_buf(HalH264eVepu500Ctx *ctx, HalEncTask *task)
 		}
 	}
 
-	if (ctx->online || is_phys) {
+	if (ctx->online) {
 		regs->reg_frm.adr_src0 = 0;
 		regs->reg_frm.adr_src1 = 0;
 		regs->reg_frm.adr_src2 = 0;

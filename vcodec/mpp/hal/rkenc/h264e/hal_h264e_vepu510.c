@@ -28,6 +28,7 @@
 
 #include "vepu5xx_common.h"
 #include "vepu510_common.h"
+#include "kmpp_meta.h"
 
 #define DUMP_REG                0
 #define MAX_TASK_CNT            2
@@ -534,6 +535,7 @@ static MPP_RET hal_h264e_vepu510_get_task(void *hal, HalEncTask *task)
 	// MppEncH264HwCfg *hw_cfg = &cfg_set->codec.h264.hw_cfg;
 	RK_U32 updated = update_vepu510_syntax(ctx, &task->syntax);
 	EncFrmStatus *frm_status = &task->rc_task->frm;
+	KmppShmPtr sptr;
 	// H264eFrmInfo *frms = ctx->frms;
 
 	hal_h264e_dbg_func("enter %p\n", hal);
@@ -544,7 +546,11 @@ static MPP_RET hal_h264e_vepu510_get_task(void *hal, HalEncTask *task)
 	if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))
 		setup_hal_bufs(ctx);
 
-	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
+	if (!kmpp_frame_get_meta(task->frame, &sptr)) {
+		KmppMeta meta = sptr.kptr;
+
+		kmpp_meta_get_ptr(meta, KEY_ROI_DATA, (void**)&ctx->roi_data);
+	}
 
 	if (!frm_status->reencode)
 		ctx->last_frame_fb = ctx->feedback;

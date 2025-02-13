@@ -63,19 +63,6 @@ static rk_s32 kmpp_frame_impl_deinit(void *entry, const rk_u8 *caller)
 
         if (impl->buffer)
             mpp_buffer_put(impl->buffer);
-
-        if (impl->osd) {
-            MppEncOSDData3 *osd_data = (MppEncOSDData3 *)impl->osd;
-            rk_u32 i = 0;
-
-            for (i = 0; i < osd_data->num_region; i++) {
-                if (osd_data->region[i].osd_buf.buf)
-                    mpp_buffer_put(osd_data->region[i].osd_buf.buf);
-
-                if (osd_data->region[i].inv_cfg.inv_buf.buf)
-                    mpp_buffer_put(osd_data->region[i].inv_cfg.inv_buf.buf);
-            }
-        }
     }
 
     return rk_ok;
@@ -157,41 +144,6 @@ rk_s32 kmpp_frame_has_meta(const KmppFrame frame)
     return 0;
 }
 
-MPP_RET kmpp_frame_add_osd(KmppFrame frame, MppOsd osd)
-{
-    KmppFrameImpl *p = kmpp_obj_to_entry(frame);
-    MppEncOSDData3 *osd_data = NULL;
-    rk_u32 i = 0;
-
-    if (check_is_mpp_frame(p) || !osd)
-        return MPP_ERR_NULL_PTR;
-
-    p->osd = osd;
-    osd_data = (MppEncOSDData3 *)osd;
-
-    for (i = 0; i < osd_data->num_region; i++) {
-        if (osd_data->region[i].osd_buf.buf)
-            mpp_buffer_inc_ref(osd_data->region[i].osd_buf.buf);
-        if (osd_data->region[i].inv_cfg.inv_buf.buf)
-            mpp_buffer_inc_ref(osd_data->region[i].inv_cfg.inv_buf.buf);
-    }
-
-    return 0;
-}
-
-rk_s32 kmpp_frame_get_osd(KmppFrame frame, MppOsd *osd)
-{
-    KmppFrameImpl *p = kmpp_obj_to_entry(frame);
-
-    if (check_is_mpp_frame(p))
-        return rk_nok;
-
-    *osd = p->osd;
-
-    return rk_ok;
-
-}
-
 MPP_RET kmpp_frame_copy(KmppFrame dst, KmppFrame src)
 {
     KmppFrameImpl *dst_p = kmpp_obj_to_entry(dst);
@@ -203,8 +155,6 @@ MPP_RET kmpp_frame_copy(KmppFrame dst, KmppFrame src)
     }
 
     osal_memcpy(dst_p, src_p, sizeof(KmppFrameImpl));
-
-    dst_p->osd = NULL;
 
     return MPP_OK;
 }
@@ -265,8 +215,6 @@ rk_s32 kmpp_frame_get_fbc_stride(KmppFrame frame, rk_u32 *stride)
 }
 
 EXPORT_SYMBOL(kmpp_frame_has_meta);
-EXPORT_SYMBOL(kmpp_frame_add_osd);
-EXPORT_SYMBOL(kmpp_frame_get_osd);
 EXPORT_SYMBOL(kmpp_frame_copy);
 EXPORT_SYMBOL(kmpp_frame_info_cmp);
 EXPORT_SYMBOL(kmpp_frame_get_fbc_offset);

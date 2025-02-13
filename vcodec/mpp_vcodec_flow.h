@@ -21,6 +21,5 @@ void *mpp_vcodec_dec_routine(void *param);
 void mpp_vcodec_enc_int_handle(int chan_id, int event, void *param);
 int mpp_vcodec_enc_run_task(RK_U32 chan_id, RK_S64 pts, RK_S64 dts);
 int mpp_vcodec_enc_set_online_mode(RK_U32 chan_id, RK_U32 mode);
-MPP_RET mpp_frame_init_with_frameinfo(KmppFrame *frame, struct mpp_frame_infos *info);
 
 #endif

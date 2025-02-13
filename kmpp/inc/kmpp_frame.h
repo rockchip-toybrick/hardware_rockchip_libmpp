@@ -304,16 +304,7 @@ typedef void* KmppPpInfo;
     ENTRY(prefix, u32, rk_u32, chroma_location) \
     ENTRY(prefix, u32, rk_u32, fmt) \
     ENTRY(prefix, u32, rk_u32, buf_size) \
-    ENTRY(prefix, u32, rk_u32, is_gray) \
-    ENTRY(prefix, u32, rk_u32, is_full) \
-    ENTRY(prefix, u32, rk_u32, phy_addr) \
-    ENTRY(prefix, u32, rk_u32, idr_request) \
-    ENTRY(prefix, u32, rk_u32, pskip_request) \
-    ENTRY(prefix, u32, rk_u32, pskip_num) \
-    ENTRY(prefix, u32, rk_u32, chan_id) \
-    ENTRY(prefix, kptr, KmppFrame, combo_frame) \
-    ENTRY(prefix, kptr, KmppRoi, roi) \
-    ENTRY(prefix, kptr, KmppPpInfo, pp_info)
+    ENTRY(prefix, u32, rk_u32, is_gray)
 
 #define KMPP_FRAME_STRUCT_TABLE(ENTRY, prefix) \
     ENTRY(prefix, shm, KmppShmPtr, meta) \
@@ -335,8 +326,6 @@ typedef void* KmppPpInfo;
 #define kmpp_frame_dump_f(frame) kmpp_frame_dump(frame, __FUNCTION__)
 
 rk_s32 kmpp_frame_has_meta(const KmppFrame frame);
-MPP_RET kmpp_frame_add_osd(KmppFrame frame, KmppOsd osd);
-rk_s32 kmpp_frame_get_osd(KmppFrame frame, KmppOsd *osd);
 MPP_RET kmpp_frame_copy(KmppFrame dst, KmppFrame src);
 MPP_RET kmpp_frame_info_cmp(KmppFrame frame0, KmppFrame frame1);
 rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, rk_u32 *offset);

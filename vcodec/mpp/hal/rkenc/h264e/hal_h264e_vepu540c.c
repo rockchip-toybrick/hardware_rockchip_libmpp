@@ -1654,7 +1654,6 @@ static void setup_vepu540c_io_buf(HalH264eVepu540cCtx *ctx,
 	RK_U32 off_in[2] = { 0 };
 	RK_U32 off_out = mpp_packet_get_length(pkt);
 	size_t siz_out = buf_out->size;
-	RK_U32 is_phys;
 
 	hal_h264e_dbg_func("enter\n");
 
@@ -1662,7 +1661,6 @@ static void setup_vepu540c_io_buf(HalH264eVepu540cCtx *ctx,
 	kmpp_frame_get_ver_stride(frm, &ver_stride);
 	kmpp_frame_get_fmt(frm, &fmt);
 	kmpp_frame_get_buffer(frm, &buf_in);
-	kmpp_frame_get_is_full(frm, &is_phys);
 
 	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
 		kmpp_frame_get_fbc_offset(task->frame, &off_in[0]);
@@ -1718,7 +1716,7 @@ static void setup_vepu540c_io_buf(HalH264eVepu540cCtx *ctx,
 		}
 	}
 
-	if (ctx->online || is_phys) {
+	if (ctx->online) {
 		regs->reg_base.adr_src0 = 0;
 		regs->reg_base.adr_src1 = 0;
 		regs->reg_base.adr_src2 = 0;
@@ -2322,45 +2320,20 @@ static void setup_vepu540c_dvbm(HalVepu540cRegSet *regs, HalH264eVepu540cCtx *ct
 static MPP_RET setup_vepu540c_dvbm(HalVepu540cRegSet *regs, HalH264eVepu540cCtx *ctx,
 				   HalEncTask *task)
 {
-	KmppFrame frame = task->frame;
-	RK_U32 is_full = 0;
 	(void)ctx;
 
-	kmpp_frame_get_is_full(frame, &is_full);
-	if (!is_full) {
-		regs->reg_ctl.dvbm_cfg.dvbm_en = 1;
-		regs->reg_ctl.dvbm_cfg.src_badr_sel = 1;
-		regs->reg_ctl.dvbm_cfg.vinf_frm_match = 0;
-		regs->reg_ctl.dvbm_cfg.vrsp_half_cycle = 8;
+	regs->reg_ctl.dvbm_cfg.dvbm_en = 1;
+	regs->reg_ctl.dvbm_cfg.src_badr_sel = 1;
+	regs->reg_ctl.dvbm_cfg.vinf_frm_match = 0;
+	regs->reg_ctl.dvbm_cfg.vrsp_half_cycle = 8;
 
-		regs->reg_ctl.vs_ldly.dvbm_ack_sel = 1;
-		regs->reg_ctl.vs_ldly.dvbm_ack_soft = 1;
-		regs->reg_ctl.vs_ldly.dvbm_inf_sel = 1;
+	regs->reg_ctl.vs_ldly.dvbm_ack_sel = 1;
+	regs->reg_ctl.vs_ldly.dvbm_ack_soft = 1;
+	regs->reg_ctl.vs_ldly.dvbm_inf_sel = 1;
 
-		regs->reg_base.dvbm_id.ch_id = 1;
-		regs->reg_base.dvbm_id.frame_id = 0;
-		regs->reg_base.dvbm_id.vrsp_rtn_en = 1;
-	} else {
-		RK_U32 phy_addr;
-		RK_S32 hor_stride;
-		RK_S32 ver_stride;
-		RK_U32 off_in[2] = { 0 };
-
-		kmpp_frame_get_phy_addr(frame, &phy_addr);
-		kmpp_frame_get_hor_stride(frame, &hor_stride);
-		kmpp_frame_get_ver_stride(frame, &ver_stride);
-		if (!phy_addr) {
-			mpp_err("online case set full frame err");
-			return MPP_NOK;
-		}
-
-		off_in[0] = hor_stride * ver_stride;
-		off_in[1] = hor_stride * ver_stride;
-
-		regs->reg_base.adr_src0 = phy_addr;
-		regs->reg_base.adr_src1 = phy_addr + off_in[0];
-		regs->reg_base.adr_src2 = phy_addr +  off_in[1];
-	}
+	regs->reg_base.dvbm_id.ch_id = 1;
+	regs->reg_base.dvbm_id.frame_id = 0;
+	regs->reg_base.dvbm_id.vrsp_rtn_en = 1;
 
 	return MPP_OK;
 }
@@ -2403,10 +2376,7 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 	MPP_RET ret = MPP_OK;
 	RK_U32 is_gray = 0;
 	vepu540c_rdo_cfg *reg_rdo = &ctx->regs_set->reg_rdo;
-	RK_U32 is_phys;
 	RK_U32 offset_x, offset_y;
-
-	kmpp_frame_get_is_full(task->frame, &is_phys);
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 	hal_h264e_dbg_detail("frame %d generate regs now", ctx->frms->seq_idx);
@@ -2425,7 +2395,7 @@ static MPP_RET hal_h264e_vepu540c_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu540c_scl_cfg(ctx);
 	setup_vepu540c_rc_base(ctx, sps, slice, &cfg->hw, task->rc_task);
 	setup_vepu540c_io_buf(ctx, task);
-	if (ctx->online || is_phys) {
+	if (ctx->online) {
 		if (setup_vepu540c_dvbm(regs, ctx, task))
 			return MPP_NOK;
 	}

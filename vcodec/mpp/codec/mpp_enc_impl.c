@@ -30,6 +30,7 @@
 
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
+#include "kmpp_meta.h"
 
 typedef union EncTaskWait_u {
 	RK_U32 val;
@@ -1766,6 +1767,8 @@ MPP_RET mpp_enc_impl_free_task(MppEncImpl *enc)
 
 MPP_RET mpp_enc_impl_get_roi_osd(MppEncImpl *enc, KmppFrame frame)
 {
+	KmppShmPtr sptr;
+
 	if (enc->cfg.roi.change) {
 		memcpy(&enc->cur_roi, &enc->cfg.roi, sizeof(enc->cur_roi));
 		enc->cfg.roi.change = 0;
@@ -1779,11 +1782,16 @@ MPP_RET mpp_enc_impl_get_roi_osd(MppEncImpl *enc, KmppFrame frame)
 
 	if (!frame)
 		return MPP_OK;
-	if (enc->cur_roi.change)
-		kmpp_frame_set_roi(frame, &enc->cur_roi);
 
-	if (enc->cur_osd.change)
-		kmpp_frame_add_osd(frame, &enc->cur_osd);
+	if (!kmpp_frame_get_meta(frame, &sptr)) {
+		KmppMeta meta = sptr.kptr;
+
+		if (enc->cur_roi.change)
+			kmpp_meta_set_ptr(meta, KEY_ROI_DATA, &enc->cur_roi);
+		if (enc->cur_osd.change)
+			kmpp_meta_set_ptr(meta, KEY_OSD_DATA3, &enc->cur_osd);
+	}
+
 	return MPP_OK;
 }
 
@@ -1924,6 +1932,7 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, KmppFrame frame)
 	EncTaskStatus *status = &task->status;
 	HalEncTask *hal_task = &task->info.enc;
 	RK_U32 idr_request = 0;
+	KmppShmPtr sptr;
 
 	/* online will no support reenc */
 	if (status->rc_reenc) {
@@ -1938,7 +1947,12 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, KmppFrame frame)
 		ret = MPP_NOK;
 		goto TASK_DONE;
 	}
-	kmpp_frame_get_idr_request(frame, &idr_request);
+
+	if (!kmpp_frame_get_meta(frame, &sptr)) {
+		KmppMeta meta = sptr.kptr;
+
+		kmpp_meta_get_s32(meta, KEY_INPUT_IDR_REQ, &idr_request);
+	}
 	if (idr_request) {
 		enc->frm_cfg.force_flag |= ENC_FORCE_IDR;
 		enc->hdr_status.val = 0;

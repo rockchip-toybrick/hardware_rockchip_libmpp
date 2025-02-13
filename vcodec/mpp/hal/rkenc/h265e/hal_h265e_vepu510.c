@@ -25,6 +25,7 @@
 
 #include "vepu5xx_common.h"
 #include "vepu510_common.h"
+#include "kmpp_meta.h"
 
 #define MAX_FRAME_TASK_NUM      2
 #define H265E_LAMBDA_TAB_SIZE  (52 * sizeof(RK_U32))
@@ -2508,6 +2509,7 @@ MPP_RET hal_h265e_v510_get_task(void *hal, HalEncTask *task)
 	// KmppFrame frame = task->frame;
 	EncFrmStatus  *frm_status = &task->rc_task->frm;
 	RK_S32 task_idx = 0;//ctx->task_idx;
+	KmppShmPtr sptr;
 
 	hal_h265e_enter();
 
@@ -2532,8 +2534,11 @@ MPP_RET hal_h265e_v510_get_task(void *hal, HalEncTask *task)
 	} else {
 		ctx->frame_type = INTER_P_FRAME;
 	}
+	if (!kmpp_frame_get_meta(task->frame, &sptr)) {
+		KmppMeta meta = sptr.kptr;
 
-	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
+		kmpp_meta_get_ptr(meta, KEY_ROI_DATA, (void**)&ctx->roi_data);
+	}
 
 	// task->flags.reg_idx = ctx->task_idx;
 	ctx->ext_line_buf = ctx->ext_line_bufs[ctx->task_idx];

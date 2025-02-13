@@ -77,19 +77,7 @@ typedef struct KmppFrameImpl_t {
      *    stride = aligned(width, 16)
      */
     RK_U32 fbc_offset;
-
-    MppRoi   roi;
-    MppOsd   osd;
-    RK_U32   is_gray;
-    RK_U32   is_full;
-    RK_U32   phy_addr;
-    MppPpInfo pp_info;
-
-    RK_U32 idr_request;
-    RK_U32 pskip_request;
-    RK_U32 pskip_num;
-    KmppFrame combo_frame;
-    RK_U32 chan_id;
+    RK_U32 is_gray;
 
     KmppShmPtr meta;
 } KmppFrameImpl;

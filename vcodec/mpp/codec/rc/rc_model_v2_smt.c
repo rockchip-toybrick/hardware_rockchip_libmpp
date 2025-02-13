@@ -494,7 +494,8 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 	RK_S32 b_min = p->usr_cfg.bps_min;
 	RK_S32 b_max = p->usr_cfg.bps_max;
 
-	kmpp_frame_get_pp_info(task->frame, (MppPpInfo*)&ppinfo);
+	/* TODO: maybe use for rv1106 */
+	// kmpp_frame_get_pp_info(task->frame, (MppPpInfo*)&ppinfo);
 	if (ppinfo) {
 		RK_S32 wp_en = ppinfo->wp_out_par_y & 0x1;
 		RK_S32 wp_weight = (ppinfo->wp_out_par_y >> 4) & 0x1FF;

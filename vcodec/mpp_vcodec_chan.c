@@ -29,6 +29,7 @@
 #include "kmpp_shm.h"
 #include "rk-mpp-kobj.h"
 #include "kmpp_frame.h"
+#include "kmpp_meta.h"
 
 int mpp_vcodec_schedule(void)
 {
@@ -367,6 +368,8 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	MppBufferInfo buf_info;
 	MppBuffer buffer = NULL;
 	KmppFrame frame = NULL;
+	KmppShmPtr sptr;
+	KmppMeta meta;
 
 	chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
 	venc = mpp_vcodec_get_enc_module_entry();
@@ -377,19 +380,46 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 		buf_info.fd = info->fd;
 		mpp_buffer_import(&buffer, &buf_info);
 	}
-	mpp_frame_init_with_frameinfo(&frame, info);
-	if (info->jpeg_chan_id > 0) {
-		KmppFrame comb_frame = NULL;
-
-		kmpp_frame_get(&comb_frame);
-		kmpp_frame_copy(comb_frame, frame);
-		kmpp_frame_set_buffer(comb_frame, buffer);
-		kmpp_frame_set_chan_id(comb_frame, info->jpeg_chan_id);
-		kmpp_frame_set_combo_frame(frame, comb_frame);
+	kmpp_frame_get(&frame);
+	kmpp_frame_set_width(frame, info->width);
+	kmpp_frame_set_height(frame, info->height);
+	kmpp_frame_set_hor_stride(frame, info->hor_stride);
+	kmpp_frame_set_ver_stride(frame, info->ver_stride);
+	kmpp_frame_set_pts(frame, info->pts);
+	kmpp_frame_set_dts(frame, info->dts);
+	kmpp_frame_set_fmt(frame, info->fmt);
+	kmpp_frame_set_offset_x(frame, info->offset_x);
+	kmpp_frame_set_offset_y(frame, info->offset_y);
+	kmpp_frame_set_is_gray(frame, info->is_gray);
+	kmpp_frame_set_eos(frame, info->eos);
+	if (!kmpp_frame_get_meta(frame, &sptr)) {
+		meta = sptr.kptr;
+		kmpp_meta_set_s32(meta, KEY_INPUT_IDR_REQ, info->idr_request);
+		kmpp_meta_set_s32(meta, KEY_INPUT_PSKIP, info->pskip);
+		kmpp_meta_set_s32(meta, KEY_INPUT_PSKIP_NUM, info->pskip_num);
 	}
 	kmpp_frame_set_buffer(frame, buffer);
 	mpp_buffer_put(buffer);
 	chan_entry->frame = frame;
+
+	if (info->jpeg_chan_id > 0) {
+		KmppFrame combo_frame;
+
+		kmpp_frame_get(&combo_frame);
+		kmpp_frame_set_width(combo_frame, info->width);
+		kmpp_frame_set_height(combo_frame, info->height);
+		kmpp_frame_set_hor_stride(combo_frame, info->hor_stride);
+		kmpp_frame_set_ver_stride(combo_frame, info->ver_stride);
+		kmpp_frame_set_fmt(combo_frame, info->fmt);
+		kmpp_frame_set_buffer(combo_frame, buffer);
+
+		if (!kmpp_frame_get_meta(combo_frame, &sptr)) {
+		KmppMeta combo_meta = sptr.kptr;
+		kmpp_meta_set_s32(combo_meta, KEY_CHANNEL_ID, info->jpeg_chan_id);
+		}
+
+		kmpp_meta_set_obj(meta, KEY_COMBO_FRAME, combo_frame);
+	}
 
 	vcodec_thread_trigger(thd);
 
