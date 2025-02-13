@@ -65,7 +65,7 @@ static rk_s32 kmpp_frame_impl_deinit(void *entry, const rk_u8 *caller)
 
         if (impl->osd) {
             MppEncOSDData3 *osd_data = (MppEncOSDData3 *)impl->osd;
-            RK_U32 i = 0;
+            rk_u32 i = 0;
 
             for (i = 0; i < osd_data->num_region; i++) {
                 if (osd_data->region[i].osd_buf.buf)
@@ -146,7 +146,7 @@ static rk_s32 kmpp_frame_impl_get_buffer(void *entry, void *arg, const rk_u8 *ca
     return rk_ok;
 }
 
-RK_S32 kmpp_frame_has_meta(const KmppFrame frame)
+rk_s32 kmpp_frame_has_meta(const KmppFrame frame)
 {
     KmppFrameImpl *p = kmpp_obj_to_entry(frame);
 
@@ -160,7 +160,7 @@ MPP_RET kmpp_frame_add_osd(KmppFrame frame, MppOsd osd)
 {
     KmppFrameImpl *p = kmpp_obj_to_entry(frame);
     MppEncOSDData3 *osd_data = NULL;
-    RK_U32 i = 0;
+    rk_u32 i = 0;
 
     if (check_is_mpp_frame(p) || !osd)
         return MPP_ERR_NULL_PTR;
@@ -228,7 +228,7 @@ MPP_RET kmpp_frame_info_cmp(KmppFrame frame0, KmppFrame frame1)
     return MPP_NOK;
 }
 
-rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, RK_U32 *offset)
+rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, rk_u32 *offset)
 {
     KmppFrameImpl *p = kmpp_obj_to_entry(frame);
 
@@ -236,8 +236,8 @@ rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, RK_U32 *offset)
         return rk_nok;
 
     if (MPP_FRAME_FMT_IS_FBC(p->fmt)) {
-        RK_U32 fbc_version = p->fmt & MPP_FRAME_FBC_MASK;
-        RK_U32 fbc_offset = 0;
+        rk_u32 fbc_version = p->fmt & MPP_FRAME_FBC_MASK;
+        rk_u32 fbc_offset = 0;
 
         if (fbc_version == MPP_FRAME_FBC_AFBC_V1) {
             fbc_offset = KMPP_ALIGN(p->width, 16) * KMPP_ALIGN(p->height, 16) / 16;
@@ -251,7 +251,7 @@ rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, RK_U32 *offset)
     return rk_ok;
 }
 
-rk_s32 kmpp_frame_get_fbc_stride(KmppFrame frame, RK_U32 *stride)
+rk_s32 kmpp_frame_get_fbc_stride(KmppFrame frame, rk_u32 *stride)
 {
     KmppFrameImpl *p = kmpp_obj_to_entry(frame);
 

@@ -261,20 +261,20 @@ typedef enum {
  * Rational number (pair of numerator and denominator).
  */
 typedef struct MppFrameRational {
-    RK_S32 num; ///< Numerator
-    RK_S32 den; ///< Denominator
+    rk_s32 num; ///< Numerator
+    rk_s32 den; ///< Denominator
 } MppFrameRational;
 
 typedef struct MppFrameMasteringDisplayMetadata {
-    RK_U16 display_primaries[3][2];
-    RK_U16 white_point[2];
-    RK_U32 max_luminance;
-    RK_U32 min_luminance;
+    rk_u16 display_primaries[3][2];
+    rk_u16 white_point[2];
+    rk_u32 max_luminance;
+    rk_u32 min_luminance;
 } MppFrameMasteringDisplayMetadata;
 
 typedef struct MppFrameContentLightMetadata {
-    RK_U16 MaxCLL;
-    RK_U16 MaxFALL;
+    rk_u16 MaxCLL;
+    rk_u16 MaxFALL;
 } MppFrameContentLightMetadata;
 
 typedef enum {
@@ -335,12 +335,12 @@ typedef void* KmppPpInfo;
 
 #define kmpp_frame_dump_f(frame) kmpp_frame_dump(frame, __FUNCTION__)
 
-RK_S32 kmpp_frame_has_meta(const KmppFrame frame);
+rk_s32 kmpp_frame_has_meta(const KmppFrame frame);
 MPP_RET kmpp_frame_add_osd(KmppFrame frame, KmppOsd osd);
 rk_s32 kmpp_frame_get_osd(KmppFrame frame, KmppOsd *osd);
 MPP_RET kmpp_frame_copy(KmppFrame dst, KmppFrame src);
 MPP_RET kmpp_frame_info_cmp(KmppFrame frame0, KmppFrame frame1);
-rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, RK_U32 *offset);
-rk_s32 kmpp_frame_get_fbc_stride(KmppFrame frame, RK_U32 *stride);
+rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, rk_u32 *offset);
+rk_s32 kmpp_frame_get_fbc_stride(KmppFrame frame, rk_u32 *stride);
 
 #endif /*__KMPP_FRAME_H__*/
