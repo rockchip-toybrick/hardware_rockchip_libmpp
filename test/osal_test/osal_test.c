@@ -20,6 +20,11 @@ static rk_u32 test_env_u64 = 0;
 static rk_u32 test_env_u32 = 0;
 static char *test_env_str = "this is a test env string";
 
+static KmppEnvNode env_node_u64 = NULL;
+static KmppEnvNode env_node_u32 = NULL;
+static KmppEnvNode env_node_str = NULL;
+static KmppEnvNode env_node_usr = NULL;
+
 rk_s32 node_thds_func(void *data)
 {
     kmpp_thds *thd = (kmpp_thds *)data;
@@ -69,6 +74,10 @@ rk_s32 osal_test_func(void *param)
     osal_dev *odev = NULL;
     void *ptr = NULL;
     void *ptr_shm = NULL;
+    KmppDmaHeap heap = NULL;
+    KmppDmaBuf buf = NULL;
+    rk_u64 uptr;
+    rk_s32 size;
     rk_s32 i;
 
     kmpp_logi("osal test func start\n");
@@ -153,7 +162,7 @@ rk_s32 osal_test_func(void *param)
     info.val = &test_env_u32;
     info.env_show = NULL;
 
-    kmpp_env_add(kmpp_env_osal, NULL, &info);
+    kmpp_env_add(kmpp_env_osal, &env_node_u32, &info);
 
     info.name = "osal_test_u64";
     info.readonly = 0;
@@ -161,7 +170,7 @@ rk_s32 osal_test_func(void *param)
     info.val = &test_env_u64;
     info.env_show = NULL;
 
-    kmpp_env_add(kmpp_env_osal, NULL, &info);
+    kmpp_env_add(kmpp_env_osal, &env_node_u64, &info);
 
     info.name = "osal_test_str";
     info.readonly = 0;
@@ -169,7 +178,7 @@ rk_s32 osal_test_func(void *param)
     info.val = test_env_str;
     info.env_show = NULL;
 
-    kmpp_env_add(kmpp_env_osal, NULL, &info);
+    kmpp_env_add(kmpp_env_osal, &env_node_str, &info);
 
     info.name = "osal_test_user";
     info.readonly = 0;
@@ -177,9 +186,40 @@ rk_s32 osal_test_func(void *param)
     info.val = NULL;
     info.env_show = test_env_show;
 
-    kmpp_env_add(kmpp_env_osal, NULL, &info);
+    kmpp_env_add(kmpp_env_osal, &env_node_usr, &info);
 
     kmpp_logi("osal env test done\n");
+
+    kmpp_logi("kmpp_dmabuf test start\n");
+
+    kmpp_dmaheap_open_f(&heap, KMPP_DMAHEAP_FLAGS_DMA32);
+
+    kmpp_logi("kmpp_dmaheap_open ret %px\n", heap);
+
+    size = 4096;
+
+    kmpp_dmabuf_alloc_f(&buf, heap, size, 0);
+    ptr = kmpp_dmabuf_get_kptr(buf);
+    uptr = kmpp_dmabuf_get_uptr(buf);
+
+    kmpp_logi("kmpp_dmabuf_alloc normal  %px [k:u] [%px:%llx]\n", buf, ptr, uptr);
+    memset(ptr, 0xff, size);
+    if (((rk_u8 *)ptr)[0] == 0xff && ((rk_u8 *)ptr)[size - 1] == 0xff)
+        kmpp_logi("access ok\n");
+    kmpp_dmabuf_free_f(buf);
+
+    kmpp_dmabuf_alloc_f(&buf, heap, size, KMPP_DMABUF_FLAGS_DUP_MAP);
+    ptr = kmpp_dmabuf_get_kptr(buf);
+    uptr = kmpp_dmabuf_get_uptr(buf);
+    kmpp_logi("kmpp_dmabuf_alloc dup-map %px [k:u] [%px:%llx]\n", buf, ptr, uptr);
+    memset(ptr, 0xff, size * 2);
+    if (((rk_u8 *)ptr)[0] == 0xff && ((rk_u8 *)ptr)[size * 2 - 1] == 0xff)
+        kmpp_logi("access ok\n");
+    kmpp_dmabuf_free_f(buf);
+
+    kmpp_dmaheap_close_f(heap);
+
+    kmpp_logi("kmpp_dmabuf test done\n");
 
     kmpp_logi("osal test func done\n");
 
@@ -188,6 +228,11 @@ rk_s32 osal_test_func(void *param)
 
 void osal_test_end(void)
 {
+    kmpp_env_del(kmpp_env_osal, env_node_u32);
+    kmpp_env_del(kmpp_env_osal, env_node_u64);
+    kmpp_env_del(kmpp_env_osal, env_node_str);
+    kmpp_env_del(kmpp_env_osal, env_node_usr);
+
     osal_fs_dev_mgr_deinit(test_fs_dev_mgr);
     osal_class_deinit(test_cls);
 

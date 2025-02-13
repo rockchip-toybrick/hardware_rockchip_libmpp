@@ -3,6 +3,7 @@ INCLUDE_DIRECTORIES(${KMPP_TOP}/osal)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/osal/inc)
 
 SET(KMPP_OSAL_SRC
+    kmpp_allocator.c
     kmpp_atomic.c
     kmpp_clk.c
     kmpp_completion.c

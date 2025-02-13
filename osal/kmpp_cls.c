@@ -499,7 +499,10 @@ rk_s32 osal_fs_dev_mgr_init(osal_fs_dev_mgr **mgr, osal_fs_dev_cfg *cfg)
     impl->cls = cls_to_impl(cls)->class;
     impl->cdev_size = sizeof(struct cdev);
     impl->cdev = (struct cdev *)(impl + 1);
-    impl->fops = *fops;
+
+    if (fops)
+        impl->fops = *fops;
+
     impl->drv_data = cfg->drv_data;
     impl->priv_size = cfg->priv_size;
     name_buf = (rk_u8 *)(impl->cdev + 1);

@@ -3,7 +3,8 @@ EXTRA_CFLAGS += -I$(TOP)/include
 EXTRA_CFLAGS += -I$(TOP)/osal/inc
 EXTRA_CFLAGS += -mno-outline-atomics
 
-${KMPP_SRC}-objs += osal/kmpp_atomic.o \
+${KMPP_SRC}-objs += osal/kmpp_allocator.o \
+                    osal/kmpp_atomic.o \
                     osal/kmpp_bitops.o \
                     osal/kmpp_clk.o \
                     osal/kmpp_cls.o \

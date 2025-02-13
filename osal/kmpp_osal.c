@@ -8,6 +8,7 @@
 #include "version.h"
 
 #include "kmpp_osal.h"
+#include "kmpp_allocator_impl.h"
 
 static void osal_version_show(KmppEnvNode node, void *data)
 {
@@ -67,12 +68,14 @@ int osal_init(void)
     osal_env_version_init();
     osal_env_class_init();
     osal_dev_init();
+    kmpp_dmaheap_init();
 
     return 0;
 }
 
 void osal_exit(void)
 {
+    kmpp_dmaheap_deinit();
     osal_dev_deinit();
     osal_env_deinit();
     osal_mem_deinit();
@@ -89,4 +92,5 @@ module_exit(osal_exit);
 MODULE_AUTHOR("rockchip");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
+MODULE_IMPORT_NS(DMA_BUF);
 #endif
