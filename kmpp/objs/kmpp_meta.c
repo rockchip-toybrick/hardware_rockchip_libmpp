@@ -161,10 +161,11 @@ static rk_s32 kmpp_meta_impl_dump(void *entry)
     ENTRY(KEY_ENC_AVERAGE_QP,       TYPE_VAL_32,    vals.enc_avg_qp) \
     ENTRY(KEY_ENC_START_QP,         TYPE_VAL_32,    vals.enc_start_qp) \
     ENTRY(KEY_ENC_BPS_RT,           TYPE_VAL_32,    vals.enc_bps_rt) \
-    ENTRY(KEY_ROI_DATA,             TYPE_SPTR,      vals.enc_roi) \
+    ENTRY(KEY_ROI_DATA,             TYPE_KPTR,      vals.enc_roi) \
     ENTRY(KEY_ROI_DATA2,            TYPE_SPTR,      vals.enc_roi2) \
     ENTRY(KEY_OSD_DATA,             TYPE_SPTR,      vals.enc_osd) \
     ENTRY(KEY_OSD_DATA2,            TYPE_SPTR,      vals.enc_osd2) \
+    ENTRY(KEY_OSD_DATA3,            TYPE_KPTR,      vals.enc_osd3) \
     ENTRY(KEY_USER_DATA,            TYPE_SPTR,      vals.usr_data) \
     ENTRY(KEY_USER_DATAS,           TYPE_SPTR,      vals.usr_datas) \
     ENTRY(KEY_LVL64_INTER_NUM,      TYPE_VAL_32,    vals.enc_inter64_num) \
@@ -177,6 +178,7 @@ static rk_s32 kmpp_meta_impl_dump(void *entry)
     ENTRY(KEY_LVL4_INTRA_NUM,       TYPE_VAL_32,    vals.enc_intra4_num) \
     ENTRY(KEY_OUTPUT_PSKIP,         TYPE_VAL_32,    vals.enc_out_pskip) \
     ENTRY(KEY_INPUT_PSKIP,          TYPE_VAL_32,    vals.enc_in_skip) \
+    ENTRY(KEY_INPUT_PSKIP_NUM,      TYPE_VAL_32,    vals.enc_in_skip_num) \
     ENTRY(KEY_ENC_SSE,              TYPE_VAL_32,    vals.enc_sse) \
     ENTRY(KEY_QPMAP0,               TYPE_SPTR,      vals.enc_qpmap0) \
     ENTRY(KEY_MV_LIST,              TYPE_SPTR,      vals.enc_mv_list) \
@@ -186,7 +188,9 @@ static rk_s32 kmpp_meta_impl_dump(void *entry)
     ENTRY(KEY_ENC_BASE_LAYER_PID,   TYPE_VAL_32,    vals.enc_base_layer_pid) \
     ENTRY(KEY_DEC_TBN_EN,           TYPE_VAL_32,    vals.dec_thumb_en) \
     ENTRY(KEY_DEC_TBN_Y_OFFSET,     TYPE_VAL_32,    vals.dec_thumb_y_offset) \
-    ENTRY(KEY_DEC_TBN_UV_OFFSET,    TYPE_VAL_32,    vals.dec_thumb_uv_offset)
+    ENTRY(KEY_DEC_TBN_UV_OFFSET,    TYPE_VAL_32,    vals.dec_thumb_uv_offset) \
+    ENTRY(KEY_COMBO_FRAME,          TYPE_SPTR,      vals.combo_frame) \
+    ENTRY(KEY_CHANNEL_ID,           TYPE_VAL_32,    vals.chan_id)
 
 void kmpp_meta_init(void)
 {

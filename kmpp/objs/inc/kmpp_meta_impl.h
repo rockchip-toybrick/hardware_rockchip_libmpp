@@ -48,10 +48,11 @@ typedef struct __attribute__((packed)) KmppMetaVals_t {
     KmppMetaVal         enc_start_qp;
     KmppMetaVal         enc_bps_rt;
 
-    KmppMetaObj         enc_roi;
+    KmppMetaVal         enc_roi;
     KmppMetaObj         enc_roi2;
     KmppMetaObj         enc_osd;
     KmppMetaObj         enc_osd2;
+    KmppMetaVal         enc_osd3;
     KmppMetaObj         usr_data;
     KmppMetaObj         usr_datas;
     KmppMetaObj         enc_qpmap0;
@@ -67,6 +68,7 @@ typedef struct __attribute__((packed)) KmppMetaVals_t {
     KmppMetaVal         enc_intra4_num;
     KmppMetaVal         enc_out_pskip;
     KmppMetaVal         enc_in_skip;
+    KmppMetaVal         enc_in_skip_num;
     KmppMetaVal         enc_sse;
 
     KmppMetaVal         enc_mark_ltr;
@@ -77,6 +79,9 @@ typedef struct __attribute__((packed)) KmppMetaVals_t {
     KmppMetaVal         dec_thumb_en;
     KmppMetaVal         dec_thumb_y_offset;
     KmppMetaVal         dec_thumb_uv_offset;
+
+    KmppMetaObj         combo_frame;
+    KmppMetaVal         chan_id;
 } KmppMetaVals;
 
 typedef struct __attribute__((packed)) KmppMetaImpl_t {

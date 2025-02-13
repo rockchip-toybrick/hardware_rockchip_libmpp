@@ -46,6 +46,7 @@ typedef enum KmppMetaKey_e {
     KEY_ROI_DATA                = FOURCC_META('r', 'o', 'i', ' '),
     KEY_OSD_DATA                = FOURCC_META('o', 's', 'd', ' '),
     KEY_OSD_DATA2               = FOURCC_META('o', 's', 'd', '2'),
+    KEY_OSD_DATA3               = FOURCC_META('o', 's', 'd', '3'),
     KEY_USER_DATA               = FOURCC_META('u', 's', 'r', 'd'),
     KEY_USER_DATAS              = FOURCC_META('u', 'r', 'd', 's'),
 
@@ -63,6 +64,7 @@ typedef enum KmppMetaKey_e {
     KEY_OUTPUT_PSKIP            = FOURCC_META('o', 'p', 's', 'p'),
     /* input P skip frame request */
     KEY_INPUT_PSKIP             = FOURCC_META('i', 'p', 's', 'p'),
+    KEY_INPUT_PSKIP_NUM         = FOURCC_META('i', 'p', 's', 'n'),
     KEY_ENC_SSE                 = FOURCC_META('e', 's', 's', 'e'),
 
     /*
@@ -116,6 +118,9 @@ typedef enum KmppMetaKey_e {
     KEY_DEC_TBN_EN              = FOURCC_META('t', 'b', 'e', 'n'),
     KEY_DEC_TBN_Y_OFFSET        = FOURCC_META('t', 'b', 'y', 'o'),
     KEY_DEC_TBN_UV_OFFSET       = FOURCC_META('t', 'b', 'c', 'o'),
+    /* combo frame */
+    KEY_COMBO_FRAME             = FOURCC_META('c', 'f', 'r', 'm'),
+    KEY_CHANNEL_ID              = FOURCC_META('c', 'h', 'a', 'n'),
 } KmppMetaKey;
 
 #define kmpp_meta_get_f(meta)               kmpp_meta_get(meta, __FUNCTION__)
