@@ -17,6 +17,7 @@
 
 #include "rk_venc_cmd.h"
 #include "mpp_maths.h"
+#include "mpp_buffer.h"
 
 static const char *module_name = MODULE_TAG;
 

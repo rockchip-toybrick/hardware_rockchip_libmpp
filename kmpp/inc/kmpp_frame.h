@@ -7,7 +7,6 @@
 #define __KMPP_FRAME_H__
 
 #include "kmpi_defs.h"
-#include "mpp_buffer.h"
 
 /*
  * bit definition for mode flag in KmppFrame

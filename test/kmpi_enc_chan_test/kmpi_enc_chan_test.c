@@ -10,6 +10,7 @@
 
 #include "kmpp_osal.h"
 #include "kmpp_venc_objs.h"
+#include "mpp_buffer.h"
 
 static RK_U32 frame_num = 10;
 module_param(frame_num, uint, 0644);

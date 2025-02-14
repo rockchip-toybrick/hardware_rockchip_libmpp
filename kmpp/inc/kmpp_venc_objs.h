@@ -6,6 +6,7 @@
 #ifndef __KMPP_VENC_OBJS_H__
 #define __KMPP_VENC_OBJS_H__
 
+#include "rk_defs.h"
 #include "kmpi_venc.h"
 
 #define KMPP_VENC_INIT_CFG_ENTRY_TABLE(ENTRY, prefix) \
