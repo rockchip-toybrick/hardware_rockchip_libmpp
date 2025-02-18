@@ -10,13 +10,16 @@
 
 #include <linux/types.h>
 
+#include "kmpp_dmabuf.h"
+#include "kmpp_allocator.h"
+
+#include "kmpp_vsp_objs_impl.h"
 #include "vepu_pp_common.h"
 
 #define MAX_CHN_NUM  (8)
 
 struct pp_buffer_t {
-	struct mpi_buf *buf;
-	struct dma_buf *buf_dma;
+	osal_dmabuf *osal_buf;
 	dma_addr_t iova;
 };
 
@@ -261,7 +264,16 @@ struct pp_output_t {
 };
 
 struct pp_chn_info_t {
+	KmppVspPpCfg cfg;
+	KmppFrame frame;
+	rk_u32 frm_cnt;
+	rk_u32 frm_num;
+	KmppDmaBuf in;
+	KmppDmaBuf md;
+	KmppDmaBuf od;
+
 	u32 chn; /* channel ID */
+	u32 used;
 	u32 width;
 	u32 height;
 	u32 max_width;
@@ -271,7 +283,6 @@ struct pp_chn_info_t {
 	int flycatkin_en;
 	int frm_accum_interval;
 	int frm_accum_gop;
-	int frm_num;
 	int mdw_len;
 
 	struct pp_buffer_t *buf_rfpw;
@@ -287,11 +298,14 @@ struct pp_chn_info_t {
 	struct pp_output_t output;
 
 	const struct pp_srv_api_t *api;
-	void *dev_srv; /* communicate with rk_vcodec.ko */
+	void *dev_srv; 	/* communicate with rk_vcodec.ko */
+	void *device;	/* struct device* */
 };
 
 struct vepu_pp_ctx_t {
 	struct pp_chn_info_t chn_info[MAX_CHN_NUM];
 };
+
+extern KmppVspApi vepu500_pp_api;
 
 #endif

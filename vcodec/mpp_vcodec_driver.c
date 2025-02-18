@@ -582,13 +582,18 @@ void vcodec_exit(void)
 #include "kmpp_osal.h"
 #include "kmpp_sys.h"
 
+extern rk_s32 kmpp_vsp_drv_register_all(void);
+extern void kmpp_vsp_drv_unregister_all(void);
+
 int kmpp_init(void)
 {
 #ifdef BUILD_MULTI_KO
+	kmpp_vsp_drv_register_all();
 	return vcodec_init();
 #else
 	osal_init();
 	sys_init();
+	kmpp_vsp_drv_register_all();
 	return vcodec_init();
 #endif
 }
@@ -596,8 +601,10 @@ int kmpp_init(void)
 void kmpp_exit(void)
 {
 #ifdef BUILD_MULTI_KO
+	kmpp_vsp_drv_unregister_all();
 	vcodec_exit();
 #else
+	kmpp_vsp_drv_unregister_all();
 	vcodec_exit();
 	sys_exit();
 	osal_exit();

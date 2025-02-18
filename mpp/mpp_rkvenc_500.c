@@ -1351,6 +1351,9 @@ irqreturn_t rkvenc_500_irq(int irq, void *param)
 	sli_num = mpp_read_relaxed(mpp, RKVENC_REG_SLICE_NUM_BASE);
 	mpp->irq_status = mpp_read(mpp, hw->int_sta_base);
 	enc_st.val = mpp_read(mpp, RKVENC_STATUS);
+
+	pr_info("irq status %x enc st %x\n", mpp->irq_status, enc_st.val);
+
 	if (!mpp->irq_status)
 		return IRQ_NONE;
 

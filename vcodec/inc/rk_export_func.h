@@ -9,33 +9,10 @@
 #ifndef __RK_EXPORT_FUNC_H__
 #define __RK_EXPORT_FUNC_H__
 
-#include <rk_type.h>
+#include "legacy_rockit.h"
 
 struct dma_buf;
 struct mpi_obj;
-
-struct pp_md_cfg {
-	struct mpi_buf *mdw_buf;
-	int switch_sad;
-	int thres_sad;
-	int thres_move;
-	int night_mode;
-	int filter_switch;
-	int thres_dust_move;
-	int thres_dust_blk;
-	int thres_dust_chng;
-	int reserved[5];
-};
-
-struct pp_od_cfg {
-	int is_background;
-	int thres_complex;
-	int thres_area_complex;
-	struct mpi_buf *odw_buf;
-	int thres_complex_cnt;
-	int thres_sad;
-	int reserved[5];
-};
 
 struct mpp_frame_infos {
 	RK_U32  width;

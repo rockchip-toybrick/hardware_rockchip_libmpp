@@ -17,6 +17,7 @@ INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/mpp_service/hack)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/kmpp/inc)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/kmpp/objs/inc)
+INCLUDE_DIRECTORIES(${KMPP_TOP}/kmpp/vsp/inc)
 
 # kmpp header
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec)
@@ -133,7 +134,6 @@ SET(KMPP_SRC
     ../vcodec/mpp_vcodec_thread.c
     ../vcodec/kmpi/kmpi_venc.c
     ../vcodec/kmpi/kmpi_venc_chan.c
-    ../vcodec/kmpi/kmpi_vsp.c
     #mpp_av1dec.c
     mpp_iep2.c
     mpp_jpgdec.c
@@ -159,6 +159,9 @@ SET(KMPP_SRC
     ../kmpp/objs/kmpp_frame.c
     ../kmpp/objs/kmpp_meta.c
     ../kmpp/objs/kmpp_venc_objs.c
+    ../kmpp/objs/kmpp_vsp_objs.c
+    ../kmpp/vsp/kmpi_vsp.c
+    ../kmpp/vsp/kmpp_vsp.c
 )
 
 IF(${BUILD_MULTI_KO})

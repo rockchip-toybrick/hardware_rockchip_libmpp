@@ -1,19 +1,16 @@
-// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/* SPDX-License-Identifier: Apache-2.0 OR MIT */
 /*
- * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
- *
- * author: timkingh.huang@rock-chips.com
- *
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
  */
 
-#include <linux/module.h>
-#include <linux/vmalloc.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
-#include "vepu_pp.h"
-#include "vepu_pp_api.h"
-#include "vepu_pp_service_api.h"
 
+#include "kmpp_mem.h"
+
+#include "rk_export_func.h"
+#include "vepu_pp.h"
+#include "vepu_pp_service_api.h"
 
 static struct vepu_pp_ctx_t g_pp_ctx;
 static struct vcodec_mpibuf_fn *g_mpi_buf_fn = NULL;
@@ -44,7 +41,7 @@ static struct pp_buffer_t * pp_malloc_buffer(struct pp_chn_info_t *info, u32 siz
 	struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
 	struct pp_buffer_t *pp_buf = NULL;
 
-	pp_buf = vmalloc(sizeof(*pp_buf));
+	pp_buf = kmpp_calloc(sizeof(*pp_buf));
 	if (IS_ERR_OR_NULL(pp_buf)) {
 		pp_err("failed\n");
 		return ERR_PTR(-ENOMEM);
@@ -78,8 +75,7 @@ static void pp_free_buffer(struct pp_chn_info_t *info, struct pp_buffer_t *pp_bu
 		if (pp_buf->buf)
 			func->buf_unref(pp_buf->buf);
 
-		vfree(pp_buf);
-		pp_buf = NULL;
+		kmpp_free(pp_buf);
 	}
 }
 
@@ -188,12 +184,11 @@ int vepu_pp_create_chn(int chn, struct pp_chn_attr *attr)
 		info->max_height = attr->height;
 	}
 
-	info->dev_srv = vmalloc(info->api->ctx_size);
-	if (info->dev_srv == NULL) {
+	info->dev_srv = kmpp_calloc(info->api->ctx_size);
+	if (!info->dev_srv) {
 		pp_err("vepu pp vmalloc failed\n");
 		return VEPU_PP_NOK;
-	} else
-		memset(info->dev_srv, 0, info->api->ctx_size);
+	}
 
 	info->api->init(info->dev_srv, MPP_DEVICE_RKVENC_PP);
 
@@ -218,10 +213,7 @@ int vepu_pp_destroy_chn(int chn)
 
 	info->api->deinit(info->dev_srv);
 
-	if (info->dev_srv) {
-		vfree(info->dev_srv);
-		info->dev_srv = NULL;
-	}
+	kmpp_free(info->dev_srv);
 
 	return VEPU_PP_OK;
 }
@@ -238,12 +230,12 @@ static void pp_set_src_addr(struct pp_chn_info_t *info, struct pp_com_cfg *cfg)
 		adr_src0 = func->buf_get_paddr(cfg->src_buf);
 
 	switch (cfg->fmt) {
-	case RKVENC_F_YCbCr_420_P: {
+	case MPP_FMT_YUV420P: {
 		adr_src1 = adr_src0 + width * height;
 		adr_src2 = adr_src1 + width * height / 4;
 		break;
 	}
-	case RKVENC_F_YCbCr_420_SP: {
+	case MPP_FMT_YUV420SP: {
 		adr_src1 = adr_src0 + width * height;
 		adr_src2 = adr_src1;
 		break;
@@ -584,22 +576,24 @@ void vepu_show_pp_info(struct seq_file *seq)
 	vepu_pp_show_od_cfg(seq);
 }
 
-#if 0
-#ifndef BUILD_ONE_KO
-static int __init vepu_pp_init(void)
+int vepu_pp_init(void)
 {
 	pr_info("vepu_pp init\n");
 	return 0;
 }
 
-static void __exit vepu_pp_exit(void)
+void vepu_pp_exit(void)
 {
 	pr_info("vepu_pp exit\n");
 }
 
+#ifndef BUILD_MULTI_KO
+#include <linux/module.h>
+
 module_init(vepu_pp_init);
 module_exit(vepu_pp_exit);
 
+MODULE_AUTHOR("rockchip");
 MODULE_LICENSE("GPL");
-#endif
+MODULE_VERSION("1.0");
 #endif

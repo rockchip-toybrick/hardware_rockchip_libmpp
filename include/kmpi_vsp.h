@@ -19,6 +19,8 @@ typedef void* KmppVspStopCfg;
 typedef void* KmppVspStCfg;
 /* runtime config */
 typedef void* KmppVspRtCfg;
+/* runtime output data */
+typedef void* KmppVspRtOut;
 
 /*
  * There are two sets for Video Signal Processer (VSP) interfaces:
@@ -32,7 +34,7 @@ typedef void* KmppVspRtCfg;
  * reset / start / stop / ctrl
  * - video signal processer control flow interfaces.
  *
- * cfg / rt_cfg
+ * cfg (st_cfg) / rt_cfg
  * - video signal processer static parameter and runtime parameter interfaces.
  *
  * encode / put_frm / get_pkt
@@ -53,17 +55,15 @@ rk_s32 kmpp_vsp_chan_start(KmppChanId id, KmppVspStartCfg cfg);
 rk_s32 kmpp_vsp_chan_stop(KmppChanId id, KmppVspStopCfg cfg);
 rk_s32 kmpp_vsp_chan_ctrl(KmppChanId id, rk_s32 cmd, void *arg);
 
-/* static config */
-rk_s32 kmpp_vsp_get_cfg(KmppCtx ctx, KmppVspStCfg cfg);
+rk_s32 kmpp_vsp_get_cfg(KmppCtx ctx, KmppVspStCfg *cfg, const rk_u8 *name);
 rk_s32 kmpp_vsp_set_cfg(KmppCtx ctx, KmppVspStCfg cfg);
-rk_s32 kmpp_vsp_chan_get_cfg(KmppChanId id, KmppVspStCfg cfg);
+rk_s32 kmpp_vsp_chan_get_cfg(KmppChanId id, KmppVspStCfg *cfg, const rk_u8 *name);
 rk_s32 kmpp_vsp_chan_set_cfg(KmppChanId id, KmppVspStCfg cfg);
 
-/* runtime config */
-rk_s32 kmpp_vsp_get_rt_cfg(KmppCtx ctx, KmppVspRtCfg cfg);
+rk_s32 kmpp_vsp_get_rt_cfg(KmppCtx ctx, KmppVspRtCfg *cfg, const rk_u8 *name);
 rk_s32 kmpp_vsp_set_rt_cfg(KmppCtx ctx, KmppVspRtCfg cfg);
-rk_s32 kmpp_vsp_chan_get_rt_cfg(KmppChanId id, KmppVspStCfg cfg);
-rk_s32 kmpp_vsp_chan_set_rt_cfg(KmppChanId id, KmppVspStCfg cfg);
+rk_s32 kmpp_vsp_chan_get_rt_cfg(KmppChanId id, KmppVspRtCfg *cfg, const rk_u8 *name);
+rk_s32 kmpp_vsp_chan_set_rt_cfg(KmppChanId id, KmppVspRtCfg cfg);
 
 rk_s32 kmpp_vsp_proc(KmppCtx ctx, KmppFrame in, KmppFrame *out);
 rk_s32 kmpp_vsp_put_frm(KmppCtx ctx, KmppFrame frm);
@@ -71,5 +71,14 @@ rk_s32 kmpp_vsp_get_frm(KmppCtx ctx, KmppFrame *frm);
 rk_s32 kmpp_vsp_chan_proc(KmppChanId id, KmppFrame in, KmppFrame *out);
 rk_s32 kmpp_vsp_chan_put_frm(KmppChanId id, KmppFrame frm);
 rk_s32 kmpp_vsp_chan_get_frm(KmppChanId id, KmppFrame *frm);
+
+rk_s32 kmpp_vsp_proc_buf(KmppCtx ctx, KmppBuffer in, KmppBuffer *out);
+rk_s32 kmpp_vsp_put_buf(KmppCtx ctx, KmppBuffer buf);
+rk_s32 kmpp_vsp_get_buf(KmppCtx ctx, KmppBuffer *buf);
+rk_s32 kmpp_vsp_chan_proc_buf(KmppChanId id, KmppBuffer in, KmppBuffer *out);
+rk_s32 kmpp_vsp_chan_put_buf(KmppChanId id, KmppBuffer buf);
+rk_s32 kmpp_vsp_chan_get_buf(KmppChanId id, KmppBuffer *buf);
+
+#include "kmpp_vsp_objs.h"
 
 #endif /*__KMPI_VSP_H__*/

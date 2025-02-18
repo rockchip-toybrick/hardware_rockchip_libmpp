@@ -5,8 +5,6 @@
 
 #define MODULE_TAG "kmpp_venc_objs"
 
-#include <linux/kernel.h>
-
 #include "kmpp_log.h"
 
 #include "kmpp_obj.h"
