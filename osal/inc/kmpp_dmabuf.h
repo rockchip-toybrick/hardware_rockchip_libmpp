@@ -22,6 +22,7 @@ typedef struct osal_dmabuf_t {
     /* daddr is iova address for the below device */
     rk_u64 daddr;
     osal_dev *dev;
+    void *device;
 
     /* kernel address for cpu access */
     void *kaddr;
@@ -37,5 +38,9 @@ rk_s32 osal_dmabuf_sync_for_dev(osal_dmabuf *dmabuf, osal_dma_direction dir);
 
 rk_s32 osal_dmabuf_attach(osal_dmabuf **dst, osal_dmabuf *src, osal_dev *dev);
 rk_s32 osal_dmabuf_detach(osal_dmabuf *dmabuf);
+
+/* osal_dmabuf by struct device */
+rk_s32 osal_dmabuf_alloc_by_device(osal_dmabuf **dmabuf, void *device, rk_s64 size, rk_u32 flag);
+rk_s32 osal_dmabuf_attach_by_device(osal_dmabuf **dst, osal_dmabuf *src, void *device);
 
 #endif /* __KMPP_DMABUF_H__ */

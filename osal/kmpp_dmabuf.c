@@ -13,6 +13,8 @@
 #include "kmpp_dmabuf.h"
 #include "kmpp_dev_impl.h"
 
+struct device;
+
 typedef struct osal_dmabuf_impl_t {
     osal_dmabuf buf;
     osal_list_head list_srv;
@@ -24,6 +26,25 @@ typedef struct osal_dmabuf_impl_t {
 
 #define osal_dmabuf_to_impl(dmabuf) container_of(dmabuf, osal_dmabuf_impl, buf)
 
+static struct device *dmabuf_to_device(osal_dmabuf *dmabuf)
+{
+    struct device *dev = NULL;
+
+    if (!dmabuf)
+        return dev;
+
+    if (dmabuf->device) {
+        dev = (struct device *)dmabuf->device;
+    } else {
+        osal_dev_impl *impl = dev_to_impl(dmabuf->dev);
+
+        if (impl->device)
+            dev = impl->device;
+    }
+
+    return dev;
+}
+
 rk_s32 osal_dmabuf_mgr_init(void)
 {
     return rk_ok;
@@ -34,32 +55,32 @@ rk_s32 osal_dmabuf_mgr_deinit(void)
     return rk_ok;
 }
 
-rk_s32 osal_dmabuf_alloc(osal_dmabuf **dmabuf, osal_dev *dev, rk_s64 size, rk_u32 flag)
+static osal_dmabuf_impl *alloc_dmabuf(rk_s64 size, rk_u32 flag, void *device, const rk_u8 *caller)
 {
-    osal_dev_impl *impl = dev_to_impl(dev);
     osal_dmabuf_impl *buf = NULL;
     struct sg_table *sgt = NULL;
     dma_addr_t daddr = 0;
     void *kaddr = NULL;
-    rk_s32 ret;
+    rk_s32 ret = rk_ok;
 
     buf = osal_kcalloc(sizeof(osal_dmabuf_impl) + sizeof(struct sg_table), GFP_KERNEL);
     if (!buf) {
-        kmpp_loge_f("alloc dmabuf struct failed\n");
+        kmpp_loge("alloc dmabuf struct failed at %s\n", caller);
         goto failed;
     }
 
     sgt = (struct sg_table *)(buf + 1);
 
-    kaddr = dma_alloc_attrs(impl->device, size, &daddr, GFP_KERNEL, flag | DMA_ATTR_NO_WARN);
+    kaddr = dma_alloc_attrs(device, size, &daddr, GFP_KERNEL, flag | DMA_ATTR_NO_WARN);
     if (IS_ERR_OR_NULL(kaddr)) {
-        kmpp_loge_f("alloc dmabuf size %d failed %d\n", size, PTR_ERR(kaddr));
+        kmpp_loge("alloc dmabuf size %d failed %d at %s\n", size, PTR_ERR(kaddr), caller);
         goto failed;
     }
 
-    ret = dma_get_sgtable_attrs(impl->device, sgt, kaddr, daddr, size, 0);
+    ret = dma_get_sgtable_attrs(device, sgt, kaddr, daddr, size, 0);
     if (ret) {
-        kmpp_loge_f("get sgt for %px:%pad size %d failed %d\n", kaddr, &daddr, size, ret);
+        kmpp_loge("alloc dmabuf sgt for %px:%pad size %d failed %d at %s\n",
+                  kaddr, &daddr, size, ret, caller);
         goto failed;
     }
 
@@ -69,21 +90,40 @@ rk_s32 osal_dmabuf_alloc(osal_dmabuf **dmabuf, osal_dev *dev, rk_s64 size, rk_u3
     buf->buf.kaddr = kaddr;
     buf->buf.daddr = daddr;
     buf->buf.size = size;
-    buf->buf.dev = dev;
     buf->sgt = sgt;
-    buf->orig_dev = dev;
     buf->is_attachment = 0;
 
-    *dmabuf = &buf->buf;
-
-    return rk_ok;
+    return buf;
 
 failed:
-    if (buf)
-        osal_kfree(buf);
+    if (daddr)
+        dma_free_attrs(device, size, kaddr, daddr, DMA_ATTR_NO_WARN);
+
+    kmpp_free(buf);
+    return NULL;
+}
+
+rk_s32 osal_dmabuf_alloc(osal_dmabuf **dmabuf, osal_dev *dev, rk_s64 size, rk_u32 flag)
+{
+    osal_dev_impl *impl = dev_to_impl(dev);
+    osal_dmabuf_impl *buf = NULL;
+
+    if (!dmabuf || !dev || !size) {
+        kmpp_loge_f("invalid dmabuf %px dev %px size %llx\n", dmabuf, dev, size);
+        return rk_nok;
+    }
+
+    buf = alloc_dmabuf(size, flag, impl->device, __FUNCTION__);
+    if (buf) {
+        buf->buf.dev = dev;
+        buf->buf.device = impl->device;
+        buf->orig_dev = dev;
+
+        *dmabuf = &buf->buf;
+        return rk_ok;
+    }
 
     *dmabuf = NULL;
-
     return rk_nok;
 }
 EXPORT_SYMBOL(osal_dmabuf_alloc);
@@ -92,9 +132,9 @@ rk_s32 osal_dmabuf_free(osal_dmabuf *dmabuf)
 {
     if (dmabuf) {
         osal_dmabuf_impl *buf = osal_dmabuf_to_impl(dmabuf);
-        osal_dev_impl *dev = dev_to_impl(dmabuf->dev);
+        struct device *dev = dmabuf_to_device(dmabuf);
 
-        dma_free_attrs(dev->device, dmabuf->size, dmabuf->kaddr, dmabuf->daddr, DMA_ATTR_NO_WARN);
+        dma_free_attrs(dev, dmabuf->size, dmabuf->kaddr, dmabuf->daddr, DMA_ATTR_NO_WARN);
         osal_kfree(buf);
         return rk_ok;
     }
@@ -106,9 +146,9 @@ rk_s32 osal_dmabuf_sync_for_cpu(osal_dmabuf *dmabuf, osal_dma_direction dir)
 {
     if (dmabuf) {
         osal_dmabuf_impl *buf = osal_dmabuf_to_impl(dmabuf);
-        osal_dev_impl *impl = dev_to_impl(dmabuf->dev);
+        struct device *dev = dmabuf_to_device(dmabuf);
 
-        dma_sync_sg_for_cpu(impl->device, buf->sgt->sgl, buf->sgt->nents, (enum dma_data_direction)dir);
+        dma_sync_sg_for_cpu(dev, buf->sgt->sgl, buf->sgt->nents, (enum dma_data_direction)dir);
         return rk_ok;
     }
 
@@ -120,9 +160,9 @@ rk_s32 osal_dmabuf_sync_for_dev(osal_dmabuf *dmabuf, osal_dma_direction dir)
 {
     if (dmabuf) {
         osal_dmabuf_impl *buf = osal_dmabuf_to_impl(dmabuf);
-        osal_dev_impl *impl = dev_to_impl(dmabuf->dev);
+        struct device *dev = dmabuf_to_device(dmabuf);
 
-        dma_sync_sg_for_device(impl->device, buf->sgt->sgl, buf->sgt->nents, (enum dma_data_direction)dir);
+        dma_sync_sg_for_device(dev, buf->sgt->sgl, buf->sgt->nents, (enum dma_data_direction)dir);
         return rk_ok;
     }
 
@@ -130,14 +170,66 @@ rk_s32 osal_dmabuf_sync_for_dev(osal_dmabuf *dmabuf, osal_dma_direction dir)
 }
 EXPORT_SYMBOL(osal_dmabuf_sync_for_dev);
 
+static osal_dmabuf_impl *attach_dmabuf(osal_dmabuf_impl *src, void *device, const rk_u8 *caller)
+{
+    osal_dmabuf_impl *impl = NULL;
+    struct sg_table *sgt = NULL;
+    rk_s32 ret;
+
+    impl = osal_kcalloc(sizeof(osal_dmabuf_impl) + sizeof(struct sg_table), GFP_KERNEL);
+    if (!impl) {
+        kmpp_loge("alloc dmabuf struct failed at %s\n", caller);
+        goto failed;
+    }
+
+    impl->sgt = (struct sg_table *)(impl + 1);
+    sgt = impl->sgt;
+
+    ret = sg_alloc_table(sgt, src->sgt->orig_nents, GFP_KERNEL);
+    if (ret) {
+        kmpp_loge("alloc dmabuf sg table failed at %s\n", caller);
+        goto failed;
+    }
+
+    {
+        struct scatterlist *sg, *new_sg;
+        rk_s32 i;
+
+        new_sg = sgt->sgl;
+        for_each_sgtable_sg(sgt, sg, i) {
+                sg_set_page(new_sg, sg_page(sg), sg->length, sg->offset);
+                new_sg = sg_next(new_sg);
+        }
+    }
+
+    ret = dma_map_sgtable(device, sgt, DMA_BIDIRECTIONAL, 0);
+    if (ret) {
+        kmpp_loge("alloc dmabuf dma_map_sgtable failed %d at %s\n", ret, caller);
+        goto failed;
+    }
+
+    impl->buf.kaddr = src->buf.kaddr;
+    impl->buf.daddr = sg_dma_address(sgt->sgl);;
+    impl->buf.size = src->buf.size;
+    impl->orig_dev = src->orig_dev;
+    impl->is_attachment = 1;
+
+    return impl;
+
+failed:
+    if (sgt)
+        sg_free_table(sgt);
+
+    kmpp_free(impl);
+
+    return NULL;
+}
+
 rk_s32 osal_dmabuf_attach(osal_dmabuf **dst, osal_dmabuf *src, osal_dev *dev)
 {
     osal_dev_impl *impl_dev;
-    osal_dmabuf_impl *impl_dst;
+    osal_dmabuf_impl *impl;
     osal_dmabuf_impl *impl_src;
-    struct sg_table *sgt;
-    rk_s32 ret;
-    rk_s32 i;
 
     if (!dst || !src || !dev) {
         kmpp_loge_f("invalid param dst %px src %px dev %px\n", dst, src, dev);
@@ -153,51 +245,13 @@ rk_s32 osal_dmabuf_attach(osal_dmabuf **dst, osal_dmabuf *src, osal_dev *dev)
         return rk_nok;
     }
 
-    impl_dst = osal_kcalloc(sizeof(osal_dmabuf_impl) + sizeof(struct sg_table), GFP_KERNEL);
-    if (!impl_dst) {
-        kmpp_loge_f("alloc dmabuf struct failed\n");
-        goto failed;
-    }
+    impl = attach_dmabuf(impl_src, impl_dev->device, __FUNCTION__);
+    if (impl) {
+        impl->buf.dev = dev;
+        impl->buf.device = impl_dev->device;
 
-    impl_dst->sgt = (struct sg_table *)(impl_dst + 1);
-    sgt = impl_dst->sgt;
-
-    ret = sg_alloc_table(sgt, impl_src->sgt->orig_nents, GFP_KERNEL);
-    if (ret) {
-        kmpp_loge_f("alloc sg table failed\n");
-        goto failed;
-    }
-
-    {
-        struct scatterlist *sg, *new_sg;
-
-        new_sg = sgt->sgl;
-        for_each_sgtable_sg(sgt, sg, i) {
-                sg_set_page(new_sg, sg_page(sg), sg->length, sg->offset);
-                new_sg = sg_next(new_sg);
-        }
-    }
-
-    ret = dma_map_sgtable(impl_dev->device, sgt, DMA_BIDIRECTIONAL, 0);
-    if (ret) {
-        kmpp_loge_f("dma_map_sgtable failed %d\n", ret);
-        goto failed;
-    }
-
-    impl_dst->buf.kaddr = impl_src->buf.kaddr;
-    impl_dst->buf.daddr = sg_dma_address(sgt->sgl);;
-    impl_dst->buf.size = impl_src->buf.size;
-    impl_dst->buf.dev = dev;
-    impl_dst->orig_dev = impl_src->orig_dev;
-    impl_dst->is_attachment = 1;
-
-    *dst = &impl_dst->buf;
-
-    return rk_ok;
-failed:
-    if (impl_dst) {
-        sg_free_table(impl_dst->sgt);
-        osal_kfree(impl_dst);
+        *dst = &impl->buf;
+        return rk_ok;
     }
 
     return rk_nok;
@@ -208,10 +262,11 @@ rk_s32 osal_dmabuf_detach(osal_dmabuf *dmabuf)
 {
     if (dmabuf) {
         osal_dmabuf_impl *buf = osal_dmabuf_to_impl(dmabuf);
-        osal_dev_impl *dev = dev_to_impl(dmabuf->dev);
 
         if (buf->is_attachment) {
-            dma_unmap_sgtable(dev->device, buf->sgt, DMA_BIDIRECTIONAL, 0);
+            struct device *dev = dmabuf_to_device(dmabuf);
+
+            dma_unmap_sgtable(dev, buf->sgt, DMA_BIDIRECTIONAL, 0);
             sg_free_table(buf->sgt);
             osal_kfree(buf);
             return rk_ok;
@@ -223,3 +278,58 @@ rk_s32 osal_dmabuf_detach(osal_dmabuf *dmabuf)
     return rk_ok;
 }
 EXPORT_SYMBOL(osal_dmabuf_detach);
+
+rk_s32 osal_dmabuf_alloc_by_device(osal_dmabuf **dmabuf, void *device, rk_s64 size, rk_u32 flag)
+{
+    osal_dmabuf_impl *buf = NULL;
+
+    if (!dmabuf || !device || !size) {
+        kmpp_loge_f("invalid dmabuf %px dev %px size %llx\n", dmabuf, device, size);
+        return rk_nok;
+    }
+
+    buf = alloc_dmabuf(size, flag, device, __FUNCTION__);
+    if (buf) {
+        buf->buf.dev = NULL;
+        buf->buf.device = device;
+        buf->orig_dev = NULL;
+
+        *dmabuf = &buf->buf;
+        return rk_ok;
+    }
+
+    *dmabuf = NULL;
+    return rk_nok;
+}
+EXPORT_SYMBOL(osal_dmabuf_alloc_by_device);
+
+rk_s32 osal_dmabuf_attach_by_device(osal_dmabuf **dst, osal_dmabuf *src, void *device)
+{
+    osal_dmabuf_impl *impl;
+    osal_dmabuf_impl *impl_src;
+
+    if (!dst || !src || !device) {
+        kmpp_loge_f("invalid param dst %px src %px dev %px\n", dst, src, device);
+        return rk_nok;
+    }
+
+    impl_src = osal_dmabuf_to_impl(src);
+
+    *dst = NULL;
+    if (src->device == device) {
+        kmpp_loge_f("can not attach buffer %px to same device again\n", src);
+        return rk_nok;
+    }
+
+    impl = attach_dmabuf(impl_src, (struct device *)device, __FUNCTION__);
+    if (impl) {
+        impl->buf.dev = NULL;
+        impl->buf.device = device;
+
+        *dst = &impl->buf;
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(osal_dmabuf_attach_by_device);
