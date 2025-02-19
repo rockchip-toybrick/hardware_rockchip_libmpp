@@ -108,6 +108,7 @@ rk_s32 kmpp_objdef_put_shared(KmppObjDefSet *defs);
 
 /* normal kernel object allocator both object head and body */
 rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def, const rk_u8 *caller);
+rk_s32 kmpp_obj_get_by_name(KmppObj *obj, const rk_u8 *name, const rk_u8 *caller);
 /* use external buffer for both object head and body */
 rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size, const rk_u8 *caller);
 /* import external shared buffer for object body */

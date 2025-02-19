@@ -265,23 +265,32 @@ rk_s32 kmpp_objdef_put(KmppObjDef def)
 }
 EXPORT_SYMBOL(kmpp_objdef_put);
 
-rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name)
+static KmppObjDefImpl *find_objdef(const rk_u8 *name)
 {
     KmppObjDefImpl *impl = NULL;
     KmppObjDefImpl *n = NULL;
 
     osal_list_for_each_entry_safe(impl, n, &kmpp_objdef_list, KmppObjDefImpl, list) {
-        if (osal_strcmp(impl->name, name) == 0) {
-            rk_s32 old = KMPP_FETCH_ADD(&impl->ref_cnt, 1);
-            obj_dbg_flow("kmpp_objdef_find %s - %px %d->%d\n",
-                         impl->name, impl, old, impl->ref_cnt);
-            *def = impl;
-            return rk_ok;
-        }
+        if (!osal_strcmp(impl->name, name))
+            return impl;
+    }
+
+    return NULL;
+}
+
+rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name)
+{
+    KmppObjDefImpl *impl = find_objdef(name);
+
+    if (impl) {
+        rk_s32 old = KMPP_FETCH_ADD(&impl->ref_cnt, 1);
+        obj_dbg_flow("kmpp_objdef_find %s - %px %d->%d\n",
+                     impl->name, impl, old, impl->ref_cnt);
+        *def = impl;
+        return rk_ok;
     }
 
     *def = NULL;
-
     return rk_nok;
 }
 EXPORT_SYMBOL(kmpp_objdef_find);
@@ -770,6 +779,26 @@ rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def, const rk_u8 *caller)
     return rk_ok;
 }
 EXPORT_SYMBOL(kmpp_obj_get);
+
+rk_s32 kmpp_obj_get_by_name(KmppObj *obj, const rk_u8 *name, const rk_u8 *caller)
+{
+    KmppObjDef def;
+    rk_s32 ret;
+
+    if (!obj || !name) {
+        kmpp_loge_f("invalid param obj %p name %s\n", obj, name);
+        return rk_nok;
+    }
+
+    def = find_objdef(name);
+    if (!def) {
+        kmpp_loge_f("can not get objdef %s ret %d\n", name, ret);
+        return rk_nok;
+    }
+
+    return kmpp_obj_get(obj, def, caller);
+}
+EXPORT_SYMBOL(kmpp_obj_get_by_name);
 
 rk_s32 kmpp_obj_assign(KmppObj *obj, KmppObjDef def, void *buf, rk_s32 size, const rk_u8 *caller)
 {
