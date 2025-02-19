@@ -17,6 +17,7 @@
 #include <linux/kref.h>
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
+#include <linux/version.h>
 
 #ifdef CONFIG_ARM_DMA_USE_IOMMU
 #include <asm/dma-iommu.h>
@@ -319,14 +320,22 @@ fail:
 int mpp_dma_unmap_kernel(struct mpp_dma_session *dma,
 			 struct mpp_dma_buffer *buffer)
 {
-	struct iosys_map map = IOSYS_MAP_INIT_VADDR(buffer->vaddr);
 	struct dma_buf *dmabuf = buffer->dmabuf;
 
-	if (IS_ERR_OR_NULL(map.vaddr) ||
+	if (IS_ERR_OR_NULL(buffer->vaddr) ||
 	    IS_ERR_OR_NULL(dmabuf))
 		return -EINVAL;
 
-	dma_buf_vunmap(dmabuf, &map);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+		dma_buf_vunmap(dmabuf, buffer->vaddr);
+#else
+	{
+		struct iosys_map map = IOSYS_MAP_INIT_VADDR(buffer->vaddr);
+
+		dma_buf_vunmap(dmabuf, &map);
+	}
+#endif
+
 	buffer->vaddr = NULL;
 
 	dma_buf_end_cpu_access(dmabuf, DMA_FROM_DEVICE);
@@ -338,8 +347,8 @@ int mpp_dma_map_kernel(struct mpp_dma_session *dma,
 		       struct mpp_dma_buffer *buffer)
 {
 	int ret;
-	struct iosys_map map;
 	struct dma_buf *dmabuf = buffer->dmabuf;
+	void *vaddr;
 
 	if (IS_ERR_OR_NULL(dmabuf))
 		return -EINVAL;
@@ -350,13 +359,27 @@ int mpp_dma_map_kernel(struct mpp_dma_session *dma,
 		goto failed_access;
 	}
 
-	ret = dma_buf_vmap(dmabuf, &map);
-	if (ret) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+	vaddr = dma_buf_vmap(dmabuf);
+	if (!vaddr) {
 		dev_dbg(dma->dev, "can't vmap the dma buffer\n");
+		ret = -EIO;
 		goto failed_vmap;
 	}
+#else
+	{
+		struct iosys_map map;
 
-	buffer->vaddr = map.vaddr;
+		ret = dma_buf_vmap(dmabuf, &map);
+		if (ret) {
+			dev_dbg(dma->dev, "can't vmap the dma buffer\n");
+			goto failed_vmap;
+		}
+		vaddr = map.vaddr;
+	}
+#endif
+
+	buffer->vaddr = vaddr;
 
 	return 0;
 

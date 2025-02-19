@@ -875,7 +875,7 @@ MPP_RET mpp_enc_proc_cfg(MppEncImpl *enc, MpiCmd cmd, void *param)
 		RK_U32 change = src->base.change;
 
 		if (sizeof(MppEncCfgSet) != impl->size)
-			mpp_err_f("MPP_ENC_SET_CFG in size err %ld != %d\n",
+			mpp_err_f("MPP_ENC_SET_CFG in size err %zu != %d\n",
 				   sizeof(MppEncCfgSet), impl->size);
 		/* get base cfg here */
 		if (change) {

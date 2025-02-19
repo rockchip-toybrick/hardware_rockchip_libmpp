@@ -506,7 +506,7 @@ int mpp_vcodec_chan_control(int chan_id, MppCtxType type, int cmd, void *arg)
 		if (cmd == MPP_SET_VENC_INIT_KCFG) {
 			struct vcodec_attr *attr = NULL;
 			KmppObjShm *ioc = (KmppObjShm *)arg;
-			KmppShm shm = (KmppShm)ioc->kobj_kaddr;
+			KmppShm shm = (KmppShm)(uintptr_t)ioc->kobj_kaddr;
 			void *kbase = kmpp_shm_get_kbase(shm);
 
 			if (!kbase || kbase != shm) {

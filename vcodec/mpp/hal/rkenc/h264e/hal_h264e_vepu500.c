@@ -26,6 +26,7 @@
 #include "vepu500_common.h"
 #include "hal_h264e_vepu500_reg.h"
 #include "hal_h264e_vepu500.h"
+#include "kmpp_meta.h"
 
 #define DUMP_REG 0
 #define MAX_TASK_CNT        1
@@ -613,12 +614,17 @@ static MPP_RET hal_h264e_vepu500_get_task(void *hal, HalEncTask *task)
 	HalH264eVepu500Ctx *ctx = (HalH264eVepu500Ctx *) hal;
 	RK_U32 updated = update_vepu500_syntax(ctx, &task->syntax);
 	EncFrmStatus *frm_status = &task->rc_task->frm;
+	KmppShmPtr sptr;
 
 	hal_h264e_dbg_func("enter %p\n", hal);
 
 	ctx->online = task->online;
-	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
-	kmpp_frame_get_osd(task->frame, (MppOsd*)&ctx->osd_cfg.osd_data3);
+	if (!kmpp_frame_get_meta(task->frame, &sptr)) {
+		KmppMeta meta = sptr.kptr;
+
+		kmpp_meta_get_ptr(meta, KEY_ROI_DATA, (void**)&ctx->roi_data);
+		kmpp_meta_get_ptr(meta, KEY_OSD_DATA3, (void**)&ctx->osd_cfg.osd_data3);
+	}
 
 	if (!frm_status->reencode) {
 		if (updated & SYN_TYPE_FLAG(H264E_SYN_CFG))

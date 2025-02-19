@@ -492,8 +492,7 @@ static int mpp_service_probe(struct platform_device *pdev)
 		dev_info(dev, "compatible: %s\n", soc_name);
 		if (soc_name) {
 			if (strstr(soc_name, "rv1103b")) {
-				MPP_REGISTER_DRIVER(srv, HAS_RKVENC500, RKVENC_DVBM, rkvenc500);
-				MPP_REGISTER_DRIVER(srv, HAS_RKVENC500, RKVENC_PP, vepu_pp);
+				MPP_REGISTER_DRIVER(srv, HAS_RKVENC500, RKVENC, rkvenc500);
 #if 0
 			} else if (strstr(soc_name, "rv1106") ||
 					   strstr(soc_name, "rv1103")) {

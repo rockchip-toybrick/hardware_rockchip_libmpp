@@ -978,7 +978,7 @@ rk_s32 kmpp_obj_to_shmptr(KmppObj obj, KmppShmPtr *sptr)
         sptr->kaddr = p->kaddr;
     } else {
         sptr->uaddr = 0;
-        sptr->kaddr = (rk_u64)impl;
+        sptr->kaddr = (rk_u64)(uintptr_t)impl;
     }
 
     return rk_ok;

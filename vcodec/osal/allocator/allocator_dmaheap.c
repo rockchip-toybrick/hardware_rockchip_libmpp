@@ -25,11 +25,14 @@ static DEFINE_SPINLOCK(lock);
 typedef struct dma_buf *(*dma_heap_alloc_func)(struct dma_heap *heap, size_t len,
 					  unsigned int fd_flags,
 					  unsigned int heap_flags);
+typedef void *(*dma_heap_find_func)(const char *name);
 
 static dma_heap_alloc_func dma_heap_alloc = NULL;
+
+static const char *dma_heap_find_name = "find";
+static dma_heap_find_func find = NULL;
 static const char *alloc_symbol_name;
 static char *symbol_name[] = {
-	"dma_heap_buffer_alloc_exp",
 	"dma_heap_buffer_alloc",
 };
 
@@ -41,9 +44,15 @@ static MPP_RET allocator_init(const char *caller)
 
 	spin_lock_irqsave(&lock, flags);
 	if (!g_dma_heap) {
-		struct dma_heap *heap = dma_heap_find(name);
+		struct dma_heap *heap = NULL;
 		RK_U32 i;
 
+		find = (dma_heap_find_func)__symbol_get(dma_heap_find_name);
+		if (!find) {
+			mpp_err_f("dma_heap_find_func not found\n");
+			goto __return;
+		}
+		heap = find(name);
 		if (!heap) {
 			mpp_err_f("allocator %s not found\n", name);
 			ret = MPP_NOK;
@@ -76,6 +85,9 @@ static void allocator_deinit(const char *caller)
 
 	if (dma_heap_alloc)
 		__symbol_put(alloc_symbol_name);
+
+	if (find)
+		__symbol_put(dma_heap_find_name);
 }
 
 static MPP_RET allocator_alloc(MppBufferInfo *info, const char *caller)

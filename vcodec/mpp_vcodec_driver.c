@@ -134,7 +134,7 @@ static int vcodec_process_cmd(void *private, struct vcodec_request *req)
 			goto fail;
 		}
 
-		shm = (KmppShm)ioc->kobj_kaddr;
+		shm = (KmppShm)(uintptr_t)ioc->kobj_kaddr;
 		kbase = kmpp_shm_get_kbase(shm);
 		if (!kbase || kbase != shm) {
 			mpp_err_f("invalid obj kbase %px shm %px\n", kbase, shm);
@@ -610,4 +610,5 @@ MODULE_LICENSE("GPL");
 module_init(kmpp_init);
 module_exit(kmpp_exit);
 MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 #endif

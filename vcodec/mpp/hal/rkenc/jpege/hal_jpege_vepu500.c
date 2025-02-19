@@ -24,6 +24,7 @@
 #include "hal_jpege_hdr.h"
 #include "mpp_packet.h"
 #include "rk-dvbm.h"
+#include "kmpp_meta.h"
 
 typedef struct HalJpegeRc_t {
 	/* For quantization table */
@@ -601,6 +602,7 @@ MPP_RET hal_jpege_v500_get_task(void *hal, HalEncTask * task)
 {
 	JpegeV500HalContext *ctx = (JpegeV500HalContext *) hal;
 	JpegeSyntax *syntax = (JpegeSyntax *) task->syntax.data;
+	KmppShmPtr sptr;
 
 	hal_jpege_enter();
 
@@ -608,7 +610,11 @@ MPP_RET hal_jpege_v500_get_task(void *hal, HalEncTask * task)
 	ctx->last_frame_type = ctx->frame_type;
 	ctx->online = task->online;
 
-	kmpp_frame_get_osd(task->frame, (MppOsd*)&ctx->osd_cfg.osd_data3);
+	if (!kmpp_frame_get_meta(task->frame, &sptr)) {
+		KmppMeta meta = sptr.kptr;
+
+		kmpp_meta_get_ptr(meta, KEY_OSD_DATA3, (void**)&ctx->osd_cfg.osd_data3);
+	}
 
 	if (ctx->cfg->rc.rc_mode != MPP_ENC_RC_MODE_FIXQP) {
 		if (!ctx->hal_rc.q_factor) {

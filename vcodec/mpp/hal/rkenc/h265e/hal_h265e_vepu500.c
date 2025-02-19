@@ -23,6 +23,7 @@
 #include "vepu500_common.h"
 #include "hal_h265e_vepu500.h"
 #include "hal_h265e_vepu500_reg.h"
+#include "kmpp_meta.h"
 
 #define hal_h265e_err(fmt, ...) \
     do {\
@@ -3107,12 +3108,17 @@ MPP_RET hal_h265e_v500_get_task(void *hal, HalEncTask *task)
 {
 	H265eV500HalContext *ctx = (H265eV500HalContext *)hal;
 	EncFrmStatus  *frm_status = &task->rc_task->frm;
+	KmppShmPtr sptr;
 
 	hal_h265e_enter();
 
 	ctx->online = task->online;
-	kmpp_frame_get_roi(task->frame, &ctx->roi_data);
-	kmpp_frame_get_osd(task->frame, (MppOsd*)&ctx->osd_cfg.osd_data3);
+	if (!kmpp_frame_get_meta(task->frame, &sptr)) {
+		KmppMeta meta = sptr.kptr;
+
+		kmpp_meta_get_ptr(meta, KEY_ROI_DATA, (void**)&ctx->roi_data);
+		kmpp_meta_get_ptr(meta, KEY_OSD_DATA3, (void**)&ctx->osd_cfg.osd_data3);
+	}
 	ctx->frame_type = frm_status->is_intra ? INTRA_FRAME : INTER_P_FRAME;
 
 	if (!task->rc_task->frm.reencode) {

@@ -29,6 +29,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/nospec.h>
+#include <linux/version.h>
 
 #include <soc/rockchip/pm_domains.h>
 
@@ -2660,6 +2661,14 @@ const struct dev_pm_ops mpp_common_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
 };
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+#define PDE_DATA(inode)         pde_data(inode)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
+/* already has the Macro definition */
+#else /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)) */
+#define PDE_DATA(inode)         NULL
+#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)) */
+
 #ifdef CONFIG_ROCKCHIP_MPP_PROC_FS
 static int fops_show_u32(struct seq_file *file, void *v)
 {
@@ -2672,7 +2681,7 @@ static int fops_show_u32(struct seq_file *file, void *v)
 
 static int fops_open_u32(struct inode *inode, struct file *file)
 {
-	return single_open(file, fops_show_u32, pde_data(inode));
+	return single_open(file, fops_show_u32, PDE_DATA(inode));
 }
 
 static ssize_t fops_write_u32(struct file *file, const char __user *buf,

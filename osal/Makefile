@@ -1,7 +1,9 @@
 EXTRA_CFLAGS += -I$(TOP)/osal
 EXTRA_CFLAGS += -I$(TOP)/include
 EXTRA_CFLAGS += -I$(TOP)/osal/inc
-EXTRA_CFLAGS += -mno-outline-atomics
+ifeq ($(CPU_TYPE), arm64)
+    EXTRA_CFLAGS += -mno-outline-atomics
+endif
 
 ${KMPP_SRC}-objs += osal/kmpp_allocator.o \
                     osal/kmpp_atomic.o \

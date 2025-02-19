@@ -287,7 +287,7 @@ static rk_s32 get_usr_str(rk_u8 *dst, rk_s32 size, void *src, const rk_u8 *log)
         return ret;
     }
 
-    ret = strncpy_from_user(dst, (void *)name_uaddr, size);
+    ret = strncpy_from_user(dst, (void *)(uintptr_t)name_uaddr, size);
     if (ret <= 0) {
         kmpp_loge_f("by %s strncpy_from_user %#llx len %d fail ret %d\n",
                     log, name_uaddr, size, ret);
@@ -451,13 +451,13 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
                 break;
             }
 
-            ret = osal_copy_from_user(&shm, (void *)uaddr, sizeof(shm));
+            ret = osal_copy_from_user(&shm, (void *)(uintptr_t)uaddr, sizeof(shm));
             if (ret) {
                 kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM osal_copy_from_user KmppObjShm fail\n", i);
                 break;
             }
 
-            impl = (KmppShmImpl *)shm.kobj_kaddr;
+            impl = (KmppShmImpl *)(uintptr_t)shm.kobj_kaddr;
             if (!impl || impl != impl->kbase || impl->ubase != shm.kobj_uaddr) {
                 kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM invalid shm %px - kbase %px ubase %#llx - %#llx\n",
                             i, impl, impl ? impl->kbase : NULL,
@@ -484,7 +484,7 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
         if (ret) {
             kmpp_loge_f("KMPP_SHM_IOC_DUMP osal_copy_from_user fail\n");
         } else {
-            KmppShmImpl *impl = (KmppShmImpl *)ioc.kobj_kaddr;
+            KmppShmImpl *impl = (KmppShmImpl *)(uintptr_t)ioc.kobj_kaddr;
 
             if (!impl || impl != impl->kbase) {
                 kmpp_loge_f("KMPP_SHM_IOC_DUMP invalid shm %px\n", impl);
@@ -724,11 +724,11 @@ static inline KmppShmGrpRoot *get_grp_root(KmppShmGrp grp)
 
 rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
 {
-    KmppShmGrpImpl *grp = get_shm_grp(file, name, __func__);;
     KmppShmImpl *impl;
-    rk_s32 entry_offset = kmpp_shm_entry_offset();
+    rk_s32 entry_offset;
     rk_s32 shm_size;
     rk_s32 ret = rk_nok;
+    KmppShmGrpImpl *grp = get_shm_grp(file, name, __func__);;
 
     if (!shm || !grp || !name) {
         kmpp_loge_f("invalid param shm %px grp %px name %s\n", shm, grp, name);
@@ -736,6 +736,7 @@ rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
     }
 
     *shm = NULL;
+    entry_offset = kmpp_shm_entry_offset();
     shm_size = entry_offset + grp->size;
     impl = kmpp_malloc_share(shm_size);
     if (!impl) {
@@ -758,11 +759,11 @@ rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
     impl->ubase = impl->vm_shm->uaddr;
 
     impl->ioc.kobj_uaddr = impl->ubase;
-    impl->ioc.kobj_kaddr = (__u64)impl;
+    impl->ioc.kobj_kaddr = (__u64)(uintptr_t)impl;
 
     shm_dbg_detail("shm %px kaddr [%px:%px] uaddr [%#lx:%#llx]\n",
-                   impl, impl->kbase, impl->kbase + kmpp_shm_entry_offset(),
-                   impl->ubase, impl->ubase + kmpp_shm_entry_offset());
+                   impl, impl->kbase, impl->kbase + entry_offset,
+                   impl->ubase, impl->ubase + entry_offset);
 
     osal_spin_lock(grp->lock);
     osal_list_add_tail(&impl->list_grp, &grp->list_shm);
