@@ -3124,6 +3124,8 @@ MPP_RET hal_h265e_v511_get_task(void *hal, HalEncTask *task)
 
 		kmpp_meta_get_ptr(meta, KEY_ROI_DATA, (void**)&ctx->roi_data);
 		kmpp_meta_get_ptr(meta, KEY_OSD_DATA3, (void**)&ctx->osd_cfg.osd_data3);
+		/* Set the osd, because rockit needs to release osd buffer. */
+		kmpp_meta_set_ptr(meta, KEY_OSD_DATA3, ctx->osd_cfg.osd_data3);
 	}
 
 	ctx->frame_type = frm_status->is_intra ? INTRA_FRAME : INTER_P_FRAME;
