@@ -1155,14 +1155,28 @@ static void setup_vepu511_rdo_pred(HalH264eVepu511Ctx *ctx, H264eSps *sps,
 	HalVepu511RegSet *regs = ctx->regs_set;
 	MppEncSceneMode sm = ctx->cfg->tune.scene_mode;
 	RK_S32 lambda_idx = 0;
+
 	hal_h264e_dbg_func("enter\n");
 
 	if (slice->slice_type == H264_I_SLICE) {
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 6;
 		lambda_idx = ctx->cfg->tune.lambda_idx_i;
+
+		regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 2;
+		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
+		regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 2;
 	} else {
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = (sm == MPP_ENC_SCENE_MODE_IPC) ? 9 : 6;
 		lambda_idx = ctx->cfg->tune.lambda_idx_p;
+
+		regs->reg_frm.rdo_mark_mode.p16_interp_num = 3;
+		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 3;
+		regs->reg_frm.rdo_mark_mode.p16t4_rmd_num = 2;
+		regs->reg_frm.rdo_mark_mode.rdo_mark_mode = 0;
+		regs->reg_frm.rdo_mark_mode.p8_interp_num = 3;
+		regs->reg_frm.rdo_mark_mode.p8t8_rdo_num = 2;
+		regs->reg_frm.rdo_mark_mode.p8t4_rmd_num = 2;
+		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
 	}
 
 	if (sm == MPP_ENC_SCENE_MODE_IPC)
@@ -1183,10 +1197,6 @@ static void setup_vepu511_rdo_pred(HalH264eVepu511Ctx *ctx, H264eSps *sps,
 	regs->reg_frm.rdo_cfg.atr_e          = ctx->cfg->tune.atr_str_i > 0;
 	regs->reg_frm.rdo_cfg.atr_mult_sel_e = 1;
 	regs->reg_frm.rdo_mark_mode.rdo_mark_mode = 0;
-
-	regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 2;
-	regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
-	regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 2;
 
 	hal_h264e_dbg_func("leave\n");
 }
