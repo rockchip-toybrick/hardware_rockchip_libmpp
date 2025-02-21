@@ -71,21 +71,21 @@ static MPP_RET mpp_cfg_get(MppCfgInfo *info, void *cfg, void *val)
     return MPP_OK;
 }
 
-#define MPP_CFG_ACCESS(type, base_type) \
+#define MPP_CFG_ACCESS(type, base_type, fmt) \
     MPP_RET mpp_cfg_set_##type(MppCfgInfo *info, void *cfg, base_type val) \
     { \
         base_type *dst = CFG_TO_##type##_PTR(info, cfg); \
         base_type old = dst[0]; \
         dst[0] = val; \
         if (!info->flag_type) { \
-            mpp_cfg_dbg_set("%p + %d set " #type " change %lld -> %lld\n", cfg, info->data_offset, (RK_U64)old, (RK_U64)val); \
+            mpp_cfg_dbg_set("%px + %d set " #type " change " #fmt  " -> " #fmt "\n", cfg, info->data_offset, old, val); \
         } else { \
             if (old != val) { \
-                mpp_cfg_dbg_set("%p + %d set " #type " update %lld -> %lld flag %d|%x\n", \
-                                cfg, info->data_offset, (RK_U64)old, (RK_U64)val, info->flag_offset, info->flag_value); \
+                mpp_cfg_dbg_set("%px + %d set " #type " update " #fmt " -> " #fmt " flag %d|%x\n", \
+                                cfg, info->data_offset, old, val, info->flag_offset, info->flag_value); \
                 CFG_TO_FLAG_PTR(info, cfg)[0] |= info->flag_value; \
             } else { \
-                mpp_cfg_dbg_set("%p + %d set " #type " keep   %lld\n", cfg, info->data_offset, (RK_U64)old); \
+                mpp_cfg_dbg_set("%px + %d set " #type " keep   " #fmt "\n", cfg, info->data_offset, old); \
             } \
         } \
         return MPP_OK; \
@@ -94,18 +94,18 @@ static MPP_RET mpp_cfg_get(MppCfgInfo *info, void *cfg, void *val)
     { \
         if (info && info->data_size) { \
             base_type *src = CFG_TO_##type##_PTR(info, cfg); \
-            mpp_cfg_dbg_set("%p + %d get " #type " value  %lld\n", cfg, info->data_offset, (RK_U64)src[0]); \
+            mpp_cfg_dbg_set("%px + %d get " #type " value  " #fmt "\n", cfg, info->data_offset, src[0]); \
             val[0] = src[0]; \
             return MPP_OK; \
         } \
         return MPP_NOK; \
     }
 
-MPP_CFG_ACCESS(s32, RK_S32)
-MPP_CFG_ACCESS(u32, RK_U32)
-MPP_CFG_ACCESS(s64, RK_S64)
-MPP_CFG_ACCESS(u64, RK_U64)
-MPP_CFG_ACCESS(ptr, void *)
+MPP_CFG_ACCESS(s32, RK_S32, %d)
+MPP_CFG_ACCESS(u32, RK_U32, %u)
+MPP_CFG_ACCESS(s64, RK_S64, %llx)
+MPP_CFG_ACCESS(u64, RK_U64, %llx)
+MPP_CFG_ACCESS(ptr, void *, %px)
 
 MPP_RET mpp_cfg_set_st(MppCfgInfo *info, void *cfg, void *val)
 {
@@ -120,14 +120,18 @@ MPP_RET mpp_cfg_get_st(MppCfgInfo *info, void *cfg, void *val)
 MPP_RET check_cfg_info(MppCfgInfo *node, const char *name, CfgType type,
                        const char *func)
 {
+    CfgType cfg_type;
+    RK_S32 cfg_size;
+    MPP_RET ret;
+
     if (NULL == node) {
         mpp_err("%s: cfg %s is invalid\n", func, name);
         return MPP_NOK;
     }
 
-    CfgType cfg_type = (CfgType)node->data_type;
-    RK_S32 cfg_size = node->data_size;
-    MPP_RET ret = MPP_OK;
+    cfg_type = (CfgType)node->data_type;
+    cfg_size = node->data_size;
+    ret = MPP_OK;
 
     switch (type) {
     case CFG_FUNC_TYPE_St : {

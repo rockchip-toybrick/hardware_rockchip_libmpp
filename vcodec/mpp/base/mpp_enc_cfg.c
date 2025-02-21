@@ -372,18 +372,22 @@ MPP_RET mpp_enc_cfg_deinit(MppEncCfg cfg)
 #define ENC_CFG_SET_ACCESS(func_name, in_type, cfg_type) \
     MPP_RET func_name(MppEncCfg cfg, const char *name, in_type val) \
     { \
+        MppEncCfgImpl *p; \
+        MppTrieInfo *node; \
+        MppCfgInfo *info; \
+        MPP_RET ret; \
         if (NULL == cfg || NULL == name) { \
             mpp_err_f("invalid input cfg %p name %p\n", cfg, name); \
             return MPP_ERR_NULL_PTR; \
         } \
-        MppEncCfgImpl *p = (MppEncCfgImpl *)cfg; \
-        MppTrieInfo *node = get_info(name); \
-        MppCfgInfo *info = (MppCfgInfo *)mpp_trie_info_ctx(node); \
+        p = (MppEncCfgImpl *)cfg; \
+        node = get_info(name); \
+        info = (MppCfgInfo *)mpp_trie_info_ctx(node); \
         if (CHECK_CFG_INFO(info, name, CFG_FUNC_TYPE_##cfg_type)) { \
             return MPP_NOK; \
         } \
         mpp_enc_cfg_dbg_set("name %s type %s\n", mpp_trie_info_name(node), strof_cfg_type(info->data_type)); \
-        MPP_RET ret = MPP_CFG_SET_##cfg_type(info, &p->cfg, val); \
+        ret = MPP_CFG_SET_##cfg_type(info, &p->cfg, val); \
         return ret; \
     }
 
@@ -397,18 +401,22 @@ ENC_CFG_SET_ACCESS(mpp_enc_cfg_set_st,  void *, St);
 #define ENC_CFG_GET_ACCESS(func_name, in_type, cfg_type) \
     MPP_RET func_name(MppEncCfg cfg, const char *name, in_type *val) \
     { \
+        MppEncCfgImpl *p; \
+        MppTrieInfo *node; \
+        MppCfgInfo *info; \
+        MPP_RET ret; \
         if (NULL == cfg || NULL == name) { \
             mpp_err_f("invalid input cfg %p name %p\n", cfg, name); \
             return MPP_ERR_NULL_PTR; \
         } \
-        MppEncCfgImpl *p = (MppEncCfgImpl *)cfg; \
-        MppTrieInfo *node = get_info(name); \
-        MppCfgInfo *info = (MppCfgInfo *)mpp_trie_info_ctx(node); \
+        p = (MppEncCfgImpl *)cfg; \
+        node = get_info(name); \
+        info = (MppCfgInfo *)mpp_trie_info_ctx(node); \
         if (CHECK_CFG_INFO(info, name, CFG_FUNC_TYPE_##cfg_type)) { \
             return MPP_NOK; \
         } \
         mpp_enc_cfg_dbg_set("name %s type %s\n", mpp_trie_info_name(node), strof_cfg_type(info->data_type)); \
-        MPP_RET ret = MPP_CFG_GET_##cfg_type(info, &p->cfg, val); \
+        ret = MPP_CFG_GET_##cfg_type(info, &p->cfg, val); \
         return ret; \
     }
 

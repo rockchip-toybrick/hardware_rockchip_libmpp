@@ -107,6 +107,9 @@ RK_U32 mpp_trie_debug = 0;
 
 static RK_S32 trie_get_node(MppTrieImpl *trie, RK_S32 prev, RK_U64 key)
 {
+    MppTrieNode *n;
+    RK_S32 idx;
+
     if (trie->node_used >= trie->node_count) {
         RK_S32 old_count = trie->node_count;
         RK_S32 new_count = old_count * 2;
@@ -127,8 +130,8 @@ static RK_S32 trie_get_node(MppTrieImpl *trie, RK_S32 prev, RK_U64 key)
         trie->node_count = new_count;
     }
 
-    RK_S32 idx = trie->node_used++;
-    MppTrieNode *n = &trie->nodes[idx];
+    idx = trie->node_used++;
+    n = &trie->nodes[idx];
 
     n->idx = idx;
     n->prev = (prev > 0) ? prev : 0;
@@ -145,6 +148,10 @@ static RK_S32 trie_get_node(MppTrieImpl *trie, RK_S32 prev, RK_U64 key)
 
 MPP_RET mpp_trie_init(MppTrie *trie, const char *name)
 {
+    MppTrieImpl *p;
+    RK_S32 name_len;
+    MPP_RET ret;
+
     if (!trie) {
         mpp_err_f("invalid NULL input trie automation\n");
         return MPP_ERR_NULL_PTR;
@@ -152,9 +159,9 @@ MPP_RET mpp_trie_init(MppTrie *trie, const char *name)
 
 //     mpp_env_get_u32("mpp_trie_debug", &mpp_trie_debug, 0);
 
-    RK_S32 name_len = strnlen(name, MPP_TRIE_NAME_MAX) + 1;
-    MPP_RET ret = MPP_ERR_NOMEM;
-    MppTrieImpl *p = mpp_calloc_size(MppTrieImpl, sizeof(MppTrieImpl) + name_len);
+    name_len = strnlen(name, MPP_TRIE_NAME_MAX) + 1;
+    ret = MPP_ERR_NOMEM;
+    p = mpp_calloc_size(MppTrieImpl, sizeof(MppTrieImpl) + name_len);
     if (!p) {
         mpp_err_f("create trie impl failed\n");
         goto DONE;
@@ -211,12 +218,14 @@ DONE:
 
 MPP_RET mpp_trie_deinit(MppTrie trie)
 {
+    MppTrieImpl *p;
+
     if (!trie) {
         mpp_err_f("invalid NULL input trie\n");
         return MPP_ERR_NULL_PTR;
     }
 
-    MppTrieImpl *p = (MppTrieImpl *)trie;
+    p = (MppTrieImpl *)trie;
 
     if (p->node_count)
         MPP_FREE(p->nodes);
