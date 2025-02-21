@@ -107,5 +107,6 @@ rk_s32 osal_dev_mmu_flush_tlb(osal_dev *dev);
 rk_s32 osal_dev_iommu_refresh(osal_dev *dev);
 
 osal_dev *osal_dev_get(const char *name);
+void *osal_dev_get_device(osal_dev *dev);
 
 #endif /* __KMPP_DEV_H__ */

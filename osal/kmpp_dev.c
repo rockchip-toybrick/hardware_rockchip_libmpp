@@ -149,7 +149,7 @@ static rk_s32 osal_dev_reset_probe(osal_dev_impl *dev)
     //rk_s32 i;
 
     dev->rst_cnt = reset_control_get_count(device);
-    dev->rstcs = devm_kzalloc(device, sizeof(*(dev->rstcs)) * dev->rst_cnt, GFP_KERNEL);
+    dev->rstcs = NULL;//devm_kzalloc(device, sizeof(*(dev->rstcs)) * dev->rst_cnt, GFP_KERNEL);
     if (!dev->rstcs) {
         kmpp_loge("failed to alloc reset_control_bulk_data\n");
         return ret;
@@ -642,3 +642,11 @@ osal_dev *osal_dev_get(const char *name)
     return ret;
 }
 EXPORT_SYMBOL(osal_dev_get);
+
+void *osal_dev_get_device(osal_dev *dev)
+{
+    osal_dev_impl *impl = dev_to_impl(dev);
+
+    return dev ? impl->device : NULL;
+}
+EXPORT_SYMBOL(osal_dev_get_device);
