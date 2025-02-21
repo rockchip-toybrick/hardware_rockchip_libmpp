@@ -21,8 +21,12 @@
 #define META_VAL_INVALID    (0x00000000)
 #define META_VAL_VALID      (0x00000001)
 #define META_VAL_READY      (0x00000002)
-#define META_VAL_IS_OBJ     (0x00000004)
-#define META_VAL_IS_SHM     (0x00000008)
+#define META_READY_MASK     (META_VAL_VALID | META_VAL_READY)
+/* property mask */
+#define META_VAL_IS_OBJ     (0x00000010)
+#define META_VAL_IS_SHM     (0x00000020)
+#define META_PROP_MASK      (META_VAL_IS_OBJ | META_VAL_IS_SHM)
+#define META_UNMASK_PROP(x) KMPP_FETCH_AND(x, (~META_PROP_MASK))
 
 typedef enum KmppMetaDataType_e {
     /* kmpp meta data of normal data type */
@@ -67,21 +71,6 @@ static rk_s32 kmpp_meta_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *c
     osal_list_add_tail(&impl->list, &srv->list);
     osal_spin_unlock(srv->lock);
     KMPP_FETCH_ADD(&srv->meta_count, 1);
-
-    impl->vals.in_frm.state = META_VAL_IS_OBJ;
-    impl->vals.in_pkt.state = META_VAL_IS_OBJ;
-    impl->vals.out_frm.state = META_VAL_IS_OBJ;
-    impl->vals.out_pkt.state = META_VAL_IS_OBJ;
-    impl->vals.hdr_buf.state = META_VAL_IS_OBJ;
-
-    impl->vals.enc_roi.state = META_VAL_IS_OBJ;
-    impl->vals.enc_roi2.state = META_VAL_IS_OBJ;
-    impl->vals.enc_osd.state = META_VAL_IS_OBJ;
-    impl->vals.enc_osd2.state = META_VAL_IS_OBJ;
-    impl->vals.usr_data.state = META_VAL_IS_OBJ;
-    impl->vals.usr_datas.state = META_VAL_IS_OBJ;
-    impl->vals.enc_qpmap0.state = META_VAL_IS_OBJ;
-    impl->vals.enc_mv_list.state = META_VAL_IS_OBJ;
 
     return rk_ok;
 }
@@ -190,7 +179,10 @@ static rk_s32 kmpp_meta_impl_dump(void *entry)
     ENTRY(KEY_DEC_TBN_Y_OFFSET,     TYPE_VAL_32,    vals.dec_thumb_y_offset) \
     ENTRY(KEY_DEC_TBN_UV_OFFSET,    TYPE_VAL_32,    vals.dec_thumb_uv_offset) \
     ENTRY(KEY_COMBO_FRAME,          TYPE_SPTR,      vals.combo_frame) \
-    ENTRY(KEY_CHANNEL_ID,           TYPE_VAL_32,    vals.chan_id)
+    ENTRY(KEY_CHANNEL_ID,           TYPE_VAL_32,    vals.chan_id) \
+    ENTRY(KEY_PP_MD_BUF,            TYPE_SPTR,      vals.pp_md_buf) \
+    ENTRY(KEY_PP_OD_BUF,            TYPE_SPTR,      vals.pp_od_buf) \
+    ENTRY(KEY_PP_OUT,               TYPE_SPTR,      vals.pp_out)
 
 void kmpp_meta_init(void)
 {
@@ -293,7 +285,7 @@ rk_s32 kmpp_meta_put(KmppMeta meta, const rk_u8 *caller)
 
 rk_s32 kmpp_meta_inc_ref(KmppMeta meta)
 {
-    KmppMetaImpl *impl = (KmppMetaImpl *)meta;
+    KmppMetaImpl *impl = kmpp_obj_to_entry(meta);
 
     if (!meta) {
         kmpp_loge_f("found NULL input\n");
@@ -306,7 +298,7 @@ rk_s32 kmpp_meta_inc_ref(KmppMeta meta)
 
 rk_s32 kmpp_meta_size(KmppMeta meta)
 {
-    KmppMetaImpl *impl = (KmppMetaImpl *)meta;
+    KmppMetaImpl *impl = kmpp_obj_to_entry(meta);
 
     if (!meta) {
         kmpp_loge_f("found NULL input\n");
@@ -324,7 +316,7 @@ rk_s32 kmpp_meta_dump(KmppMeta meta)
 #define KMPP_META_ACCESSOR(func_type, arg_type, key_type, key_field)  \
     rk_s32 kmpp_meta_set_##func_type(KmppMeta meta, KmppMetaKey key, arg_type val) \
     { \
-        KmppMetaImpl *impl = (KmppMetaImpl *)meta; \
+        KmppMetaImpl *impl = kmpp_obj_to_entry(meta); \
         KmppMetaVal *meta_val = meta_key_to_addr(impl, key, key_type); \
         if (!meta_val) \
             return rk_nok; \
@@ -337,12 +329,12 @@ rk_s32 kmpp_meta_dump(KmppMeta meta)
     EXPORT_SYMBOL(kmpp_meta_set_##func_type); \
     rk_s32 kmpp_meta_get_##func_type(KmppMeta meta, KmppMetaKey key, arg_type *val) \
     { \
-        KmppMetaImpl *impl = (KmppMetaImpl *)meta; \
+        KmppMetaImpl *impl = kmpp_obj_to_entry(meta); \
         KmppMetaVal *meta_val = meta_key_to_addr(impl, key, key_type); \
         if (!meta_val) \
             return rk_nok; \
-        if (KMPP_BOOL_CAS(&meta_val->state, META_VAL_VALID | META_VAL_READY, META_VAL_INVALID)) { \
-            *val = meta_val->key_field; \
+        if (KMPP_BOOL_CAS(&meta_val->state, META_READY_MASK, META_VAL_INVALID)) { \
+            if (val) *val = meta_val->key_field; \
             KMPP_FETCH_SUB(&impl->node_count, 1); \
             return rk_ok; \
         } \
@@ -351,15 +343,15 @@ rk_s32 kmpp_meta_dump(KmppMeta meta)
     EXPORT_SYMBOL(kmpp_meta_get_##func_type); \
     rk_s32 kmpp_meta_get_##func_type##_d(KmppMeta meta, KmppMetaKey key, arg_type *val, arg_type def) \
     { \
-        KmppMetaImpl *impl = (KmppMetaImpl *)meta; \
+        KmppMetaImpl *impl = kmpp_obj_to_entry(meta); \
         KmppMetaVal *meta_val = meta_key_to_addr(impl, key, key_type); \
         if (!meta_val) \
             return rk_nok; \
-        if (KMPP_BOOL_CAS(&meta_val->state, META_VAL_VALID | META_VAL_READY, META_VAL_INVALID)) { \
-            *val = meta_val->key_field; \
+        if (KMPP_BOOL_CAS(&meta_val->state, META_READY_MASK, META_VAL_INVALID)) { \
+            if (val) *val = meta_val->key_field; \
             KMPP_FETCH_SUB(&impl->node_count, 1); \
         } else { \
-            *val = def; \
+            if (val) *val = def; \
         } \
         return rk_ok; \
     } \
@@ -371,8 +363,8 @@ KMPP_META_ACCESSOR(ptr, void *, TYPE_KPTR, val_ptr)
 
 rk_s32 kmpp_meta_set_obj(KmppMeta meta, KmppMetaKey key, KmppObj val)
 {
-    KmppMetaImpl *impl = (KmppMetaImpl *)meta;
-    KmppMetaObj *meta_obj = (KmppMetaObj *)meta_key_to_addr(impl, key, TYPE_SPTR);
+    KmppMetaImpl *impl = kmpp_obj_to_entry(meta);
+    KmppMetaObj *meta_obj = meta_key_to_addr(impl, key, TYPE_SPTR);
 
     if (!meta_obj)
         return rk_nok;
@@ -401,33 +393,118 @@ rk_s32 kmpp_meta_set_obj(KmppMeta meta, KmppMetaKey key, KmppObj val)
 
 rk_s32 kmpp_meta_get_obj(KmppMeta meta, KmppMetaKey key, KmppObj *val)
 {
-    KmppMetaImpl *impl = (KmppMetaImpl *)meta;
+    KmppMetaImpl *impl = kmpp_obj_to_entry(meta);
     KmppMetaObj *meta_obj = meta_key_to_addr(impl, key, TYPE_SPTR);
 
     if (!meta_obj)
         return rk_nok;
 
-    if (KMPP_BOOL_CAS(&meta_obj->state, META_VAL_VALID | META_VAL_READY, META_VAL_INVALID)) {
-        *val = meta_obj->val_shm.kptr;
+    META_UNMASK_PROP(&meta_obj->state);
+    if (KMPP_BOOL_CAS(&meta_obj->state, META_READY_MASK, META_VAL_INVALID)) {
+        if (val)
+            *val = meta_obj->val_shm.kptr;
+        KMPP_FETCH_SUB(&impl->node_count, 1);
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+
+rk_s32 kmpp_meta_get_obj_d(KmppMeta meta, KmppMetaKey key, KmppObj *val, KmppObj def)
+{
+    KmppMetaImpl *impl = kmpp_obj_to_entry(meta);
+    KmppMetaObj *meta_obj = meta_key_to_addr(impl, key, TYPE_SPTR);
+
+    if (!meta_obj)
+        return rk_nok;
+
+    META_UNMASK_PROP(&meta_obj->state);
+    if (KMPP_BOOL_CAS(&meta_obj->state, META_READY_MASK, META_VAL_INVALID)) {
+        if (val)
+            *val = meta_obj->val_shm.kptr;
+        KMPP_FETCH_SUB(&impl->node_count, 1);
+    } else {
+        if (val)
+            *val = def ? def : NULL;
+    }
+
+    return rk_ok;
+}
+
+rk_s32 kmpp_meta_set_shm(KmppMeta meta, KmppMetaKey key, KmppShmPtr *sptr)
+{
+    KmppMetaImpl *impl = kmpp_obj_to_entry(meta);
+    KmppMetaObj *meta_obj = (KmppMetaObj *)meta_key_to_addr(impl, key, TYPE_SPTR);
+
+    if (!meta_obj)
+        return rk_nok;
+
+    if (KMPP_BOOL_CAS(&meta_obj->state, META_VAL_INVALID, META_VAL_VALID))
+        KMPP_FETCH_ADD(&impl->node_count, 1);
+
+    if (sptr) {
+        meta_obj->val_shm.uaddr = sptr->uaddr;
+        meta_obj->val_shm.kaddr = sptr->kaddr;
+    } else {
+        meta_obj->val_shm.uaddr = 0;
+        meta_obj->val_shm.kptr = 0;
+    }
+
+    if (sptr->uaddr)
+        KMPP_FETCH_OR(&meta_obj->state, META_VAL_IS_SHM);
+    else
+        KMPP_FETCH_AND(&meta_obj->state, ~META_VAL_IS_SHM);
+
+    KMPP_FETCH_OR(&meta_obj->state, META_VAL_READY);
+
+    return rk_ok;
+}
+
+rk_s32 kmpp_meta_get_shm(KmppMeta meta, KmppMetaKey key, KmppShmPtr *sptr)
+{
+    KmppMetaImpl *impl = kmpp_obj_to_entry(meta);
+    KmppMetaObj *meta_obj = meta_key_to_addr(impl, key, TYPE_SPTR);
+
+    if (!meta_obj)
+        return rk_nok;
+
+    META_UNMASK_PROP(&meta_obj->state);
+    if (KMPP_BOOL_CAS(&meta_obj->state, META_READY_MASK, META_VAL_INVALID)) {
+        if (sptr) {
+            sptr->uaddr = meta_obj->val_shm.uaddr;
+            sptr->kaddr = meta_obj->val_shm.kaddr;
+        }
         KMPP_FETCH_SUB(&impl->node_count, 1);
         return rk_ok;
     }
     return rk_nok;
 }
 
-rk_s32 kmpp_meta_get_obj_d(KmppMeta meta, KmppMetaKey key, KmppObj *val, KmppObj def)
+rk_s32 kmpp_meta_get_shm_d(KmppMeta meta, KmppMetaKey key, KmppShmPtr *sptr, KmppShmPtr *def)
 {
-    KmppMetaImpl *impl = (KmppMetaImpl *)meta;
+    KmppMetaImpl *impl = kmpp_obj_to_entry(meta);
     KmppMetaObj *meta_obj = meta_key_to_addr(impl, key, TYPE_SPTR);
 
     if (!meta_obj)
         return rk_nok;
 
-    if (KMPP_BOOL_CAS(&meta_obj->state, META_VAL_VALID | META_VAL_READY, META_VAL_INVALID)) {
-        *val = meta_obj->val_shm.kptr;
+    META_UNMASK_PROP(&meta_obj->state);
+    if (KMPP_BOOL_CAS(&meta_obj->state, META_READY_MASK, META_VAL_INVALID)) {
+        if (sptr) {
+            sptr->uaddr = meta_obj->val_shm.uaddr;
+            sptr->kaddr = meta_obj->val_shm.kaddr;
+        }
         KMPP_FETCH_SUB(&impl->node_count, 1);
     } else {
-        *val = def;
+        if (sptr) {
+            if (def) {
+                sptr->uaddr = def->uaddr;
+                sptr->kaddr = def->kaddr;
+            } else {
+                sptr->uaddr = 0;
+                sptr->kaddr = 0;
+            }
+        }
     }
 
     return rk_ok;
@@ -441,3 +518,6 @@ EXPORT_SYMBOL(kmpp_meta_dump);
 EXPORT_SYMBOL(kmpp_meta_set_obj);
 EXPORT_SYMBOL(kmpp_meta_get_obj);
 EXPORT_SYMBOL(kmpp_meta_get_obj_d);
+EXPORT_SYMBOL(kmpp_meta_set_shm);
+EXPORT_SYMBOL(kmpp_meta_get_shm);
+EXPORT_SYMBOL(kmpp_meta_get_shm_d);

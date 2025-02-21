@@ -82,6 +82,11 @@ typedef struct __attribute__((packed)) KmppMetaVals_t {
 
     KmppMetaObj         combo_frame;
     KmppMetaVal         chan_id;
+
+    KmppMetaObj         pp_md_buf;
+    KmppMetaObj         pp_od_buf;
+    /* pp output object */
+    KmppMetaObj         pp_out;
 } KmppMetaVals;
 
 typedef struct __attribute__((packed)) KmppMetaImpl_t {

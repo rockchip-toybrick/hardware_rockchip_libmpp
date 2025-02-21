@@ -121,6 +121,14 @@ typedef enum KmppMetaKey_e {
     /* combo frame */
     KEY_COMBO_FRAME             = FOURCC_META('c', 'f', 'r', 'm'),
     KEY_CHANNEL_ID              = FOURCC_META('c', 'h', 'a', 'n'),
+
+    /* Preprocess (pp) operation metat data */
+    /* Motion Detection output buffer */
+    KEY_PP_MD_BUF               = FOURCC_META('m', 'd', 'b', 'f'),
+    /* Occlusion Detection output buffer */
+    KEY_PP_OD_BUF               = FOURCC_META('o', 'd', 'b', 'f'),
+    /* pp output data */
+    KEY_PP_OUT                  = FOURCC_META('o', 'p', 'p', ' '),
 } KmppMetaKey;
 
 #define kmpp_meta_get_f(meta)               kmpp_meta_get(meta, __FUNCTION__)
@@ -146,8 +154,8 @@ rk_s32 kmpp_meta_get_ptr_d(KmppMeta meta, KmppMetaKey key, void  **val, void *de
 rk_s32 kmpp_meta_set_obj(KmppMeta meta, KmppMetaKey key, KmppObj obj);
 rk_s32 kmpp_meta_get_obj(KmppMeta meta, KmppMetaKey key, KmppObj *obj);
 rk_s32 kmpp_meta_get_obj_d(KmppMeta meta, KmppMetaKey key, KmppObj *obj, KmppObj def);
-rk_s32 kmpp_meta_set_shm(KmppMeta meta, KmppMetaKey key, KmppObj obj);
-rk_s32 kmpp_meta_get_shm(KmppMeta meta, KmppMetaKey key, KmppObj *obj);
-rk_s32 kmpp_meta_get_shm_d(KmppMeta meta, KmppMetaKey key, KmppObj *obj, KmppObj def);
+rk_s32 kmpp_meta_set_shm(KmppMeta meta, KmppMetaKey key, KmppShmPtr *sptr);
+rk_s32 kmpp_meta_get_shm(KmppMeta meta, KmppMetaKey key, KmppShmPtr *sptr);
+rk_s32 kmpp_meta_get_shm_d(KmppMeta meta, KmppMetaKey key, KmppShmPtr *sptr, KmppShmPtr *def);
 
 #endif /*__KMPP_META_H__*/
