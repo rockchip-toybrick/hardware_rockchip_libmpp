@@ -9,7 +9,7 @@
 #include <linux/mman.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/dma-buf.h>
+#include <linux/dma-buf-cache.h>
 #include <linux/scatterlist.h>
 #include <linux/platform_device.h>
 #include <linux/proc_fs.h>
@@ -91,6 +91,7 @@ typedef struct KmppDmaBufIova_t {
     struct sg_table     *sgt;
     rk_u64              iova;
     rk_s32              size;
+    rk_s32              sg_size;
 } KmppDmaBufIova;
 
 typedef struct KmppDmaBufImpl_t {
@@ -752,6 +753,8 @@ static KmppDmaBufIova *attach_iova(KmppDmaBuf buf, osal_dev *dev, struct device 
     struct dma_buf_attachment *attach;
     struct dma_buf *dmabuf;
     struct sg_table *sgt;
+    struct scatterlist *sg = NULL;
+    rk_u32 i;
 
     node = kmpp_calloc(sizeof(*node));
     if (!node) {
@@ -768,21 +771,25 @@ static KmppDmaBufIova *attach_iova(KmppDmaBuf buf, osal_dev *dev, struct device 
         goto failed;
     }
 
-	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
-	if (IS_ERR_OR_NULL(sgt)) {
-		kmpp_loge_f("dma_buf_map_attachment dmabuf %px:%x failed ret %d at %s\n",
+    sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+    if (IS_ERR_OR_NULL(sgt)) {
+        kmpp_loge_f("dma_buf_map_attachment dmabuf %px:%x failed ret %d at %s\n",
                     buf, dmabuf, PTR_ERR(sgt), caller);
-		goto failed;
-	}
+        goto failed;
+    }
 
     node->buf = buf;
     node->dev = dev;
     node->device = device;
     node->iova = sg_dma_address(sgt->sgl);
-    node->size = sg_dma_len(sgt->sgl);
+    node->size = impl->size;
     node->dmabuf = dmabuf;
     node->attach = attach;
     node->sgt = sgt;
+
+    for_each_sgtable_sg(sgt, sg, i) {
+        node->sg_size += sg_dma_len(sg);
+    }
 
     OSAL_INIT_LIST_HEAD(&node->list);
     osal_spin_lock(impl->lock_iova);
