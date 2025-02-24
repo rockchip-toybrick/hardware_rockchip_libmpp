@@ -1008,7 +1008,7 @@ EXPORT_SYMBOL(kmpp_obj_from_shmptr);
         if (ret) \
             kmpp_loge("obj %s set %s " #type " failed ret %d\n", \
                     impl ? impl->def ? impl->def->name : NULL : NULL, name, ret); \
-        return rk_nok; \
+        return ret; \
     } \
     EXPORT_SYMBOL(kmpp_obj_set_##type); \
     rk_s32 kmpp_obj_get_##type(KmppObj obj, const rk_u8 *name, base_type *val) \
@@ -1025,7 +1025,7 @@ EXPORT_SYMBOL(kmpp_obj_from_shmptr);
         if (ret) \
             kmpp_loge("obj %s get %s " #type " failed ret %d\n", \
                     impl ? impl->def ? impl->def->name : NULL : NULL, name, ret); \
-        return rk_nok; \
+        return ret; \
     } \
     EXPORT_SYMBOL(kmpp_obj_get_##type);
 
@@ -1052,7 +1052,7 @@ KMPP_OBJ_ACCESS(kfp, void *)
         if (ret) \
             kmpp_loge("obj %s set %s " #type " failed ret %d\n", \
                     impl ? impl->def ? impl->def->name : NULL : NULL, name, ret); \
-        return rk_nok; \
+        return ret; \
     } \
     EXPORT_SYMBOL(kmpp_obj_set_##type); \
     rk_s32 kmpp_obj_get_##type(KmppObj obj, const rk_u8 *name, base_type *val) \
@@ -1069,7 +1069,7 @@ KMPP_OBJ_ACCESS(kfp, void *)
         if (ret) \
             kmpp_loge("obj %s get %s " #type " failed ret %d\n", \
                     impl ? impl->def ? impl->def->name : NULL : NULL, name, ret); \
-        return rk_nok; \
+        return ret; \
     } \
     EXPORT_SYMBOL(kmpp_obj_get_##type);
 
@@ -1086,7 +1086,7 @@ KMPP_OBJ_ACCESS_ST(shm, KmppShmPtr)
         if (ret) \
             kmpp_loge("obj %s tbl %08x set " #type " failed ret %d\n", \
                     impl ? impl->def ? impl->def->name : NULL : NULL, tbl ? tbl->val : 0, ret); \
-        return rk_nok; \
+        return ret; \
     } \
     EXPORT_SYMBOL(kmpp_obj_tbl_set_##type); \
     rk_s32 kmpp_obj_tbl_get_##type(KmppObj obj, KmppLocTbl *tbl, base_type *val) \
@@ -1098,7 +1098,7 @@ KMPP_OBJ_ACCESS_ST(shm, KmppShmPtr)
         if (ret) \
             kmpp_loge("obj %s tbl %08x get " #type " failed ret %d\n", \
                     impl ? impl->def ? impl->def->name : NULL : NULL, tbl ? tbl->val : 0, ret); \
-        return rk_nok; \
+        return ret; \
     } \
     EXPORT_SYMBOL(kmpp_obj_tbl_get_##type);
 
