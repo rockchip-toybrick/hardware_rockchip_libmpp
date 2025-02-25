@@ -5,12 +5,13 @@ INCLUDE_DIRECTORIES(${KMPP_TOP}/sys)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/sys/inc)
 
 SET(KMPP_SYS_SRC
-    kmpp_sys.c
-    kmpp_trie.c
     kmpp_dq.c
+    kmpp_mem_pool.c
     kmpp_obj.c
     kmpp_shm.c
     kmpp_sym.c
+    kmpp_sys.c
+    kmpp_trie.c
 )
 
 IF(${BUILD_MULTI_KO})

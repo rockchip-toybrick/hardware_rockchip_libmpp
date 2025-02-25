@@ -6,11 +6,14 @@
 #ifndef __KMPP_SYS_H__
 #define __KMPP_SYS_H__
 
+#include "kmpp_env.h"
+#include "kmpp_mem_pool.h"
 #include "kmpp_obj.h"
 #include "kmpp_sym.h"
 #include "kmpp_shm.h"
 
 rk_s32 sys_init(void);
 void sys_exit(void);
+KmppEnvGrp sys_get_env(void);
 
 #endif /* __KMPP_SYS_H__ */
