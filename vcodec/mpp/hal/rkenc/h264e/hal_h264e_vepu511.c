@@ -1604,35 +1604,6 @@ static void setup_vepu511_recn_refr(HalH264eVepu511Ctx *ctx, HalVepu511RegSet *r
 		regs->reg_frm.rfpb_b_addr  = 0;
 	}
 
-	/*
-	 * Fix hw bug:
-	 * If there are some non-zero value in the recn buffer,
-	 * may cause fbd err because of invalid data used.
-	 * So clear recn buffer when resolution changed.
-	 */
-	if (ctx->recn_buf_clear) {
-		MppBuffer recn_buf = NULL;
-		void *ptr = NULL;
-		RK_U32 len;
-		struct dma_buf *dma = NULL;
-
-		if (recn_ref_wrap) {
-			recn_buf = ctx->recn_ref_buf;
-			len = ctx->wrap_infos.hdr.total_size + ctx->wrap_infos.hdr_lt.total_size;
-		} else {
-			recn_buf = curr->buf[RECREF_TYPE];
-			len = ctx->pixel_buf_fbc_hdr_size;
-		}
-
-		ptr = mpp_buffer_get_ptr(recn_buf);
-		dma = mpp_buffer_get_dma(recn_buf);
-		mpp_assert(ptr);
-		mpp_assert(dma);
-		memset(ptr, 0, len);
-		dma_buf_end_cpu_access_partial(dma, DMA_TO_DEVICE, 0, len);
-		ctx->recn_buf_clear = 0;
-	}
-
 	regs->reg_frm.adr_smear_wr = mpp_buffer_get_iova(curr->buf[SMEAR_TYPE], dev);
 	regs->reg_frm.adr_smear_rd = mpp_buffer_get_iova(refr->buf[SMEAR_TYPE], dev);
 
