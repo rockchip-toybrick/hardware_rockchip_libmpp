@@ -783,7 +783,6 @@ EXPORT_SYMBOL(kmpp_obj_get);
 rk_s32 kmpp_obj_get_by_name(KmppObj *obj, const rk_u8 *name, const rk_u8 *caller)
 {
     KmppObjDef def;
-    rk_s32 ret;
 
     if (!obj || !name) {
         kmpp_loge_f("invalid param obj %p name %s\n", obj, name);
@@ -792,7 +791,7 @@ rk_s32 kmpp_obj_get_by_name(KmppObj *obj, const rk_u8 *name, const rk_u8 *caller
 
     def = find_objdef(name);
     if (!def) {
-        kmpp_loge_f("can not get objdef %s ret %d\n", name, ret);
+        kmpp_loge_f("can not get objdef %s\n", name);
         return rk_nok;
     }
 
