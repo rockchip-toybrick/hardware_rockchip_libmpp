@@ -54,7 +54,7 @@ static void kmpp_mem_pool_show(KmppEnvNode env, void *data)
     KmppMemPoolSrv *srv = get_pool_srv(__FUNCTION__);
     KmppMemPoolImpl *pool, *m;
 
-    kmpp_env_log(env, "\n-------------------------------- total %d mem pool --------------------------------\n", srv->pool_cnt);
+    kmpp_env_log(env, "\n----------------------------------- total %d mem pool -----------------------------------\n", srv->pool_cnt);
 
     if (!srv->pool_cnt)
         return;
@@ -74,15 +74,15 @@ static void kmpp_mem_pool_show(KmppEnvNode env, void *data)
 
         if (pool->used_count) {
             osal_list_for_each_entry_safe(node, n, &pool->used, KmppMemPoolNode, list) {
-                kmpp_env_log(env, "|%4d|%-16px|%-12d|%-12s|%-12s|%-12s|%-12s|\n",
-                             node->id, node->ptr, node->size, space_12, "used", space_12, space_12);
+                kmpp_env_log(env, "|    |%-16px|%-12d|%-12s|%-12d|%-12s|%-12s|\n",
+                             node->ptr, node->size, space_12, node->id, space_12, space_12);
             }
         }
 
         if (pool->unused_count) {
             osal_list_for_each_entry_safe(node, n, &pool->unused, KmppMemPoolNode, list) {
-                kmpp_env_log(env, "|%4d|%-16px|%-12d|%-12s|%-12s|%-12s|%-12s|\n",
-                             node->id, node->ptr, node->size, "unused", space_12, space_12, space_12);
+                kmpp_env_log(env, "|    |%-16px|%-12d|%-12d|%-12s|%-12s|%-12s|\n",
+                             node->ptr, node->size, node->id, space_12, space_12, space_12);
             }
         }
     }
