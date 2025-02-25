@@ -23,8 +23,10 @@
 #include "kmpp_allocator.h"
 #include "kmpp_string.h"
 #include "kmpp_spinlock.h"
+#include "kmpp_macro.h"
 
-#define MAX_DMAHEAP_NUM     8
+#define MAX_DMAHEAP_NUM                 8
+#define CACHE_LINE_SIZE                 (64)
 
 #define DMABUF_DBG_FLOW                 (0x00000001)
 #define DMABUF_DBG_DETAIL               (0x00000002)
@@ -564,6 +566,7 @@ rk_s32 kmpp_dmabuf_import_fd(KmppDmaBuf *buf, rk_s32 fd, rk_u32 flag, const rk_u
 {
     struct dma_buf *dma_buf;
     KmppDmaBufImpl *impl;
+    rk_s32 lock_size;
 
     if (!buf || fd < 0) {
         kmpp_loge_f("invalid buf %px fd %d at %s\n", buf, fd, caller);
@@ -578,7 +581,8 @@ rk_s32 kmpp_dmabuf_import_fd(KmppDmaBuf *buf, rk_s32 fd, rk_u32 flag, const rk_u
         return rk_nok;
     }
 
-    impl = kmpp_calloc(sizeof(KmppDmaBufImpl));
+    lock_size = osal_spinlock_size();
+    impl = kmpp_calloc(sizeof(KmppDmaBufImpl) + lock_size);
     if (!impl) {
         kmpp_loge_f("failed to create KmppDmaBufImpl\n");
         dma_buf_put(dma_buf);
@@ -586,6 +590,8 @@ rk_s32 kmpp_dmabuf_import_fd(KmppDmaBuf *buf, rk_s32 fd, rk_u32 flag, const rk_u
     }
 
     OSAL_INIT_LIST_HEAD(&impl->list);
+    OSAL_INIT_LIST_HEAD(&impl->list_iova);
+    osal_spinlock_assign(&impl->lock_iova, impl + 1, lock_size);
     impl->dma_buf = dma_buf;
     impl->fd = fd;
     impl->size = dma_buf->size;
@@ -606,10 +612,11 @@ rk_s32 kmpp_dmabuf_import_fd(KmppDmaBuf *buf, rk_s32 fd, rk_u32 flag, const rk_u
     return rk_ok;
 }
 
-rk_s32 kmpp_dmabuf_import_ext(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_u8 *caller)
+rk_s32 kmpp_dmabuf_import_ctx(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_u8 *caller)
 {
     struct dma_buf *dma_buf = (struct dma_buf *)ctx;
     KmppDmaBufImpl *impl;
+    rk_s32 lock_size;
 
     if (!buf || !ctx) {
         kmpp_loge_f("invalid buf %px ctx %px at %s\n", buf, ctx, caller);
@@ -617,13 +624,16 @@ rk_s32 kmpp_dmabuf_import_ext(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_
     }
 
     *buf = NULL;
-    impl = kmpp_calloc(sizeof(KmppDmaBufImpl));
+    lock_size = osal_spinlock_size();
+    impl = kmpp_calloc(sizeof(KmppDmaBufImpl) + lock_size);
     if (!impl) {
         kmpp_loge_f("failed to create KmppDmaBufImpl\n");
         return rk_nok;
     }
 
     OSAL_INIT_LIST_HEAD(&impl->list);
+    OSAL_INIT_LIST_HEAD(&impl->list_iova);
+    osal_spinlock_assign(&impl->lock_iova, impl + 1, lock_size);
     impl->dma_buf = dma_buf;
     impl->fd = -1;
     impl->size = dma_buf->size;
@@ -718,10 +728,11 @@ rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf)
     }
 
     if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP) {
-        uptr = vm_mmap(file, uptr + size, size, PROT_READ | PROT_WRITE, MAP_SHARED, 0);
-        if (IS_ERR_VALUE(uptr)) {
+        rk_ul uptr1 = vm_mmap(file, uptr + size, size, PROT_READ | PROT_WRITE, MAP_SHARED, 0);
+
+        if (IS_ERR_VALUE(uptr1)) {
             kmpp_loge_f("vm_mmap double size %d -> %d failed ret %d\n",
-                        size, size * 2, uptr);
+                        size, size * 2, uptr1);
             vm_munmap(uptr, size);
             return 0;
         }
@@ -932,21 +943,65 @@ void *kmpp_dmabuf_get_priv(KmppDmaBuf buf)
 
 rk_s32 kmpp_dmabuf_flush_for_cpu(KmppDmaBuf buf)
 {
+    KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
+
+    if (!impl) {
+        kmpp_loge_f("invalid NULL buf\n");
+        return rk_nok;
+    }
+
+    dma_buf_begin_cpu_access(impl->dma_buf, DMA_FROM_DEVICE);
+
     return 0;
 }
 
 rk_s32 kmpp_dmabuf_flush_for_dev(KmppDmaBuf buf, osal_dev *dev)
 {
+    KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
+
+    if (!impl) {
+        kmpp_loge_f("invalid NULL buf\n");
+        return rk_nok;
+    }
+
+    dma_buf_end_cpu_access(impl->dma_buf, DMA_TO_DEVICE);
+
     return 0;
 }
 
 rk_s32 kmpp_dmabuf_flush_for_cpu_partial(KmppDmaBuf buf, rk_u32 offset, rk_u32 size)
 {
+    KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
+    rk_u32 _offset, _size;
+
+    if (!impl) {
+        kmpp_loge_f("invalid NULL buf\n");
+        return rk_nok;
+    }
+
+    _offset = KMPP_ALIGN_DOWN(offset, CACHE_LINE_SIZE);
+    _size = KMPP_ALIGN(size + offset - _offset, CACHE_LINE_SIZE);
+
+    dma_buf_begin_cpu_access_partial(impl->dma_buf, DMA_FROM_DEVICE, _offset, _size);
+
     return 0;
 }
 
 rk_s32 kmpp_dmabuf_flush_for_dev_partial(KmppDmaBuf buf, osal_dev *dev, rk_u32 offset, rk_u32 size)
 {
+    KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
+    rk_u32 _offset, _size;
+
+    if (!impl) {
+        kmpp_loge_f("invalid NULL buf\n");
+        return rk_nok;
+    }
+
+    _offset = KMPP_ALIGN_DOWN(offset, CACHE_LINE_SIZE);
+    _size = KMPP_ALIGN(size + offset - _offset, CACHE_LINE_SIZE);
+
+    dma_buf_end_cpu_access_partial(impl->dma_buf, DMA_TO_DEVICE, _offset, _size);
+
     return 0;
 }
 
@@ -957,7 +1012,7 @@ EXPORT_SYMBOL(kmpp_dmaheap_close);
 EXPORT_SYMBOL(kmpp_dmabuf_alloc);
 EXPORT_SYMBOL(kmpp_dmabuf_free);
 EXPORT_SYMBOL(kmpp_dmabuf_import_fd);
-EXPORT_SYMBOL(kmpp_dmabuf_import_ext);
+EXPORT_SYMBOL(kmpp_dmabuf_import_ctx);
 
 EXPORT_SYMBOL(kmpp_dmabuf_get_kptr);
 EXPORT_SYMBOL(kmpp_dmabuf_get_uptr);

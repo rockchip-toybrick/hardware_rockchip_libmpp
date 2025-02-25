@@ -35,7 +35,7 @@ rk_s32 kmpp_dmabuf_alloc(KmppDmaBuf *buf, KmppDmaHeap heap, rk_s32 size, rk_u32 
 rk_s32 kmpp_dmabuf_free(KmppDmaBuf buf, const rk_u8 *caller);
 rk_s32 kmpp_dmabuf_import_fd(KmppDmaBuf *buf, rk_s32 fd, rk_u32 flag, const rk_u8 *caller);
 /* the ctx is struct dma_buf * */
-rk_s32 kmpp_dmabuf_import_ext(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_u8 *caller);
+rk_s32 kmpp_dmabuf_import_ctx(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_u8 *caller);
 
 void *kmpp_dmabuf_get_kptr(KmppDmaBuf buf);
 rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf);
@@ -59,11 +59,11 @@ rk_s32 kmpp_dmabuf_flush_for_dev(KmppDmaBuf buf, osal_dev *dev);
 rk_s32 kmpp_dmabuf_flush_for_cpu_partial(KmppDmaBuf buf, rk_u32 offset, rk_u32 size);
 rk_s32 kmpp_dmabuf_flush_for_dev_partial(KmppDmaBuf buf, osal_dev *dev, rk_u32 offset, rk_u32 size);
 
-#define kmpp_dmaheap_open_f(heap, flag)     kmpp_dmaheap_open(heap, flag, __func__)
-#define kmpp_dmaheap_close_f(heap)          kmpp_dmaheap_close(heap, __func__)
+#define kmpp_dmaheap_open_f(heap, flag)             kmpp_dmaheap_open(heap, flag, __func__)
+#define kmpp_dmaheap_close_f(heap)                  kmpp_dmaheap_close(heap, __func__)
 #define kmpp_dmabuf_alloc_f(buf, heap, size, flag)  kmpp_dmabuf_alloc(buf, heap, size, flag, __func__)
-#define kmpp_dmabuf_free_f(buf)             kmpp_dmabuf_free(buf, __func__)
-#define kmpp_dmabuf_import_fd_f(buf, fd)    kmpp_dmabuf_import_fd(buf, fd, __func__)
-#define kmpp_dmabuf_import_ctx_f(buf, ctx)  kmpp_dmabuf_import_ctx(buf, ctx, __func__)
+#define kmpp_dmabuf_free_f(buf)                     kmpp_dmabuf_free(buf, __func__)
+#define kmpp_dmabuf_import_fd_f(buf, fd, flag)      kmpp_dmabuf_import_fd(buf, fd, flag, __func__)
+#define kmpp_dmabuf_import_ctx_f(buf, ctx, flag)    kmpp_dmabuf_import_ctx(buf, ctx, flag, __func__)
 
 #endif /* __KMPP_ALLOCATOR_H__ */
