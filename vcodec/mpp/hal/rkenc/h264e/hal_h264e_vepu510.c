@@ -6,7 +6,6 @@
 #define MODULE_TAG "hal_h264e_vepu510"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
 #include "kmpp_frame.h"

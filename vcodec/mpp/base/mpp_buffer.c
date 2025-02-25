@@ -24,9 +24,7 @@
 #include "mpp_buffer_impl.h"
 #include "mpp_mem_pool.h"
 #include "mpp_maths.h"
-#include "mpp_allocator.h"
-
-#define CACHE_LINE_SIZE (64)
+#include "kmpp_allocator.h"
 
 static const char *module_name = MODULE_TAG;
 struct MppBufferImpl {
@@ -35,14 +33,13 @@ struct MppBufferImpl {
 	RK_U32          cir_flag;
 	atomic_t        ref_count;
 	RK_UL           uaddr;
-	RK_U32          phy_flg;
-	RK_U32          phy_addr;
 	RK_U32          iova;
-	struct sg_table *sgt;
-	struct dma_buf_attachment *attach;
+	struct device   *dev;
+	KmppDmaBuf	buf;
 };
 
 static MppMemPool g_mppbuf_pool = NULL;
+static KmppDmaHeap mppbuf_heap = NULL;
 
 MPP_RET mpp_buffer_pool_init(RK_U32 max_cnt)
 {
@@ -50,19 +47,24 @@ MPP_RET mpp_buffer_pool_init(RK_U32 max_cnt)
 		return MPP_OK;
 
 	g_mppbuf_pool = mpp_mem_pool_init(module_name, sizeof(struct MppBufferImpl), max_cnt);
-	mpp_allocator_init(__func__);
+
+	if (!mppbuf_heap)
+		kmpp_dmaheap_get_f(&mppbuf_heap, KMPP_DMAHEAP_FLAGS_CACHABLE);
 
 	return MPP_OK;
 }
 
 MPP_RET mpp_buffer_pool_deinit(void)
 {
-	if (!g_mppbuf_pool)
-		return MPP_OK;
+	if (mppbuf_heap) {
+		kmpp_dmaheap_put_f(mppbuf_heap);
+		mppbuf_heap = NULL;
+	}
 
-	mpp_allocator_deinit(__func__);
-	mpp_mem_pool_deinit(g_mppbuf_pool);
-	g_mppbuf_pool = NULL;
+	if (g_mppbuf_pool) {
+		mpp_mem_pool_deinit(g_mppbuf_pool);
+		g_mppbuf_pool = NULL;
+	}
 
 	return MPP_OK;
 }
@@ -76,7 +78,7 @@ MPP_RET mpp_buffer_import_with_tag(MppBufferGroup group, MppBufferInfo *info,
 				   MppBuffer *buffer, const char *tag,
 				   const char *caller)
 {
-	MPP_RET ret = MPP_OK;
+	MPP_RET ret = MPP_NOK;
 
 	if (NULL == info) {
 		mpp_err_f("invalid input: info NULL from %s\n", caller);
@@ -90,15 +92,20 @@ MPP_RET mpp_buffer_import_with_tag(MppBufferGroup group, MppBufferInfo *info,
 			mpp_err("mpp_buffer_import fail %s\n", caller);
 			return MPP_ERR_NULL_PTR;
 		}
-		ret = mpp_allocator_import(info, caller);
+		if (info->fd > 0) {
+			ret = kmpp_dmabuf_import_fd_f(&buf->buf, info->fd, 0);
+		} else if (info->dma_buf) {
+			ret = kmpp_dmabuf_import_ctx_f(&buf->buf, info->dma_buf, 0);
+		}
 		if (ret) {
-			mpp_err_f("buffer import fail %s\n", caller);
+			mpp_err_f("buffer fd %d dma_buf %p import fail ret %d %s\n",
+				  info->fd, info->dma_buf, ret, caller);
 			mpp_mem_pool_put(g_mppbuf_pool, buf);
 			return ret;
 		}
+		info->size = kmpp_dmabuf_get_size(buf->buf);
 		buf->info = *info;
 		atomic_inc(&buf->ref_count);
-		buf->info.fd = -1;
 		*buffer = buf;
 	}
 
@@ -123,8 +130,8 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 		return MPP_ERR_UNKNOW;
 	}
 	buf_impl->info.size = size;
-	if (mpp_allocator_alloc(&buf_impl->info, caller)) {
-		mpp_err("mpp_buffer_get failed: group %p buffer %p size %u from %s\n",
+	if (kmpp_dmabuf_alloc_f(&buf_impl->buf, mppbuf_heap, size, 0)) {
+		mpp_err("kmpp_dmabuf_alloc fail : group %p buffer %p size %u from %s\n",
 			group, buffer, (RK_U32)size, caller);
 		mpp_mem_pool_put(g_mppbuf_pool, buf_impl);
 		return MPP_ERR_UNKNOW;
@@ -149,14 +156,14 @@ MPP_RET mpp_ring_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 		return MPP_ERR_UNKNOW;
 	}
 
-	buf_impl->info.size = size;
-	if (mpp_allocator_alloc(&buf_impl->info, caller)) {
-		mpp_err("mpp_buffer_get failed: group %p buffer %p size %u from %s\n",
+	if (kmpp_dmabuf_alloc_f(&buf_impl->buf, mppbuf_heap, size, KMPP_DMABUF_FLAGS_DUP_MAP)) {
+		mpp_err_f("mpp_buffer_get failed: group %p buffer %p size %u from %s\n",
 			group, buffer, (RK_U32)size, caller);
 		mpp_mem_pool_put(g_mppbuf_pool, buf_impl);
 		return MPP_ERR_UNKNOW;
 	}
 
+	buf_impl->info.size = size;
 	buf_impl->info.fd = -1;
 	atomic_inc(&buf_impl->ref_count);
 	buf_impl->cir_flag = 1;
@@ -175,135 +182,26 @@ MPP_RET mpp_buffer_put_with_caller(MppBuffer buffer, const char *caller)
 		return MPP_ERR_UNKNOW;
 	}
 	if (atomic_dec_and_test(&buf_impl->ref_count)) {
-		if (buf_impl->cir_flag && buf_impl->info.ptr) {
-			vunmap(buf_impl->info.ptr);
-			buf_impl->info.ptr = NULL;
-		}
-
-		/*
-		 * If the current process killed, the current mm will be recycle first,
-		 * so it does not need to vm_mnunmap uaddr here
-		 */
-		if (buf_impl->uaddr && current->mm) {
-			RK_U32 size = buf_impl->info.size;
-
-			if (buf_impl->cir_flag)
-				size *= 2;
-
-			vm_munmap(buf_impl->uaddr, size);
-		}
-		if (buf_impl->iova && buf_impl->attach)
-			mpp_buffer_dettach_dev(buffer, caller);
-		mpp_allocator_free(&buf_impl->info, caller);
-
+		if (buf_impl->iova)
+			kmpp_dmabuf_put_iova_by_device(buf_impl->buf, buf_impl->iova, buf_impl->dev);
+		kmpp_dmabuf_free_f(buf_impl->buf);
 		mpp_mem_pool_put(g_mppbuf_pool, buf_impl);
 	}
 
 	return MPP_OK;
 }
 
-extern u32 mpp_srv_get_phy(struct dma_buf *buf);
-
-void *mpp_buffer_map_ring_ptr(struct MppBufferImpl *p)
-{
-	RK_U32 end = 0, start = 0;
-	RK_S32 i = 0;
-	struct page **pages;
-	RK_S32 page_count;
-	RK_S32 phy_addr = p->iova;
-
-	if (phy_addr == -1)
-		phy_addr = mpp_srv_get_phy(p->info.dma_buf);
-
-	end = phy_addr + p->info.size;
-	start = phy_addr;
-	end = round_up(end, PAGE_SIZE);
-
-	if (phy_addr & 0xfff) {
-		mpp_err("alloc buf start is no 4k align");
-		return NULL;
-	}
-
-	page_count = (((end - start) >> PAGE_SHIFT) + 1) * 2;
-	pages = kmalloc_array(page_count, sizeof(*pages), GFP_KERNEL);
-	if (!pages)
-		return NULL;
-
-	i = 0;
-	while (start < end) {
-		mpp_assert(i < page_count);
-		pages[i++] = phys_to_page(start);
-		start += PAGE_SIZE;
-	}
-
-	start = phy_addr;
-	while (start < end) {
-		mpp_assert(i < page_count);
-		pages[i++] = phys_to_page(start);
-		start += PAGE_SIZE;
-	}
-
-	p->info.ptr = vmap(pages, i, VM_MAP, PAGE_KERNEL);
-
-	kfree(pages);
-	return p->info.ptr;
-}
-
-void *mpp_buffer_map_ring_buffer(MppBuffer buffer)
-{
-	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-
-	if (NULL == p) {
-		mpp_err_f("invalid input: buffer NULL\n");
-		return NULL;
-	}
-
-	if (!p->sgt) {
-		mpp_err_f("invalid sgt NULL\n");
-		return NULL;
-	}
-
-	{
-		struct sg_table *table = p->sgt;
-		int npages = PAGE_ALIGN(p->info.size) / PAGE_SIZE;
-		struct page **pages = vmalloc(sizeof(struct page *) * npages * 2);
-		struct page **tmp = pages;
-		struct sg_page_iter piter;
-		void *vaddr;
-
-		if (!pages)
-			return ERR_PTR(-ENOMEM);
-
-		for_each_sgtable_page(table, &piter, 0) {
-			// WARN_ON(tmp - pages >= npages);
-			*tmp++ = sg_page_iter_page(&piter);
-		}
-		table = p->sgt;
-		for_each_sgtable_page(table, &piter, 0) {
-			// WARN_ON(tmp - pages >= npages);
-			*tmp++ = sg_page_iter_page(&piter);
-		}
-
-		vaddr = vmap(pages, 2 * npages, VM_MAP, PAGE_KERNEL);
-		vfree(pages);
-
-		if (!vaddr) {
-			mpp_err_f("vmap failed\n");
-			return ERR_PTR(-ENOMEM);
-		}
-		p->info.ptr = vaddr;
-
-		return vaddr;
-	}
-}
-
 static MPP_RET mpp_buffer_map(struct MppBufferImpl *p)
 {
 	if (NULL == p->info.ptr) {
-		if (p->cir_flag)
-			p->info.ptr = mpp_buffer_map_ring_ptr(p);
-		else
-			mpp_allocator_mmap(&p->info, __func__);
+		void *ptr = NULL;
+
+		ptr = kmpp_dmabuf_get_kptr(p->buf);
+		if (!ptr) {
+			mpp_err_f("buffer %p get kptr failed size %zu\n", p, p->info.size);
+			return MPP_ERR_UNKNOW;
+		}
+		p->info.ptr = ptr;
 	}
 
 	return MPP_OK;
@@ -406,7 +304,6 @@ void *mpp_buffer_get_ptr_with_caller(MppBuffer buffer, const char *caller)
 int mpp_buffer_get_fd_with_caller(MppBuffer buffer, const char *caller)
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-	int fd = -1;
 
 	if (NULL == p) {
 		mpp_err("mpp_buffer_get_fd invalid NULL input from %s\n",
@@ -414,24 +311,8 @@ int mpp_buffer_get_fd_with_caller(MppBuffer buffer, const char *caller)
 		return -1;
 	}
 
-	if (p->info.fd > 0) {
-		struct dma_buf *dma_buf = dma_buf_get(p->info.fd);
-
-		if (IS_ERR_OR_NULL(dma_buf)) {
-			RK_S32 new_fd = dma_buf_fd(p->info.dma_buf, 0);
-			mpp_err_f("return new fd %d from %s\n", new_fd, caller);
-			return new_fd;
-		}
-		dma_buf_put(dma_buf);
-		return p->info.fd;
-	}
-
-	fd = dma_buf_fd(p->info.dma_buf, 0);
-	mpp_assert(fd > 0);
-
-	p->info.fd = fd;
-
-	return fd;
+	//TODO: maybe need a new fd by dma_buf_fd
+	return p->info.fd;
 }
 
 struct dma_buf *mpp_buffer_get_dma_with_caller(MppBuffer buffer,
@@ -529,9 +410,6 @@ MPP_RET mpp_buffer_info_get_with_caller(MppBuffer buffer, MppBufferInfo *info,
 		return MPP_ERR_UNKNOW;
 	}
 
-	if (NULL == p->info.ptr)
-		mpp_allocator_mmap(&p->info, caller);
-
 	*info = p->info;
 
 	return MPP_OK;
@@ -541,127 +419,57 @@ MPP_RET mpp_buffer_flush_for_cpu_with_caller(MppBuffer buffer, const char *calle
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
 
-	if (!p || !p->info.dma_buf) {
+	if (!p) {
 		mpp_err_f("invalid NULL input from %s\n", caller);
 		return MPP_ERR_UNKNOW;
 	}
 
-	dma_buf_begin_cpu_access(p->info.dma_buf, DMA_FROM_DEVICE);
-
-	return MPP_OK;
+	return kmpp_dmabuf_flush_for_cpu(p->buf);
 }
 
 MPP_RET mpp_buffer_flush_for_device_with_caller(MppBuffer buffer, const char *caller)
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
 
-	if (!p || !p->info.dma_buf) {
+	if (!p) {
 		mpp_err_f("invalid NULL input from %s\n", caller);
 		return MPP_ERR_UNKNOW;
 	}
 
-	dma_buf_end_cpu_access(p->info.dma_buf, DMA_TO_DEVICE);
-
-	return MPP_OK;
+	return kmpp_dmabuf_flush_for_dev(p->buf, NULL);
 }
 
 MPP_RET mpp_buffer_flush_for_cpu_partial_with_caller(MppBuffer buffer, RK_U32 offset, RK_U32 len,
 						     const char *caller)
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-	RK_U32 _offset = 0;
-	RK_U32 _len = 0;
 
 	if (!p) {
 		mpp_err_f("invalid NULL input from %s\n", caller);
 		return MPP_ERR_UNKNOW;
 	}
 
-	_offset = MPP_ALIGN_DOWN(offset, CACHE_LINE_SIZE);
-	_len = MPP_ALIGN(len + offset - _offset, CACHE_LINE_SIZE);
-
-	dma_buf_begin_cpu_access_partial(p->info.dma_buf, DMA_FROM_DEVICE, _offset, _len);
-
-	return MPP_OK;
+	return kmpp_dmabuf_flush_for_cpu_partial(p->buf, offset, len);
 }
 
 MPP_RET mpp_buffer_flush_for_device_partial_with_caller(MppBuffer buffer, RK_U32 offset, RK_U32 len,
 							const char *caller)
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-	RK_U32 _offset = 0;
-	RK_U32 _len = 0;
 
 	if (!p) {
 		mpp_err_f("invalid NULL input from %s\n", caller);
 		return MPP_ERR_UNKNOW;
 	}
 
-	_offset = MPP_ALIGN_DOWN(offset, CACHE_LINE_SIZE);
-	_len = MPP_ALIGN(len + offset - _offset, CACHE_LINE_SIZE);
-
-	dma_buf_end_cpu_access_partial(p->info.dma_buf, DMA_TO_DEVICE, _offset, _len);
-
-	return MPP_OK;
-}
-
-RK_S32 mpp_buffer_attach_dev(MppBuffer buffer, MppDev dev, const char *caller)
-{
-	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-	struct dma_buf_attachment *attach;
-	struct sg_table *sgt;
-	RK_S32 ret = 0;
-
-	if (NULL == p) {
-		mpp_err_f("mpp_buffer_get_offset invalid NULL input from %s\n", caller);
-		return MPP_ERR_NULL_PTR;
-	}
-
-	attach = dma_buf_attach(p->info.dma_buf, mpp_get_dev(dev));
-	if (IS_ERR(attach)) {
-		ret = PTR_ERR(attach);
-		mpp_err_f("dma_buf_attach failed(%d) caller %s\n", ret, caller);
-		return ret;
-	}
-
-	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
-	if (IS_ERR(sgt)) {
-		ret = PTR_ERR(sgt);
-		mpp_err_f("dma_buf_map_attachment failed(%d) caller %s\n", ret, caller);
-		goto fail_map;
-	}
-	p->iova = sg_dma_address(sgt->sgl);
-	p->sgt = sgt;
-	p->attach = attach;
-
-	return 0;
-fail_map:
-	dma_buf_detach(p->info.dma_buf, attach);
-	return ret;
-}
-
-RK_S32 mpp_buffer_dettach_dev(MppBuffer buffer, const char *caller)
-{
-	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
-
-	if (NULL == p) {
-		mpp_err_f("mpp_buffer_get_offset invalid NULL input from %s\n", caller);
-		return MPP_ERR_NULL_PTR;
-	}
-
-	dma_buf_unmap_attachment(p->attach, p->sgt, DMA_BIDIRECTIONAL);
-	dma_buf_detach(p->info.dma_buf, p->attach);
-	p->iova = 0;
-	p->attach = NULL;
-	p->sgt = NULL;
-
-	return 0;
+	return kmpp_dmabuf_flush_for_dev_partial(p->buf, NULL, offset, len);
 }
 
 RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
 {
 	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
 	MPP_RET ret;
+	RK_U64 iova = 0;
 
 	if (NULL == p) {
 		mpp_err_f("mpp_buffer_get_offset invalid NULL input from %s\n", caller);
@@ -672,10 +480,11 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
 		return (RK_U32)p->iova;
 	}
 
-	ret = mpp_buffer_attach_dev(buffer, dev, caller);
-
+	ret = kmpp_dmabuf_get_iova_by_device(p->buf, &iova, mpp_get_dev(dev));
 	if (ret)
 		return -1;
+	p->dev = mpp_get_dev(dev);
+	p->iova = (RK_U32)iova;
 
 	return p->iova;
 }
@@ -690,39 +499,17 @@ RK_UL mpp_buffer_get_uaddr(MppBuffer buffer)
 	}
 
 	if (!p->uaddr || IS_ERR_VALUE(p->uaddr)) {
-		void *file = p->info.dma_buf->file;
-		RK_U32 size = p->info.size;
-		RK_UL uaddr = 0;
-
-		if (p->cir_flag) {
-			uaddr = get_unmapped_area(file, 0, size * 2, 0, MAP_SHARED);
-			if (IS_ERR_VALUE(uaddr)) {
-				mpp_err_f("get_unmapped_area failed uaddr %lx\n", uaddr);
-				return 0;
-			}
-		}
-
-		uaddr = vm_mmap(file, uaddr, size, PROT_READ | PROT_WRITE, MAP_SHARED, 0);
-		if (IS_ERR_VALUE(uaddr)) {
-			mpp_err_f("vm_mmap failed uaddr %lx\n", uaddr);
-			return 0;
-		}
-
-		if (p->cir_flag) {
-			RK_UL uaddr1 = vm_mmap(file, uaddr + size, size,
-						PROT_READ | PROT_WRITE,
-						MAP_SHARED, 0);
-
-			if (IS_ERR_VALUE(uaddr1)) {
-				mpp_err_f("vm_mmap failed uaddr1 %lx\n", uaddr1);
-				vm_munmap(uaddr, size);
-				return 0;
-			}
-		}
-		p->uaddr = uaddr;
+		p->uaddr = kmpp_dmabuf_get_uptr(p->buf);
 	}
 
 	return p->uaddr;
+}
+
+KmppDmaBuf mpp_buffer_get_dmabuf(MppBuffer buffer)
+{
+	struct MppBufferImpl *p = (struct MppBufferImpl *)buffer;
+
+	return p ? p->buf : NULL;
 }
 
 EXPORT_SYMBOL(mpp_buffer_import_with_tag);
@@ -742,6 +529,5 @@ EXPORT_SYMBOL(mpp_buffer_flush_for_cpu_with_caller);
 EXPORT_SYMBOL(mpp_buffer_flush_for_device_with_caller);
 EXPORT_SYMBOL(mpp_buffer_flush_for_cpu_partial_with_caller);
 EXPORT_SYMBOL(mpp_buffer_flush_for_device_partial_with_caller);
-EXPORT_SYMBOL(mpp_buffer_attach_dev);
-EXPORT_SYMBOL(mpp_buffer_dettach_dev);
 EXPORT_SYMBOL(mpp_buffer_get_iova_f);
+EXPORT_SYMBOL(mpp_buffer_get_dmabuf);

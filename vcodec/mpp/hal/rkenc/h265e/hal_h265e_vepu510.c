@@ -6,7 +6,6 @@
 #define MODULE_TAG  "hal_h265e_v510"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
 #include "kmpp_frame.h"

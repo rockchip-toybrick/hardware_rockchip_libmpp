@@ -12,7 +12,6 @@
 #include <linux/string.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_time.h"
 #include "mpp_maths.h"
@@ -1373,8 +1372,6 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 				mpp_err("ring buf get mpp_buf fail \n");
 				return MPP_NOK;
 			}
-			mpp_buffer_attach_dev(buffer, enc->dev, __func__);
-			mpp_buffer_map_ring_buffer(buffer);
 		}
 		ret = ring_buf_init(enc->ring_pool, buffer, enc->max_strm_cnt);
 		if (ret) {

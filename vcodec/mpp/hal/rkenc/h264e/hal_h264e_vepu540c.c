@@ -11,7 +11,6 @@
 #define MODULE_TAG "hal_h264e_vepu540c"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
 #include "mpp_maths.h"

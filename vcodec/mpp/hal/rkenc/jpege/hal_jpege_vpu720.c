@@ -6,7 +6,6 @@
 #define MODULE_TAG "hal_jpege_vpu720"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
 #include "mpp_maths.h"

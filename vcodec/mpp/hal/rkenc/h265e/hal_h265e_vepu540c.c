@@ -10,7 +10,6 @@
 #define MODULE_TAG  "hal_h265e_v540c"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
 #include "mpp_packet.h"

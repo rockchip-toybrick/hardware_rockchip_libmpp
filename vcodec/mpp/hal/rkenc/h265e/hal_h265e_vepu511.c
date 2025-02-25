@@ -8,7 +8,6 @@
 #include <linux/string.h>
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 #include <mpp_maths.h>
 
 #include "mpp_mem.h"
@@ -2327,7 +2326,7 @@ static void vepu511_h265_tune_qpmap_normal(H265eV511HalContext *ctx)
 	if (0) {
 		//TODO: re-encode qpmap
 	} else {
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(md_info_buf);
 
 		for (idx = 0; idx < b16_num / 4; idx++) {
 			motion_b16_num = 0;
@@ -2456,7 +2455,7 @@ static void vepu511_h265_tune_qpmap_smart(H265eV511HalContext *ctx)
 	if (0) {
 		//TODO: re-encode qpmap
 	} else {
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(md_info_buf);
 
 		for (idx = 0; idx < b16_num; idx++) {
 			b16_idx = (idx % b16_stride) + (idx / b16_stride) * md_stride;
@@ -2589,7 +2588,7 @@ static void vepu511_h265_tune_qpmap(H265eV511HalContext *ctx)
 			    ctx->cfg->tune.static_frm_num >= 2)
 				vepu511_h265_tune_qpmap_mdc(ctx);
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(ctx->qpmap), DMA_TO_DEVICE);
+		mpp_buffer_flush_for_device(ctx->qpmap);
 	}
 
 	reg_frm->reg0186_adr_roir = mpp_buffer_get_iova(ctx->qpmap, ctx->dev);

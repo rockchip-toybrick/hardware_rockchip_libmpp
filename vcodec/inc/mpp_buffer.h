@@ -12,6 +12,7 @@
 
 #include "rk_type.h"
 #include "mpp_err.h"
+#include "kmpp_allocator.h"
 
 /*
  * MppBuffer module has several functions:
@@ -306,6 +307,8 @@ int     mpp_buffer_get_index_with_caller(MppBuffer buffer, const char *caller);
 MPP_RET mpp_buffer_set_index_with_caller(MppBuffer buffer, int index, const char *caller);
 size_t  mpp_buffer_get_offset_with_caller(MppBuffer buffer, const char *caller);
 MPP_RET mpp_buffer_set_offset_with_caller(MppBuffer buffer, size_t offset, const char *caller);
+
+KmppDmaBuf mpp_buffer_get_dmabuf(MppBuffer buffer);
 
 MPP_RET mpp_buffer_group_get(MppBufferGroup *group, MppBufferType type, MppBufferMode mode,
 			     const char *tag, const char *caller);

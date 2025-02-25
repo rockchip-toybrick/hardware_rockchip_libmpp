@@ -6,7 +6,6 @@
 #define MODULE_TAG "hal_h264e_vepu500"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
 #include "kmpp_frame.h"
@@ -1662,7 +1661,6 @@ static void setup_vepu500_recn_refr(HalH264eVepu500Ctx *ctx, HalVepu500RegSet *r
 		MppBuffer recn_buf = NULL;
 		void *ptr = NULL;
 		RK_U32 len;
-		struct dma_buf *dma = NULL;
 
 		if (recn_ref_wrap) {
 			recn_buf = ctx->recn_ref_buf;
@@ -1673,11 +1671,9 @@ static void setup_vepu500_recn_refr(HalH264eVepu500Ctx *ctx, HalVepu500RegSet *r
 		}
 
 		ptr = mpp_buffer_get_ptr(recn_buf);
-		dma = mpp_buffer_get_dma(recn_buf);
 		mpp_assert(ptr);
-		mpp_assert(dma);
 		memset(ptr, 0, len);
-		dma_buf_end_cpu_access_partial(dma, DMA_TO_DEVICE, 0, len);
+		mpp_buffer_flush_for_device_partial(recn_buf, 0, len);
 		ctx->recn_buf_clear = 0;
 	}
 
@@ -2252,7 +2248,7 @@ static void vepu500_h264_tune_qpmap_normal(HalH264eVepu500Ctx *ctx)
 	if (0) {
 		//TODO: re-encode qpmap
 	} else {
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(md_info_buf);
 
 		for (j = 0; j < b16_num; j++) {
 			k = (j % b16_stride) + (j / b16_stride) * md_stride;
@@ -2334,7 +2330,7 @@ static void vepu500_h264_tune_qpmap_smart(HalH264eVepu500Ctx *ctx)
 	if (0) {
 		//TODO: re-encode qpmap
 	} else {
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(md_info_buf);
 
 		for (j = 0; j < b16_num; j++) {
 			k = (j % b16_stride) + (j / b16_stride) * md_stride;
@@ -2426,7 +2422,7 @@ static void vepu500_h264_tune_qpmap(HalH264eVepu500Ctx *ctx)
 			vepu500_h264_tune_qpmap_normal(ctx);
 		}
 
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(ctx->qpmap), DMA_TO_DEVICE);
+		mpp_buffer_flush_for_device(ctx->qpmap);
 	}
 
 	reg_frm->adr_roir = mpp_dev_get_iova_address(ctx->dev, ctx->qpmap, 186);

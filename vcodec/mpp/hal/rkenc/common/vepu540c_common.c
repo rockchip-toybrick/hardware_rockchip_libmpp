@@ -11,7 +11,6 @@
 #define MODULE_TAG  "vepu541_common"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_log.h"
 #include "mpp_mem.h"
@@ -156,7 +155,7 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 			}
 		}
 
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(qpmap);
 		if (qp_out < 36)
 			qp_delta_base = 0;
 		else if (qp_out < 42)
@@ -190,7 +189,7 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 				}
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_TO_DEVICE);
+		mpp_buffer_flush_for_device(qpmap);
 	} else {
 		mdr = (RK_U32 *)mpp_buffer_get_ptr(mv_info);
 		qpmap_hevc = (Vepu540cHevcQpmapCfg *)mpp_buffer_get_ptr(qpmap);
@@ -223,7 +222,7 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 			}
 		}
 
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(qpmap);
 		if (qp_out < 36)
 			qp_delta_base = 0;
 		else if (qp_out < 42)
@@ -272,7 +271,7 @@ MPP_RET vepu540c_set_qpmap_smart(void *roi_reg_base, MppBuffer mv_info, MppBuffe
 				}
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_TO_DEVICE);
+		mpp_buffer_flush_for_device(qpmap);
 	}
 
 	return MPP_OK;
@@ -359,7 +358,7 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 			else
 				roi_cfg->bmap_cfg.bmap_qpmin = 25;
 		}
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(qpmap);
 		if (coef_move < 15 * cnt && coef_move > 0) {
 			dqp = qp_delta_base;
 			if (coef_move < 1 * cnt)
@@ -381,7 +380,7 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 					qpmap_avc[i].qp_adju = 0x80 - dqp;
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_TO_DEVICE);
+		mpp_buffer_flush_for_device(qpmap);
 	} else {
 		mdr = (RK_U32 *)mpp_buffer_get_ptr(mv_info);
 		qpmap_hevc = (Vepu540cHevcQpmapCfg *)mpp_buffer_get_ptr(qpmap);
@@ -444,7 +443,7 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 				roi_cfg->bmap_cfg.bmap_qpmin = deblur_str < 2 ? 27 : 26;
 		}
 
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(qpmap), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(qpmap);
 		if (coef_move < 15 * cnt && coef_move > 0) {
 			dqp = qp_delta_base;
 			if (coef_move < 1 * cnt)
@@ -479,7 +478,7 @@ MPP_RET vepu540c_set_qpmap_normal(void *roi_reg_base, MppBuffer mv_info, MppBuff
 				}
 			}
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(qpmap), DMA_TO_DEVICE);
+		mpp_buffer_flush_for_device(qpmap);
 	}
 
 	return MPP_OK;

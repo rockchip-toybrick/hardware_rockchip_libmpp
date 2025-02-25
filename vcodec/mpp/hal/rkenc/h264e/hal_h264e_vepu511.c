@@ -6,7 +6,6 @@
 #define MODULE_TAG "hal_h264e_vepu511"
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 
 #include "mpp_mem.h"
 #include "kmpp_frame.h"
@@ -2177,7 +2176,7 @@ static void vepu511_h264_tune_qpmap_normal(HalH264eVepu511Ctx *ctx)
 	if (0) {
 		//TODO: re-encode qpmap
 	} else {
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(md_info_buf);
 
 		for (j = 0; j < b16_num; j++) {
 			k = (j % b16_stride) + (j / b16_stride) * md_stride;
@@ -2259,7 +2258,7 @@ static void vepu511_h264_tune_qpmap_smart(HalH264eVepu511Ctx *ctx)
 	if (0) {
 		//TODO: re-encode qpmap
 	} else {
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(md_info_buf);
 
 		for (j = 0; j < b16_num; j++) {
 			k = (j % b16_stride) + (j / b16_stride) * md_stride;
@@ -2351,7 +2350,7 @@ static void vepu511_h264_tune_qpmap(HalH264eVepu511Ctx *ctx)
 			vepu511_h264_tune_qpmap_normal(ctx);
 		}
 
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(ctx->qpmap), DMA_TO_DEVICE);
+		mpp_buffer_flush_for_device(ctx->qpmap);
 	}
 
 	reg_frm->adr_roir = mpp_buffer_get_iova(ctx->qpmap, ctx->dev);

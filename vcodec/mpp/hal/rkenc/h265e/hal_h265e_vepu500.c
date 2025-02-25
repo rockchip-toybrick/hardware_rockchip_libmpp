@@ -8,7 +8,6 @@
 #include <linux/string.h>
 
 #include <linux/string.h>
-#include <linux/dma-buf.h>
 #include <mpp_maths.h>
 
 #include "mpp_mem.h"
@@ -1485,7 +1484,6 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 		MppBuffer recn_buf = NULL;
 		void *ptr = NULL;
 		RK_U32 len;
-		struct dma_buf *dma = NULL;
 
 		if (ctx->recn_ref_wrap) {
 			recn_buf = ctx->recn_ref_buf;
@@ -1496,11 +1494,9 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 		}
 
 		ptr = mpp_buffer_get_ptr(recn_buf);
-		dma = mpp_buffer_get_dma(recn_buf);
 		mpp_assert(ptr);
-		mpp_assert(dma);
 		memset(ptr, 0, len);
-		dma_buf_end_cpu_access_partial(dma, DMA_TO_DEVICE, 0, len);
+		mpp_buffer_flush_for_device_partial(recn_buf, 0, len);
 		ctx->recn_buf_clear = 0;
 	}
 }
@@ -2319,7 +2315,7 @@ static void vepu500_h265_tune_qpmap_normal(H265eV500HalContext *ctx)
 	if (0) {
 		//TODO: re-encode qpmap
 	} else {
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(md_info_buf);
 
 		for (idx = 0; idx < b16_num / 4; idx++) {
 			motion_b16_num = 0;
@@ -2448,7 +2444,7 @@ static void vepu500_h265_tune_qpmap_smart(H265eV500HalContext *ctx)
 	if (0) {
 		//TODO: re-encode qpmap
 	} else {
-		dma_buf_begin_cpu_access(mpp_buffer_get_dma(md_info_buf), DMA_FROM_DEVICE);
+		mpp_buffer_flush_for_cpu(md_info_buf);
 
 		for (idx = 0; idx < b16_num; idx++) {
 			b16_idx = (idx % b16_stride) + (idx / b16_stride) * md_stride;
@@ -2581,7 +2577,7 @@ static void vepu500_h265_tune_qpmap(H265eV500HalContext *ctx)
 			    ctx->cfg->tune.static_frm_num >= 2)
 				vepu500_h265_tune_qpmap_mdc(ctx);
 		}
-		dma_buf_end_cpu_access(mpp_buffer_get_dma(ctx->qpmap), DMA_TO_DEVICE);
+		mpp_buffer_flush_for_device(ctx->qpmap);
 	}
 
 	reg_frm->reg0186_adr_roir = mpp_dev_get_iova_address(ctx->dev, ctx->qpmap, 186);
