@@ -925,6 +925,23 @@ rk_s32 kmpp_obj_check(KmppObj obj, const rk_u8 *caller)
 }
 EXPORT_SYMBOL(kmpp_obj_check);
 
+rk_s32 kmpp_obj_reset(KmppObj obj, const rk_u8 *caller)
+{
+    KmppObjImpl *impl = (KmppObjImpl *)obj;
+
+    if (!impl || !impl->def) {
+        kmpp_loge_f("from %s failed for NULL arg\n", caller);
+        return rk_nok;
+    }
+
+    if (impl->def->init)
+        return impl->def->init(impl->entry, NULL, caller);
+
+    osal_memset(impl->entry, 0, impl->def->entry_size);
+    return rk_ok;
+}
+EXPORT_SYMBOL(kmpp_obj_reset);
+
 void *kmpp_obj_to_entry(KmppObj obj)
 {
     KmppObjImpl *impl = (KmppObjImpl *)obj;
