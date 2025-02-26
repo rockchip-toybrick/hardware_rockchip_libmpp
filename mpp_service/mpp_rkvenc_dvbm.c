@@ -48,6 +48,10 @@
 
 #define VEPU_IS_WORK(mpp) (!!(readl(mpp->reg_base + RKVENC_DBG_TCTRL) & RKVENC_DBG_FRM_WORK))
 
+#define VEPU_IS_ONLINE_WORK(mpp)  \
+	(!!(readl(mpp->reg_base + RKVENC_DBG_TCTRL) & RKVENC_DBG_FRM_WORK) && \
+	!!(readl(mpp->reg_base + 0x308) & BIT(16)))
+
 #if ROCKCHIP_DVBM_ENABLE
 
 /* 0x60 DVBM_CFG */
@@ -246,6 +250,9 @@ static int rkvenc_dvbm_setup(struct mpp_dvbm *dvbm, struct dvbm_isp_cfg_t *isp_c
 	u32 ybuf_start;
 	u32 cbuf_start;
 	int ret = 0;
+
+	if (IS_ERR_OR_NULL(isp_cfg->buf))
+		mpp_err("dvbm buffer %px is invalid\n", isp_cfg->buf);
 
 	if (dvbm->wrap_buf.buf && (isp_cfg->buf != dvbm->wrap_buf.buf))
 		rkvenc_dvbm_buffer_deinit(dvbm);
@@ -471,13 +478,18 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 	case DVBM_ISP_REQ_CONNECT:
 	case DVBM_VPSS_REQ_CONNECT: {
 		u32 source_id = *(u32*)arg;
+		union dvbm_cfg dvbm_cfg = { .val = mpp_read(mpp, RKVENC_DVBM_CFG) };
 
 		dvbm->source = event == DVBM_ISP_REQ_CONNECT ? DVBM_SOURCE_ISP : DVBM_SOURCE_VPSS;
 		if (mpp->online_mode == MPP_ENC_ONLINE_MODE_SW)
 			return 0;
 
-		mpp_debug(DEBUG_ISP_INFO, "%s %d connect\n", dvbm_src[dvbm->source], source_id);
-		mpp_write(mpp, RKVENC_DVBM_CFG, DVBM_ISP_CONNETC | RKVENC_DVBM_EN);
+		mpp_debug(DEBUG_ISP_INFO, "%s %d connect dvbm %#x\n", dvbm_src[dvbm->source], source_id, dvbm_cfg.val);
+		if (!VEPU_IS_ONLINE_WORK(mpp)) {
+			dvbm_cfg.dvbm_isp_cnct = 1;
+			dvbm_cfg.dvbm_en = 1;
+			mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg.val);
+		}
 		atomic_set(&dvbm->src_fcnt, 0);
 		set_bit(source_id, &dvbm->dvbm_setup);
 	} break;
@@ -505,7 +517,8 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 			return 0;
 		mpp_power_on(mpp);
 		mpp->always_on = 1;
-                mpp_write(mpp, RKVENC_DVBM_CFG, 0);
+		if (!VEPU_IS_ONLINE_WORK(mpp))
+			mpp_write(mpp, RKVENC_DVBM_CFG, 0);
 		rkvenc_dvbm_setup(dvbm, isp_cfg);
 	} break;
 	case DVBM_VEPU_NOTIFY_FRM_STR: {
