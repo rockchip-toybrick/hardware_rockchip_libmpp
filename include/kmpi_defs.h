@@ -17,6 +17,7 @@ typedef void* KmppMeta;
 typedef void* KmppPacket;
 typedef void* KmppFrame;
 typedef void* KmppBuffer;
+typedef void* KmppBufGrp;
 typedef void* KmppPacketBulk;
 typedef void* KmppFrameBulk;
 

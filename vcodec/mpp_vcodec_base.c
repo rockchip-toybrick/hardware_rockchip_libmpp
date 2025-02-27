@@ -30,6 +30,7 @@
 
 #include "kmpp_frame.h"
 #include "kmpp_meta_impl.h"
+#include "kmpp_buffer_impl.h"
 #include "kmpp_venc_objs.h"
 
 RK_U32 mpp_vcodec_debug = 0;
@@ -556,6 +557,7 @@ void enc_chan_get_high_prior_chan(void)
 
 int mpp_vcodec_init(void)
 {
+    kmpp_buf_init();
     kmpp_meta_init();
     kmpp_frame_init();
     kmpp_venc_init_cfg_init();
@@ -589,6 +591,7 @@ int mpp_vcodec_deinit(void)
     kmpp_venc_init_cfg_deinit();
     kmpp_frame_deinit();
     kmpp_meta_deinit();
+    kmpp_buf_deinit();
 
 	return 0;
 }

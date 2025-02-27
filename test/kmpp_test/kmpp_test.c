@@ -12,6 +12,7 @@
 
 #include "kmpp_obj.h"
 #include "kmpp_shm.h"
+#include "kmpp_buffer.h"
 #include "kmpp_frame.h"
 #include "kmpp_meta.h"
 
@@ -77,9 +78,40 @@ rk_s32 kmpp_test_func(void *param)
     KmppTrie trie1;
     KmppTrie trie2;
     KmppMeta meta = NULL;
-    KmppBuffer buffer = NULL;
     KmppShmPtr sptr;
+    KmppBufGrpCfg grp_cfg;
+    KmppBufGrp group;
+    KmppBufCfg buf_cfg;
+    KmppBuffer buffer = NULL;
+    void *kptr;
     void *root;
+
+    kmpp_buf_grp_cfg_get(&grp_cfg);
+    kmpp_logi("get buffer group cfg %px\n", grp_cfg);
+    sptr.kptr = "rk dma heap";
+    sptr.uaddr = 0;
+    kmpp_buf_grp_cfg_set_name(grp_cfg, &sptr);
+    kmpp_buf_grp_cfg_dump(grp_cfg, __FUNCTION__);
+
+    kmpp_buf_cfg_get(&buf_cfg);
+    kmpp_logi("get buffer cfg %px\n", buf_cfg);
+    kmpp_buf_cfg_set_size(buf_cfg, 1024);
+
+    kmpp_buf_grp_get_f(&group, grp_cfg);
+    kmpp_logi("get buffer group %px\n", group);
+
+    kmpp_buffer_get_f(&buffer, buf_cfg);
+    kptr = kmpp_buffer_get_kptr(buffer);
+    kmpp_logi("get buffer %px kptr %px\n", buffer, kptr);
+    osal_memset(kptr, 0xff, 1024);
+    kmpp_buffer_put_f(buffer);
+
+    kmpp_buf_grp_put_f(group);
+
+    kmpp_buf_grp_cfg_put(grp_cfg);
+    kmpp_buf_cfg_put(buf_cfg);
+
+    return rk_ok;
 
     kmpp_objdef_dump_all();
 

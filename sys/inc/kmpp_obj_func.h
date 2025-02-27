@@ -106,6 +106,17 @@ KMPP_OBJ_ENTRY_TABLE2(ENTRY_TO_DECLARE, KMPP_OBJ_NAME)
 #undef ENTRY_TO_DECLARE
 #endif
 
+/* internal structure entry access funcitons */
+#ifdef KMPP_OBJ_STRUCT_TABLE2
+#define ENTRY_TO_DECLARE(prefix, ftype, type, f1, f2) \
+    rk_s32 KMPP_OBJ_CONCAT4(prefix, set, f1, f2)(KMPP_OBJ_INTF_TYPE p, type* val); \
+    rk_s32 KMPP_OBJ_CONCAT4(prefix, get, f1, f2)(KMPP_OBJ_INTF_TYPE p, type* val);
+
+KMPP_OBJ_STRUCT_TABLE2(ENTRY_TO_DECLARE, KMPP_OBJ_NAME)
+
+#undef KMPP_OBJ_STRUCT_TABLE2
+#undef ENTRY_TO_DECLARE
+#endif
 
 #undef KMPP_OBJ_NAME
 #undef KMPP_OBJ_INTF_TYPE
