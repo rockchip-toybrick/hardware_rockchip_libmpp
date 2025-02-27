@@ -47,6 +47,9 @@
 #ifndef KMPP_OBJ_ENTRY_TABLE
 #define KMPP_OBJ_ENTRY_TABLE(ENTRY, prefix)
 #endif
+#ifndef KMPP_OBJ_ENTRY_RO_TABLE
+#define KMPP_OBJ_ENTRY_RO_TABLE(ENTRY, prefix)
+#endif
 #ifndef KMPP_OBJ_STRUCT_TABLE
 #define KMPP_OBJ_STRUCT_TABLE(ENTRY, prefix)
 #endif
@@ -197,6 +200,19 @@
         return ret; \
     }
 
+#define KMPP_OBJ_ENTRY_RO_FUNC(prefix, ftype, type, field) \
+    static KmppLocTbl *tbl_##prefix##_##field = NULL; \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
+    { \
+        rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
+        if (ret) return ret; \
+        if (tbl_##prefix##_##field) \
+            ret = kmpp_obj_tbl_get_##ftype(s, tbl_##prefix##_##field, v); \
+        else \
+            *v = ((KMPP_OBJ_IMPL_TYPE*)kmpp_obj_to_entry(s))->field; \
+        return ret; \
+    }
+
 #define KMPP_OBJ_STRUCT_FUNC(prefix, ftype, type, field) \
     static KmppLocTbl *tbl_##prefix##_##field = NULL; \
     rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
@@ -289,6 +305,7 @@
 #define KMPP_OBJS_USAGE_SET(prefix) \
 static KmppObjDef KMPP_OBJ_DEF(prefix) = NULL; \
 KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_ENTRY_FUNC, prefix) \
+KMPP_OBJ_ENTRY_RO_TABLE(KMPP_OBJ_ENTRY_RO_FUNC, prefix) \
 KMPP_OBJ_STRUCT_TABLE(KMPP_OBJ_STRUCT_FUNC, prefix) \
 KMPP_OBJ_ENTRY_HOOK(KMPP_OBJ_ENTRY_HOOK_FUNC, prefix) \
 KMPP_OBJ_STRUCT_HOOK(KMPP_OBJ_STRUCT_HOOK_FUNC, prefix) \
@@ -302,6 +319,7 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
         return rk_nok; \
     } \
     KMPP_OBJ_ENTRY_TABLE(ENTRY_TO_TRIE1, prefix) \
+    KMPP_OBJ_ENTRY_RO_TABLE(ENTRY_TO_TRIE1, prefix) \
     KMPP_OBJ_STRUCT_TABLE(ENTRY_TO_TRIE1, prefix) \
     KMPP_OBJ_ENTRY_HOOK(HOOK_TO_TRIE1, prefix) \
     KMPP_OBJ_STRUCT_HOOK(HOOK_TO_TRIE1, prefix) \
@@ -312,6 +330,7 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
     KMPP_OBJ_ADD_DEINIT(prefix); \
     KMPP_OBJ_ADD_DUMP(prefix); \
     KMPP_OBJ_ENTRY_TABLE(ENTRY_QUERY, prefix) \
+    KMPP_OBJ_ENTRY_RO_TABLE(ENTRY_QUERY, prefix) \
     KMPP_OBJ_STRUCT_TABLE(ENTRY_QUERY, prefix) \
     KMPP_OBJ_ENTRY_HOOK(HOOK_QUERY, prefix) \
     KMPP_OBJ_STRUCT_HOOK(HOOK_QUERY, prefix) \
@@ -357,6 +376,14 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
         return rk_ok; \
     } \
     rk_s32 KMPP_OBJ_FUNC3(prefix, set, field)(KMPP_OBJ_INTF_TYPE s, type v) \
+    { \
+        (void) s; \
+        (void) v; \
+        return rk_ok; \
+    }
+
+#define KMPP_OBJ_ENTRY_RO_FUNC(prefix, ftype, type, field) \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, get, field)(KMPP_OBJ_INTF_TYPE s, type *v) \
     { \
         (void) s; \
         (void) v; \
@@ -421,6 +448,7 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
 
 #define KMPP_OBJS_USAGE_SET(prefix) \
 KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_ENTRY_FUNC, prefix) \
+KMPP_OBJ_ENTRY_RO_TABLE(KMPP_OBJ_ENTRY_RO_FUNC, prefix) \
 KMPP_OBJ_STRUCT_TABLE(KMPP_OBJ_STRUCT_FUNC, prefix) \
 KMPP_OBJ_ENTRY_HOOK(KMPP_OBJ_ENTRY_HOOK_FUNC, prefix) \
 KMPP_OBJ_STRUCT_HOOK(KMPP_OBJ_STRUCT_HOOK_FUNC, prefix) \
@@ -466,6 +494,9 @@ KMPP_OBJS_USAGE_SET(KMPP_OBJ_NAME);
     EXPORT_SYMBOL(KMPP_OBJ_FUNC3(prefix, get, field)); \
     EXPORT_SYMBOL(KMPP_OBJ_FUNC3(prefix, set, field));
 
+#define KMPP_OBJ_EXPORT_RO(prefix, ftype, type, field) \
+    EXPORT_SYMBOL(KMPP_OBJ_FUNC3(prefix, get, field));
+
 #define KMPP_OBJ_EXPORT2(prefix, ftype, type, f1, f2) \
     EXPORT_SYMBOL(KMPP_OBJ_FUNC4(prefix, get, f1, f2)); \
     EXPORT_SYMBOL(KMPP_OBJ_FUNC4(prefix, set, f1, f2));
@@ -478,6 +509,7 @@ EXPORT_SYMBOL(KMPP_OBJ_FUNC2(prefix, assign)); \
 EXPORT_SYMBOL(KMPP_OBJ_FUNC2(prefix, put)); \
 EXPORT_SYMBOL(KMPP_OBJ_FUNC2(prefix, dump)); \
 KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_EXPORT, prefix) \
+KMPP_OBJ_ENTRY_RO_TABLE(KMPP_OBJ_EXPORT_RO, prefix) \
 KMPP_OBJ_STRUCT_TABLE(KMPP_OBJ_EXPORT, prefix) \
 KMPP_OBJ_ENTRY_HOOK(KMPP_OBJ_EXPORT, prefix) \
 KMPP_OBJ_STRUCT_HOOK(KMPP_OBJ_EXPORT, prefix) \
@@ -495,6 +527,7 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_INTF_TYPE
 #undef KMPP_OBJ_IMPL_TYPE
 #undef KMPP_OBJ_ENTRY_TABLE
+#undef KMPP_OBJ_ENTRY_RO_TABLE
 #undef KMPP_OBJ_STRUCT_TABLE
 #undef KMPP_OBJ_ENTRY_HOOK
 #undef KMPP_OBJ_STRUCT_HOOK
@@ -518,7 +551,9 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_HOOK3
 #undef KMPP_OBJ_FUNC4
 #undef KMPP_OBJ_ENTRY_FUNC
+#undef KMPP_OBJ_ENTRY_RO_FUNC
 #undef KMPP_OBJ_EXPORT
+#undef KMPP_OBJ_EXPORT_RO
 #undef KMPP_OBJ_EXPORT2
 #undef KMPP_OBJ_SHARE_FUNC
 #undef KMPP_OBJ_ADD_INIT

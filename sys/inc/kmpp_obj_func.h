@@ -46,6 +46,17 @@ KMPP_OBJ_ENTRY_TABLE(ENTRY_TO_DECLARE, KMPP_OBJ_NAME)
 #undef ENTRY_TO_DECLARE
 #endif
 
+/* simple entry read-only access funcitons */
+#ifdef KMPP_OBJ_ENTRY_RO_TABLE
+#define ENTRY_TO_DECLARE(prefix, ftype, type, f1) \
+    rk_s32 KMPP_OBJ_CONCAT3(prefix, get, f1)(KMPP_OBJ_INTF_TYPE p, type* val);
+
+KMPP_OBJ_ENTRY_RO_TABLE(ENTRY_TO_DECLARE, KMPP_OBJ_NAME)
+
+#undef KMPP_OBJ_ENTRY_RO_TABLE
+#undef ENTRY_TO_DECLARE
+#endif
+
 /* structure entry access funcitons */
 #ifdef KMPP_OBJ_STRUCT_TABLE
 #define STRUCT_TO_DECLARE(prefix, ftype, type, f1) \
