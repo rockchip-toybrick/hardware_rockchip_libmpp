@@ -1397,6 +1397,9 @@ static void setup_recn_refr_wrap(H265eV511HalContext *ctx, HevcVepu511Frame *reg
 	regs->reg0182_adr_rfpt_b = ref_iova + rfp_b_top;
 	regs->reg0183_adr_rfpb_b = ref_iova + rfp_b_bot;
 
+	regs->reg0223_me_ref_comb.rfpw_mode = 1;
+	regs->reg0223_me_ref_comb.rfpr_mode = 1;
+
 	if (recn_ref_wrap) {
 		RK_U32 cur_hdr_off;
 		RK_U32 cur_bdy_off;

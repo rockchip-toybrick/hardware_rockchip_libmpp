@@ -1530,6 +1530,9 @@ static void setup_recn_refr_wrap(HalH264eVepu511Ctx *ctx, HalVepu511RegSet *regs
 	regs->reg_frm.rfpb_b_addr = ref_iova + rfp_b_bot;
 	regs->reg_frm.enc_pic.cur_frm_ref = !cur_is_non_ref;
 
+	regs->reg_frm.me_ref_comb.rfpw_mode = 1;
+	regs->reg_frm.me_ref_comb.rfpr_mode = 1;
+
 	if (recn_ref_wrap) {
 		RK_U32 cur_hdr_off;
 		RK_U32 cur_bdy_off;
