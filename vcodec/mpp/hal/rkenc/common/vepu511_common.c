@@ -174,7 +174,7 @@ static MPP_RET vepu511_jpeg_set_uv_offset(Vepu511JpegFrame *regs, JpegeSyntax * 
 	kmpp_frame_get_fmt(task->frame, &fmt);
 	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
 		kmpp_frame_get_fbc_offset(task->frame, &u_offset);
-		v_offset = 0;
+		v_offset = u_offset;
 		mpp_log("fbc case u_offset = %d", u_offset);
 	} else {
 		switch (input_fmt) {
@@ -248,6 +248,7 @@ MPP_RET vepu511_set_jpeg_reg(Vepu511JpegCfg * cfg)
 	RK_U32 pkt_len;
 	RK_U32 frame_height = 0;
 	RK_U32 offset_x, offset_y;
+	RK_U32 format;
 
 	kmpp_frame_get_height(frame, &frame_height);
 	slice_en = (frame_height < height) && syn->restart_ri;
@@ -305,10 +306,13 @@ MPP_RET vepu511_set_jpeg_reg(Vepu511JpegCfg * cfg)
 	regs->src_proc.src_mirr = syn->mirroring > 0;
 	regs->src_proc.src_rot = syn->rotation;
 
-	if (syn->hor_stride)
+	kmpp_frame_get_fmt(frame, &format);
+	if (MPP_FRAME_FMT_IS_FBC(format)) {
+		regs->src_proc.rkfbcd_en = 1;
+		stridey = MPP_ALIGN(syn->hor_stride, 64) >> 2;
+	} else if (syn->hor_stride) {
 		stridey = syn->hor_stride;
-
-	else {
+	} else {
 		if (regs->src_fmt.src_cfmt == VEPU541_FMT_BGRA8888)
 			stridey = syn->width * 4;
 		else if (regs->src_fmt.src_cfmt == VEPU541_FMT_BGR888 ||

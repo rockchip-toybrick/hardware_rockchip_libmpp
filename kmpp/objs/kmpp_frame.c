@@ -193,7 +193,8 @@ rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, rk_u32 *offset)
         if (fbc_version == MPP_FRAME_FBC_AFBC_V1) {
             fbc_offset = KMPP_ALIGN(p->width, 16) * KMPP_ALIGN(p->height, 16) / 16;
             fbc_offset = KMPP_ALIGN(fbc_offset, SZ_4K);
-        } else if (fbc_version == MPP_FRAME_FBC_AFBC_V2)
+        } else if (fbc_version == MPP_FRAME_FBC_AFBC_V2 ||
+                   fbc_version == MPP_FRAME_FBC_RKFBC)
             fbc_offset = 0;
         p->fbc_offset = fbc_offset;
     }

@@ -633,7 +633,7 @@ static MPP_RET vepu511_h265_uv_address(HevcVepu511Frame *regs, H265eSyntax_new *
 	kmpp_frame_get_fmt(task->frame, &fmt);
 	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
 		kmpp_frame_get_fbc_offset(task->frame, &u_offset);
-		v_offset = 0;
+		v_offset = u_offset;
 	} else {
 		switch (input_fmt) {
 		case VEPU541_FMT_YUV420P: {
@@ -974,13 +974,16 @@ static void vepu511_h265_set_sao_regs(H265eV511HalContext *ctx)
 	sqi->subj_anti_blur_wgt4.merge_cost_bit_bo_wgt0 = 4;
 }
 
-static MPP_RET vepu511_h265_set_pp_regs(H265eV511RegSet *regs, VepuFmtCfg *fmt,
-					MppEncPrepCfg *prep_cfg)
+static MPP_RET vepu511_h265_set_pp_regs(H265eV511HalContext *ctx, HalEncTask *task)
 {
+	H265eV511RegSet *regs = ctx->regs;
 	Vepu511ControlCfg *reg_ctl = &regs->reg_ctl;
 	HevcVepu511Frame *reg_frm = &regs->reg_frm;
 	RK_S32 stridey = 0;
 	RK_S32 stridec = 0;
+	VepuFmtCfg *fmt = ctx->input_fmt;
+	MppEncPrepCfg *prep_cfg = &ctx->cfg->prep;
+	RK_U32 format;
 
 	reg_ctl->dtrns_map.src_bus_edin = fmt->src_endian;
 	reg_frm->reg0198_src_fmt.src_cfmt = fmt->format;
@@ -992,9 +995,13 @@ static MPP_RET vepu511_h265_set_pp_regs(H265eV511RegSet *regs, VepuFmtCfg *fmt,
 	reg_frm->reg0203_src_proc.src_mirr = prep_cfg->mirroring > 0;
 	reg_frm->reg0203_src_proc.src_rot = prep_cfg->rotation;
 
-	if (prep_cfg->hor_stride)
+	kmpp_frame_get_fmt(task->frame, &format);
+	if (MPP_FRAME_FMT_IS_FBC(format)) {
+		reg_frm->reg0203_src_proc.rkfbcd_en = 1;
+		stridey = MPP_ALIGN(prep_cfg->hor_stride, 64) >> 2;
+	} else if (prep_cfg->hor_stride) {
 		stridey = prep_cfg->hor_stride;
-	else {
+	} else {
 		if (reg_frm->reg0198_src_fmt.src_cfmt == VEPU541_FMT_BGRA8888 )
 			stridey = prep_cfg->width * 4;
 		else if (reg_frm->reg0198_src_fmt.src_cfmt == VEPU541_FMT_BGR888 )
@@ -2733,7 +2740,6 @@ MPP_RET hal_h265e_v511_gen_regs(void *hal, HalEncTask *task)
 	HalEncTask *enc_task = task;
 	H265eSyntax_new *syn = (H265eSyntax_new *)enc_task->syntax.data;
 	H265eV511RegSet *regs = ctx->regs;
-	VepuFmtCfg *fmt = (VepuFmtCfg *)ctx->input_fmt;
 	HevcVepu511Frame *reg_frm = &regs->reg_frm;
 	EncFrmStatus *frm = &task->rc_task->frm;
 
@@ -2752,7 +2758,7 @@ MPP_RET hal_h265e_v511_gen_regs(void *hal, HalEncTask *task)
 	vepu511_h265_set_me_regs(ctx, syn);
 	vepu511_h265_set_split(regs, ctx->cfg);
 	vepu511_h265_set_hw_address(ctx, reg_frm, task);
-	vepu511_h265_set_pp_regs(regs, fmt, &ctx->cfg->prep);
+	vepu511_h265_set_pp_regs(ctx, task);
 	vepu511_h265_set_vsp_filtering(ctx);
 	vepu511_h265_set_rc_regs(ctx, regs, task);
 	vepu511_h265_set_rdo_regs(ctx, regs);

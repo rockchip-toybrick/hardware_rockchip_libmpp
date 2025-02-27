@@ -190,6 +190,12 @@ typedef enum {
  * Payload offset is always set to zero.
  */
 #define MPP_FRAME_FBC_AFBC_V2       (0x00200000)
+/*
+ * RKFBC is for video decoder output.
+ * It has default header stride to be calculated * from width and height:
+ * Header stride = MPP_ALIGN(width, 64) / 64 * 16
+ */
+#define MPP_FRAME_FBC_RKFBC         (0x00400000)
 
 #define MPP_FRAME_FMT_LE_MASK       (0x01000000)
 

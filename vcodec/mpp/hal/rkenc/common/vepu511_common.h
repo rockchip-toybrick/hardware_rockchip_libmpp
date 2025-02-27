@@ -683,7 +683,9 @@ typedef struct Vepu511JpegFrame_t {
 		RK_U32 reserved           : 9;
 		RK_U32 src_mirr           : 1;
 		RK_U32 src_rot            : 2;
-		RK_U32 reserved1          : 3;
+		RK_U32 reserved1          : 1;
+		RK_U32 rkfbcd_en          : 1;
+		RK_U32 reserved2          : 1;
 	} src_proc;
 
 	/* 0x00000460 reg280 */

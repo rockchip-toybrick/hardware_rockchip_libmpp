@@ -229,7 +229,8 @@ typedef struct Vepu511FrameCfg_t {
 		RK_U32 src_mirr           : 1;
 		RK_U32 src_rot            : 2;
 		RK_U32 tile4x4_en         : 1;
-		RK_U32 reserved1          : 2;
+		RK_U32 rkfbcd_en          : 1;
+		RK_U32 reserved1          : 1;
 	} src_proc;
 
 	/* 0x00000330 reg204 */

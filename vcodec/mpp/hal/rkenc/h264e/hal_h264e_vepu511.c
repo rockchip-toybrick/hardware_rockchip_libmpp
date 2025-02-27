@@ -730,7 +730,7 @@ static MPP_RET setup_vepu511_prep(HalVepu511RegSet *regs, MppEncPrepCfg *prep,
 				  HalEncTask *task)
 {
 	VepuFmtCfg cfg;
-	MppFrameFormat fmt = prep->format;
+	RK_U32 fmt = prep->format;
 	MPP_RET ret = vepu5xx_set_fmt(&cfg, fmt);
 	RK_U32 hw_fmt = cfg.format;
 	RK_S32 y_stride;
@@ -756,10 +756,13 @@ static MPP_RET setup_vepu511_prep(HalVepu511RegSet *regs, MppEncPrepCfg *prep,
 	// regs->reg_frm.src_fmt.src_range  = (prep->range == MPP_FRAME_RANGE_JPEG ? 1 : 0);
 	regs->reg_frm.src_fmt.out_fmt = ((fmt & MPP_FRAME_FMT_MASK) == MPP_FMT_YUV400 ? 0 : 1);
 
-	if (prep->hor_stride)
+	kmpp_frame_get_fmt(task->frame, &fmt);
+	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
+		regs->reg_frm.src_proc.rkfbcd_en = 1;
+		y_stride = MPP_ALIGN(prep->hor_stride, 64) >> 2;
+	} else if (prep->hor_stride) {
 		y_stride = prep->hor_stride;
-
-	else {
+	} else {
 		if (hw_fmt == VEPU541_FMT_BGRA8888 )
 			y_stride = prep->width * 4;
 		else if (hw_fmt == VEPU541_FMT_BGR888 )
@@ -1321,7 +1324,10 @@ static void setup_vepu511_io_buf(HalH264eVepu511Ctx *ctx, HalEncTask *task)
 	kmpp_frame_get_fmt(frm, &fmt);
 	kmpp_frame_get_buffer(frm, &buf_in);
 
-	if (MPP_FRAME_FMT_IS_YUV(fmt)) {
+	if (MPP_FRAME_FMT_IS_FBC(fmt)) {
+		kmpp_frame_get_fbc_offset(task->frame, &off_in[0]);
+		off_in[1] = off_in[0];
+	} else if (MPP_FRAME_FMT_IS_YUV(fmt)) {
 		VepuFmtCfg cfg;
 
 		vepu5xx_set_fmt(&cfg, fmt);
