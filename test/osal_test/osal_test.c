@@ -192,9 +192,9 @@ rk_s32 osal_test_func(void *param)
 
     kmpp_logi("kmpp_dmabuf test start\n");
 
-    kmpp_dmaheap_open_f(&heap, KMPP_DMAHEAP_FLAGS_DMA32);
+    kmpp_dmaheap_get_f(&heap, KMPP_DMAHEAP_FLAGS_DMA32);
 
-    kmpp_logi("kmpp_dmaheap_open ret %px\n", heap);
+    kmpp_logi("kmpp_dmaheap_get ret %px\n", heap);
 
     size = 4096;
 
@@ -217,7 +217,7 @@ rk_s32 osal_test_func(void *param)
         kmpp_logi("access ok\n");
     kmpp_dmabuf_free_f(buf);
 
-    kmpp_dmaheap_close_f(heap);
+    kmpp_dmaheap_put_f(heap);
 
     kmpp_logi("kmpp_dmabuf test done\n");
 

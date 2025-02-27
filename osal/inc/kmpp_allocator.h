@@ -25,11 +25,11 @@ typedef void* KmppDmaHeap;
 typedef void* KmppDmaBuf;
 
 /* open default dmaheap with flag */
-rk_s32 kmpp_dmaheap_open(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller);
+rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller);
 /* open special dmaheap by name with flag */
-rk_s32 kmpp_dmaheap_open_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 flag, const rk_u8 *caller);
+rk_s32 kmpp_dmaheap_get_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 flag, const rk_u8 *caller);
 /* close dmaheap */
-rk_s32 kmpp_dmaheap_close(KmppDmaHeap heap, const rk_u8 *caller);
+rk_s32 kmpp_dmaheap_put(KmppDmaHeap heap, const rk_u8 *caller);
 
 rk_s32 kmpp_dmabuf_alloc(KmppDmaBuf *buf, KmppDmaHeap heap, rk_s32 size, rk_u32 flag, const rk_u8 *caller);
 rk_s32 kmpp_dmabuf_free(KmppDmaBuf buf, const rk_u8 *caller);
@@ -59,8 +59,8 @@ rk_s32 kmpp_dmabuf_flush_for_dev(KmppDmaBuf buf, osal_dev *dev);
 rk_s32 kmpp_dmabuf_flush_for_cpu_partial(KmppDmaBuf buf, rk_u32 offset, rk_u32 size);
 rk_s32 kmpp_dmabuf_flush_for_dev_partial(KmppDmaBuf buf, osal_dev *dev, rk_u32 offset, rk_u32 size);
 
-#define kmpp_dmaheap_open_f(heap, flag)             kmpp_dmaheap_open(heap, flag, __func__)
-#define kmpp_dmaheap_close_f(heap)                  kmpp_dmaheap_close(heap, __func__)
+#define kmpp_dmaheap_get_f(heap, flag)              kmpp_dmaheap_get(heap, flag, __func__)
+#define kmpp_dmaheap_put_f(heap)                    kmpp_dmaheap_put(heap, __func__)
 #define kmpp_dmabuf_alloc_f(buf, heap, size, flag)  kmpp_dmabuf_alloc(buf, heap, size, flag, __func__)
 #define kmpp_dmabuf_free_f(buf)                     kmpp_dmabuf_free(buf, __func__)
 #define kmpp_dmabuf_import_fd_f(buf, fd, flag)      kmpp_dmabuf_import_fd(buf, fd, flag, __func__)

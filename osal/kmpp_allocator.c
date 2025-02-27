@@ -309,7 +309,7 @@ void kmpp_dmaheap_deinit(void)
     }
 }
 
-rk_s32 kmpp_dmaheap_open(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
+rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
 {
     KmppDmaHeaps *heaps = kmpp_dmaheaps;
     KmppDmaHeapImpl *impl;
@@ -337,7 +337,7 @@ rk_s32 kmpp_dmaheap_open(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
     return rk_ok;
 }
 
-rk_s32 kmpp_dmaheap_open_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 flag, const rk_u8 *caller)
+rk_s32 kmpp_dmaheap_get_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 flag, const rk_u8 *caller)
 {
     KmppDmaHeaps *heaps, *n;
 
@@ -366,7 +366,7 @@ rk_s32 kmpp_dmaheap_open_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 fl
     return rk_nok;
 }
 
-rk_s32 kmpp_dmaheap_close(KmppDmaHeap heap, const rk_u8 *caller)
+rk_s32 kmpp_dmaheap_put(KmppDmaHeap heap, const rk_u8 *caller)
 {
     KmppDmaHeaps *heaps = kmpp_dmaheaps;
     KmppDmaHeapImpl *impl = (KmppDmaHeapImpl *)heap;
@@ -1005,9 +1005,9 @@ rk_s32 kmpp_dmabuf_flush_for_dev_partial(KmppDmaBuf buf, osal_dev *dev, rk_u32 o
     return 0;
 }
 
-EXPORT_SYMBOL(kmpp_dmaheap_open);
-EXPORT_SYMBOL(kmpp_dmaheap_open_by_name);
-EXPORT_SYMBOL(kmpp_dmaheap_close);
+EXPORT_SYMBOL(kmpp_dmaheap_get);
+EXPORT_SYMBOL(kmpp_dmaheap_get_by_name);
+EXPORT_SYMBOL(kmpp_dmaheap_put);
 
 EXPORT_SYMBOL(kmpp_dmabuf_alloc);
 EXPORT_SYMBOL(kmpp_dmabuf_free);
