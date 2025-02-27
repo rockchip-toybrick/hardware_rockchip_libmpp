@@ -75,9 +75,12 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			kmpp_meta_get_obj_d(meta, KEY_COMBO_FRAME, &comb_frame, NULL);
 		}
 		if (comb_frame) {
-			RK_U32 jpeg_chan_id = 0;
+			RK_S32 jpeg_chan_id = -1;
 
-			kmpp_meta_get_s32(meta, KEY_CHANNEL_ID, &jpeg_chan_id);
+			if (!kmpp_frame_get_meta(comb_frame, &sptr)) {
+				KmppMeta comb_meta = sptr.kptr;
+				kmpp_meta_get_s32(comb_meta, KEY_CHANNEL_ID, &jpeg_chan_id);
+			}
 
 			mpp_vcodec_jpegcomb("attach jpeg id %d\n", jpeg_chan_id);
 			comb_chan = mpp_vcodec_get_chan_entry(jpeg_chan_id, MPP_CTX_ENC);
