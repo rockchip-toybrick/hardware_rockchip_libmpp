@@ -771,7 +771,7 @@ typedef struct Vepu511JpegFrame_t {
 } Vepu511JpegFrame;
 
 typedef struct Vepu511JpegTable_t {
-	/* 0x2590 - 0x270c */
+	/* 0x2ca0 - 0x2e1c */
 	RK_U16 qua_tab0[64];
 	RK_U16 qua_tab1[64];
 	RK_U16 qua_tab2[64];
@@ -2280,7 +2280,9 @@ typedef struct Vepu511SclJpgTbl_t {
 	Vepu511SclCfg       scl;
 	/* 0x2588 - 0x258f */
 	RK_U32              reserve[2];
-	/* 0x2590 reg2404 - 0x270c reg2499 */
+	/* 0x2590 - 0x2c9c*/
+	RK_U32		    scl1[452];
+	/* 0x2ca0 - 0x2e1c */
 	Vepu511JpegTable    jpg_tbl;
 } Vepu511SclJpgTbl;
 
