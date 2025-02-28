@@ -20,16 +20,12 @@ ${KMPP_SRC}-$(KMPP_TEST_ENABLE) += vcodec/mpp/base/mpp_trie.o \
                                    vcodec/mpp/base/mpp_enc_cfg.o \
                                    vcodec/mpp/base/mpp_cfg.o
 
-${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_dmaheap.o
-${KMPP_SRC}-objs += vcodec/osal/allocator/allocator_rkdmaheap.o
 ${KMPP_SRC}-objs += vcodec/osal/mpp_log.o \
                     vcodec/osal/mpp_mem.o \
                     vcodec/osal/mpp_maths.o \
                     vcodec/osal/mpp_device.o \
                     vcodec/osal/osal_mpp_service.o \
-                    vcodec/osal/mpp_time.o \
-                    vcodec/osal/mpp_allocator.o
-
+                    vcodec/osal/mpp_time.o
 
 ${KMPP_SRC}-objs += $(BASE_CFILES)
 ${KMPP_SRC}-objs += $(CODEC_CFILES)
@@ -39,7 +35,6 @@ ${KMPP_SRC}-objs += $(KMPI_CFILES)
 EXTRA_CFLAGS += -I$(TOP)/include
 EXTRA_CFLAGS += -I$(TOP)/legacy/inc
 EXTRA_CFLAGS += -I$(TOP)/vcodec/osal/inc
-EXTRA_CFLAGS += -I$(TOP)/vcodec/osal/allocator
 EXTRA_CFLAGS += -I$(TOP)/vcodec/inc
 EXTRA_CFLAGS += -I$(TOP)/vcodec/mpp/common
 EXTRA_CFLAGS += -I$(TOP)/vcodec/mpp/inc

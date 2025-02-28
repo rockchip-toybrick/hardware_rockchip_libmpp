@@ -31,7 +31,6 @@ INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/h264e)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/h265e)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/codec/enc/jpeg)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/common)
-INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/osal/allocator)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/inc)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/common)
 INCLUDE_DIRECTORIES(${KMPP_TOP}/vcodec/mpp/hal/common/h264)
@@ -92,7 +91,6 @@ SET(KMPP_SRC
     ../vcodec/mpp/base/mpp_buffer.c
     ../vcodec/mpp/base/mpp_stream_ring_buf.c
     ../vcodec/mpp/base/mpp_bitread.c
-    ../vcodec/mpp/base/mpp_mem_pool.c
     ../vcodec/mpp/base/mpp_cfg.c
     ../vcodec/mpp/base/mpp_2str.c
     ../vcodec/mpp/codec/enc_impl.c
@@ -132,9 +130,6 @@ SET(KMPP_SRC
     ../vcodec/osal/mpp_device.c
     ../vcodec/osal/mpp_maths.c
     ../vcodec/osal/mpp_mem.c
-    ../vcodec/osal/mpp_allocator.c
-    ../vcodec/osal/allocator/allocator_dmaheap.c
-    ../vcodec/osal/allocator/allocator_rkdmaheap.c
     ../vcodec/mpp_vcodec_thread.c
     ../vcodec/kmpi/kmpi_venc.c
     ../vcodec/kmpi/kmpi_venc_chan.c
