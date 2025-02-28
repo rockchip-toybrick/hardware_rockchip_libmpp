@@ -316,6 +316,8 @@ void kmpp_mem_pool_put(KmppMemPool pool, void *p, const rk_u8 *caller)
         return;
     }
 
+    osal_memset(node->ptr, 0, node->size);
+
     osal_spin_lock_irqsave(srv->lock, &flags);
 
     osal_list_del_init(&node->list);
