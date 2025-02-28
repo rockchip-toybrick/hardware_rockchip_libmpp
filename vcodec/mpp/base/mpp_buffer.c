@@ -22,7 +22,7 @@
 #include "mpp_log.h"
 #include "mpp_mem.h"
 #include "mpp_buffer_impl.h"
-#include "mpp_mem_pool.h"
+#include "kmpp_mem_pool.h"
 #include "mpp_maths.h"
 #include "kmpp_allocator.h"
 
@@ -38,15 +38,13 @@ struct MppBufferImpl {
 	KmppDmaBuf	buf;
 };
 
-static MppMemPool g_mppbuf_pool = NULL;
+static KmppMemPool mppbuf_pool = NULL;
 static KmppDmaHeap mppbuf_heap = NULL;
 
 MPP_RET mpp_buffer_pool_init(RK_U32 max_cnt)
 {
-	if (g_mppbuf_pool)
-		return MPP_OK;
-
-	g_mppbuf_pool = mpp_mem_pool_init(module_name, sizeof(struct MppBufferImpl), max_cnt);
+	if (!mppbuf_pool)
+		mppbuf_pool = kmpp_mem_get_pool_f(module_name, sizeof(struct MppBufferImpl), max_cnt, 0);
 
 	if (!mppbuf_heap)
 		kmpp_dmaheap_get_f(&mppbuf_heap, KMPP_DMAHEAP_FLAGS_CACHABLE);
@@ -61,9 +59,9 @@ MPP_RET mpp_buffer_pool_deinit(void)
 		mppbuf_heap = NULL;
 	}
 
-	if (g_mppbuf_pool) {
-		mpp_mem_pool_deinit(g_mppbuf_pool);
-		g_mppbuf_pool = NULL;
+	if (mppbuf_pool) {
+		kmpp_mem_put_pool_f(mppbuf_pool);
+		mppbuf_pool = NULL;
 	}
 
 	return MPP_OK;
@@ -71,7 +69,7 @@ MPP_RET mpp_buffer_pool_deinit(void)
 
 void mpp_buf_pool_info_show(void *seq_file)
 {
-	mpp_mem_pool_info_show(seq_file, g_mppbuf_pool);
+	return;
 }
 
 MPP_RET mpp_buffer_import_with_tag(MppBufferGroup group, MppBufferInfo *info,
@@ -87,7 +85,7 @@ MPP_RET mpp_buffer_import_with_tag(MppBufferGroup group, MppBufferInfo *info,
 	if (buffer) {
 		struct MppBufferImpl *buf = NULL;
 
-		buf = mpp_mem_pool_get(g_mppbuf_pool);
+		buf = kmpp_mem_pool_get_f(mppbuf_pool);
 		if (!buf) {
 			mpp_err("mpp_buffer_import fail %s\n", caller);
 			return MPP_ERR_NULL_PTR;
@@ -100,7 +98,7 @@ MPP_RET mpp_buffer_import_with_tag(MppBufferGroup group, MppBufferInfo *info,
 		if (ret) {
 			mpp_err_f("buffer fd %d dma_buf %p import fail ret %d %s\n",
 				  info->fd, info->dma_buf, ret, caller);
-			mpp_mem_pool_put(g_mppbuf_pool, buf);
+			kmpp_mem_pool_put_f(mppbuf_pool, buf);
 			return ret;
 		}
 		info->size = kmpp_dmabuf_get_size(buf->buf);
@@ -123,7 +121,7 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 		return MPP_NOK;
 	}
 
-	buf_impl = mpp_mem_pool_get(g_mppbuf_pool);
+	buf_impl = kmpp_mem_pool_get_f(mppbuf_pool);
 	if (NULL == buf_impl) {
 		mpp_err("buf impl malloc fail : group %p buffer %p size %u from %s\n",
 			group, buffer, (RK_U32)size, caller);
@@ -133,7 +131,7 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 	if (kmpp_dmabuf_alloc_f(&buf_impl->buf, mppbuf_heap, size, 0)) {
 		mpp_err("kmpp_dmabuf_alloc fail : group %p buffer %p size %u from %s\n",
 			group, buffer, (RK_U32)size, caller);
-		mpp_mem_pool_put(g_mppbuf_pool, buf_impl);
+		kmpp_mem_pool_put_f(mppbuf_pool, buf_impl);
 		return MPP_ERR_UNKNOW;
 	}
 
@@ -149,7 +147,7 @@ MPP_RET mpp_ring_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 {
 	struct MppBufferImpl *buf_impl = NULL;
 
-	buf_impl = mpp_mem_pool_get(g_mppbuf_pool);
+	buf_impl = kmpp_mem_pool_get_f(mppbuf_pool);
 	if (NULL == buf_impl) {
 		mpp_err("buf impl malloc fail : group %p buffer %p size %u from %s\n",
 			group, buffer, (RK_U32)size, caller);
@@ -159,7 +157,7 @@ MPP_RET mpp_ring_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 	if (kmpp_dmabuf_alloc_f(&buf_impl->buf, mppbuf_heap, size, KMPP_DMABUF_FLAGS_DUP_MAP)) {
 		mpp_err_f("mpp_buffer_get failed: group %p buffer %p size %u from %s\n",
 			group, buffer, (RK_U32)size, caller);
-		mpp_mem_pool_put(g_mppbuf_pool, buf_impl);
+		kmpp_mem_pool_put_f(mppbuf_pool, buf_impl);
 		return MPP_ERR_UNKNOW;
 	}
 
@@ -185,7 +183,7 @@ MPP_RET mpp_buffer_put_with_caller(MppBuffer buffer, const char *caller)
 		if (buf_impl->iova)
 			kmpp_dmabuf_put_iova_by_device(buf_impl->buf, buf_impl->iova, buf_impl->dev);
 		kmpp_dmabuf_free_f(buf_impl->buf);
-		mpp_mem_pool_put(g_mppbuf_pool, buf_impl);
+		kmpp_mem_pool_put_f(mppbuf_pool, buf_impl);
 	}
 
 	return MPP_OK;

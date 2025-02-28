@@ -24,7 +24,6 @@
 #include "mpp_vcodec_thread.h"
 #include "mpp_buffer_impl.h"
 #include "mpp_packet_impl.h"
-#include "mpp_mem_pool.h"
 #include "kmpp_frame.h"
 #include "hal_bufs.h"
 #include "mpp_maths.h"

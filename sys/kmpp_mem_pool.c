@@ -379,3 +379,11 @@ void kmpp_mem_pool_dump_all(const rk_u8 *caller)
 
     osal_spin_unlock_irqrestore(srv->lock, &flag);
 }
+
+#include <linux/export.h>
+EXPORT_SYMBOL(kmpp_mem_get_pool);
+EXPORT_SYMBOL(kmpp_mem_put_pool);
+EXPORT_SYMBOL(kmpp_mem_pool_get);
+EXPORT_SYMBOL(kmpp_mem_pool_put);
+EXPORT_SYMBOL(kmpp_mem_pool_dump);
+EXPORT_SYMBOL(kmpp_mem_pool_dump_all);

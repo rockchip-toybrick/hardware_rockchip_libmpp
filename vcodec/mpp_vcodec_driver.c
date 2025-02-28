@@ -22,7 +22,6 @@
 #include "mpp_vcodec_base.h"
 #include "mpp_vcodec_flow.h"
 #include "mpp_vcodec_intf.h"
-#include "mpp_mem_pool.h"
 
 #include "mpp_log.h"
 #include "mpp_enc.h"
