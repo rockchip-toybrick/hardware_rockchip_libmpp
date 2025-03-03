@@ -45,6 +45,9 @@
 #define ENTRY_TO_kobj_PTR(tbl, entry)   ((KmppObj *)ENTRY_TO_PTR(tbl, entry))
 #define ENTRY_TO_kptr_PTR(tbl, entry)   ((void **)ENTRY_TO_PTR(tbl, entry))
 #define ENTRY_TO_kfp_PTR(tbl, entry)    ((void **)ENTRY_TO_PTR(tbl, entry))
+#define ENTRY_TO_uobj_PTR(tbl, entry)   ((rk_u64 *)ENTRY_TO_PTR(tbl, entry))
+#define ENTRY_TO_uptr_PTR(tbl, entry)   ((rk_u64 *)ENTRY_TO_PTR(tbl, entry))
+#define ENTRY_TO_ufp_PTR(tbl, entry)    ((rk_u64 *)ENTRY_TO_PTR(tbl, entry))
 
 #define ENTRY_TO_FLAG_PTR(tbl, entry)   ((rk_u16 *)((rk_u8 *)entry + tbl->flag_offset))
 
@@ -153,6 +156,9 @@ KMPP_OBJ_ACCESS_IMPL(u64, rk_u64, %llx)
 KMPP_OBJ_ACCESS_IMPL(kobj, KmppObj, %px)
 KMPP_OBJ_ACCESS_IMPL(kptr, void *, %px)
 KMPP_OBJ_ACCESS_IMPL(kfp, void *, %px)
+KMPP_OBJ_ACCESS_IMPL(uobj, rk_u64, %llx)
+KMPP_OBJ_ACCESS_IMPL(uptr, rk_u64, %llx)
+KMPP_OBJ_ACCESS_IMPL(ufp, rk_u64, %llx)
 
 #define KMPP_OBJ_ACCESS_IMPL_ST(type, base_type) \
     rk_s32 kmpp_obj_impl_set_##type(KmppLocTbl *tbl, void *entry, base_type *val) \
@@ -216,9 +222,6 @@ rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
     impl->entry_size = size;
     impl->buf_size = size + sizeof(KmppObjImpl);
     osal_strncpy(impl->name, name, len);
-
-    kmpp_trie_init(&impl->trie, name);
-    kmpp_trie_init(&impl->hook, name);
 
     OSAL_INIT_LIST_HEAD(&impl->list);
     osal_list_add_tail(&impl->list, &kmpp_objdef_list);
@@ -300,6 +303,13 @@ rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl)
     KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
     rk_s32 ret = rk_nok;
 
+    if (!impl->trie) {
+        if (!name)
+            return rk_ok;
+
+        kmpp_trie_init(&impl->trie, impl->name);
+    }
+
     if (impl->trie) {
         KmppTrie trie = impl->trie;
 
@@ -310,7 +320,6 @@ rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl)
             ret = kmpp_trie_add_info(trie, "__size", &impl->entry_size, sizeof(rk_s32));
             ret |= kmpp_trie_add_info(trie, NULL, NULL, 0);
         }
-
     }
 
     if (ret)
@@ -327,6 +336,13 @@ rk_s32 kmpp_objdef_add_hook(KmppObjDef def, const rk_u8 *name, KmppObjHook hook)
     rk_s32 ret = rk_nok;
 
     obj_dbg_hook("name %s hook %px to trie %px\n", name, hook, impl->hook);
+
+    if (!impl->hook) {
+        if (!name)
+            return rk_ok;
+
+        kmpp_trie_init(&impl->hook, impl->name);
+    }
 
     if (impl->hook) {
         KmppTrie trie = impl->hook;
@@ -476,53 +492,100 @@ rk_s32 kmpp_objdef_dump(KmppObjDef def)
 {
     if (def) {
         KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
-        KmppTrie trie = impl->trie;
         KmppTrieInfo *info = NULL;
         const rk_u8 *name = impl->name;
-        RK_S32 i = 0;
+        rk_s32 i = 0;
 
-        kmpp_logi("dump objdef %-16s entry_size %d element count %d\n",
-                 name, impl->entry_size, kmpp_trie_get_info_count(trie));
+        kmpp_logi("--------------------- objdef %-16s ---------------------\n", name);
+        kmpp_logi("entry_size %d element count %d hook count %d\n",
+                  impl->entry_size, kmpp_trie_get_info_count(impl->trie),
+                  kmpp_trie_get_info_count(impl->hook));
 
-        info = kmpp_trie_get_info_first(trie);
-        while (info) {
-            name = kmpp_trie_info_name(info);
-            if (!kmpp_trie_info_name_is_self(name)) {
-                rk_s32 idx = i++;
+        if (impl->trie) {
+            info = kmpp_trie_get_info_first(impl->trie);
+            while (info) {
+                name = kmpp_trie_info_name(info);
+                if (!kmpp_trie_info_name_is_self(name)) {
+                    rk_s32 idx = i++;
 
-                if (info->ctx_len) {
-                    KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
+                    if (info->ctx_len) {
+                        KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
 
-                    kmpp_logi("%-2d - %-16s offset %4d size %d\n", idx,
-                              name, tbl->data_offset, tbl->data_size);
-                } else {
-                    /* meta key */
-                    if (idx != info->index)
-                        kmpp_logi("%-2d - key - %c%c%c%c - index %d mismatch\n",
-                                  idx, name[3], name[2], name[1], name[0], info->index);
-                    else
-                        kmpp_logi("%-2d - key - %c%c%c%c\n",
-                                  idx, name[3], name[2], name[1], name[0]);
+                        kmpp_logi("elem %-2d - %-16s offset %4d size %d\n", idx,
+                                  name, tbl->data_offset, tbl->data_size);
+                    } else {
+                        /* meta key */
+                        if (idx != info->index)
+                            kmpp_logi("elem %-2d - key - %c%c%c%c - index %d mismatch\n",
+                                      idx, name[3], name[2], name[1], name[0], info->index);
+                        else
+                            kmpp_logi("elem %-2d - key - %c%c%c%c\n",
+                                      idx, name[3], name[2], name[1], name[0]);
+                    }
                 }
+                info = kmpp_trie_get_info_next(impl->trie, info);
             }
-            info = kmpp_trie_get_info_next(trie, info);
+
+            info = kmpp_trie_get_info_first(impl->trie);
+            while (info) {
+                name = kmpp_trie_info_name(info);
+                if (kmpp_trie_info_name_is_self(name)) {
+                    void *p = kmpp_trie_info_ctx(info);
+                    rk_s32 idx = i++;
+
+                    if (info->ctx_len == sizeof(rk_u32)) {
+
+                        kmpp_logi("trie %-2d - %-16s val %d\n", idx, name, *(rk_u32 *)p);
+                    } else {
+                        kmpp_logi("trie %-2d - %-16s str %s\n", idx, name, p);
+                    }
+                }
+                info = kmpp_trie_get_info_next(impl->trie, info);
+            }
         }
 
-        info = kmpp_trie_get_info_first(trie);
-        while (info) {
-            name = kmpp_trie_info_name(info);
-            if (kmpp_trie_info_name_is_self(name)) {
-                void *p = kmpp_trie_info_ctx(info);
-                rk_s32 idx = i++;
+        /* dump hook info */
+        if (impl->hook) {
+            i = 0;
+            info = kmpp_trie_get_info_first(impl->hook);
+            while (info) {
+                name = kmpp_trie_info_name(info);
+                if (!kmpp_trie_info_name_is_self(name)) {
+                    rk_s32 idx = i++;
 
-                if (info->ctx_len == sizeof(RK_U32)) {
+                    if (info->ctx_len) {
+                        KmppObjHook *hook = (KmppObjHook *)kmpp_trie_info_ctx(info);
 
-                    kmpp_logi("%-2d - %-16s val %d\n", idx, name, *(RK_U32 *)p);
-                } else {
-                    kmpp_logi("%-2d - %-16s str %s\n", idx, name, p);
+                        kmpp_logi("hook %-2d - %-16s hook %px\n", idx, name, *hook);
+                    } else {
+                        /* meta key */
+                        if (idx != info->index)
+                            kmpp_logi("hook %-2d - key - %c%c%c%c - index %d mismatch\n",
+                                      idx, name[3], name[2], name[1], name[0], info->index);
+                        else
+                            kmpp_logi("hook %-2d - key - %c%c%c%c\n",
+                                      idx, name[3], name[2], name[1], name[0]);
+                    }
                 }
+                info = kmpp_trie_get_info_next(impl->hook, info);
             }
-            info = kmpp_trie_get_info_next(trie, info);
+
+            info = kmpp_trie_get_info_first(impl->hook);
+            while (info) {
+                name = kmpp_trie_info_name(info);
+                if (kmpp_trie_info_name_is_self(name)) {
+                    void *p = kmpp_trie_info_ctx(info);
+                    rk_s32 idx = i++;
+
+                    if (info->ctx_len == sizeof(rk_u32)) {
+
+                        kmpp_logi("trie %-2d - %-16s val %d\n", idx, name, *(rk_u32 *)p);
+                    } else {
+                        kmpp_logi("trie %-2d - %-16s str %s\n", idx, name, p);
+                    }
+                }
+                info = kmpp_trie_get_info_next(impl->hook, info);
+            }
         }
 
         return rk_ok;
@@ -1052,6 +1115,9 @@ KMPP_OBJ_ACCESS(u64, rk_u64)
 KMPP_OBJ_ACCESS(kobj, KmppObj)
 KMPP_OBJ_ACCESS(kptr, void *)
 KMPP_OBJ_ACCESS(kfp, void *)
+KMPP_OBJ_ACCESS(uobj, rk_u64)
+KMPP_OBJ_ACCESS(uptr, rk_u64)
+KMPP_OBJ_ACCESS(ufp, rk_u64)
 
 #define KMPP_OBJ_ACCESS_ST(type, base_type) \
     rk_s32 kmpp_obj_set_##type(KmppObj obj, const rk_u8 *name, base_type *val) \
@@ -1125,6 +1191,9 @@ KMPP_OBJ_TBL_ACCESS(u64, rk_u64)
 KMPP_OBJ_TBL_ACCESS(kobj, KmppObj)
 KMPP_OBJ_TBL_ACCESS(kptr, void *)
 KMPP_OBJ_TBL_ACCESS(kfp, void *)
+KMPP_OBJ_TBL_ACCESS(uobj, rk_u64)
+KMPP_OBJ_TBL_ACCESS(uptr, rk_u64)
+KMPP_OBJ_TBL_ACCESS(ufp, rk_u64)
 
 #define KMPP_OBJ_TBL_ACCESS_ST(type, base_type) \
     rk_s32 kmpp_obj_tbl_set_##type(KmppObj obj, KmppLocTbl *tbl, base_type *val) \

@@ -99,8 +99,8 @@
         /* NOTE: also add entry table for userspace access and dump */ \
         KmppLocTbl tbl = FIELD_TO_LOCTBL_ACCESS1(f1, ftype); \
         kmpp_objdef_add_entry(KMPP_OBJ_DEF(prefix), #f1, &tbl); \
-        kmpp_objdef_add_hook(KMPP_OBJ_DEF(prefix), "s_"#f1, KMPP_OBJ_FUNC3(prefix, impl_set, f1)); \
-        kmpp_objdef_add_hook(KMPP_OBJ_DEF(prefix), "g_"#f1, KMPP_OBJ_FUNC3(prefix, impl_get, f1)); \
+        kmpp_objdef_add_hook(KMPP_OBJ_DEF(prefix), "set_"#f1, KMPP_OBJ_FUNC3(prefix, impl_set, f1)); \
+        kmpp_objdef_add_hook(KMPP_OBJ_DEF(prefix), "get_"#f1, KMPP_OBJ_FUNC3(prefix, impl_get, f1)); \
     } while (0);
 
 #define ENTRY_QUERY(prefix, ftype, type, f1) \
@@ -111,9 +111,9 @@
 #define HOOK_QUERY(prefix, ftype, type, f1) \
     do { \
         KMPP_OBJ_HOOK3(prefix, set, f1) = \
-        kmpp_objdef_get_hook(KMPP_OBJ_DEF(prefix), "s_"#f1); \
+        kmpp_objdef_get_hook(KMPP_OBJ_DEF(prefix), "set_"#f1); \
         KMPP_OBJ_HOOK3(prefix, get, f1) = \
-        kmpp_objdef_get_hook(KMPP_OBJ_DEF(prefix), "g_"#f1); \
+        kmpp_objdef_get_hook(KMPP_OBJ_DEF(prefix), "get_"#f1); \
     } while (0);
 
 #define FIELD_TO_LOCTBL_FLAG2(f1, f2, ftype, field_flag, flag_value) \
