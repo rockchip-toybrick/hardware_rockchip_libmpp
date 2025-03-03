@@ -166,7 +166,7 @@ void kmpp_dmabuf_dev_init(void)
     struct platform_device_info dev_info = {
         .name       = "kmpp_dmabuf",
         .id         = PLATFORM_DEVID_NONE,
-        .dma_mask   = DMA_BIT_MASK(32),
+        .dma_mask   = DMA_BIT_MASK(64),
     };
 
     pdev = platform_device_register_full(&dev_info);
@@ -174,7 +174,7 @@ void kmpp_dmabuf_dev_init(void)
         dmabuf_pdev = pdev;
         dmabuf_dev = &pdev->dev;
 
-        dma_set_max_seg_size(dmabuf_dev, (unsigned int)DMA_BIT_MASK(32));
+        dma_set_max_seg_size(dmabuf_dev, (unsigned int)DMA_BIT_MASK(64));
     }
 }
 
