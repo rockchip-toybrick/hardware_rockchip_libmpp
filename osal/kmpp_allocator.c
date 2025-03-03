@@ -206,6 +206,7 @@ void kmpp_dmaheap_init(void)
         if (find && alloc) {
             void *prev_valid = NULL;
             rk_s32 j;
+            rk_u8 find_valid = 0;
 
             heaps = (KmppDmaHeaps *)kmpp_calloc_atomic(sizeof(KmppDmaHeaps) + lock_size);
             if (!heaps) {
@@ -231,6 +232,7 @@ void kmpp_dmaheap_init(void)
                     kmpp_logi("find heap %s\n", name);
                     prev_valid = curr;
                     impl->valid = 1;
+                    find_valid = 1;
                 } else {
                     /* use previous valid heap */
                     curr = prev_valid;
@@ -243,7 +245,7 @@ void kmpp_dmaheap_init(void)
                 OSAL_INIT_LIST_HEAD(&impl->list_used);
             }
 
-            if (!kmpp_dmaheaps) {
+            if (!kmpp_dmaheaps && find_valid) {
                 kmpp_dmaheaps = heaps;
                 kmpp_logi("set %s as default\n", info->name);
             } else {
@@ -331,6 +333,13 @@ rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
     }
 
     impl = &heaps->heaps[flag];
+    if (!impl->handle) {
+        kmpp_loge_f("heap %s flag %#x invalid NULL heap handle at %s\n",
+                    impl->heaps->info->name, flag, caller);
+        *heap = NULL;
+        return rk_nok;
+    }
+
     KMPP_FETCH_ADD(&impl->ref_cnt, 1);
     *heap = impl;
 
