@@ -978,6 +978,14 @@ rk_s32 kmpp_dmabuf_flush_for_dev(KmppDmaBuf buf, osal_dev *dev)
     return 0;
 }
 
+#ifndef CONFIG_DMABUF_PARTIAL
+#define dma_buf_begin_cpu_access_partial(dma_buf, dir, offset, size) \
+    dma_buf_begin_cpu_access(dma_buf, dir)
+
+#define dma_buf_end_cpu_access_partial(dma_buf, dir, offset, size) \
+    dma_buf_end_cpu_access(dma_buf, dir)
+#endif
+
 rk_s32 kmpp_dmabuf_flush_for_cpu_partial(KmppDmaBuf buf, rk_u32 offset, rk_u32 size)
 {
     KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
