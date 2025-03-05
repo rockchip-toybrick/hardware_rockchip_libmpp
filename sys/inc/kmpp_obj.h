@@ -101,12 +101,6 @@ rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs);
 /* destroy an objdef set */
 rk_s32 kmpp_objdef_put_shared(KmppObjDefSet *defs);
 
-#define kmpp_obj_get_f(obj, def)                kmpp_obj_get(obj, def, __FUNCTION__)
-#define kmpp_obj_assign_f(obj, def, buf, size)  kmpp_obj_assign(obj, def, buf, size, __FUNCTION__)
-#define kmpp_obj_get_share_f(obj, def, file)    kmpp_obj_get_share(obj, def, file, __FUNCTION__)
-#define kmpp_obj_put_f(obj)                     kmpp_obj_put(obj, __FUNCTION__)
-#define kmpp_obj_reset_f(obj)                   kmpp_obj_reset(obj, __FUNCTION__)
-
 /* normal kernel object allocator both object head and body */
 rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def, const rk_u8 *caller);
 rk_s32 kmpp_obj_get_by_name(KmppObj *obj, const rk_u8 *name, const rk_u8 *caller);
@@ -117,6 +111,14 @@ rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, osal_fs_dev *file, const
 rk_s32 kmpp_obj_put(KmppObj obj, const rk_u8 *caller);
 rk_s32 kmpp_obj_check(KmppObj obj, const rk_u8 *caller);
 rk_s32 kmpp_obj_reset(KmppObj obj, const rk_u8 *caller);
+
+#define kmpp_obj_get_f(obj, def)                kmpp_obj_get(obj, def, __FUNCTION__)
+#define kmpp_obj_get_by_name_f(obj, name)       kmpp_obj_get_by_name(obj, name, __FUNCTION__)
+#define kmpp_obj_assign_f(obj, def, buf, size)  kmpp_obj_assign(obj, def, buf, size, __FUNCTION__)
+#define kmpp_obj_get_share_f(obj, def, file)    kmpp_obj_get_share(obj, def, file, __FUNCTION__)
+#define kmpp_obj_put_f(obj)                     kmpp_obj_put(obj, __FUNCTION__)
+#define kmpp_obj_check_f(obj)                   kmpp_obj_check(obj, __FUNCTION__)
+#define kmpp_obj_reset_f(obj)                   kmpp_obj_reset(obj, __FUNCTION__)
 
 /* object implement element entry access */
 void *kmpp_obj_to_entry(KmppObj obj);
