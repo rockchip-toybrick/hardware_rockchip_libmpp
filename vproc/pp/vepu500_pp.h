@@ -268,9 +268,9 @@ struct pp_chn_info_t {
 	KmppFrame frame;
 	rk_u32 frm_cnt;
 	rk_u32 frm_num;
-	KmppDmaBuf in;
-	KmppDmaBuf md;
-	KmppDmaBuf od;
+	KmppDmaBuf in_buf;
+	KmppDmaBuf md_buf;
+	KmppDmaBuf od_buf;
 
 	u32 chn; /* channel ID */
 	u32 used;
@@ -292,7 +292,6 @@ struct pp_chn_info_t {
 	u8 *buf_rfmwr0;
 	u8 *buf_rfmwr1;
 	u8 *buf_rfmwr2; /* md output without fly-catkin filtering */
-	struct mpi_buf *mdw_buf;
 
 	struct pp_param_t param;
 	struct pp_output_t output;

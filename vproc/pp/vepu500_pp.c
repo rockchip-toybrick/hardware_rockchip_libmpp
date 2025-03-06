@@ -4,7 +4,6 @@
  */
 
 #include <linux/mm.h>
-#include <linux/dma-buf.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
 
@@ -27,16 +26,6 @@
 #define pp_info(fmt, arg...)   //pr_info("PP: " fmt, ##arg)
 
 static struct vepu_pp_ctx_t g_pp_ctx;
-static struct vcodec_mpibuf_fn *g_mpi_buf_fn = NULL;
-
-static struct vcodec_mpibuf_fn * get_vmpibuf_func(void)
-{
-    if (IS_ERR_OR_NULL(g_mpi_buf_fn)) {
-        pr_err("%s failed\n", __FUNCTION__);
-        return ERR_PTR(-ENOMEM);
-    } else
-        return g_mpi_buf_fn;
-}
 
 static struct pp_buffer_t * pp_malloc_buffer(struct pp_chn_info_t *info, u32 size)
 {
@@ -148,9 +137,9 @@ static void pp_set_src_addr(struct pp_chn_info_t *info)
     kmpp_frame_get_fmt(frame, &fmt);
     kmpp_frame_get_buffer(frame, &buffer);
 
-    kmpp_dmabuf_get_iova_by_device(info->in, &iova, info->device);
+    kmpp_dmabuf_get_iova_by_device(info->in_buf, &iova, info->device);
     adr_src0 = iova;
-    kmpp_dmabuf_put_iova_by_device(info->in, iova, info->device);
+    kmpp_dmabuf_put_iova_by_device(info->in_buf, iova, info->device);
 
     switch (fmt) {
     case MPP_FMT_YUV420P: {
@@ -282,8 +271,7 @@ static int vepu_pp_get_blk8_vld_flag(struct pp_chn_info_t *info, int x, int y)
 
 static int vepu_pp_get_blk8_move_cnt(struct pp_chn_info_t *info, int x, int y, int *vld_cnt)
 {
-    struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
-    u8 *mdw_buf = func->buf_map(info->mdw_buf);
+    u8 *mdw_buf = kmpp_dmabuf_get_kptr(info->md_buf);
     int mv_cnt = 0, vld_num = 0;
 
     if (vepu_pp_get_blk8_vld_flag(info, x - 1, y - 1)) {
@@ -410,8 +398,7 @@ static void vepu_pp_flycatkin_filter(struct pp_chn_info_t *info)
         int b8_row = PP_ALIGN(info->height, 32) / 32;
         int c, r, k;
         int vld_cnt, dust_flg, move_sum;
-        struct vcodec_mpibuf_fn *func = get_vmpibuf_func();
-        u8 *mdw_buf = func->buf_map(info->mdw_buf);
+        u8 *mdw_buf = kmpp_dmabuf_get_kptr(info->md_buf);
         u8 *mdw_ptr = NULL, *mdw_flt;
 
         if (info->frm_num % 2 == 0)
@@ -419,7 +406,7 @@ static void vepu_pp_flycatkin_filter(struct pp_chn_info_t *info)
         else
             osal_dmabuf_sync_for_cpu(info->buf_rfpr->osal_buf, OSAL_DMA_FROM_DEVICE);
 
-        dma_buf_begin_cpu_access(func->buf_get_dmabuf(info->mdw_buf), DMA_FROM_DEVICE);
+        kmpp_dmabuf_flush_for_cpu(info->md_buf);
         memcpy(info->buf_rfmwr2, mdw_buf, info->mdw_len);
 
         for (r = 0; r < b8_row; r++) {
@@ -807,20 +794,20 @@ rk_s32 vepu500_pp_proc(void *ctx, KmppFrame in, KmppFrame *out)
     update_rt_reg(info);
 
     /* setup input address registers */
-    info->in = mpp_buffer_get_dmabuf(impl->buffer);
-    info->md = mpp_buffer_get_dmabuf(md);
-    info->od = mpp_buffer_get_dmabuf(od);
+    info->in_buf = mpp_buffer_get_dmabuf(impl->buffer);
+    info->md_buf = mpp_buffer_get_dmabuf(md);
+    info->od_buf = mpp_buffer_get_dmabuf(od);
 
     pp_set_src_addr(info);
 
     {
         rk_u64 iova = 0;
 
-        kmpp_dmabuf_get_iova_by_device(info->md, &iova, info->device);
+        kmpp_dmabuf_get_iova_by_device(info->md_buf, &iova, info->device);
         p->adr_md_vpp = iova;
 
         iova = 0;
-        kmpp_dmabuf_get_iova_by_device(info->od, &iova, info->device);
+        kmpp_dmabuf_get_iova_by_device(info->od_buf, &iova, info->device);
         p->adr_od_vpp = iova;
     }
 
@@ -857,16 +844,16 @@ rk_s32 vepu500_pp_proc(void *ctx, KmppFrame in, KmppFrame *out)
         if (info->api->cmd_poll)
             info->api->cmd_poll(info->dev_srv);
 
-        if (info->md_en && info->flycatkin_en && info->mdw_buf)
+        if (info->md_en && info->flycatkin_en && info->md_buf)
             vepu_pp_flycatkin_filter(info);
     }
 
     if (p->adr_md_vpp) {
-        kmpp_dmabuf_put_iova_by_device(info->md, p->adr_md_vpp, info->device);
+        kmpp_dmabuf_put_iova_by_device(info->md_buf, p->adr_md_vpp, info->device);
         p->adr_md_vpp = 0;
     }
     if (p->adr_od_vpp) {
-        kmpp_dmabuf_put_iova_by_device(info->od, p->adr_od_vpp, info->device);
+        kmpp_dmabuf_put_iova_by_device(info->od_buf, p->adr_od_vpp, info->device);
         p->adr_od_vpp = 0;
     }
 
