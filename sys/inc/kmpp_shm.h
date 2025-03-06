@@ -39,6 +39,7 @@ rk_s32 kmpp_shm_deinit(void);
 
 rk_s32 kmpp_shm_add_trie_info(KmppTrie trie);
 
+osal_fs_dev *kmpp_shm_get_objs_file(void);
 rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name);
 rk_s32 kmpp_shm_put(KmppShm shm);
 

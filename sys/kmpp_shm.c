@@ -8,8 +8,7 @@
 #include <asm/ioctl.h>
 #include <linux/mm.h>
 #include <linux/mman.h>
-#include <linux/kernel.h>
-#include <linux/uaccess.h>
+#include <linux/export.h>
 
 #include "rk_list.h"
 #include "rk-mpp-kobj.h"
@@ -95,8 +94,10 @@ typedef struct KmppShmGrpRoot_t {
     void            *buf;
     rk_s32          buf_size;
 
-	/* session id for pid in system */
-	rk_u32          sid;
+    /* session id for pid in system */
+    rk_u32          sid;
+    /* pid for find valid process share memory allocator */
+    rk_s32          pid;
 
     KmppShmGrpImpl  *grps;
 } KmppShmGrpRoot;
@@ -119,7 +120,7 @@ typedef struct KmppShmImpl_t {
 static KmppShmClsImpl *kmpp_shm_cls = NULL;
 static const rk_u8 kmpp_shm_name[] = "kmpp_shm";
 static KmppEnvNode kmpp_shm_env = NULL;
-static KmppShmMgr * kmpp_shm_objs = NULL;
+static KmppShmMgr *kmpp_shm_objs = NULL;
 static rk_u32 kmpp_shm_root_sid = 0;
 static rk_u32 kmpp_shm_debug = 0;
 
@@ -171,6 +172,7 @@ rk_s32 kmpp_shm_open(osal_fs_dev *file)
     osal_spinlock_assign(&root->lock, (void *)(root + 1), osal_spinlock_size());
 
     root->sid = kmpp_shm_root_sid++;
+    root->pid = osal_getpid();
 
     OSAL_INIT_LIST_HEAD(&root->list_mgr);
     OSAL_INIT_LIST_HEAD(&root->list_grp);
@@ -287,9 +289,9 @@ static rk_s32 get_usr_str(rk_u8 *dst, rk_s32 size, void *src, const rk_u8 *log)
         return ret;
     }
 
-    ret = strncpy_from_user(dst, (void *)(uintptr_t)name_uaddr, size);
+    ret = osal_strncpy_from_user(dst, (void *)(uintptr_t)name_uaddr, size);
     if (ret <= 0) {
-        kmpp_loge_f("by %s strncpy_from_user %#llx len %d fail ret %d\n",
+        kmpp_loge_f("by %s copy userspace string from %#llx len %d fail ret %d\n",
                     log, name_uaddr, size, ret);
         return ret;
     }
@@ -720,6 +722,30 @@ static inline KmppShmGrpRoot *get_grp_root(KmppShmGrp grp)
     KmppShmGrpRoot *root = file ? (KmppShmGrpRoot *)file->priv_data : NULL;
 
     return root;
+}
+
+osal_fs_dev *kmpp_shm_get_objs_file(void)
+{
+    KmppShmClsImpl *cls = kmpp_shm_cls;
+    KmppShmMgr *mgr = kmpp_shm_objs;
+    osal_fs_dev *file = NULL;
+
+    if (cls && mgr) {
+        KmppShmGrpRoot *root, *n;
+        rk_s32 pid = osal_getpid();
+
+        osal_spin_lock(cls->lock);
+        osal_list_for_each_entry_safe(root, n, &mgr->list_root, KmppShmGrpRoot, list_mgr) {
+            if (root->pid == pid) {
+                file = root->file;
+                kmpp_logi_f("find root %px pid %d file %px\n", root, pid, file);
+                break;
+            }
+        }
+        osal_spin_unlock(cls->lock);
+    }
+
+    return file;
 }
 
 rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
