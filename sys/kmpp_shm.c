@@ -72,7 +72,11 @@ typedef struct KmppShmGrpImpl_t {
     /* list for list_shm in KmppShmGrpImpl */
     osal_list_head  list_shm;
     rk_s32          shm_count;
+    /* objdef entry size */
     rk_s32          size;
+    /* objdef name string offset from the share buffer base address */
+    rk_s32          name_offset;
+    /* objdef index in all the objdefs */
     rk_s32          index;
 } KmppShmGrpImpl;
 
@@ -105,16 +109,23 @@ typedef struct KmppShmGrpRoot_t {
 typedef struct KmppShmImpl_t {
     KmppObjShm      ioc;
 
+    /* reserve for userspace writing */
+    rk_u64          upriv;
+    rk_u64          ubase;
+
+    /* share memory name offset from the share trie root */
+    rk_u32          name_offset;
+    rk_u32          reserved;
+
+    /* kernel access address */
+    void            *kpriv;
+    void            *kbase;
+
     osal_fs_vm      *vm_shm;
+    KmppShmGrpImpl  *grp;
 
     /* list to list_shm in KmppShmGrpImpl */
     osal_list_head  list_grp;
-    KmppShmGrpImpl  *grp;
-
-    void            *kpriv;
-    void            *kbase;
-    rk_u64          upriv;
-    rk_u64          ubase;
 } KmppShmImpl;
 
 static KmppShmClsImpl *kmpp_shm_cls = NULL;
@@ -186,6 +197,7 @@ rk_s32 kmpp_shm_open(osal_fs_dev *file)
 
     if (defs->count) {
         KmppShmGrpImpl *grps = kmpp_calloc(defs->count * sizeof(KmppShmGrpImpl));
+        KmppTrieInfo *info;
         rk_s32 i;
 
         if (!grps) {
@@ -194,9 +206,11 @@ rk_s32 kmpp_shm_open(osal_fs_dev *file)
         }
 
         root->grps = grps;
+        info = kmpp_trie_get_info_first(defs->trie);
 
         for (i = 0; i < defs->count; i++) {
             KmppShmGrpImpl *grp = &grps[i];
+            const rk_u8 *name = kmpp_trie_info_name(info);
 
             grp->lock = root->lock;
             grp->file = file;
@@ -204,6 +218,9 @@ rk_s32 kmpp_shm_open(osal_fs_dev *file)
             OSAL_INIT_LIST_HEAD(&grp->list_shm);
             grp->size = kmpp_objdef_get_entry_size(grp->def);
             grp->index = i;
+            grp->name_offset = name - (rk_u8 *)root->buf;
+
+            info = kmpp_trie_get_info_next(defs->trie, info);
         }
     }
 
@@ -707,6 +724,10 @@ rk_s32 kmpp_shm_add_trie_info(KmppTrie trie)
     val = offsetof(KmppShmImpl, upriv);
     kmpp_trie_add_info(trie, "__priv", &val, sizeof(val));
 
+    /* add name offset from the objdef share root */
+    val = offsetof(KmppShmImpl, name_offset);
+    kmpp_trie_add_info(trie, "__name_offset", &val, sizeof(val));
+
     return rk_ok;
 }
 
@@ -783,6 +804,7 @@ rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name)
     impl->kpriv = NULL;
     impl->kbase = impl;
     impl->ubase = impl->vm_shm->uaddr;
+    impl->name_offset = grp->name_offset;
 
     impl->ioc.kobj_uaddr = impl->ubase;
     impl->ioc.kobj_kaddr = (__u64)(uintptr_t)impl;
