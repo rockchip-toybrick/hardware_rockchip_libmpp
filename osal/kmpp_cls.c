@@ -8,6 +8,7 @@
 #include <linux/mm.h>
 #include <linux/mman.h>
 #include <linux/cdev.h>
+#include <linux/sched.h>
 #include <linux/of_platform.h>
 #include <linux/version_compat_defs.h>
 
@@ -668,3 +669,9 @@ rk_s32 osal_fs_vm_munmap(osal_fs_vm *vm)
     return ret;
 }
 EXPORT_SYMBOL(osal_fs_vm_munmap);
+
+rk_s32 osal_getpid(void)
+{
+    return task_pid_nr(current);
+}
+EXPORT_SYMBOL(osal_getpid);
