@@ -534,6 +534,7 @@ rk_s32 kmpp_trie_last_info(KmppTrie trie)
 
     nodes_size = sizeof(KmppTrieNode) * p->node_used;
     p->buf_size = nodes_size + sizeof(KmppTrieInfo) * p->info_used + p->info_buf_pos + p->name_buf_pos;
+    p->buf_size = KMPP_ALIGN(p->buf_size, sizeof(void *));
 
     buf = kmpp_calloc(p->buf_size);
     if (!buf) {
