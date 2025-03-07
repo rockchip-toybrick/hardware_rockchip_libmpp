@@ -53,6 +53,7 @@
 #define to_rkvenc_dev(dev)		\
 		container_of(dev, struct rkvenc_dev, mpp)
 
+#define task_type_str(task)	(task->pp_info ? "pp" : "enc")
 
 enum RKVENC_FORMAT_TYPE {
 	RKVENC_FMT_BASE		= 0x0000,
@@ -92,6 +93,37 @@ enum RKVENC_VEPU_TYPE {
 	RKVENC_VEPU_510		= 2,
 	RKVENC_VEPU_511		= 3,
 	RKVENC_VEPU_BUTT,
+};
+
+enum RKVENC_PP_REG_OFFSET {
+	INT_EN		= 0x20,
+	INT_MSK		= 0x24,
+	SRC0_ADDR	= 0x280,
+	SRC1_ADDR	= 0x284,
+	SRC2_ADDR	= 0x288,
+	DSPW_ADDR	= 0x2a4,
+	DSPR_ADDR	= 0x2a8,
+	ENC_PIC		= 0x300,
+	ENC_ID		= 0x308,
+	ENC_RSL		= 0x310,
+	SRC_FILL	= 0x314,
+	SRC_FMT		= 0x318,
+	PIC_OFST	= 0x330,
+	SRC_STRD0	= 0x334,
+	SRC_STRD1	= 0x338,
+	SRC_FLT_CFG	= 0x33c,
+	ME_RNGE		= 0x370,
+	ME_CFG		= 0x374,
+	ME_CACH		= 0x378,
+	SYNT_SLI0	= 0x3bc,
+	JPEG_BASE_CFG	= 0x47c,
+	PP_MD_ADR	= 0x520,
+	PP_OD_ADR	= 0x524,
+	PP_REF_MDW_ADR	= 0x528,
+	PP_REF_MDR_ADR	= 0x52c,
+	PP_BASE_CFG	= 0x530,
+	PP_MD_THD	= 0x534,
+	PP_OD_THD	= 0x538,
 };
 
 struct rkvenc_reg_msg {
@@ -207,6 +239,8 @@ union rkvenc2_dual_core_handshake_id {
 #define RKVENC2_REG_ADR_BSBR		(0x2bc)
 #define RKVENC580_REG_ADR_BSBR		(0x2b8)
 #define RKVENC580_REG_ADR_BSBS		(0x2bc)
+#define RKVENC2_REG_VPP_BASE_CFG	(0x530)
+#define RKVENC2_REG_ST_OD_Y_SUM		(0x4070)
 
 union rkvenc2_slice_len_info {
 	u32 val;
@@ -234,6 +268,46 @@ struct rkvenc_poll_slice_cfg {
 	s32 count_max;
 	s32 count_ret;
 	union rkvenc2_slice_len_info slice_info[];
+};
+
+struct rkvenc_pp_param {
+	u32 int_en;
+	u32 int_msk;
+	u32 src0_addr;
+	u32 src1_addr;
+	u32 src2_addr;
+	u32 dspw_addr;
+	u32 dspr_addr;
+	u32 enc_pic;
+	u32 enc_id;
+	u32 enc_rsl;
+	u32 src_fill;
+	u32 src_fmt;
+	u32 pic_ofst;
+	u32 src_strd0;
+	u32 src_strd1;
+	u32 src_flt_cfg;
+	u32 me_rnge;
+	u32 me_cfg;
+	u32 me_cach;
+	u32 synt_sli0;
+	u32 jpeg_base_cfg;
+	u32 pp_md_adr;
+	u32 pp_od_adr;
+	u32 pp_ref_mdw_adr;
+	u32 pp_ref_mdr_adr;
+	u32 pp_base_cfg;
+	u32 pp_md_thd;
+	u32 pp_od_thd;
+};
+
+struct rkvenc_pp_out {
+	u32 luma_pix_sum_od;
+};
+
+struct rkvenc_pp_info {
+	struct rkvenc_pp_param param;
+	struct rkvenc_pp_out output;
 };
 
 struct rkvenc_task {
@@ -273,6 +347,7 @@ struct rkvenc_task {
 	struct mpp_dma_buffer *bs_buf;
 	u32 offset_bs;
 	u32 rec_fbc_dis;
+	struct rkvenc_pp_info *pp_info;
 };
 
 #define RKVENC_MAX_RCB_NUM		(4)
@@ -1137,6 +1212,34 @@ static void rkvenc2_check_split_task(struct mpp_dev *mpp, struct rkvenc_task *ta
 		INIT_KFIFO(task->slice_info);
 }
 
+static void rkvenc_pp_extract_task_msg(struct rkvenc_task *task,
+				      struct mpp_task_msgs *msgs)
+{
+	struct rkvenc_pp_info *pp_info = task->pp_info;
+	struct mpp_request *req;
+	u32 i;
+
+	for (i = 0; i < msgs->req_cnt; i++) {
+		req = &msgs->reqs[i];
+		if (!req->size)
+			continue;
+
+		switch (req->cmd) {
+		case MPP_CMD_SET_REG_WRITE: {
+			if (sizeof(pp_info->param) != req->size)
+				mpp_err("invalid pp param size %d\n", req->size);
+
+			osal_copy_from_user(&pp_info->param, req->data, req->size);
+		} break;
+		case MPP_CMD_SET_REG_READ: {
+			osal_copy_from_user(&task->r_reqs[task->r_req_cnt++], req, sizeof(*req));
+		} break;
+		default:
+			break;
+		}
+	}
+}
+
 static void *rkvenc_alloc_task(struct mpp_session *session,
 			       struct mpp_task_msgs *msgs)
 {
@@ -1158,6 +1261,22 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 	if (session->k_space)
 		mpp_task->clbk_en = 1;
 	task->hw_info = to_rkvenc_info(mpp_task->hw_info);
+
+	/* alloc pp info and handle */
+	if (session->pp_session) {
+		struct rkvenc_pp_info *pp_info = kzalloc(sizeof(*pp_info), GFP_KERNEL);
+
+		if (!pp_info) {
+			mpp_err("alloc pp info failed, session %p \n", session);
+			goto free_task;
+		}
+		task->pp_info = pp_info;
+		rkvenc_pp_extract_task_msg(task, msgs);
+		mpp_task->clbk_en = 0;
+
+		return mpp_task;
+	}
+
 	/* extract reqs for current task */
 	ret = rkvenc_extract_task_msg(session, task, msgs);
 	if (ret)
@@ -1485,6 +1604,80 @@ static void rkvenc2_calc_timeout_thd(struct mpp_dev *mpp)
 	mpp_write(mpp, RKVENC_WDG, 0);
 }
 
+static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
+{
+	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
+	struct rkvenc_task *task = to_rkvenc_task(mpp_task);
+	struct rkvenc_pp_param *param = &task->pp_info->param;
+	struct rkvenc_hw_info *hw = enc->hw_info;
+	u32 timing_en = mpp->srv->timing_en;
+	u32 off, s, e;
+	u32 i;
+
+	mpp_debug_enter();
+
+	mpp_write(mpp, hw->enc_clr_base, 0x2);
+	udelay(5);
+	mpp_write(mpp, hw->enc_clr_base, 0x0);
+
+	/* clear some reg before pp task */
+	for (i = RKVENC_CLASS_PIC; i <= RKVENC_CLASS_OSD; i++) {
+		s = hw->reg_msg[i].base_s;
+		e = hw->reg_msg[i].base_e;
+		for (off = s; off <= e; off += 4)
+			mpp_write_relaxed(mpp, off, 0);
+	}
+
+	mpp_write_relaxed(mpp, INT_EN, param->int_en);
+	mpp_write_relaxed(mpp, INT_MSK, param->int_msk);
+	mpp_write_relaxed(mpp, SRC0_ADDR, param->src0_addr);
+	mpp_write_relaxed(mpp, SRC1_ADDR, param->src1_addr);
+	mpp_write_relaxed(mpp, SRC2_ADDR, param->src2_addr);
+	mpp_write_relaxed(mpp, DSPW_ADDR, param->dspw_addr);
+	mpp_write_relaxed(mpp, DSPR_ADDR, param->dspr_addr);
+	mpp_write_relaxed(mpp, ENC_PIC, param->enc_pic);
+	mpp_write_relaxed(mpp, ENC_ID, param->enc_id);
+	mpp_write_relaxed(mpp, ENC_RSL, param->enc_rsl);
+	mpp_write_relaxed(mpp, SRC_FILL, param->src_fill);
+	mpp_write_relaxed(mpp, SRC_FMT, param->src_fmt);
+	mpp_write_relaxed(mpp, PIC_OFST, param->pic_ofst);
+	mpp_write_relaxed(mpp, SRC_STRD0, param->src_strd0);
+	mpp_write_relaxed(mpp, SRC_STRD1, param->src_strd1);
+	mpp_write_relaxed(mpp, SRC_FLT_CFG, param->src_flt_cfg);
+	mpp_write_relaxed(mpp, ME_RNGE, param->me_rnge);
+	mpp_write_relaxed(mpp, ME_CFG, param->me_cfg);
+	mpp_write_relaxed(mpp, ME_CACH, param->me_cach);
+	mpp_write_relaxed(mpp, SYNT_SLI0, param->synt_sli0);
+	mpp_write_relaxed(mpp, JPEG_BASE_CFG, param->jpeg_base_cfg);
+	mpp_write_relaxed(mpp, PP_MD_ADR, param->pp_md_adr);
+	mpp_write_relaxed(mpp, PP_OD_ADR, param->pp_od_adr);
+	mpp_write_relaxed(mpp, PP_REF_MDW_ADR, param->pp_ref_mdw_adr);
+	mpp_write_relaxed(mpp, PP_REF_MDR_ADR, param->pp_ref_mdr_adr);
+	mpp_write_relaxed(mpp, PP_BASE_CFG, param->pp_base_cfg);
+	mpp_write_relaxed(mpp, PP_MD_THD, param->pp_md_thd);
+	mpp_write_relaxed(mpp, PP_OD_THD, param->pp_od_thd);
+
+	/* flush tlb before starting hardware */
+	mpp_iommu_flush_tlb(mpp->iommu_info);
+	/* init current task */
+	mpp->cur_task = mpp_task;
+
+	/* Flush the register before the start the device */
+	wmb();
+	rkvenc2_calc_timeout_thd(mpp);
+	mpp_task_run_begin(mpp_task, timing_en, MPP_WORK_TIMEOUT_DELAY);
+
+	mpp_debug(DEBUG_RUN, "chan %d pp_task %d start\n",
+		  mpp_task->session->chn_id, mpp_task->task_index);
+	mpp_write(mpp, hw->enc_start_base, 0x100);
+
+	mpp_task_run_end(mpp_task, timing_en);
+
+	mpp_debug_leave();
+
+	return 0;
+}
+
 static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 {
 	u32 i, j;
@@ -1493,6 +1686,12 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	struct rkvenc_task *task = to_rkvenc_task(mpp_task);
 	struct rkvenc_hw_info *hw = enc->hw_info;
 	u32 timing_en = mpp->srv->timing_en;
+
+	/* pp flow handle */
+	if (mpp_task->session->pp_session) {
+		rkvenc_pp_run(mpp, mpp_task);
+		return 0;
+	}
 
 	mpp_debug_enter();
 
@@ -1853,6 +2052,12 @@ static int rkvenc_finish(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 	mpp_debug_enter();
 
+	if (task->pp_info) {
+		task->pp_info->output.luma_pix_sum_od = mpp_read(mpp, RKVENC2_REG_ST_OD_Y_SUM);
+		mpp_write(mpp, RKVENC2_REG_VPP_BASE_CFG, 0);
+		return 0;
+	}
+
 	for (i = 0; i < task->r_req_cnt; i++) {
 		int ret;
 		int s, e;
@@ -1896,15 +2101,24 @@ static int rkvenc_result(struct mpp_dev *mpp,
 
 	mpp_debug_enter();
 
-	for (i = 0; i < task->r_req_cnt; i++) {
-		struct mpp_request *req = &task->r_reqs[i];
-		u32 *reg = rkvenc_get_class_reg(task, req->offset);
+	if (task->pp_info) {
+		struct mpp_request *req;
 
-		if (!reg)
-			return -EINVAL;
-		if (osal_copy_to_user(req->data, reg, req->size)) {
-			mpp_err("osal_copy_to_user reg fail\n");
-			return -EIO;
+		for (i = 0; i < task->r_req_cnt; i++) {
+			req = &task->r_reqs[i];
+			osal_copy_to_user(req->data, (u8 *)&task->pp_info->output, req->size);
+		}
+	} else {
+		for (i = 0; i < task->r_req_cnt; i++) {
+			struct mpp_request *req = &task->r_reqs[i];
+			u32 *reg = rkvenc_get_class_reg(task, req->offset);
+
+			if (!reg)
+				return -EINVAL;
+			if (osal_copy_to_user(req->data, reg, req->size)) {
+				mpp_err("osal_copy_to_user reg fail\n");
+				return -EIO;
+			}
 		}
 	}
 
@@ -1920,6 +2134,8 @@ static int rkvenc_free_task(struct mpp_session *session,
 
 	mpp_task_finalize(session, mpp_task);
 	rkvenc_free_class_msg(task);
+	if (task->pp_info)
+		kfree(task->pp_info);
 	kfree(task);
 
 	return 0;

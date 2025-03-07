@@ -425,7 +425,7 @@ extern void vepu_show_pp_info(struct seq_file *seq);
 
 static int rkvenc_show_pp_info(struct seq_file *seq, void *offset)
 {
-	// vepu_show_pp_info(seq);
+	vepu_show_pp_info(seq);
 
 	return 0;
 }

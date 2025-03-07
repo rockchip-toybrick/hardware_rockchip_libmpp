@@ -10,10 +10,14 @@
 #include "kmpp_vsp_objs.h"
 
 #include "vepu500_pp.h"
+#include "vepu511_pp.h"
 
 static KmppVspApi *vsp_apis[] = {
 #ifdef RKVEPU500_PP_ENABLE
     &vepu500_pp_api,
+#endif
+#ifdef RKVEPU511_PP_ENABLE
+    &vepu511_pp_api,
 #endif
     NULL,
 };

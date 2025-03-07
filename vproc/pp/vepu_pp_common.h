@@ -13,6 +13,7 @@
 
 #include "mpp_debug.h"
 #include "mpp_common.h"
+#include "kmpp_dmabuf.h"
 
 struct dma_buf;
 
@@ -37,6 +38,24 @@ enum PP_RET {
 	VEPU_PP_NOK = -1,
 	VEPU_PP_OK = 0,
 };
+
+typedef enum pp_hw_fmt_e {
+	VEPU_PP_HW_FMT_BGRA8888,     // 0
+	VEPU_PP_HW_FMT_RGB888,       // 1
+	VEPU_PP_HW_FMT_RGB565,       // 2
+	VEPU_PP_HW_FMT_RSV_3,        // 3
+	VEPU_PP_HW_FMT_YUV422SP,     // 4
+	VEPU_PP_HW_FMT_YUV422P,      // 5
+	VEPU_PP_HW_FMT_YUV420SP,     // 6
+	VEPU_PP_HW_FMT_YUV420P,      // 7
+	VEPU_PP_HW_FMT_YUYV422,      // 8
+	VEPU_PP_HW_FMT_UYVY422,      // 9
+	VEPU_PP_HW_FMT_YUV400,       // 10
+	VEPU_PP_HW_FMT_RSV_11,       // 11
+	VEPU_PP_HW_FMT_YUV444SP,     // 12
+	VEPU_PP_HW_FMT_YUV444P,      // 13
+	VEPU_PP_HW_FMT_BUTT,
+} pp_hw_fmt;
 
 struct dev_reg_wr_t {
 	void *data_ptr;
@@ -65,5 +84,23 @@ struct pp_srv_api_t {
 	void (*release_address) (void *ctx, struct dma_buf *buf);
 	struct device *(*get_dev)(void *ctx);
 };
+
+typedef struct vepu_pp_hw_fmt_cfg_t {
+        pp_hw_fmt format;
+	u32 alpha_swap;
+	u32 rbuv_swap;
+	u32 src_endian;
+} vepu_pp_hw_fmt_cfg;
+
+struct pp_buffer_t {
+	osal_dmabuf *osal_buf;
+	dma_addr_t iova;
+};
+
+struct pp_output_t {
+	u32 od_out_pix_sum; /* 0x4070 */
+};
+
+void vepu_pp_transform_hw_fmt_cfg(vepu_pp_hw_fmt_cfg *cfg, MppFrameFormat format);
 
 #endif

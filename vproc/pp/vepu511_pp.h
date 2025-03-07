@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2025 Rockchip Electronics Co., Ltd.
  *
  *
  */
 
-#ifndef __VEPU500_PP_H__
-#define __VEPU500_PP_H__
+#ifndef __VEPU511_PP_H__
+#define __VEPU511_PP_H__
 
 #include <linux/types.h>
 
@@ -17,7 +17,7 @@
 
 #define MAX_CHN_NUM  (8)
 
-struct pp_param_t {
+typedef struct vepu511_pp_param_t {
 	struct {
 		u32 enc_done_en          : 1;
 		u32 lkt_node_done_en     : 1;
@@ -251,13 +251,13 @@ struct pp_param_t {
 		u32 thres_sad_od            : 14;
 		u32 reserved                : 3;
 	} thd_od_vpp;
-};
+} vepu511_pp_param;
 
-struct pp_chn_info_t {
+typedef struct vepu511_pp_chn_info_t {
 	KmppVspPpCfg cfg;
 	KmppFrame frame;
-	rk_u32 frm_cnt;
-	rk_u32 frm_num;
+	u32 frm_cnt;
+	u32 frm_num;
 	KmppDmaBuf in_buf;
 	KmppDmaBuf md_buf;
 	KmppDmaBuf od_buf;
@@ -274,27 +274,28 @@ struct pp_chn_info_t {
 	int frm_accum_interval;
 	int frm_accum_gop;
 	int mdw_len;
+	int gop;
+	int md_interval;
+	int od_interval;
 
 	struct pp_buffer_t *buf_rfpw;
 	struct pp_buffer_t *buf_rfpr;
+	/* MD rw*/
+	struct pp_buffer_t *buf_rfmrd;
+	struct pp_buffer_t *buf_rfmwr;
 
-	u8 *buf_rfmwr; /* for fly-catkin filtering */
-	u8 *buf_rfmwr0;
-	u8 *buf_rfmwr1;
-	u8 *buf_rfmwr2; /* md output without fly-catkin filtering */
-
-	struct pp_param_t param;
+	vepu511_pp_param param;
 	struct pp_output_t output;
 
 	const struct pp_srv_api_t *api;
 	void *dev_srv; 	/* communicate with rk_vcodec.ko */
 	void *device;	/* struct device* */
+} vepu511_pp_chn_info;
+
+struct vepu511_pp_ctx_t {
+	vepu511_pp_chn_info chn_info[MAX_CHN_NUM];
 };
 
-struct vepu_pp_ctx_t {
-	struct pp_chn_info_t chn_info[MAX_CHN_NUM];
-};
-
-extern KmppVspApi vepu500_pp_api;
+extern KmppVspApi vepu511_pp_api;
 
 #endif
