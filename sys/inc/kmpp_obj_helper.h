@@ -15,6 +15,7 @@
 #warning "KMPP_OBJ_INTF_TYPE            - object interface type"
 #warning "KMPP_OBJ_IMPL_TYPE            - object implement type"
 #warning "option macro:"
+#warning "KMPP_OBJ_EXTRA_SIZE           - object extra size in bytes"
 #warning "KMPP_OBJ_ENTRY_TABLE          - object element value / pointer entry table"
 #warning "KMPP_OBJ_STRUCT_TABLE         - object element structure / array / share memory table"
 #warning "KMPP_OBJ_ENTRY_HOOK           - object element value hook function table"
@@ -44,6 +45,9 @@
 #define KMPP_OBJ_DEF(x)         x##_def
 #define KMPP_OBJ_DEF_NAME(x)    KMPP_OBJ_TO_STR(x)
 
+#ifndef KMPP_OBJ_EXTRA_SIZE
+#define KMPP_OBJ_EXTRA_SIZE     0
+#endif
 #ifndef KMPP_OBJ_ENTRY_TABLE
 #define KMPP_OBJ_ENTRY_TABLE(ENTRY, prefix)
 #endif
@@ -312,7 +316,7 @@ KMPP_OBJ_STRUCT_HOOK(KMPP_OBJ_STRUCT_HOOK_FUNC, prefix) \
 KMPP_OBJ_ENTRY_TABLE2(KMPP_OBJ_ENTRY_FUNC2, prefix) \
 rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
 { \
-    rk_s32 impl_size = sizeof(KMPP_OBJ_IMPL_TYPE); \
+    rk_s32 impl_size = (sizeof(KMPP_OBJ_IMPL_TYPE) + KMPP_OBJ_EXTRA_SIZE + 3) & ~3; \
     kmpp_objdef_get(&KMPP_OBJ_DEF(prefix), impl_size, KMPP_OBJ_DEF_NAME(KMPP_OBJ_INTF_TYPE)); \
     if (!KMPP_OBJ_DEF(prefix)) { \
         kmpp_loge_f(#prefix " init failed\n"); \
