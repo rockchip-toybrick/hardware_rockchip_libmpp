@@ -1540,9 +1540,10 @@ static int rkvenc_unbind_jpeg_task(struct mpp_session *session)
 	struct mpp_dev *mpp = session->mpp;
 	struct mpp_taskqueue *queue = mpp->queue;
 	struct mpp_task *task, *n;
+	unsigned long flags, flags1;
 
-	mutex_lock(&queue->dev_lock);
-	mutex_lock(&session->pending_lock);
+	spin_lock_irqsave(&queue->dev_lock, flags);
+	spin_lock_irqsave(&session->pending_lock, flags1);
 
 	list_for_each_entry_safe(task, n, &session->pending_list, pending_link) {
 		if (test_bit(TASK_STATE_RUNNING, &task->state))
@@ -1552,8 +1553,8 @@ static int rkvenc_unbind_jpeg_task(struct mpp_session *session)
 		task->disable_jpeg = 1;
 	}
 
-	mutex_unlock(&session->pending_lock);
-	mutex_unlock(&queue->dev_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags1);
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
 
 	return 0;
 }
@@ -1752,9 +1753,10 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 	struct mpp_task *mpp_task;
 	struct mpp_dev *mpp = container_of(work_s, struct mpp_dev, work);
 	struct mpp_taskqueue *queue = mpp->queue;
+	unsigned long flags;
 
 	mpp_debug_enter();
-	mutex_lock(&queue->dev_lock);
+	spin_lock_irqsave(&queue->dev_lock, flags);
 
 	/* 1. check reset process */
 	if (atomic_read(&mpp->reset_request) && !list_empty(&queue->running_list)) {
@@ -1762,11 +1764,11 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 		mpp_dev_reset(mpp);
 		enable_irq(mpp->irq);
 	}
-	mutex_unlock(&queue->dev_lock);
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
 
 	mpp_power_on(mpp);
 
-	mutex_lock(&queue->dev_lock);
+	spin_lock_irqsave(&queue->dev_lock, flags);
 	if (!list_empty(&queue->running_list))
 		goto done;
 
@@ -1790,7 +1792,7 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 		rkvenc_run(mpp, mpp_task);
 
 done:
-	mutex_unlock(&queue->dev_lock);
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
 	if (list_empty(&queue->running_list))
 		mpp_power_off(mpp);
 	mpp_session_clean_detach(queue);

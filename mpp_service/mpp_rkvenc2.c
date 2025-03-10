@@ -2602,10 +2602,11 @@ static int rkvenc_set_freq(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 static void rkvenc2_task_pop_pending(struct mpp_task *task)
 {
 	struct mpp_session *session = task->session;
+	unsigned long flags;
 
-	mutex_lock(&session->pending_lock);
+	spin_lock_irqsave(&session->pending_lock, flags);
 	list_del_init(&task->pending_link);
-	mutex_unlock(&session->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags);
 
 	kref_put(&task->ref, mpp_free_task);
 }
@@ -2665,12 +2666,13 @@ static int rkvenc2_wait_result(struct mpp_session *session,
 	union rkvenc2_slice_len_info slice_info;
 	u32 task_id;
 	int ret = 0;
+	unsigned long flags;
 
-	mutex_lock(&session->pending_lock);
+	spin_lock_irqsave(&session->pending_lock, flags);
 	task = list_first_entry_or_null(&session->pending_list,
 					struct mpp_task,
 					pending_link);
-	mutex_unlock(&session->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags);
 	if (!task) {
 		mpp_err("session %p pending list is empty!\n", session);
 		return -EIO;

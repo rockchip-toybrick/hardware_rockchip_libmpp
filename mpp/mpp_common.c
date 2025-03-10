@@ -77,8 +77,9 @@ mpp_session_get_idle_task(struct mpp_session *session)
 {
 	struct mpp_task *task, *n;
 	u32 found = 0;
+	unsigned long flags;
 
-	mutex_lock(&session->pending_lock);
+	spin_lock_irqsave(&session->pending_lock, flags);
 	list_for_each_entry_safe(task, n, &session->pending_list, pending_link) {
 		if (task)
 			mpp_debug_func(DEBUG_TASK_INFO, "task %d %#lx session %p chan %d find session %p\n",
@@ -88,7 +89,7 @@ mpp_session_get_idle_task(struct mpp_session *session)
 			break;
 		}
 	}
-	mutex_unlock(&session->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags);
 
 	if (!found)
 		task = NULL;
@@ -148,16 +149,17 @@ static int mpp_session_clear(struct mpp_dev *mpp,
 			     struct mpp_session *session)
 {
 	struct mpp_task *task = NULL, *n;
+	unsigned long flags;
 
 	/* clear session pending list */
-	mutex_lock(&session->pending_lock);
+	spin_lock_irqsave(&session->pending_lock, flags);
 	list_for_each_entry_safe(task, n, &session->pending_list, pending_link) {
 		/* abort task in taskqueue */
 		atomic_inc(&task->abort_request);
 		list_del_init(&task->pending_link);
 		kref_put(&task->ref, mpp_free_task);
 	}
-	mutex_unlock(&session->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags);
 
 	return 0;
 }
@@ -276,10 +278,12 @@ static int
 mpp_session_push_pending(struct mpp_session *session,
 			 struct mpp_task *task)
 {
+	unsigned long flags;
+
 	kref_get(&task->ref);
-	mutex_lock(&session->pending_lock);
+	spin_lock_irqsave(&session->pending_lock, flags);
 	list_add_tail(&task->pending_link, &session->pending_list);
-	mutex_unlock(&session->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags);
 
 	return 0;
 }
@@ -505,7 +509,7 @@ static void mpp_task_worker_default(struct kthread_work *work_s)
 	struct mpp_taskqueue *queue = mpp->queue;
 
 	mpp_debug_enter();
-	mutex_lock(&queue->dev_lock);
+	spin_lock_irqsave(&queue->dev_lock, flags);
 again:
 	task = mpp_taskqueue_get_pending_task(queue);
 	if (!task)
@@ -550,7 +554,7 @@ again:
 
 done:
 	mpp_session_clean_detach(queue);
-	mutex_unlock(&queue->dev_lock);
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
 }
 #endif
 
@@ -560,8 +564,9 @@ int mpp_chnl_is_running(struct mpp_session *session)
 	struct mpp_taskqueue *queue = mpp->queue;
 	struct mpp_task *task, *n;
 	int running = 0;
+	unsigned long flags;
 
-	mutex_lock(&queue->dev_lock);
+	spin_lock_irqsave(&queue->dev_lock, flags);
 	mutex_lock(&queue->pending_lock);
 
 	list_for_each_entry_safe(task, n, &session->pending_list, pending_link) {
@@ -572,7 +577,7 @@ int mpp_chnl_is_running(struct mpp_session *session)
 	}
 
 	mutex_unlock(&queue->pending_lock);
-	mutex_unlock(&queue->dev_lock);
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
 
 	return running;
 }
@@ -584,8 +589,9 @@ int mpp_chnl_run_task(struct mpp_session *session, void *param)
 	struct mpp_task *task = NULL;
 	int ret = 0;
 	struct mpp_task_info *info = (struct mpp_task_info *)param;
+	unsigned long flags;
 
-	mutex_lock(&queue->dev_lock);
+	spin_lock_irqsave(&queue->dev_lock, flags);
 	mpp_debug_func(DEBUG_TASK_INFO, "chan_id %d ++\n", session->chn_id);
 
 again:
@@ -649,7 +655,7 @@ again:
 	down(&mpp->work_sem);
 
 	/* run task */
-	mpp = mpp_get_task_used_device(task, task->session);
+	mpp = mpp_get_task_used_device(task, session);
 	mpp_taskqueue_pending_to_run(queue, task);
 	mpp_reset_down_read(mpp->reset_group);
 	mpp_time_record(task);
@@ -661,7 +667,7 @@ done:
 	mpp_session_clean_detach(queue);
 
 	mpp_debug_func(DEBUG_TASK_INFO, "chan_id %d --\n", session->chn_id);
-	mutex_unlock(&queue->dev_lock);
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
 	return ret;
 }
 
@@ -801,7 +807,7 @@ static void mpp_attach_workqueue(struct mpp_dev *mpp,
 
 	INIT_LIST_HEAD(&mpp->queue_link);
 
-	mutex_lock(&queue->dev_lock);
+	spin_lock_irqsave(&queue->dev_lock, flags);
 
 	if (mpp->core_id >= 0)
 		core_id = mpp->core_id;
@@ -834,7 +840,7 @@ static void mpp_attach_workqueue(struct mpp_dev *mpp,
 		queue->task_capacity = mpp->task_capacity;
 
 done:
-	mutex_unlock(&queue->dev_lock);
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
 }
 
 static void mpp_detach_workqueue(struct mpp_dev *mpp)
@@ -842,7 +848,7 @@ static void mpp_detach_workqueue(struct mpp_dev *mpp)
 	struct mpp_taskqueue *queue = mpp->queue;
 
 	if (queue) {
-		mutex_lock(&queue->dev_lock);
+		spin_lock_irqsave(&queue->dev_lock, flags);
 
 		queue->cores[mpp->core_id] = NULL;
 		queue->core_count--;
@@ -852,7 +858,7 @@ static void mpp_detach_workqueue(struct mpp_dev *mpp)
 
 		mpp->queue = NULL;
 
-		mutex_unlock(&queue->dev_lock);
+		spin_unlock_irqrestore(&queue->dev_lock, flags);
 	}
 }
 #endif

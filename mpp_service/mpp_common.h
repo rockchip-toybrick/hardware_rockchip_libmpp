@@ -380,7 +380,7 @@ struct mpp_session {
 	struct mpp_dma_session *dma;
 
 	/* lock for session task pending list */
-	struct mutex pending_lock;
+	spinlock_t pending_lock;
 	/* task pending list in session */
 	struct list_head pending_list;
 
@@ -565,7 +565,7 @@ struct mpp_taskqueue {
 	struct mutex mmu_lock;
 	struct list_head mmu_list;
 	/* lock for dev list */
-	struct mutex dev_lock;
+	spinlock_t dev_lock;
 	struct list_head dev_list;
 	/*
 	 * task_capacity in taskqueue is the minimum task capacity of the

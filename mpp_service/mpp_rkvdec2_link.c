@@ -1291,11 +1291,12 @@ struct mpp_task *
 rkvdec2_get_pending_task(struct mpp_session *session)
 {
 	struct mpp_task *task = NULL;
+	unsigned long flags;
 
-	mutex_lock(&session->pending_lock);
+	spin_lock_irqsave(&session->pending_lock, flags);
 	task = list_first_entry_or_null(&session->pending_list, struct mpp_task,
 					pending_link);
-	mutex_unlock(&session->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags);
 
 	return task;
 }
@@ -1308,9 +1309,11 @@ static int task_is_done(struct mpp_task *task)
 int rkvdec2_pop_pending(struct mpp_session *session,
 				   struct mpp_task *task)
 {
-	mutex_lock(&session->pending_lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&session->pending_lock, flags);
 	list_del_init(&task->pending_link);
-	mutex_unlock(&session->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags);
 	kref_put(&task->ref, rkvdec2_link_free_task);
 
 	return 0;
@@ -1332,6 +1335,7 @@ int rkvdec2_link_process_task(struct mpp_session *session,
 	struct rkvdec_link_info *link_info = mpp->var->hw_info->link_info;
 	struct rkvdec2_dev *dec = to_rkvdec2_dev(mpp);
 	struct rkvdec_link_dev *link_dec = dec->link_dec;
+	unsigned long flags;
 
 	task = rkvdec2_alloc_task(session, msgs);
 	if (!task) {
@@ -1359,9 +1363,10 @@ int rkvdec2_link_process_task(struct mpp_session *session,
 	atomic_inc(&session->task_count);
 
 	kref_get(&task->ref);
-	mutex_lock(&session->pending_lock);
+
+	spin_lock_irqsave(&session->pending_lock, flags);
 	list_add_tail(&task->pending_link, &session->pending_list);
-	mutex_unlock(&session->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags);
 
 	kref_get(&task->ref);
 	mutex_lock(&mpp->queue->pending_lock);
