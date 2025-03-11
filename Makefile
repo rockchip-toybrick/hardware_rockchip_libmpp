@@ -10,7 +10,7 @@ OSTYPE=linux
 KMPP_SRC := kmpp
 MAKE_JOBS ?= $(shell echo `getconf _NPROCESSORS_ONLN`)
 KMPP_MAKE_JOBS := $(shell expr $(MAKE_JOBS) / 2)
-KMPP_TEST ?= n
+KMPP_TEST ?= y
 
 EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/inc
 EXTRA_CFLAGS += -I$(KERNEL_DIR)/drivers/kmpp/vcodec/mpp/base/inc
