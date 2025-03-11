@@ -8,7 +8,9 @@
 #include "version.h"
 
 #include "kmpp_osal.h"
+
 #include "kmpp_sys.h"
+#include "kmpp_obj_impl.h"
 #include "kmpp_mem_pool_impl.h"
 
 KmppEnvGrp kmpp_env_sys;
@@ -93,6 +95,7 @@ int sys_init(void)
     sys_env_version_init();
 
     kmpp_mem_pool_init();
+    kmpp_obj_init();
     kmpp_sym_init();
     kmpp_symdef_get(&sys_sym, "sys");
     /* Add sys export funciton here */
@@ -118,6 +121,7 @@ void sys_exit(void)
         sys_sym = NULL;
     }
     kmpp_sym_deinit();
+    kmpp_obj_deinit();
     kmpp_mem_pool_deinit();
 
     sys_env_deinit();

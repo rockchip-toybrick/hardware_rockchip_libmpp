@@ -135,7 +135,7 @@ void kmpp_mem_pool_deinit(void)
         return;
 
     osal_list_for_each_entry_safe(pool, m, &srv->list_pool, KmppMemPoolImpl, list_srv) {
-        kmpp_loge_f("pool %2d - %-12s %px size %d max %d not released\n",
+        kmpp_loge_f("pool %2d - %-16s %px size %d max %d not released\n",
                     pool->pool_id, pool->name, pool, pool->size, pool->max_cnt);
 
         osal_list_for_each_entry_safe(node, n, &pool->unused, KmppMemPoolNode, list) {
@@ -169,7 +169,7 @@ KmppMemPool kmpp_mem_get_pool(const rk_u8 *name, rk_s32 size, rk_u32 max_cnt, rk
     str_len = KMPP_ALIGN(osal_strlen(name) + 1, 4);
     pool = kmpp_calloc_atomic(sizeof(KmppMemPoolImpl) + str_len);
     if (!pool) {
-        kmpp_err_f("failed to alloc mem pool %2d - %-12s\n", name);
+        kmpp_err_f("failed to alloc mem pool %2d - %-16s\n", name);
         return NULL;
     }
 
@@ -189,7 +189,7 @@ KmppMemPool kmpp_mem_get_pool(const rk_u8 *name, rk_s32 size, rk_u32 max_cnt, rk
     srv->pool_cnt++;
     osal_spin_unlock_irqrestore(srv->lock, &flags);
 
-    mem_pool_dbg_flow("pool %2d - %-12s get size %4d max %3d at %s\n",
+    mem_pool_dbg_flow("pool %2d - %-16s get size %4d max %3d at %s\n",
                       pool->pool_id ,name, pool->size, pool->max_cnt, caller);
 
     return pool;
@@ -206,7 +206,7 @@ void kmpp_mem_put_pool(KmppMemPool pool, const rk_u8 *caller)
         return;
 
     if (impl != impl->check) {
-        kmpp_err_f("invalid mem pool %2d - %-12s %px check %px\n", impl->name, impl, impl->check);
+        kmpp_err_f("invalid mem pool %2d - %-16s %px check %px\n", impl->name, impl, impl->check);
         return;
     }
 
@@ -215,7 +215,7 @@ void kmpp_mem_put_pool(KmppMemPool pool, const rk_u8 *caller)
     srv->pool_cnt--;
     osal_spin_unlock_irqrestore(srv->lock, &flags);
 
-    mem_pool_dbg_flow("pool %2d - %-12s put %4d max:used:unused [%d:%d:%d] at %s\n",
+    mem_pool_dbg_flow("pool %2d - %-16s put %4d max:used:unused [%d:%d:%d] at %s\n",
                       impl->pool_id, impl->name, impl->size, impl->max_cnt,
                       impl->used_count, impl->unused_count, caller);
 
@@ -225,7 +225,7 @@ void kmpp_mem_put_pool(KmppMemPool pool, const rk_u8 *caller)
     }
 
     if (!osal_list_empty(&impl->used)) {
-        kmpp_err_f("pool %2d - %-12s size %d found %d used buffer at %s\n",
+        kmpp_err_f("pool %2d - %-16s size %d found %d used buffer at %s\n",
                     impl->pool_id, impl->name, impl->size, impl->used_count, caller);
 
         osal_list_for_each_entry_safe(node, m, &impl->used, KmppMemPoolNode, list) {
@@ -235,7 +235,7 @@ void kmpp_mem_put_pool(KmppMemPool pool, const rk_u8 *caller)
     }
 
     if (impl->used_count || impl->unused_count)
-        kmpp_err_f("pool %2d - %-12s size %d max %d found leaked buffer used:unused [%d:%d]\n",
+        kmpp_err_f("pool %2d - %-16s size %d max %d found leaked buffer used:unused [%d:%d]\n",
                    impl->pool_id, impl->name, impl->size,
                    impl->max_cnt, impl->used_count, impl->unused_count);
 
@@ -267,14 +267,14 @@ void *kmpp_mem_pool_get(KmppMemPool pool, const rk_u8 *caller)
     }
 
     if (impl->max_cnt > 0 && (impl->unused_count + impl->used_count) >= impl->max_cnt) {
-        kmpp_log("pool %2d - %-12s size %d reach max cnt %d\n",
+        kmpp_log("pool %2d - %-16s size %d reach max cnt %d\n",
                  impl->pool_id, impl->name, impl->size, impl->max_cnt);
         goto DONE;
     }
 
     node = kmpp_calloc_atomic(sizeof(KmppMemPoolNode) + KMPP_ALIGN(impl->size, 4));
     if (!node) {
-        kmpp_err_f("pool %2d - %-12s failed to create node at %s\n",
+        kmpp_err_f("pool %2d - %-16s failed to create node at %s\n",
                    impl->pool_id, impl->name, caller);
     } else {
         node->check = node;
@@ -288,7 +288,7 @@ void *kmpp_mem_pool_get(KmppMemPool pool, const rk_u8 *caller)
     }
 
 DONE:
-    mem_pool_dbg_flow("pool %2d - %-12s size %d node_id %d get used:unused [%d:%d] at %s\n",
+    mem_pool_dbg_flow("pool %2d - %-16s size %d node_id %d get used:unused [%d:%d] at %s\n",
                       impl->pool_id, impl->name, impl->size, node->id,
                       impl->used_count, impl->unused_count, caller);
     osal_spin_unlock_irqrestore(srv->lock, &flags);
@@ -307,12 +307,12 @@ void kmpp_mem_pool_put(KmppMemPool pool, void *p, const rk_u8 *caller)
         return;
 
     if (impl != impl->check) {
-        kmpp_err_f("invalid mem pool %2d - %-12s %px check %px\n", impl->name, impl, impl->check);
+        kmpp_err_f("invalid mem pool %2d - %-16s %px check %px\n", impl->name, impl, impl->check);
         return;
     }
 
     if (node != node->check) {
-        kmpp_err_f("invalid mem pool %2d - %-12s ptr %px node %px check %px\n",
+        kmpp_err_f("invalid mem pool %2d - %-16s ptr %px node %px check %px\n",
               impl->name, p, node, node->check);
         return;
     }
@@ -327,7 +327,7 @@ void kmpp_mem_pool_put(KmppMemPool pool, void *p, const rk_u8 *caller)
     impl->unused_count++;
     node->check = NULL;
 
-    mem_pool_dbg_flow("pool %2d - %-12s size %d node_id %d put used:unused [%d:%d] at %s\n",
+    mem_pool_dbg_flow("pool %2d - %-16s size %d node_id %d put used:unused [%d:%d] at %s\n",
                       impl->pool_id, impl->name, impl->size, node->id,
                       impl->used_count, impl->unused_count, caller);
 

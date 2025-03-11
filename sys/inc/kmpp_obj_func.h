@@ -26,6 +26,7 @@
 #define KMPP_OBJ_FUNC_DEFINE(prefix) \
 rk_s32 KMPP_OBJ_CONCAT2(prefix, init)(void); \
 rk_s32 KMPP_OBJ_CONCAT2(prefix, deinit)(void); \
+rk_s32 KMPP_OBJ_CONCAT2(prefix, size)(void); \
 rk_s32 KMPP_OBJ_CONCAT2(prefix, get)(KMPP_OBJ_INTF_TYPE *p); \
 rk_s32 KMPP_OBJ_CONCAT2(prefix, get_share)(KMPP_OBJ_INTF_TYPE *p, KmppShmGrp grp); \
 rk_s32 KMPP_OBJ_CONCAT2(prefix, assign)(KMPP_OBJ_INTF_TYPE *p, void *buf, rk_s32 size); \

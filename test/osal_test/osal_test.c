@@ -202,7 +202,7 @@ rk_s32 osal_test_func(void *param)
     ptr = kmpp_dmabuf_get_kptr(buf);
     uptr = kmpp_dmabuf_get_uptr(buf);
 
-    kmpp_logi("kmpp_dmabuf_alloc normal  %px [k:u] [%px:%llx]\n", buf, ptr, uptr);
+    kmpp_logi("kmpp_dmabuf_alloc normal  %px [u:k] [%llx:%px]\n", buf, uptr, ptr);
     memset(ptr, 0xff, size);
     if (((rk_u8 *)ptr)[0] == 0xff && ((rk_u8 *)ptr)[size - 1] == 0xff)
         kmpp_logi("access ok\n");
@@ -211,7 +211,7 @@ rk_s32 osal_test_func(void *param)
     kmpp_dmabuf_alloc_f(&buf, heap, size, KMPP_DMABUF_FLAGS_DUP_MAP);
     ptr = kmpp_dmabuf_get_kptr(buf);
     uptr = kmpp_dmabuf_get_uptr(buf);
-    kmpp_logi("kmpp_dmabuf_alloc dup-map %px [k:u] [%px:%llx]\n", buf, ptr, uptr);
+    kmpp_logi("kmpp_dmabuf_alloc dup-map %px [u:k] [%llx:%px]\n", buf, uptr, ptr);
     memset(ptr, 0xff, size * 2);
     if (((rk_u8 *)ptr)[0] == 0xff && ((rk_u8 *)ptr)[size * 2 - 1] == 0xff)
         kmpp_logi("access ok\n");
