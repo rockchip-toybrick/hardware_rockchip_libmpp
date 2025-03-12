@@ -10,6 +10,21 @@
 
 #include "kmpp_uaccess.h"
 
+static rk_s32 kmpp_strncpy(char *dst, const char *src, rk_ul size)
+{
+    rk_s32 len = strlen(src);
+
+    if (len >= size) {
+        memcpy(dst, src, size - 1);
+        len = size - 1;
+    } else {
+        memcpy(dst, src, len);
+        dst[len] = '\0';
+    }
+
+    return len;
+}
+
 rk_ul osal_copy_from_user(void *dst, const void *src, rk_ul size)
 {
     if (access_ok(src, size))
@@ -35,7 +50,7 @@ rk_ul osal_strncpy_from_user(void *dst, void *src, rk_ul size)
     if (access_ok(src, size))
         return strncpy_from_user(dst, src, size);
 
-    return (char *)strncpy(dst, src, size) - (char *)dst;
+    return kmpp_strncpy(dst, src, size);
 }
 EXPORT_SYMBOL(osal_strncpy_from_user);
 
@@ -54,7 +69,7 @@ rk_ul osal_strncpy_sptr(void *dst, KmppShmPtr *src, rk_ul size)
         return 0;
 
     if (src->kptr)
-        return (char *)strncpy(dst, src->kptr, size) - (char *)dst;
+        return kmpp_strncpy(dst, src->kptr, size);
 
     if (src->uptr)
         return osal_strncpy_from_user(dst, src->uptr, size);
