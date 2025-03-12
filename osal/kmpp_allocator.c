@@ -29,15 +29,17 @@
 #define CACHE_LINE_SIZE                 (64)
 
 #define DMABUF_DBG_FLOW                 (0x00000001)
-#define DMABUF_DBG_DETAIL               (0x00000002)
-#define DMABUF_DBG_IOCTL                (0x00000004)
-#define DMABUF_DBG_DUMP                 (0x00000008)
+#define DMABUF_DBG_HEAPS                (0x00000002)
+#define DMABUF_DBG_BUF                  (0x00000004)
+#define DMABUF_DBG_IOCTL                (0x00000008)
+#define DMABUF_DBG_DUMP                 (0x00000010)
 
 #define dmabuf_dbg(flag, fmt, ...)      kmpp_dbg(kmpp_dmabuf_debug, flag, fmt, ## __VA_ARGS__)
 #define dmabuf_dbg_f(flag, fmt, ...)    kmpp_dbg_f(kmpp_dmabuf_debug, flag, fmt, ## __VA_ARGS__)
 
 #define dmabuf_dbg_flow(fmt, ...)       dmabuf_dbg_f(DMABUF_DBG_FLOW, fmt, ## __VA_ARGS__)
-#define dmabuf_dbg_detail(fmt, ...)     dmabuf_dbg_f(DMABUF_DBG_DETAIL, fmt, ## __VA_ARGS__)
+#define dmabuf_dbg_heaps(fmt, ...)      dmabuf_dbg(DMABUF_DBG_HEAPS, fmt, ## __VA_ARGS__)
+#define dmabuf_dbg_buf(fmt, ...)        dmabuf_dbg(DMABUF_DBG_BUF, fmt, ## __VA_ARGS__)
 #define dmabuf_dbg_ioctl(fmt, ...)      dmabuf_dbg(DMABUF_DBG_IOCTL, fmt, ## __VA_ARGS__)
 
 typedef void *(*HeapFindFunc)(const char *name);
@@ -249,9 +251,9 @@ void kmpp_dmaheap_init(void)
                 kmpp_dmaheaps = heaps;
                 kmpp_logi("set %s as default\n", info->name);
             } else {
-                osal_list_add_tail(&heaps->list, &kmpp_dmaheap_list);
                 kmpp_logi("add %s\n", info->name);
             }
+            osal_list_add_tail(&heaps->list, &kmpp_dmaheap_list);
         } else {
             kmpp_logi("probe heap %s failed\n", info->name);
         }
@@ -264,6 +266,8 @@ static void __kmpp_dmaheap_deinit(KmppDmaHeaps *heaps)
 {
     KmppDmaHeapInfo *info = heaps->info;
     rk_s32 i;
+
+    osal_list_del_init(&heaps->list);
 
     for (i = MAX_DMAHEAP_NUM - 1; i >= 0; i--) {
         KmppDmaHeapImpl *impl = &heaps->heaps[i];
@@ -315,6 +319,7 @@ rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
 {
     KmppDmaHeaps *heaps = kmpp_dmaheaps;
     KmppDmaHeapImpl *impl;
+    rk_s32 old;
 
     if (!heaps) {
         kmpp_loge_f("found NULL default dmaheaps\n");
@@ -340,8 +345,11 @@ rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
         return rk_nok;
     }
 
-    KMPP_FETCH_ADD(&impl->ref_cnt, 1);
+    old = KMPP_FETCH_ADD(&impl->ref_cnt, 1);
     *heap = impl;
+
+    dmabuf_dbg_heaps("heap %s - %d ref %d -> %d\n", heaps->info->name,
+                     impl->index, old, impl->ref_cnt);
 
     return rk_ok;
 }
@@ -363,11 +371,17 @@ rk_s32 kmpp_dmaheap_get_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 fla
     }
 
     osal_list_for_each_entry_safe(heaps, n, &kmpp_dmaheap_list, KmppDmaHeaps, list) {
+        dmabuf_dbg_heaps("checking %s for %s\n", heaps->info->name, name);
         if (!osal_strcmp(heaps->info->name, name)) {
             KmppDmaHeapImpl *impl = &heaps->heaps[flag];
+            rk_s32 old;
 
-            KMPP_FETCH_ADD(&impl->ref_cnt, 1);
+            old = KMPP_FETCH_ADD(&impl->ref_cnt, 1);
             *heap = impl;
+
+            dmabuf_dbg_heaps("heap %s - %d ref %d -> %d\n", impl->heaps->info->name,
+                              flag, old, impl->ref_cnt);
+
             return rk_ok;
         }
     }
@@ -379,6 +393,7 @@ rk_s32 kmpp_dmaheap_put(KmppDmaHeap heap, const rk_u8 *caller)
 {
     KmppDmaHeaps *heaps = kmpp_dmaheaps;
     KmppDmaHeapImpl *impl = (KmppDmaHeapImpl *)heap;
+    rk_s32 old;
 
     if (!heaps) {
         kmpp_loge_f("found NULL default dmaheaps\n");
@@ -390,7 +405,10 @@ rk_s32 kmpp_dmaheap_put(KmppDmaHeap heap, const rk_u8 *caller)
         return rk_nok;
     }
 
-    KMPP_FETCH_SUB(&impl->ref_cnt, 1);
+    old = KMPP_FETCH_SUB(&impl->ref_cnt, 1);
+
+    dmabuf_dbg_heaps("heap %s - %d ref %d -> %d\n", impl->heaps->info->name,
+                      impl->index, old, impl->ref_cnt);
 
     if (impl->ref_cnt < 0)
         kmpp_loge_f("invalid ref_cnt %d at %s\n", impl->ref_cnt, caller);
@@ -719,7 +737,7 @@ rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf)
     size = impl->size;
     uptr = 0;
 
-    dmabuf_dbg_detail("dmabuf %px file %px size %d at mm %px\n",
+    dmabuf_dbg_heaps("dmabuf %px file %px size %d at mm %px\n",
                       dma_buf, file, size, current->mm);
 
     if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP) {
