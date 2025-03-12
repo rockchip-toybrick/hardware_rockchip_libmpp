@@ -30,6 +30,9 @@
 #include "rk-mpp-kobj.h"
 #include "kmpp_frame.h"
 #include "kmpp_meta.h"
+#include "kmpp_obj.h"
+#include "kmpp_venc_objs_impl.h"
+#include "kmpp_atomic.h"
 
 int mpp_vcodec_schedule(void)
 {
@@ -189,6 +192,19 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 		if (chan_entry->cfg.online)
 			mpp_vcodec_chan_unbind(chan_entry);
 		mutex_lock(&chan_entry->chan_debug_lock);
+		if (chan_entry->frame) {
+			KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
+			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+			ntfy_impl->chan_id = chan_id;
+			ntfy_impl->frame = chan_entry->frame;
+
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+			ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
+			kmpp_venc_notify(ntfy);
+			kmpp_frame_put(chan_entry->frame);
+			chan_entry->frame = NULL;
+		}
 		mpp_enc_deinit(chan_entry->handle);
 		mpp_vcodec_stream_clear(chan_entry);
 		mpp_vcodec_dec_chan_num(type);
@@ -375,6 +391,11 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	venc = mpp_vcodec_get_enc_module_entry();
 	thd = venc->thd;
 
+	if (osal_cmpxchg(&chan_entry->frame, chan_entry->frame, chan_entry->frame)) {
+		mpp_err_f("frame is not null %px\n", chan_entry->frame);
+		return MPP_NOK;
+	}
+
 	memset(&buf_info, 0, sizeof(buf_info));
 	if (info->fd) {
 		buf_info.fd = info->fd;
@@ -400,7 +421,6 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	}
 	kmpp_frame_set_buffer(frame, buffer);
 	mpp_buffer_put(buffer);
-	chan_entry->frame = frame;
 
 	if (info->jpeg_chan_id > 0) {
 		KmppFrame combo_frame;
@@ -420,6 +440,7 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 
 		kmpp_meta_set_obj(meta, KEY_COMBO_FRAME, combo_frame);
 	}
+	osal_cmpxchg(&chan_entry->frame, chan_entry->frame, frame);
 
 	vcodec_thread_trigger(thd);
 

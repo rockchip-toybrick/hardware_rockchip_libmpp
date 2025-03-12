@@ -29,6 +29,7 @@
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
 #include "kmpp_meta.h"
+#include "kmpp_atomic.h"
 
 void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry, MppPacket packet);
 
@@ -64,10 +65,9 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 
 	mpp_vcodec_detail("enc_chan_process_single_chan id %d\n", chan_id);
 	if (!chan_entry->reenc) {
-		frame = chan_entry->frame;
+		frame = osal_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
 		if (!frame)
 			return MPP_OK;
-		chan_entry->frame = NULL;
 		chan_entry->gap_time = (RK_S32)(mpp_time() - chan_entry->last_yuv_time);
 		chan_entry->last_yuv_time = mpp_time();
 		if (!kmpp_frame_get_meta(frame, &sptr)) {
@@ -113,11 +113,24 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		if (frame && pskip) {
 			MppPacket packet = NULL;
 			struct venc_module *venc = NULL;
+			KmppVencNtfy ntfy;
+			KmppVencNtfyImpl* ntfy_impl;
 
 			venc = mpp_vcodec_get_enc_module_entry();
 			ret = mpp_enc_force_pskip(chan_entry->handle, frame, &packet);
 			if (packet)
 				mpp_vcodec_enc_add_packet_list(chan_entry, packet);
+
+			ntfy = mpp_enc_get_notify(chan_entry->handle);
+			ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+			ntfy_impl->chan_id = chan_id;
+			ntfy_impl->frame = frame;
+
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
+			ntfy_impl->is_intra = 0;
+			kmpp_venc_notify(ntfy);
+
 			kmpp_frame_put(frame);
 			frame = NULL;
 			atomic_dec(&chan_entry->runing);

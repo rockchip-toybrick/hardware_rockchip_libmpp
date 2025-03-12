@@ -14,6 +14,7 @@
 
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
+#include "kmpp_atomic.h"
 
 #include "mpp_vcodec_base.h"
 #include "mpp_vcodec_thread.h"
@@ -235,8 +236,11 @@ rk_s32 kmpp_venc_chan_put_frm(KmppChanId id, KmppFrame frm)
 
     venc = mpp_vcodec_get_enc_module_entry();
     thd = venc->thd;
-
-    chan->frame = frm;
+    if (osal_cmpxchg(&chan->frame, chan->frame, chan->frame)) {
+        mpp_err_f("chan %d frame %p is not NULL\n", chan_id, chan->frame);
+        return MPP_NOK;
+    }
+    osal_cmpxchg(&chan->frame, chan->frame, frm);
     vcodec_thread_trigger(thd);
 
     return 0;

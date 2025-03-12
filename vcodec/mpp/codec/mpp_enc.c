@@ -158,6 +158,8 @@ ERR_RET:
 void mpp_enc_deinit_frame(MppEnc ctx)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
+	KmppVencNtfy ntfy;
+	KmppVencNtfyImpl* ntfy_impl;
 
 	if (!enc || !enc->frame || !enc->packet)
 		return;
@@ -165,6 +167,16 @@ void mpp_enc_deinit_frame(MppEnc ctx)
 	atomic_set(&enc->hw_run, 0);
 	mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
 	mpp_packet_deinit(&enc->packet);
+
+	ntfy = enc->venc_notify;
+	ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+	ntfy_impl->chan_id = enc->chan_id;
+	ntfy_impl->frame = enc->frame;
+
+	ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+	ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+	kmpp_venc_notify(ntfy);
 	kmpp_frame_put(enc->frame);
 	enc->frame = NULL;
 }
