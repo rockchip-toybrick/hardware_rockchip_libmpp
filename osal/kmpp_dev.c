@@ -650,3 +650,11 @@ void *osal_dev_get_device(osal_dev *dev)
     return dev ? impl->device : NULL;
 }
 EXPORT_SYMBOL(osal_dev_get_device);
+
+const rk_u8 *osal_device_name(void *device)
+{
+    struct device *dev = device;
+
+    return (const rk_u8 *)dev_name(dev);
+}
+EXPORT_SYMBOL(osal_device_name);
