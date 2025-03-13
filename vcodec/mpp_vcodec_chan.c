@@ -102,6 +102,7 @@ int mpp_vcodec_chan_create(struct vcodec_attr *attr)
 			return -1;
 		}
 #endif
+		INIT_KFIFO(chan_entry->frame_fifo);
 		mpp_vcodec_inc_chan_num(type);
 		chan_entry->cfg.online = online;
 		chan_entry->last_yuv_time = mpp_time();
@@ -194,8 +195,7 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 		if (chan_entry->cfg.online)
 			mpp_vcodec_chan_unbind(chan_entry);
 
-		frame = osal_force_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
-		if (frame) {
+		while(kfifo_get(&chan_entry->frame_fifo, &frame)) {
 			KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
 			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 			KmppShmPtr sptr;
@@ -411,8 +411,8 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	venc = mpp_vcodec_get_enc_module_entry();
 	thd = venc->thd;
 
-	if (osal_cmpxchg(&chan_entry->frame, chan_entry->frame, chan_entry->frame)) {
-		mpp_err_f("chan %d frame %p is busy\n", chan_entry->chan_id, chan_entry->frame);
+	if (kfifo_is_full(&chan_entry->frame_fifo)) {
+		mpp_err_f("chan %d frame fifo is full\n", chan_entry->chan_id);
 		vcodec_thread_trigger(thd);
 		return MPP_NOK;
 	}
@@ -471,7 +471,8 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 
 		kmpp_meta_set_obj(meta, KEY_COMBO_FRAME, combo_frame);
 	}
-	osal_cmpxchg(&chan_entry->frame, chan_entry->frame, frame);
+
+	kfifo_in(&chan_entry->frame_fifo, &frame, 1);
 
 	vcodec_thread_trigger(thd);
 

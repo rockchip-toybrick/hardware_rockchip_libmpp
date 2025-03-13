@@ -15,6 +15,7 @@
 #include <linux/spinlock.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
+#include <linux/kfifo.h>
 
 #include "mpp_packet.h"
 
@@ -82,7 +83,7 @@ struct mpp_chan {
 	RK_U32 max_lt_cnt;
 	RK_S64 pts_diff;
 	KmppFrame pskip_frame;
-	KmppFrame frame;
+	DECLARE_KFIFO(frame_fifo, KmppFrame, 2);
 };
 
 struct stream_packet {

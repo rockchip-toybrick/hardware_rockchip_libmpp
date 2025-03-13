@@ -244,13 +244,13 @@ rk_s32 kmpp_venc_chan_put_frm(KmppChanId id, KmppFrame frm)
 
     venc = mpp_vcodec_get_enc_module_entry();
     thd = venc->thd;
-    if (osal_cmpxchg(&chan->frame, chan->frame, chan->frame)) {
-        mpp_err_f("chan %d frame %p is busy\n", chan_id, chan->frame);
+    if (kfifo_is_full(&chan->frame_fifo)) {
+        mpp_err_f("chan %d frame fifo is full\n", chan->chan_id);
         spin_unlock_irqrestore(&chan->chan_lock, flags);
         vcodec_thread_trigger(thd);
         return MPP_NOK;
     }
-    osal_cmpxchg(&chan->frame, chan->frame, frm);
+    kfifo_in(&chan->frame_fifo, &frm, 1);
     spin_unlock_irqrestore(&chan->chan_lock, flags);
     vcodec_thread_trigger(thd);
 

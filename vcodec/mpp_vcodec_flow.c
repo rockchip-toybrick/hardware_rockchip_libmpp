@@ -82,13 +82,18 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 	}
 
 	/* 3. try to get frame to process */
-	frame = osal_force_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
-	if (!frame) {
+	spin_lock_irqsave(&chan_entry->chan_lock, lock_flag);
+	if (kfifo_is_empty(&chan_entry->frame_fifo)) {
 		atomic_dec(&chan_entry->runing);
 		wake_up(&chan_entry->stop_wait);
 		mutex_unlock(&chan_entry->chan_mutex);
+		spin_unlock_irqrestore(&chan_entry->chan_lock, lock_flag);
 		return MPP_OK;
 	}
+
+	if (!kfifo_out(&chan_entry->frame_fifo, &frame, 1))
+		mpp_err_f("chan %d get frame %p failed\n", chan_id, frame);
+	spin_unlock_irqrestore(&chan_entry->chan_lock, lock_flag);
 	chan_entry->gap_time = (RK_S32)(mpp_time() - chan_entry->last_yuv_time);
 	chan_entry->last_yuv_time = mpp_time();
 

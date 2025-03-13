@@ -266,7 +266,6 @@ rk_s32 kmpp_venc_put_frm(KmppCtx ctx, KmppFrame frm)
     venc = mpp_vcodec_get_enc_module_entry();
     thd = venc->thd;
 
-    chan->frame = frm;
     vcodec_thread_trigger(thd);
 
     return 0;
