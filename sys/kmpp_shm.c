@@ -45,13 +45,6 @@ typedef struct KmppShmClsImpl_t {
     osal_list_head  list_mgr;
 } KmppShmClsImpl;
 
-typedef struct KmppShmMapSize_t {
-    rk_s32          size_aligned;
-    rk_s32          size_map;
-    rk_s32          pg_num;
-    rk_s32          pg_den;
-} KmppShmMapSize;
-
 /* kmpp share memory manager (kmpp_shm_mgr) each file class has a manager */
 typedef struct KmppShmMgr_t {
     osal_spinlock   *lock;
@@ -148,21 +141,6 @@ static inline rk_s32 align_to_power_of_two(rk_s32 n)
     n |= n >> 16;
 
     return n + 1;
-}
-
-void size_to_map_info(KmppShmMapSize *info, rk_s32 size)
-{
-    if (size < PAGE_SIZE) {
-        info->size_aligned = align_to_power_of_two(size);
-        info->size_map = PAGE_SIZE;
-        info->pg_num = 1;
-        info->pg_den = PAGE_SIZE / info->size_aligned;
-    } else {
-        info->size_aligned = PAGE_ALIGN(size);
-        info->size_map = info->size_aligned;
-        info->pg_num = info->size_aligned / PAGE_SIZE;
-        info->pg_den = 1;
-    }
 }
 
 rk_s32 kmpp_shm_open(osal_fs_dev *file)
@@ -452,28 +430,20 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
 
         arg += sizeof(ioc);
 
-        for (i = 0; i < ioc.count; i++, arg += sizeof(rk_u64)) {
-            rk_u64 uaddr;
-            KmppObjShm shm;
+        for (i = 0; i < ioc.count; i++, arg += sizeof(KmppShmPtr)) {
+            KmppShmPtr sptr;
             KmppShmImpl *impl;
 
-            ret = osal_copy_from_user(&uaddr, arg, sizeof(uaddr));
+            ret = osal_copy_from_user(&sptr, arg, sizeof(sptr));
             if (ret) {
-                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM osal_copy_from_user uaddr fail\n", i);
+                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM osal_copy_from_user KmppShmPtr fail\n", i);
                 break;
             }
 
-            ret = osal_copy_from_user(&shm, (void *)(uintptr_t)uaddr, sizeof(shm));
-            if (ret) {
-                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM osal_copy_from_user KmppObjShm fail\n", i);
-                break;
-            }
-
-            impl = (KmppShmImpl *)(uintptr_t)shm.kobj_kaddr;
-            if (!impl || impl != impl->kbase || impl->ubase != shm.kobj_uaddr) {
-                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM invalid shm %px - kbase %px ubase %#llx - %#llx\n",
-                            i, impl, impl ? impl->kbase : NULL,
-                            impl ? impl->ubase : 0, shm.kobj_uaddr);
+            impl = kmpp_shm_from_shmptr_f(&sptr);
+            if (!impl) {
+                kmpp_loge_f("slot %d KMPP_SHM_IOC_PUT_SHM shm [u:k] %#llx:%#px check failed\n",
+                            i, sptr.uaddr, sptr.kptr);
                 break;
             }
 
@@ -849,6 +819,61 @@ rk_s32 kmpp_shm_put(KmppShm shm)
     return rk_ok;
 }
 
+rk_s32 kmpp_shm_dump(KmppShm shm, const rk_u8 *caller)
+{
+    KmppShmImpl *impl = (KmppShmImpl *)shm;
+
+    if (!impl) {
+        kmpp_loge_f("invalid param shm %px\n", impl);
+        return rk_nok;
+    }
+
+    kmpp_logi("dump shm %px at %s\n", impl, caller);
+    kmpp_logi("ioc [u:k] %#llx:%#llx\n", impl->ioc.kobj_uaddr, impl->ioc.kobj_kaddr);
+    kmpp_logi("ubase %#llx uaddr %#llx upriv %#llx\n", impl->ubase,
+              impl->ubase + kmpp_shm_entry_offset(), impl->upriv);
+    kmpp_logi("kbase %#px kaddr %#px kpriv %#px\n", impl->kbase,
+              impl->kbase + kmpp_shm_entry_offset(), impl->kpriv);
+
+    return rk_ok;
+}
+
+rk_s32 kmpp_shm_check(KmppShm shm, const rk_u8 *caller)
+{
+    KmppShmImpl *impl = (KmppShmImpl *)shm;
+
+    if (!impl) {
+        kmpp_loge_f("invalid param shm %px at %s\n", impl, caller);
+        return rk_nok;
+    }
+
+    if (impl != impl->kbase) {
+        kmpp_loge_f("shm %px mismatch kbase %px at %s\n",
+                    impl, impl->kbase, caller);
+        return rk_nok;
+    }
+
+    if (impl->ubase != impl->ioc.kobj_uaddr) {
+        kmpp_loge_f("shm %px mismatch ubase %llx - ioc ubase %llx at %s\n",
+                    impl, impl->ubase, impl->ioc.kobj_uaddr, caller);
+        return rk_nok;
+    }
+
+    return rk_ok;
+}
+
+KmppShm kmpp_shm_from_shmptr(KmppShmPtr *sptr, const rk_u8 *caller)
+{
+    if (sptr) {
+        KmppShmImpl *impl = (KmppShmImpl *)sptr->kptr;
+
+        if (!kmpp_shm_check(impl, caller))
+            return impl;
+    }
+
+    return NULL;
+}
+
 KmppShmPtr *kmpp_shm_to_shmptr(KmppShm shm)
 {
     KmppShmImpl *impl = (KmppShmImpl *)shm;
@@ -857,11 +882,6 @@ KmppShmPtr *kmpp_shm_to_shmptr(KmppShm shm)
                    impl, impl->ioc.kobj_uaddr, impl->ioc.kobj_kaddr);
 
     return impl ? (KmppShmPtr *)&impl->ioc : NULL;
-}
-
-KmppShm kmpp_shm_from_shmptr(KmppShmPtr *sptr)
-{
-    return sptr ? (KmppShm)sptr->kptr : NULL;
 }
 
 void *kmpp_shm_get_kbase(KmppShm shm)
@@ -875,7 +895,7 @@ void *kmpp_shm_get_kaddr(KmppShm shm)
 {
     KmppShmImpl *impl = (KmppShmImpl *)shm;
 
-    return impl && impl->kbase ? impl->kbase + kmpp_shm_entry_offset() : NULL;
+    return (impl && impl->kbase) ? (impl->kbase + kmpp_shm_entry_offset()) : NULL;
 }
 
 rk_ul kmpp_shm_get_ubase(KmppShm shm)
@@ -934,6 +954,8 @@ rk_s32 kmpp_shm_get_entry_size(KmppShm shm)
 
 EXPORT_SYMBOL(kmpp_shm_get);
 EXPORT_SYMBOL(kmpp_shm_put);
+EXPORT_SYMBOL(kmpp_shm_dump);
+EXPORT_SYMBOL(kmpp_shm_check);
 
 EXPORT_SYMBOL(kmpp_shm_to_shmptr);
 EXPORT_SYMBOL(kmpp_shm_from_shmptr);

@@ -43,8 +43,15 @@ osal_fs_dev *kmpp_shm_get_objs_file(void);
 rk_s32 kmpp_shm_get(KmppShm *shm, osal_fs_dev *file, const rk_u8 *name);
 rk_s32 kmpp_shm_put(KmppShm shm);
 
+rk_s32 kmpp_shm_dump(KmppShm shm, const rk_u8 *caller);
+rk_s32 kmpp_shm_check(KmppShm shm, const rk_u8 *caller);
+KmppShm kmpp_shm_from_shmptr(KmppShmPtr *shmptr, const rk_u8 *caller);
+
+#define kmpp_shm_dump_f(shm)        kmpp_shm_dump(shm, __FUNCTION__)
+#define kmpp_shm_check_f(shm)       kmpp_shm_check(shm, __FUNCTION__)
+#define kmpp_shm_from_shmptr_f(shm) kmpp_shm_from_shmptr(shm, __FUNCTION__)
+
 KmppShmPtr *kmpp_shm_to_shmptr(KmppShm shm);
-KmppShm kmpp_shm_from_shmptr(KmppShmPtr *shmptr);
 
 void *kmpp_shm_get_kbase(KmppShm shm);
 void *kmpp_shm_get_kaddr(KmppShm shm);
