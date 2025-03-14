@@ -9,6 +9,7 @@
 #include "kmpp_cls.h"
 
 #include "kmpp_sys_defs.h"
+#include "kmpp_ioctl.h"
 #include "kmpp_trie.h"
 
 /*
@@ -45,10 +46,20 @@ typedef union KmppLocTbl_u {
     };
 } KmppLocTbl;
 
+typedef struct KmppObjIoctl_t {
+    rk_s32              cmd;
+    rk_s32              (*func)(osal_fs_dev *file, KmppShmPtr *set, KmppShmPtr *get);
+} KmppObjIoctl;
+
+typedef struct KmppObjIoctls_t {
+    rk_s32              count;
+    KmppObjIoctl        funcs[];
+} KmppObjIoctls;
+
 typedef struct KmppObjDefSet_t {
     KmppTrie            trie;
-    rk_s32              count;
-    rk_s32              buf_size;
+    rk_u32              count;
+    rk_u32              buf_size;
     KmppObjDef          defs[0];
 } KmppObjDefSet;
 
@@ -76,6 +87,8 @@ rk_s32 kmpp_objdef_add_hook(KmppObjDef def, const rk_u8 *name, KmppObjHook hook)
 rk_s32 kmpp_objdef_add_init(KmppObjDef def, KmppObjInit init);
 /* object deinit function register */
 rk_s32 kmpp_objdef_add_deinit(KmppObjDef def, KmppObjDeinit deinit);
+/* object ioctl function register */
+rk_s32 kmpp_objdef_add_ioctl(KmppObjDef def, KmppObjIoctls *ioctls);
 /* object dump function register */
 rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump);
 
@@ -84,6 +97,7 @@ rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl **tbl
 rk_s32 kmpp_objdef_get_index(KmppObjDef def, const rk_u8 *name);
 rk_s32 kmpp_objdef_get_offset(KmppObjDef def, const rk_u8 *name);
 rk_s32 kmpp_objdef_get_hook(KmppObjDef def, const rk_u8 *name);
+rk_s32 kmpp_objdef_ioctl(KmppObjDef def, osal_fs_dev *file, KmppIoc ioc);
 
 rk_s32 kmpp_objdef_dump(KmppObjDef def);
 void kmpp_objdef_dump_all(void);

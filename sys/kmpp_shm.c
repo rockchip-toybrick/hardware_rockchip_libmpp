@@ -396,12 +396,11 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
 
         arg += sizeof(ioc);
 
-        for (i = 0; i < ioc.count; i++, arg += sizeof(rk_u64)) {
+        for (i = 0; i < ioc.count; i++, arg += sizeof(KmppShmPtr)) {
             rk_u8 name[64];
             KmppShmGrpImpl *grp = NULL;
+            KmppShmPtr sptr;
             KmppObj obj = NULL;
-            void *kbase = NULL;
-            rk_u64 ubase = 0;
 
             shm_dbg_ioctl("get shm ioc %d\n", i);
 
@@ -423,17 +422,11 @@ rk_s32 kmpp_shm_ioctl(osal_fs_dev *file, rk_s32 cmd, void *arg)
             if (obj && (kmpp_shm_debug & SHM_DBG_DUMP))
                 kmpp_obj_dump(obj, "KMPP_SHM_IOC_GET_SHM");
 
-            {
-                KmppShm shm = NULL;
+            kmpp_obj_to_shmptr(obj, &sptr);
 
-                shm = kmpp_obj_to_shm(obj);
-                ubase = kmpp_shm_get_ubase(shm);
-                kbase = kmpp_shm_get_kbase(shm);
-            }
+            shm_dbg_ioctl("slot %d get shm [u:k] %#llx :%#px\n", i, sptr.uaddr, sptr.kptr);
 
-            shm_dbg_ioctl("slot %d get shm k:%px u:%#llx\n", i, kbase, ubase);
-
-            if (osal_copy_to_user(arg, &ubase, sizeof(ubase))) {
+            if (osal_copy_to_user(arg, &sptr, sizeof(sptr))) {
                 kmpp_loge_f("slot %d KMPP_SHM_IOC_GET_SHM osal_copy_to_user fail\n", i);
                 ret = rk_nok;
             }

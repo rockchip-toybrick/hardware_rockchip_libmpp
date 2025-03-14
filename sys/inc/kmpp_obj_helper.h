@@ -20,6 +20,9 @@
 #warning "KMPP_OBJ_STRUCT_TABLE         - object element structure / array / share memory table"
 #warning "KMPP_OBJ_ENTRY_HOOK           - object element value hook function table"
 #warning "KMPP_OBJ_STRUCT_HOOK          - object element structure hook function table"
+#warning "KMPP_OBJ_ENTRY_TABLE2         - object element value / pointer entry 2 level table"
+#warning "KMPP_OBJ_STRUCT_TABLE2        - object element structure / array / share memory 2 level table"
+#warning "KMPP_OBJ_FUNC_IOCTL           - object element ioctl cmd and function table"
 #warning "KMPP_OBJ_FUNC_EXPORT_ENABLE   - enable function EXPORT_SYMBOL"
 #warning "KMPP_OBJ_FUNC_STUB_ENABLE     - enable function stub mode by define empty function"
 #warning "KMPP_OBJ_SHARE_ENABLE         - use /dev/kmpp_objs to share object to userspace"
@@ -170,6 +173,12 @@
 #define KMPP_OBJ_ADD_DEINIT(x)  kmpp_objdef_add_deinit(KMPP_OBJ_DEF(x), KMPP_OBJ_FUNC_DEINIT)
 #else
 #define KMPP_OBJ_ADD_DEINIT(x)
+#endif
+
+#if defined(KMPP_OBJ_FUNC_IOCTL)
+#define KMPP_OBJ_ADD_IOCTL(x)   kmpp_objdef_add_ioctl(KMPP_OBJ_DEF(x), &KMPP_OBJ_FUNC_IOCTL)
+#else
+#define KMPP_OBJ_ADD_IOCTL(x)
 #endif
 
 #if defined(KMPP_OBJ_FUNC_DUMP)
@@ -332,6 +341,7 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
     kmpp_objdef_add_hook(KMPP_OBJ_DEF(prefix), NULL, NULL); \
     KMPP_OBJ_ADD_INIT(prefix); \
     KMPP_OBJ_ADD_DEINIT(prefix); \
+    KMPP_OBJ_ADD_IOCTL(prefix); \
     KMPP_OBJ_ADD_DUMP(prefix); \
     KMPP_OBJ_ENTRY_TABLE(ENTRY_QUERY, prefix) \
     KMPP_OBJ_ENTRY_RO_TABLE(ENTRY_QUERY, prefix) \
@@ -540,6 +550,7 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_FUNC_EXPORT_ENABLE
 #undef KMPP_OBJ_FUNC_INIT
 #undef KMPP_OBJ_FUNC_DEINIT
+#undef KMPP_OBJ_FUNC_IOCTL
 #undef KMPP_OBJ_FUNC_DUMP
 #undef KMPP_OBJ_SHARE_ENABLE
 
@@ -563,6 +574,7 @@ KMPP_OBJS_USAGE_EXPORT(KMPP_OBJ_NAME)
 #undef KMPP_OBJ_SHARE_FUNC
 #undef KMPP_OBJ_ADD_INIT
 #undef KMPP_OBJ_ADD_DEINIT
+#undef KMPP_OBJ_ADD_IOCTL
 #undef KMPP_OBJ_ADD_DUMP
 
 #undef __KMPP_OBJ_HERLPER_H__

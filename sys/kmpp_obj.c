@@ -19,13 +19,15 @@
 #include "kmpp_obj_impl.h"
 #include "kmpp_mem_pool.h"
 #include "kmpp_shm.h"
+#include "kmpp_ioctl_impl.h"
 
 #define OBJ_DBG_FLOW                    (0x00000001)
 #define OBJ_DBG_SHARE                   (0x00000002)
 #define OBJ_DBG_ENTRY                   (0x00000004)
 #define OBJ_DBG_HOOK                    (0x00000008)
-#define OBJ_DBG_SET                     (0x00000010)
-#define OBJ_DBG_GET                     (0x00000020)
+#define OBJ_DBG_IOCTL                   (0x00000010)
+#define OBJ_DBG_SET                     (0x00000040)
+#define OBJ_DBG_GET                     (0x00000080)
 
 #define obj_dbg(flag, fmt, ...)         kmpp_dbg(kmpp_obj_debug, flag, fmt, ## __VA_ARGS__)
 
@@ -33,6 +35,7 @@
 #define obj_dbg_share(fmt, ...)         obj_dbg(OBJ_DBG_SHARE, fmt, ## __VA_ARGS__)
 #define obj_dbg_entry(fmt, ...)         obj_dbg(OBJ_DBG_ENTRY, fmt, ## __VA_ARGS__)
 #define obj_dbg_hook(fmt, ...)          obj_dbg(OBJ_DBG_HOOK, fmt, ## __VA_ARGS__)
+#define obj_dbg_ioctl(fmt, ...)         obj_dbg(OBJ_DBG_IOCTL, fmt, ## __VA_ARGS__)
 #define obj_dbg_set(fmt, ...)           obj_dbg(OBJ_DBG_SET, fmt, ## __VA_ARGS__)
 #define obj_dbg_get(fmt, ...)           obj_dbg(OBJ_DBG_GET, fmt, ## __VA_ARGS__)
 
@@ -77,7 +80,7 @@ typedef struct KmppObjDefInfo_t {
 typedef struct KmppObjDefImpl_t {
     osal_list_head list;
     rk_s32 ref_cnt;
-    rk_s32 head_size;
+    rk_s32 index;
     rk_s32 entry_size;
     rk_s32 buf_size;
     KmppMemPool pool;
@@ -88,6 +91,7 @@ typedef struct KmppObjDefImpl_t {
     KmppObjHook *hooks;
     KmppObjInit init;
     KmppObjDeinit deinit;
+    KmppObjIoctls *ioctls;
     KmppObjDump dump;
     const rk_u8 *name_check;            /* for object name address check */
     rk_u8 *name;
@@ -110,6 +114,7 @@ typedef struct KmppObjSrv_t {
     osal_list_head  list;
     KmppMemPool     head_pool;
     rk_s32          count;
+    rk_s32          index;
 } KmppObjSrv;
 
 static rk_u32 kmpp_obj_debug = 0;
@@ -272,7 +277,6 @@ rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
 
     impl->name_check = name;
     impl->name = (rk_u8 *)(impl + 1);
-    impl->head_size = sizeof(KmppObjImpl);
     impl->entry_size = size;
     impl->buf_size = size + sizeof(KmppObjImpl);
     impl->pool = kmpp_mem_get_pool_f(name, impl->buf_size, 0, 0);
@@ -286,6 +290,7 @@ rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
 
     OSAL_INIT_LIST_HEAD(&impl->list);
     osal_list_add_tail(&impl->list, &srv->list);
+    impl->index = srv->index++;
     srv->count++;
     impl->ref_cnt++;
 
@@ -382,6 +387,7 @@ rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl)
             ret = kmpp_trie_add_info(trie, name, tbl, tbl ? sizeof(*tbl) : 0);
         } else {
             /* record object impl size */
+            ret = kmpp_trie_add_info(trie, "__index", &impl->index, sizeof(rk_s32));
             ret = kmpp_trie_add_info(trie, "__size", &impl->entry_size, sizeof(rk_s32));
             ret |= kmpp_trie_add_info(trie, NULL, NULL, 0);
         }
@@ -465,6 +471,19 @@ rk_s32 kmpp_objdef_add_deinit(KmppObjDef def, KmppObjDeinit deinit)
     return rk_nok;
 }
 EXPORT_SYMBOL(kmpp_objdef_add_deinit);
+
+rk_s32 kmpp_objdef_add_ioctl(KmppObjDef def, KmppObjIoctls *ioctls)
+{
+    if (def) {
+        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+
+        impl->ioctls = ioctls;
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(kmpp_objdef_add_ioctl);
 
 rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump)
 {
@@ -552,6 +571,34 @@ rk_s32 kmpp_objdef_get_hook(KmppObjDef def, const rk_u8 *name)
     return index;
 }
 EXPORT_SYMBOL(kmpp_objdef_get_hook);
+
+rk_s32 kmpp_objdef_ioctl(KmppObjDef def, osal_fs_dev *file, KmppIoc ioc)
+{
+    KmppObjDefImpl *impl_def = (KmppObjDefImpl *)def;
+    KmppIocImpl *impl_ioc = (KmppIocImpl *)ioc;
+    KmppObjIoctls *ioctls = impl_def->ioctls;
+    rk_s32 i;
+
+    if (!ioctls) {
+        kmpp_loge_f("objdef %s not support ioctl\n", impl_def->name);
+        return rk_nok;
+    }
+
+    obj_dbg_ioctl("objdef %s ioctl cnt %d try proc cmd %d\n",
+                  impl_def->name, ioctls->count, impl_ioc->cmd);
+
+    for (i = 0; i < ioctls->count; i++) {
+        KmppObjIoctl *func = &ioctls->funcs[i];
+
+        if (func->cmd == impl_ioc->cmd)
+            return func->func(file, &impl_ioc->in, &impl_ioc->out);
+    }
+
+    kmpp_loge_f("objdef %s not support ioctl cmd %d\n", impl_def->name, impl_ioc->cmd);
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(kmpp_objdef_ioctl);
 
 rk_s32 kmpp_objdef_dump(KmppObjDef def)
 {
@@ -985,7 +1032,7 @@ rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, osal_fs_dev *file, const
 
     impl = (KmppObjImpl *)kmpp_mem_pool_get_f(srv->head_pool);
     if (!impl) {
-        kmpp_loge_f("malloc obj head size %d failed\n", impl_def->head_size);
+        kmpp_loge_f("malloc obj head size %d failed\n", sizeof(KmppObjImpl));
         return rk_nok;
     }
 
