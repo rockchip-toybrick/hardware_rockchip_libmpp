@@ -26,6 +26,7 @@
 #include <soc/rockchip/pm_domains.h>
 #include <uapi/linux/rk-mpp.h>
 
+#include "mpp_debug.h"
 #include "kmpp_uaccess.h"
 
 #ifndef CONFIG_ROCKCHIP_MPP_PROC_FS
@@ -359,8 +360,6 @@ struct mpp_dev {
 
 	struct semaphore work_sem;
 	atomic_t suspend_en;
-	/* debug for isp */
-	void __iomem *isp_base;
 	u32 online_mode;
 };
 
@@ -746,6 +745,7 @@ int mpp_taskqueue_pop_running(struct mpp_taskqueue *queue, struct mpp_task *task
 struct mpp_task *mpp_session_get_pending_task(struct mpp_session *session);
 int mpp_session_pop_pending(struct mpp_session *session, struct mpp_task *task);
 void mpp_session_clean_detach(struct mpp_taskqueue *queue);
+void mpp_session_clear_online_task(struct mpp_dev *mpp, struct mpp_session *session);
 struct mpp_session *mpp_session_init(void);
 /* from kmpp end */
 
@@ -802,8 +802,8 @@ static inline int mpp_write(struct mpp_dev *mpp, u32 reg, u32 val)
 {
 	int idx = reg / sizeof(u32);
 
-	mpp_debug(DEBUG_SET_REG,
-		  "write reg[%03d]: %04x: 0x%08x\n", idx, reg, val);
+	mpp_debug(DEBUG_SET_REG, "write reg[%03d]: %04x: 0x%08x\n", idx, reg, val);
+
 	writel(val, mpp->reg_base + reg);
 
 	return 0;
@@ -813,8 +813,8 @@ static inline int mpp_write_relaxed(struct mpp_dev *mpp, u32 reg, u32 val)
 {
 	int idx = reg / sizeof(u32);
 
-	mpp_debug(DEBUG_SET_REG,
-		  "write reg[%03d]: %04x: 0x%08x\n", idx, reg, val);
+	mpp_debug(DEBUG_SET_REG, "write reg[%03d]: %04x: 0x%08x\n", idx, reg, val);
+
 	writel_relaxed(val, mpp->reg_base + reg);
 
 	return 0;

@@ -81,7 +81,7 @@ extern unsigned int mpp_dev_debug;
 #define mpp_debug(type, fmt, args...)				\
 	do {							\
 		if (unlikely(mpp_dev_debug & (type))) {		\
-			pr_info(fmt, ##args);			\
+			pr_info("%s:%d: " fmt, __func__, __LINE__, ##args);			\
 		}						\
 	} while (0)
 
@@ -115,7 +115,7 @@ extern unsigned int mpp_dev_debug;
 #define mpp_dbg_session(fmt, args...)				\
 	do {							\
 		if (unlikely(mpp_dev_debug & DEBUG_SESSION)) {	\
-			pr_info(fmt, ##args);			\
+			pr_info("%s:%d: " fmt, __func__, __LINE__, ##args);			\
 		}						\
 	} while (0)
 
@@ -130,14 +130,14 @@ extern unsigned int mpp_dev_debug;
 #define mpp_dbg_core(fmt, args...)				\
 	do {							\
 		if (unlikely(mpp_dev_debug & DEBUG_CORE)) {	\
-			pr_info(fmt, ##args);			\
+			pr_info("%s:%d: " fmt, __func__, __LINE__, ##args);			\
 		}						\
 	} while (0)
 
 #define mpp_dbg_slice(fmt, args...)				\
 	do {							\
 		if (unlikely(mpp_dev_debug & DEBUG_SLICE)) {	\
-			pr_info(fmt, ##args);			\
+			pr_info("%s:%d: " fmt, __func__, __LINE__, ##args);			\
 		}						\
 	} while (0)
 
@@ -151,7 +151,7 @@ extern unsigned int mpp_dev_debug;
 #define mpp_dbg_warning(fmt, args...)				\
 	do {							\
 		if (unlikely(mpp_dev_debug & DEBUG_WARNING)) {	\
-			pr_info(fmt, ##args);			\
+			pr_info("%s:%d: " fmt, __func__, __LINE__, ##args);			\
 		}						\
 	} while (0)
 

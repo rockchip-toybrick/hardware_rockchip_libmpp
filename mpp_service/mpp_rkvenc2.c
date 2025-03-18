@@ -34,9 +34,11 @@
 #include <soc/rockchip/rockchip_system_monitor.h>
 #include <soc/rockchip/rockchip_iommu.h>
 
+#include <rk-mpp.h>
 #include "mpp_debug.h"
 #include "mpp_iommu.h"
 #include "mpp_common.h"
+#include "mpp_rkvenc_dvbm.h"
 
 #define RKVENC_DRIVER_NAME			"mpp_rkvenc2"
 
@@ -164,6 +166,30 @@ struct rkvenc_hw_info {
 	u32 vepu_type;
 };
 
+union st_enc_u
+{
+	u32 val;
+	struct {
+		u32 st_enc             : 2;
+		u32 st_sclr            : 1;
+		u32 vepu_fbd_err       : 5;
+		u32 isp_src_oflw       : 1;
+		u32 vepu_src_oflw      : 1;
+		u32 vepu_sid_nmch      : 1;
+		u32 vepu_fcnt_nmch     : 1;
+		u32 reserved           : 4;
+		u32 dvbm_finf_wful     : 1;
+		u32 dvbm_linf_wful     : 1;
+		u32 dvbm_fsid_nmch     : 1;
+		u32 dvbm_fcnt_early    : 1;
+		u32 dvbm_fcnt_late     : 1;
+		u32 dvbm_isp_oflw      : 1;
+		u32 dvbm_vepu_oflw     : 1;
+		u32 isp_time_out       : 1;
+		u32 dvbm_vsrc_fcnt     : 8;
+	};
+};
+
 #define INT_STA_ENC_DONE_STA	BIT(0)
 #define INT_STA_SCLR_DONE_STA	BIT(2)
 #define INT_STA_SLC_DONE_STA	BIT(3)
@@ -172,6 +198,9 @@ struct rkvenc_hw_info {
 #define INT_STA_WBUS_ERR_STA	BIT(6)
 #define INT_STA_RBUS_ERR_STA	BIT(7)
 #define INT_STA_WDG_STA		BIT(8)
+
+#define RKVENC_VIDEO_OVERFLOW	BIT(4)
+#define RKVENC_JPEG_OVERFLOW	BIT(13)
 
 #define INT_STA_ERROR		(INT_STA_BRSP_OTSD_STA | \
 				INT_STA_WBUS_ERR_STA | \
@@ -211,6 +240,7 @@ union rkvenc2_dual_core_handshake_id {
 
 #define RKVENC2_REG_INT_EN		(8)
 #define RKVENC2_BIT_SLICE_DONE_EN	BIT(3)
+#define RKVENC_SOURCE_ERR		(BIT(7))
 
 #define RKVENC2_REG_INT_MASK		(9)
 #define RKVENC2_BIT_SLICE_DONE_MASK	BIT(3)
@@ -242,6 +272,20 @@ union rkvenc2_dual_core_handshake_id {
 #define RKVENC580_REG_ADR_BSBS		(0x2bc)
 #define RKVENC2_REG_VPP_BASE_CFG	(0x530)
 #define RKVENC2_REG_ST_OD_Y_SUM		(0x4070)
+
+#define RKVENC_STATUS		(0x4020)
+/* dvbm regs */
+#define RKVENC_DVBM_CFG		(0x60)
+
+#define RKVENC_JPEG_BASE_CFG	(0x47c)
+#define JRKVENC_PEGE_ENABLE	(BIT(31))
+#define RKVENC_JPEG_BSBT	(0x400)
+#define RKVENC_JPEG_BSBB	(0x404)
+#define RKVENC_JPEG_BSBS	(0x408)
+#define RKVENC_JPEG_BSBR	(0x40c)
+
+#define RKVENC_RSL		(0x310)
+#define RKVENC_JPEG_RSL		(0x440)
 
 union rkvenc2_slice_len_info {
 	u32 val;
@@ -363,6 +407,20 @@ struct rkvenc2_rcb_info {
 	struct rcb_info_elem elem[RKVENC_MAX_RCB_NUM];
 };
 
+struct rkvenc_debug_info {
+	/* normal info */
+	u32 hw_running;
+	/* record bs buf top/bot/write/read addr */
+	u32 bsbuf_info[4];
+	/* err info */
+	u32 wrap_overflow_cnt;
+	u32 bsbuf_overflow_cnt;
+	u32 wrap_source_mis_cnt;
+	u32 enc_err_cnt;
+	u32 enc_err_irq;
+	u32 enc_err_status;
+};
+
 struct rkvenc2_session_priv {
 	struct rw_semaphore rw_sem;
 	/* codec info from user */
@@ -374,6 +432,7 @@ struct rkvenc2_session_priv {
 	} codec_info[ENC_INFO_BUTT];
 	/* rcb_info for sram */
 	struct rkvenc2_rcb_info rcb_inf;
+	struct rkvenc_debug_info info;
 };
 
 struct rkvenc_dev {
@@ -401,12 +460,11 @@ struct rkvenc_dev {
 	u32 sram_enabled;
 	struct page *rcb_page;
 
-	u32 bs_overflow;
-
 #ifdef CONFIG_PM_DEVFREQ
 	struct rockchip_opp_info opp_info;
 	struct monitor_dev_info *mdev_info;
 #endif
+	struct mpp_dvbm dvbm;
 };
 
 struct rkvenc_ccu {
@@ -706,8 +764,7 @@ static struct rkvenc_hw_info rkvenc_511_hw_info = {
 	.int_clr_base = 0x0028,
 	.int_sta_base = 0x002c,
 	.enc_wdg_base = 0x0038,
-
-	.err_mask = 0x27d0,
+	.err_mask = 0xa7d0,
 	.enc_rsl = 0x0310,
 	.dcsh_class_ofst = 0,
 	.vepu_type =  RKVENC_VEPU_511,
@@ -1249,6 +1306,8 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 	struct mpp_task *mpp_task;
 	struct mpp_dev *mpp = session->mpp;
 	u32 reg_enc_pic = 0;
+	u32 resolution_addr = RKVENC_RSL;
+	u32 *reg_tmp;
 
 	mpp_debug_enter();
 
@@ -1355,6 +1414,13 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 		if (task->rec_fbc_dis)
 			mpp_task->clbk_en = 0;
 	}
+
+	/* get resolution info */
+	if (task->fmt == 2)
+		resolution_addr = RKVENC_JPEG_RSL;
+	reg_tmp = rkvenc_get_class_reg(task, resolution_addr);
+	mpp_task->width = (((*reg_tmp) & 0x7ff) + 1) << 3;
+	mpp_task->height = ((((*reg_tmp) >> 16) & 0x7ff) + 1) << 3;
 
 	mpp_debug_leave();
 
@@ -1603,7 +1669,7 @@ static void rkvenc2_calc_timeout_thd(struct mpp_dev *mpp)
 		timeout_thd |= timeout_ms * clk_get_rate(enc->core_clk_info.clk) / 1024000;
 
 	// disable hw timeout watchdog for fpga test
-	mpp_write(mpp, RKVENC_WDG, 0);
+	mpp_write(mpp, RKVENC_WDG, 0xffffff);
 }
 
 static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
@@ -1611,6 +1677,8 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	struct rkvenc_task *task = to_rkvenc_task(mpp_task);
 	struct rkvenc_pp_param *param = &task->pp_info->param;
+	struct mpp_session *session = mpp_task->session;
+	struct rkvenc2_session_priv *priv = session->priv;
 	struct rkvenc_hw_info *hw = enc->hw_info;
 	u32 timing_en = mpp->srv->timing_en;
 	u32 off, s, e;
@@ -1668,7 +1736,7 @@ static int rkvenc_pp_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	wmb();
 	rkvenc2_calc_timeout_thd(mpp);
 	mpp_task_run_begin(mpp_task, timing_en, MPP_WORK_TIMEOUT_DELAY);
-
+	priv->info.hw_running = 1;
 	mpp_debug(DEBUG_RUN, "chan %d pp_task %d start\n",
 		  mpp_task->session->chn_id, mpp_task->task_index);
 	mpp_write(mpp, hw->enc_start_base, 0x100);
@@ -1688,9 +1756,12 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	struct rkvenc_task *task = to_rkvenc_task(mpp_task);
 	struct rkvenc_hw_info *hw = enc->hw_info;
 	u32 timing_en = mpp->srv->timing_en;
+	struct mpp_session *session = mpp_task->session;
+	struct rkvenc2_session_priv *priv = session->priv;
+	u32 dvbm_cfg = 0;
 
 	/* pp flow handle */
-	if (mpp_task->session->pp_session) {
+	if (session->pp_session) {
 		rkvenc_pp_run(mpp, mpp_task);
 		return 0;
 	}
@@ -1708,6 +1779,13 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	mpp_write_relaxed(mpp, 0x5300, 0x2);
 
 	rkvenc2_patch_dchs(enc, task);
+
+	if (mpp_task->disable_jpeg) {
+		u32 *reg = rkvenc_get_class_reg(task, RKVENC_JPEG_BASE_CFG);
+
+		if (reg)
+			(*reg) &= (~JRKVENC_PEGE_ENABLE);
+	}
 
 	for (i = 0; i < task->w_req_cnt; i++) {
 		int ret;
@@ -1730,6 +1808,11 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 				start_val = regs[j];
 				continue;
 			}
+			/* skip dvbm cfg */
+			if (off == RKVENC_DVBM_CFG) {
+				dvbm_cfg = regs[j];
+				continue;
+			}
 			mpp_write_relaxed(mpp, off, regs[j]);
 		}
 	}
@@ -1741,11 +1824,23 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	/* flush tlb before starting hardware */
 	mpp_iommu_flush_tlb(mpp->iommu_info);
 
+	if (session->online) {
+		mpp_rkvenc_dvbm_update(&enc->dvbm, mpp_task, session->online);
+		mpp_debug(DEBUG_RUN, "chan %d task %d pipe %d frame %d start\n",
+			  session->chn_id, mpp_task->task_index,
+			  mpp_task->pipe_id, mpp_task->frame_id);
+		mpp_rkvenc_dvbm_connect(&enc->dvbm, dvbm_cfg);
+	} else {
+		mpp_debug(DEBUG_RUN, "chan %d task %d start\n",
+			  session->chn_id, mpp_task->task_index);
+	}
+
 	/* init current task */
 	mpp->cur_task = mpp_task;
 
 	rkvenc2_calc_timeout_thd(mpp);
 
+	priv->info.hw_running = 1;
 	mpp_task_run_begin(mpp_task, timing_en, MPP_WORK_TIMEOUT_DELAY);
 
 	if (hw->vepu_type == RKVENC_VEPU_510) {
@@ -1779,6 +1874,9 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	/* Flush the register before the start the device */
 	wmb();
 	mpp_write(mpp, enc->hw_info->enc_start_base, start_val);
+
+	if (session->online)
+		mpp_rkvenc_dvbm_hack(&enc->dvbm);
 
 	mpp_task_run_end(mpp_task, timing_en);
 
@@ -1875,6 +1973,7 @@ static void rkvenc2_bs_overflow_handle(struct mpp_dev *mpp)
 	struct rkvenc_hw_info *hw = enc->hw_info;
 	struct mpp_task *mpp_task = mpp->cur_task;
 	u32 bs_rd, bs_wr, bs_top, bs_bot;
+	struct rkvenc2_session_priv *priv = mpp_task->session->priv;
 
 	if (hw->vepu_type == RKVENC_VEPU_580) {
 		bs_rd = mpp_read(mpp, RKVENC580_REG_ADR_BSBR);
@@ -1882,16 +1981,55 @@ static void rkvenc2_bs_overflow_handle(struct mpp_dev *mpp)
 		bs_top = mpp_read(mpp, RKVENC2_REG_ADR_BSBT);
 		bs_bot = mpp_read(mpp, RKVENC2_REG_ADR_BSBB);
 
+		priv->info.bsbuf_info[0] = bs_top;
+		priv->info.bsbuf_info[1] = bs_bot;
+		priv->info.bsbuf_info[2] = bs_wr;
+		priv->info.bsbuf_info[3] = bs_rd;
+
 		bs_wr += 128;
 		if (bs_wr >= bs_top)
 			bs_wr = bs_bot;
 		/* update write addr for enc continue */
 		mpp_write(mpp, RKVENC2_REG_ADR_BSBS, bs_wr);
+	} else if (hw->vepu_type == RKVENC_VEPU_511) {
+		if (mpp->irq_status & RKVENC_JPEG_OVERFLOW) {
+			bs_rd = mpp_read(mpp, RKVENC_JPEG_BSBR);
+			bs_wr = mpp_read(mpp, RKVENC_JPEG_BSBS);
+			bs_top = mpp_read(mpp, RKVENC_JPEG_BSBT);
+			bs_bot = mpp_read(mpp, RKVENC_JPEG_BSBB);
+
+			priv->info.bsbuf_info[0] = bs_top;
+			priv->info.bsbuf_info[1] = bs_bot;
+			priv->info.bsbuf_info[2] = bs_wr;
+			priv->info.bsbuf_info[3] = bs_rd;
+
+			mpp_dbg_warning("task %d jpeg bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
+					mpp_task->task_index, bs_top, bs_bot, bs_wr, bs_rd);
+		}
+		if (mpp->irq_status & RKVENC_VIDEO_OVERFLOW) {
+			bs_rd = mpp_read(mpp, RKVENC2_REG_ADR_BSBR);
+			bs_wr = mpp_read(mpp, RKVENC2_REG_ADR_BSBS);
+			bs_top = mpp_read(mpp, RKVENC2_REG_ADR_BSBT);
+			bs_bot = mpp_read(mpp, RKVENC2_REG_ADR_BSBB);
+
+			priv->info.bsbuf_info[0] = bs_top;
+			priv->info.bsbuf_info[1] = bs_bot;
+			priv->info.bsbuf_info[2] = bs_wr;
+			priv->info.bsbuf_info[3] = bs_rd;
+
+			mpp_dbg_warning("task %d video bs overflow, buf[t:%#x b:%#x w:%#x r:%#x]\n",
+					mpp_task->task_index, bs_top, bs_bot, bs_wr, bs_rd);
+		}
 	} else {
 		bs_rd = mpp_read(mpp, RKVENC2_REG_ADR_BSBR);
 		bs_wr = mpp_read(mpp, RKVENC2_REG_ST_BSB);
 		bs_top = mpp_read(mpp, RKVENC2_REG_ADR_BSBT);
 		bs_bot = mpp_read(mpp, RKVENC2_REG_ADR_BSBB);
+
+		priv->info.bsbuf_info[0] = bs_top;
+		priv->info.bsbuf_info[1] = bs_bot;
+		priv->info.bsbuf_info[2] = bs_wr;
+		priv->info.bsbuf_info[3] = bs_rd;
 
 		bs_wr += 128;
 		if (bs_wr >= bs_top)
@@ -1910,23 +2048,31 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	struct rkvenc_hw_info *hw = enc->hw_info;
-	struct mpp_task *mpp_task = NULL;
+	struct mpp_task *mpp_task = mpp->cur_task;
 	struct rkvenc_task *task = NULL;
 	u32 irq_status;
 	int ret = IRQ_NONE;
+	struct mpp_session *session;
+	struct rkvenc2_session_priv *priv;
+	union st_enc_u enc_st;
 
 	mpp_debug_enter();
 
 	irq_status = mpp_read(mpp, hw->int_sta_base);
+	enc_st.val = mpp_read(mpp, RKVENC_STATUS);
+	mpp->irq_status = irq_status;
 
-	mpp_debug(DEBUG_IRQ_STATUS, "%s irq_status: %08x\n",
-		  dev_name(mpp->dev), irq_status);
+	mpp_debug(DEBUG_IRQ_STATUS, "%s irq_status: %08x st 0x%08x\n",
+		  dev_name(mpp->dev), irq_status, enc_st.val);
 
 	if (!irq_status)
 		return ret;
 
 	/* clear int first */
 	mpp_write(mpp, hw->int_clr_base, irq_status);
+
+	if (!mpp_task)
+		return IRQ_HANDLED;
 
 	/*
 	 * prevent watch dog irq storm.
@@ -1936,10 +2082,9 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 	if (irq_status & INT_STA_WDG_STA)
 		mpp_write(mpp, hw->int_mask_base, INT_STA_WDG_STA);
 
-	if (mpp->cur_task) {
-		mpp_task = mpp->cur_task;
-		task = to_rkvenc_task(mpp_task);
-	}
+	task = to_rkvenc_task(mpp_task);
+	session = mpp_task->session;
+	priv = session->priv;
 
 	/* 1. read slice number and slice length */
 	if (hw->vepu_type == RKVENC_VEPU_510 && task) {
@@ -1955,6 +2100,11 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 		}
 	}
 
+	if (session->online) {
+		if (mpp_rkvenc_dvbm_handle(&enc->dvbm, mpp_task))
+			return IRQ_HANDLED;
+	}
+
 	/* 2. process slice irq */
 	if (irq_status & INT_STA_SLC_DONE_STA)
 		ret = IRQ_HANDLED;
@@ -1962,31 +2112,31 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 	/* 3. process bitstream overflow */
 	if (irq_status & INT_STA_BSF_OFLW_STA) {
 		rkvenc2_bs_overflow_handle(mpp);
-		enc->bs_overflow = 1;
-		ret = IRQ_HANDLED;
 	}
 
 	/* 4. process frame irq */
 	if (irq_status & INT_STA_ENC_DONE_STA) {
 		mpp->irq_status = irq_status;
 
-		if (enc->bs_overflow) {
-			mpp->irq_status |= INT_STA_BSF_OFLW_STA;
-			enc->bs_overflow = 0;
-		}
-
 		ret = IRQ_WAKE_THREAD;
 	}
 
 	/* 5. process error irq */
-	if (irq_status & INT_STA_ERROR) {
+	if (irq_status & enc->hw_info->err_mask) {
 		mpp->irq_status = irq_status;
-
-		dev_err(mpp->dev, "found error status %08x\n", irq_status);
-
+		priv->info.enc_err_irq = irq_status;
+		priv->info.enc_err_status = enc_st.val;
+		if (enc_st.vepu_src_oflw)
+			priv->info.wrap_overflow_cnt++;
+		if ((irq_status & RKVENC_VIDEO_OVERFLOW) ||
+		    (irq_status & RKVENC_JPEG_OVERFLOW))
+		    priv->info.bsbuf_overflow_cnt++;
+		priv->info.enc_err_cnt++;
+		dev_err(mpp->dev, "chan %d task %d error %08x\n",
+			session->chn_id, mpp_task->task_index, irq_status);
 		ret = IRQ_WAKE_THREAD;
 	}
-
+	priv->info.hw_running = 0;
 	mpp_debug_leave();
 
 	return ret;
@@ -2029,12 +2179,11 @@ static int rkvenc_isr(struct mpp_dev *mpp)
 		atomic_inc(&mpp->reset_request);
 
 		/* dump register */
-		if (mpp_debug_unlikely(DEBUG_DUMP_ERR_REG))
-			mpp_task_dump_hw_reg(mpp);
+		if (mpp->dev_ops && mpp->dev_ops->dump_dev)
+			mpp->dev_ops->dump_dev(mpp);
 	}
 
 	mpp_task_finish(mpp_task->session, mpp_task);
-
 	core_idle = queue->core_idle;
 	set_bit(mpp->core_id, &queue->core_idle);
 
@@ -2051,9 +2200,12 @@ static int rkvenc_finish(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	u32 i, j;
 	u32 *reg;
 	struct rkvenc_task *task = to_rkvenc_task(mpp_task);
+	struct mpp_session *session = mpp_task->session;
+	struct rkvenc2_session_priv *priv = session->priv;
 
 	mpp_debug_enter();
 
+	priv->info.hw_running = 0;
 	if (task->pp_info) {
 		task->pp_info->output.luma_pix_sum_od = mpp_read(mpp, RKVENC2_REG_ST_OD_Y_SUM);
 		mpp_write(mpp, RKVENC2_REG_VPP_BASE_CFG, 0);
@@ -2124,6 +2276,12 @@ static int rkvenc_result(struct mpp_dev *mpp,
 		}
 	}
 
+	if (test_bit(TASK_STATE_TIMEOUT, &mpp_task->state))
+		return -1;
+
+	if (atomic_read(&mpp_task->abort_request))
+		return -1;
+
 	mpp_debug_leave();
 
 	return 0;
@@ -2143,9 +2301,50 @@ static int rkvenc_free_task(struct mpp_session *session,
 	return 0;
 }
 
+static int rkvenc_unbind_jpeg_task(struct mpp_session *session)
+{
+	struct mpp_dev *mpp = session->mpp;
+	struct mpp_taskqueue *queue = mpp->queue;
+	struct mpp_task *task, *n;
+	unsigned long flags, flags1;
+
+	spin_lock_irqsave(&queue->dev_lock, flags);
+	spin_lock_irqsave(&session->pending_lock, flags1);
+
+	list_for_each_entry_safe(task, n, &session->pending_list, pending_link) {
+		if (test_bit(TASK_STATE_RUNNING, &task->state))
+			continue;
+
+		pr_err("chan %d task %d disable_jpeg\n", session->chn_id, task->task_index);
+		task->disable_jpeg = 1;
+	}
+
+	spin_unlock_irqrestore(&session->pending_lock, flags1);
+	spin_unlock_irqrestore(&queue->dev_lock, flags);
+
+	return 0;
+}
+
 static int rkvenc_control(struct mpp_session *session, struct mpp_request *req)
 {
 	switch (req->cmd) {
+	case MPP_CMD_UNBIND_JPEG_TASK: {
+		return rkvenc_unbind_jpeg_task(session);
+	} break;
+	case MPP_CMD_VEPU_CONNECT_DVBM: {
+		u32 dvbm_cfg = mpp_read(session->mpp, RKVENC_DVBM_CFG);
+		u32 connect = *(u32*)req->data;
+		struct rkvenc_dev *enc = to_rkvenc_dev(session->mpp);
+
+		if (session->online == MPP_ENC_ONLINE_MODE_SW)
+			return 0;
+
+		mpp_dbg_dvbm("connect dvbm %d cfg 0x%08x\n", connect, dvbm_cfg);
+		if (connect)
+			return mpp_rkvenc_dvbm_connect(&enc->dvbm, dvbm_cfg);
+		else
+			return mpp_rkvenc_dvbm_disconnect(&enc->dvbm, dvbm_cfg);
+	} break;
 	case MPP_CMD_SEND_CODEC_INFO: {
 		int i;
 		int cnt;
@@ -2229,43 +2428,51 @@ static int rkvenc_procfs_remove(struct mpp_dev *mpp)
 
 static int rkvenc_dump_session(struct mpp_session *session, struct seq_file *seq)
 {
-	int i;
 	struct rkvenc2_session_priv *priv = session->priv;
+	struct rkvenc_debug_info *info = &priv->info;
 
 	down_read(&priv->rw_sem);
 	/* item name */
-	seq_puts(seq, "------------------------------------------------------");
+	seq_puts(seq, "\n--------hw session infos");
 	seq_puts(seq, "------------------------------------------------------\n");
-	seq_printf(seq, "|%8s|", (const char *)"session");
-	seq_printf(seq, "%8s|", (const char *)"device");
-	for (i = ENC_INFO_BASE; i < ENC_INFO_BUTT; i++) {
-		bool show = priv->codec_info[i].flag;
+	seq_printf(seq, "%8s|", "ID");
+	seq_printf(seq, "%8s|", "device");
+	seq_printf(seq, "%13s|%8s|%12s|%10s|%15s|%13s|%13s|%12s\n",
+		   "hw_running", "online", "wrap_ovfl", "bs_ovfl", "wrap_src_mis",
+		   "enc_err_cnt", "enc_err_irq", "enc_err_st");
 
-		if (show)
-			seq_printf(seq, "%8s|", enc_info_item_name[i]);
-	}
-	seq_puts(seq, "\n");
-	/* item data*/
-	seq_printf(seq, "|%8d|", session->index);
+	seq_printf(seq, "%8d|", session->chn_id);
 	seq_printf(seq, "%8s|", mpp_device_name[session->device_type]);
-	for (i = ENC_INFO_BASE; i < ENC_INFO_BUTT; i++) {
-		u32 flag = priv->codec_info[i].flag;
+	seq_printf(seq, "%13d|%8d|%12d|%10d|%15d|%13d|%13x|%12x\n",
+		   info->hw_running, session->online, info->wrap_overflow_cnt,
+		   info->bsbuf_overflow_cnt, info->wrap_source_mis_cnt,
+		   info->enc_err_cnt, info->enc_err_irq, info->enc_err_status);
 
-		if (!flag)
-			continue;
-		if (flag == CODEC_INFO_FLAG_NUMBER) {
-			u32 data = priv->codec_info[i].val;
-
-			seq_printf(seq, "%8d|", data);
-		} else if (flag == CODEC_INFO_FLAG_STRING) {
-			const char *name = (const char *)&priv->codec_info[i].val;
-
-			seq_printf(seq, "%8s|", name);
-		} else {
-			seq_printf(seq, "%8s|", (const char *)"null");
-		}
+	if (info->bsbuf_overflow_cnt) {
+		seq_puts(seq, "\n--------bitstream buffer addr");
+		seq_puts(seq, "------------------------------------------------------\n");
+		seq_printf(seq, "%10s|%10s|%10s|%10s|\n",
+			   "top", "bot", "wr", "rd");
+		seq_printf(seq, "%10x|%10x|%10x|%10x|\n",
+			   info->bsbuf_info[0], info->bsbuf_info[1],
+			   info->bsbuf_info[2], info->bsbuf_info[3]);
 	}
-	seq_puts(seq, "\n");
+
+	if (session->online) {
+		struct rkvenc_dev *enc = to_rkvenc_dev(session->mpp);
+		struct mpp_dvbm *dvbm = &enc->dvbm;
+
+		seq_puts(seq, "\n--------wrap info ");
+		seq_puts(seq, "------------------------------------------------------\n");
+		seq_printf(seq, "%10s|%23s|%23s|%10s|\n",
+			   "source", "y_buf", "uv_buf", "wrap_line");
+		seq_printf(seq, "%10s|%10x - %10x|%10x - %10x|%10d\n",
+			   dvbm->source == DVBM_SOURCE_ISP ? "isp" : "vpss",
+			   dvbm->wrap_buf.y_bot_iova, dvbm->wrap_buf.y_top_iova,
+			   dvbm->wrap_buf.c_bot_iova, dvbm->wrap_buf.c_top_iova,
+			   dvbm->wrap_line);
+	}
+
 	up_read(&priv->rw_sem);
 
 	return 0;
@@ -2766,6 +2973,38 @@ task_done_ret:
 	return ret;
 }
 
+static int rkvenc_dump_dev(struct mpp_dev *mpp)
+{
+	u32 i;
+
+	if (!unlikely(mpp_dev_debug & DEBUG_DUMP_ERR_REG))
+		return 0;
+	dev_err(mpp->dev, "=== %s ===\n", __func__);
+	for (i = 0; i < RKVENC_CLASS_BUTT; i++) {
+		u32 j, s, e;
+
+		s = rkvenc_511_hw_info.reg_msg[i].base_s;
+		e = rkvenc_511_hw_info.reg_msg[i].base_e;
+
+		if ((i == RKVENC_CLASS_RC) ||
+		    (i == RKVENC_CLASS_PAR) ||
+		    (i == RKVENC_CLASS_SQI) ||
+		    (i == RKVENC_CLASS_SCL) ||
+		    (i == RKVENC_CLASS_OSD))
+			continue;
+
+		for (j = s; j <= e; j += 4) {
+			u32 val = mpp_read(mpp, j);
+
+			if (val) {
+				pr_err("reg[0x%0x] = 0x%08x\n", j, mpp_read(mpp, j));
+			}
+		}
+	}
+
+	return 0;
+}
+
 static struct mpp_hw_ops rkvenc_hw_ops = {
 	.init = rkvenc_init,
 	.exit = rkvenc_exit,
@@ -2788,6 +3027,7 @@ static struct mpp_dev_ops rkvenc_dev_ops_v2 = {
 	.init_session = rkvenc_init_session,
 	.free_session = rkvenc_free_session,
 	.dump_session = rkvenc_dump_session,
+	.dump_dev = rkvenc_dump_dev,
 };
 
 static struct mpp_dev_ops rkvenc_ccu_dev_ops = {
@@ -3224,6 +3464,7 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 		dev_err(dev, "register interrupter runtime failed\n");
 		goto failed_get_irq;
 	}
+	mpp_rkvenc_dvbm_init(&enc->dvbm, mpp);
 	mpp->session_max_buffers = RKVENC_SESSION_MAX_BUFFERS;
 	enc->hw_info = to_rkvenc_info(mpp->var->hw_info);
 	rkvenc_procfs_init(mpp);
@@ -3304,6 +3545,7 @@ static int rkvenc_remove(struct platform_device *pdev)
 		rkvenc2_free_rcbbuf(pdev, enc);
 		mpp_dev_remove(mpp);
 		rkvenc_procfs_remove(mpp);
+		mpp_rkvenc_dvbm_deinit(&enc->dvbm);
 	}
 
 	return 0;

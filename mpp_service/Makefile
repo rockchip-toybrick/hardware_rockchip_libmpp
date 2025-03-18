@@ -18,6 +18,7 @@ EXTRA_CFLAGS += $(MPP_CFLAGS)
 ${KMPP_SRC}-objs += $(MPP_CFILES)
 
 ${KMPP_SRC}-objs += $(MPP_SERVICE_DIR)/mpp_service.o $(MPP_SERVICE_DIR)/mpp_common.o $(MPP_SERVICE_DIR)/mpp_iommu.o
+${KMPP_SRC}-objs += $(MPP_SERVICE_DIR)/mpp_rkvenc_dvbm.o
 
 CONFIG_ROCKCHIP_MPP_RKVDEC = y
 CONFIG_ROCKCHIP_MPP_RKVENC = y

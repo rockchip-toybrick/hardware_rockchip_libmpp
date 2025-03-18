@@ -167,6 +167,7 @@ SET(KMPP_SRC
     mpp_iommu.c
     mpp_service.c
     mpp_common.c
+    mpp_rkvenc_dvbm.c
     ../mpp_osal/mpp_osal.c
     hack/mpp_hack_px30.c
     hack/mpp_hack_rk3576.c

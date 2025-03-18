@@ -337,7 +337,12 @@ void mpp_session_cleanup_detach(struct mpp_taskqueue *queue, struct kthread_work
 
 	mutex_lock(&queue->session_lock);
 	list_for_each_entry_safe(session, n, &queue->session_detach, session_link) {
-		s32 task_count = atomic_read(&session->task_count);
+		s32 task_count;
+
+		if (session->online)
+			mpp_session_clear_online_task(session->mpp, session);
+
+		task_count = atomic_read(&session->task_count);
 
 		if (!task_count) {
 			list_del_init(&session->session_link);
@@ -560,7 +565,9 @@ static void mpp_task_timeout_work(struct work_struct *work_s)
 	}
 	disable_irq(mpp->irq);
 	if (test_and_set_bit(TASK_STATE_HANDLE, &task->state)) {
-		mpp_err("task has been handled\n");
+		mpp_err("session %d:%d task %d state %#lx has been handled\n",
+			session->device_type, session->index, task->task_index, task->state);
+		enable_irq(mpp->irq);
 		return;
 	}
 	mpp_err("session %d:%d task %d processing time out!\n",
@@ -751,7 +758,7 @@ void mpp_task_run_begin(struct mpp_task *task, u32 timing_en, u32 timeout)
 
 	mpp_time_record(task);
 	schedule_delayed_work(&task->timeout_work, msecs_to_jiffies(timeout));
-
+	set_bit(TASK_STATE_RUNNING, &task->state);
 	if (timing_en) {
 		task->on_sched_timeout = ktime_get();
 		set_bit(TASK_TIMING_TO_SCHED, &task->state);
@@ -932,55 +939,54 @@ static void mpp_task_worker_default(struct kthread_work *work_s)
 	struct mpp_task *task;
 	struct mpp_dev *mpp = container_of(work_s, struct mpp_dev, work);
 	struct mpp_taskqueue *queue = mpp->queue;
+	unsigned long flags;
 
 	mpp_debug_enter();
 
 	try_process_running_task(mpp);
-again:
-	task = mpp_taskqueue_get_pending_task(queue);
-	if (!task)
-		goto done;
 
-	/* if task timeout and aborted, remove it */
-	if (atomic_read(&task->abort_request) > 0) {
-		mpp_taskqueue_pop_pending(queue, task);
-		goto again;
-	}
+	while (1) {
+		task = mpp_taskqueue_get_pending_task(queue);
+		if (!task)
+			break;
 
-	/* get device for current task */
-	mpp = task->session->mpp;
+		/* if task timeout and aborted, remove it */
+		if (atomic_read(&task->abort_request) > 0) {
+			mpp_taskqueue_pop_pending(queue, task);
+			continue;
+		}
 
-	/*
-	 * In the link table mode, the prepare function of the device
-	 * will check whether I can insert a new task into device.
-	 * If the device supports the task status query(like the HEVC
-	 * encoder), it can report whether the device is busy.
-	 * If the device does not support multiple task or task status
-	 * query, leave this job to mpp service.
-	 */
-	if (mpp->dev_ops->prepare)
-		task = mpp->dev_ops->prepare(mpp, task);
-	else if (mpp_taskqueue_is_running(queue))
-		task = NULL;
+		/* get device for current task */
+		mpp = task->session->mpp;
+		spin_lock_irqsave(&queue->dev_lock, flags);
+		/*
+		* In the link table mode, the prepare function of the device
+		* will check whether I can insert a new task into device.
+		* If the device supports the task status query(like the HEVC
+		* encoder), it can report whether the device is busy.
+		* If the device does not support multiple task or task status
+		* query, leave this job to mpp service.
+		*/
+		if (mpp->dev_ops->prepare)
+			task = mpp->dev_ops->prepare(mpp, task);
+		else if (mpp_taskqueue_is_running(queue))
+			task = NULL;
 
-	/*
-	 * FIXME if the hardware supports task query, but we still need to lock
-	 * the running list and lock the mpp service in the current state.
-	 */
-	/* Push a pending task to running queue */
-	if (task) {
-		struct mpp_dev *task_mpp = mpp_get_task_used_device(task, task->session);
+		if (!task) {
+			spin_unlock_irqrestore(&queue->dev_lock, flags);
+			break;
+		}
 
-		atomic_inc(&task_mpp->task_count);
+		/* Push a pending task to running queue */
+		mpp = mpp_get_task_used_device(task, task->session);
+
+		atomic_inc(&mpp->task_count);
 		mpp_taskqueue_pending_to_run(queue, task);
 		set_bit(TASK_STATE_RUNNING, &task->state);
-		if (mpp_task_run(task_mpp, task))
+		spin_unlock_irqrestore(&queue->dev_lock, flags);
+		if (mpp_task_run(mpp, task))
 			mpp_taskqueue_pop_running(queue, task);
-		else
-			goto again;
 	}
-
-done:
 	mpp_session_cleanup_detach(queue, work_s);
 }
 

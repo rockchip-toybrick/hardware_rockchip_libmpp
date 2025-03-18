@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2022 Rockchip Electronics Co., Ltd
+ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
  */
 #ifndef __SOC_ROCKCHIP_DVBM_H
 #define __SOC_ROCKCHIP_DVBM_H
@@ -11,6 +11,8 @@
 enum dvbm_port_dir {
 	DVBM_ISP_PORT,
 	DVBM_VEPU_PORT,
+	DVBM_VPSS_PORT,
+	DVBM_PORT_BUTT,
 };
 
 enum dvbm_cmd {
@@ -26,14 +28,12 @@ enum dvbm_cmd {
 	DVBM_VEPU_CMD_BASE  = 0x10,
 	DVBM_VEPU_GET_ADR,
 	DVBM_VEPU_CMD_BUTT,
-};
 
-enum isp_frame_status {
-	ISP_FRAME_START,
-	ISP_FRAME_ONE_QUARTER,
-	ISP_FRAME_HALF,
-	ISP_FRAME_THREE_QUARTERS,
-	ISP_FRAME_FINISH,
+	DVBM_VPSS_CMD_BASE   = 0x20,
+	DVBM_VPSS_SET_CFG,
+	DVBM_VPSS_FRM_START,
+	DVBM_VPSS_FRM_END,
+	DVBM_VPSS_CMD_BUTT,
 };
 
 enum dvbm_cb_event {
@@ -51,6 +51,12 @@ enum dvbm_cb_event {
 	DVBM_VEPU_NOTIFY_FRM_END,
 	DVBM_VEPU_NOTIFY_FRM_INFO,
 	DVBM_VEPU_EVENT_BUTT,
+
+	DVBM_VPSS_EVENT_BASE   = 0x20,
+	DVBM_VPSS_REQ_CONNECT,
+	DVBM_VPSS_REQ_DISCONNECT,
+	DVBM_VPSS_SET_DVBM_CFG,
+	DVBM_VPSS_EVENT_BUTT,
 };
 
 struct dvbm_port {
@@ -60,7 +66,7 @@ struct dvbm_port {
 
 struct dvbm_isp_cfg_t {
 	u32 chan_id;
-	struct dmabuf *buf;
+	struct dma_buf *buf;
 	dma_addr_t dma_addr;
 	u32 ybuf_top;
 	u32 ybuf_bot;
@@ -98,7 +104,7 @@ struct dvbm_cb {
 	int event;
 };
 
-//#if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
+// #if IS_ENABLED(CONFIG_ROCKCHIP_DVBM)
 #if 1
 
 struct dvbm_port *rk_dvbm_get_port(struct platform_device *pdev,

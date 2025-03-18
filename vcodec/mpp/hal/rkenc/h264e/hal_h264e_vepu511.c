@@ -655,7 +655,7 @@ static void setup_vepu511_normal(HalVepu511RegSet *regs)
 	/* reg002 ENC_CLR */
 	regs->reg_ctl.enc_clr.safe_clr           = 0;
 	regs->reg_ctl.enc_clr.force_clr          = 0;
-	regs->reg_ctl.enc_clr.dvbm_clr_disable 	 = 1;
+	regs->reg_ctl.enc_clr.dvbm_clr           = 0;
 
 	/* reg003 LKT_ADDR */
 	// regs->reg_ctl.lkt_addr           = 0;
@@ -668,7 +668,6 @@ static void setup_vepu511_normal(HalVepu511RegSet *regs)
 	regs->reg_ctl.int_en.vbsf_oflw_en       = 1;
 	regs->reg_ctl.int_en.vbuf_lens_en       = 1;
 	regs->reg_ctl.int_en.enc_err_en         = 1;
-	// regs->reg_ctl.int_en.dvbm_fcfg_en       = 1;
 
 	regs->reg_ctl.int_en.wdg_en             = 1;
 	regs->reg_ctl.int_en.vsrc_err_en        = 1;
@@ -679,8 +678,7 @@ static void setup_vepu511_normal(HalVepu511RegSet *regs)
 	regs->reg_ctl.int_en.jslc_done_en       = 1;
 	regs->reg_ctl.int_en.jbsf_oflw_en       = 1;
 	regs->reg_ctl.int_en.jbuf_lens_en       = 1;
-	// regs->reg_ctl.int_en.dvbm_dcnt_en       = 1;
-	regs->reg_ctl.int_en.dvbm_err_en        = 0;
+	regs->reg_ctl.int_en.dvbm_err_en        = 1;
 
 	/* reg005 INT_MSK */
 	regs->reg_ctl.int_msk.enc_done_msk        = 0;
@@ -1775,11 +1773,11 @@ static MPP_RET vepu511_h264e_set_dvbm(HalH264eVepu511Ctx *ctx, HalEncTask *task)
 	}
 
 	regs->reg_ctl.dvbm_cfg.dvbm_en = 1;
-	/* 1: cur frame 0: next frame */
-	regs->reg_ctl.dvbm_cfg.ptr_gbck = 0;
+	regs->reg_ctl.dvbm_cfg.src_badr_sel = 0;
+	regs->reg_ctl.dvbm_cfg.dvbm_vpu_fskp = 0;
 	regs->reg_ctl.dvbm_cfg.src_oflw_drop = 1;
 	regs->reg_ctl.dvbm_cfg.vepu_expt_type = 0;
-	regs->reg_ctl.dvbm_cfg.vinf_dly_cycle = 0;
+	regs->reg_ctl.dvbm_cfg.vinf_dly_cycle = 2;
 	regs->reg_ctl.dvbm_cfg.ybuf_full_mgn = MPP_ALIGN(width * 8, SZ_4K) / SZ_4K;
 	regs->reg_ctl.dvbm_cfg.ybuf_oflw_mgn = 0;
 

@@ -1525,11 +1525,6 @@ static MPP_RET vepu511_h265_set_dvbm(H265eV511HalContext *ctx, HalEncTask *task)
 	H265eV511RegSet *regs = ctx->regs;
 	RK_U32 width = ctx->cfg->prep.width;
 
-	regs->reg_frm.reg0194_enc_id.frame_id = 0;
-	regs->reg_frm.reg0194_enc_id.frm_id_match = 0;
-	regs->reg_frm.reg0194_enc_id.source_id = 0;
-	regs->reg_frm.reg0194_enc_id.src_id_match = 0;
-
 	if (ctx->online == MPP_ENC_ONLINE_MODE_SW) {
 		regs->reg_ctl.vs_ldly.dvbm_ack_soft = 1;
 		regs->reg_ctl.vs_ldly.dvbm_ack_sel  = 1;
@@ -1538,14 +1533,18 @@ static MPP_RET vepu511_h265_set_dvbm(H265eV511HalContext *ctx, HalEncTask *task)
 	}
 
 	regs->reg_ctl.dvbm_cfg.dvbm_en = 1;
-	/* 1: cur frame 0: next frame */
-	regs->reg_ctl.dvbm_cfg.ptr_gbck = 0;
+	regs->reg_ctl.dvbm_cfg.src_badr_sel = 0;
+	regs->reg_ctl.dvbm_cfg.dvbm_vpu_fskp = 0;
 	regs->reg_ctl.dvbm_cfg.src_oflw_drop = 1;
 	regs->reg_ctl.dvbm_cfg.vepu_expt_type = 0;
-	regs->reg_ctl.dvbm_cfg.vinf_dly_cycle = 0;
-	regs->reg_ctl.dvbm_cfg.ybuf_full_mgn = MPP_ALIGN(width * 8, SZ_4K) / SZ_4K;;
+	regs->reg_ctl.dvbm_cfg.vinf_dly_cycle = 2;
+	regs->reg_ctl.dvbm_cfg.ybuf_full_mgn = MPP_ALIGN(width * 8, SZ_4K) / SZ_4K;
 	regs->reg_ctl.dvbm_cfg.ybuf_oflw_mgn = 0;
 
+	regs->reg_frm.reg0194_enc_id.frame_id = 0;
+	regs->reg_frm.reg0194_enc_id.frm_id_match = 0;
+	regs->reg_frm.reg0194_enc_id.source_id = 0;
+	regs->reg_frm.reg0194_enc_id.src_id_match = 0;
 	regs->reg_frm.reg0194_enc_id.ch_id = 1;
 	regs->reg_frm.reg0194_enc_id.vinf_req_en = 1;
 	regs->reg_frm.reg0194_enc_id.vrsp_rtn_en = 1;
@@ -1561,7 +1560,7 @@ static MPP_RET vepu511_h265_set_normal(H265eV511HalContext *ctx)
 	reg_ctl->enc_strt.vepu_cmd     = 1;
 	reg_ctl->enc_clr.safe_clr      = 0;
 	reg_ctl->enc_clr.force_clr     = 0;
-	reg_ctl->enc_clr.dvbm_clr_disable = 1;
+	reg_ctl->enc_clr.dvbm_clr      = 0;
 
 	reg_ctl->int_en.enc_done_en        = 1;
 	reg_ctl->int_en.lkt_node_done_en   = 1;
@@ -1578,7 +1577,7 @@ static MPP_RET vepu511_h265_set_normal(H265eV511HalContext *ctx)
 	reg_ctl->int_en.jslc_done_en       = 1;
 	reg_ctl->int_en.jbsf_oflw_en       = 1;
 	reg_ctl->int_en.jbuf_lens_en       = 1;
-	reg_ctl->int_en.dvbm_err_en        = 0;
+	reg_ctl->int_en.dvbm_err_en        = 1;
 
 	reg_ctl->dtrns_map.jpeg_bus_edin    = 0x7;
 	reg_ctl->int_clr.enc_done_clr = 1;

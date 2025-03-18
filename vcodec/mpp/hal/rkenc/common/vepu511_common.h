@@ -307,7 +307,7 @@ typedef struct Vepu511ControlCfg_t {
 	struct {
 		RK_U32 safe_clr            : 1;
 		RK_U32 force_clr           : 1;
-		RK_U32 dvbm_clr_disable    : 1;
+		RK_U32 dvbm_clr    	   : 1;
 		RK_U32 reserved            : 29;
 	} enc_clr;
 
@@ -543,7 +543,7 @@ typedef struct Vepu511ControlCfg_t {
 	struct {
 		RK_U32 dvbm_en           : 1;
 		RK_U32 src_badr_sel      : 1;
-		RK_U32 ptr_gbck          : 1;
+		RK_U32 dvbm_vpu_fskp     : 1;
 		RK_U32 src_oflw_drop     : 1;
 		RK_U32 dvbm_isp_cnct     : 1;
 		RK_U32 dvbm_vepu_cnct    : 1;
