@@ -21,18 +21,20 @@ typedef struct KmppBufGrpCfgImpl_t {
     rk_u32              size;
     KmppBufferMode      mode;
     rk_s32              fd;
+    rk_s32              grp_id;
     rk_s32              used;
     rk_s32              unused;
     void                *device;
     KmppShmPtr          allocator;
     KmppShmPtr          name;
+    void                *grp_impl;
 } KmppBufGrpCfgImpl;
 
 typedef struct KmppBufGrpImpl_t {
     /* group share config pointer */
     KmppShmPtr          cfg;
     KmppBufGrpCfg       cfg_ext;
-    KmppBufGrpCfgImpl   *cfg_set;
+    KmppBufGrpCfgImpl   *cfg_usr;
 
     /* internal parameter set on used */
     rk_u32              flag;
@@ -68,7 +70,7 @@ typedef struct KmppBufGrpImpl_t {
     rk_u8               str_buf[BUF_GRP_STR_BUF_SIZE];
 
     /* buffer group config for internal usage */
-    KmppBufGrpCfgImpl   cfg_impl;
+    KmppBufGrpCfgImpl   cfg_int;
 } KmppBufGrpImpl;
 
 typedef struct KmppBufCfgImpl_t {
@@ -76,7 +78,11 @@ typedef struct KmppBufCfgImpl_t {
     rk_u32              offset;
     rk_u32              flag;
     rk_s32              fd;
-    rk_s32              index;
+    rk_s32              index;      /* index for external user buffer match */
+    rk_s32              grp_id;
+    rk_s32              buf_gid;
+    rk_s32              buf_uid;
+
     void                *khnd;
     void                *kdmabuf;
     void                *kdev;
@@ -90,25 +96,28 @@ typedef struct KmppBufCfgImpl_t {
     rk_u64              ufp;
     KmppShmPtr          sptr;
     KmppShmPtr          group;
+    void                *buf_impl;
 } KmppBufCfgImpl;
 
 typedef struct KmppBufferImpl_t {
     KmppShmPtr          cfg;
     KmppBufCfg          cfg_ext;
-    KmppBufCfgImpl      *cfg_set;
+    KmppBufCfgImpl      *cfg_usr;
 
     KmppBufGrpImpl      *grp;
     KmppDmaBuf          buf;
     void                *kptr;
+    rk_u64              uaddr;
+    rk_u32              size;
 
     rk_s32              grp_id;
-    rk_s32              buf_id;
-    rk_s32              srv_buf_id;
+    rk_s32              buf_gid;
+    rk_s32              buf_uid;
     rk_s32              ref_cnt;
 
     osal_list_head      list_status;
     osal_list_head      list_maps;
-    KmppBufCfgImpl      cfg_impl;
+    KmppBufCfgImpl      cfg_int;
 } KmppBufferImpl;
 
 rk_s32 kmpp_buf_grp_get_size(KmppBufGrpImpl *grp);

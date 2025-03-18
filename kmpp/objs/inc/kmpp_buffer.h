@@ -198,10 +198,11 @@ rk_u64 kmpp_buf_grp_get_cfg_u(KmppBufGrp group);
     ENTRY(prefix, u32,  rk_u32,         flag) \
     ENTRY(prefix, u32,  rk_u32,         count) \
     ENTRY(prefix, u32,  rk_u32,         size) \
+    ENTRY(prefix, u32,  KmppBufferMode, mode) \
     ENTRY(prefix, s32,  rk_s32,         fd) \
+    ENTRY(prefix, s32,  rk_s32,         grp_id) \
     ENTRY(prefix, s32,  rk_s32,         used) \
     ENTRY(prefix, s32,  rk_s32,         unused) \
-    ENTRY(prefix, u32,  KmppBufferMode, mode) \
     ENTRY(prefix, kptr, void *,         device)
 
 /*
@@ -219,7 +220,7 @@ rk_u64 kmpp_buf_grp_get_cfg_u(KmppBufGrp group);
 #include "kmpp_obj_func.h"
 
 
-rk_s32 kmpp_buffer_setup(KmppBuffer buffer, const rk_u8 *caller);
+rk_s32 kmpp_buffer_setup(KmppBuffer buffer, osal_fs_dev *file, const rk_u8 *caller);
 rk_s32 kmpp_buffer_inc_ref(KmppBuffer buffer, const rk_u8 *caller);
 
 /* helper functions */
@@ -238,8 +239,8 @@ rk_s32 kmpp_buffer_get_fd(KmppBuffer buffer);
 #define KMPP_OBJ_STRUCT_TABLE           KMPP_BUFFER_STRUCT_TABLE
 #include "kmpp_obj_func.h"
 
-#define kmpp_buffer_setup_f(buffer) kmpp_buffer_setup(buffer, __FUNCTION__)
-#define kmpp_buffer_inc_ref_f(buffer) kmpp_buffer_inc_ref(buffer, __FUNCTION__)
+#define kmpp_buffer_setup_f(buf, file)  kmpp_buffer_setup(buf, file, __FUNCTION__)
+#define kmpp_buffer_inc_ref_f(buffer)   kmpp_buffer_inc_ref(buffer, __FUNCTION__)
 
 
 /*
@@ -259,6 +260,9 @@ rk_s32 kmpp_buffer_get_fd(KmppBuffer buffer);
     ENTRY(prefix, u32,  rk_u32,         flag) \
     ENTRY(prefix, s32,  rk_s32,         fd) \
     ENTRY(prefix, s32,  rk_s32,         index) \
+    ENTRY(prefix, s32,  rk_s32,         grp_id) \
+    ENTRY(prefix, s32,  rk_s32,         buf_gid) \
+    ENTRY(prefix, s32,  rk_s32,         buf_uid) \
     ENTRY(prefix, kptr, void *,         khnd) \
     ENTRY(prefix, kptr, void *,         kdmabuf)
 
