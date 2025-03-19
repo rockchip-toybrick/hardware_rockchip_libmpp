@@ -49,4 +49,11 @@ rk_s32 osal_atomic_xchg(osal_atomic *v, rk_s32 i);
 
 #define osal_cmpxchg(ptr, oldval, newval) cmpxchg(ptr, oldval, newval)
 
+#define osal_force_cmpxchg(ptr, oldval, newval) \
+({ \
+        typeof(*ptr) __val; \
+        while ((__val = cmpxchg(ptr, oldval, newval)) && (*ptr != newval)); \
+        __val; \
+})
+
 #endif /* __KMPP_ATOMIC_H__ */

@@ -65,7 +65,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 
 	mpp_vcodec_detail("enc_chan_process_single_chan id %d\n", chan_id);
 	if (!chan_entry->reenc) {
-		frame = osal_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
+		frame = osal_force_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
 		if (!frame)
 			return MPP_OK;
 		chan_entry->gap_time = (RK_S32)(mpp_time() - chan_entry->last_yuv_time);
