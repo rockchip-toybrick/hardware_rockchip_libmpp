@@ -78,7 +78,7 @@ static rk_s32 kmpp_ioc_open(osal_fs_dev *file)
 
     OSAL_INIT_LIST_HEAD(&mgr->list_srv);
 
-    kmpp_objdef_get_shared(&defs);
+    kmpp_objdefset_get(&defs);
 
     if (!defs) {
         kmpp_loge_f("failed to get shared objdef set\n");
@@ -103,7 +103,7 @@ static rk_s32 kmpp_ioc_release(osal_fs_dev *file)
     KmppIocMgr *mgr = (KmppIocMgr *)file->priv_data;
 
     if (mgr->defs) {
-        kmpp_objdef_put_shared(mgr->defs);
+        kmpp_objdefset_put(mgr->defs);
         mgr->defs = NULL;
     }
 

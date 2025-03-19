@@ -99,7 +99,13 @@ rk_s32 kmpp_objdef_get_offset(KmppObjDef def, const rk_u8 *name);
 rk_s32 kmpp_objdef_get_hook(KmppObjDef def, const rk_u8 *name);
 rk_s32 kmpp_objdef_ioctl(KmppObjDef def, osal_fs_dev *file, KmppIoc ioc);
 
-rk_s32 kmpp_objdef_dump(KmppObjDef def);
+#define OBJDEF_DUMP_INFO    1
+#define OBJDEF_DUMP_ENTRY   2
+#define OBJDEF_DUMP_HOOK    4
+#define OBJDEF_DUMP_SELF    8
+#define OBJDEF_DUMP_ALL     (OBJDEF_DUMP_INFO | OBJDEF_DUMP_ENTRY | OBJDEF_DUMP_HOOK | OBJDEF_DUMP_SELF)
+
+rk_s32 kmpp_objdef_dump(KmppObjDef def, rk_u32 flag);
 void kmpp_objdef_dump_all(void);
 
 /* kmpp objcet internal element access function */
@@ -111,9 +117,11 @@ KmppTrie kmpp_objdef_get_trie(KmppObjDef def);
 /* Allow objdef to be shared with userspace */
 rk_s32 kmpp_objdef_share(KmppObjDef def);
 /* create an objdef set for userspace sharing */
-rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs);
+rk_s32 kmpp_objdefset_get(KmppObjDefSet **defs);
 /* destroy an objdef set */
-rk_s32 kmpp_objdef_put_shared(KmppObjDefSet *defs);
+rk_s32 kmpp_objdefset_put(KmppObjDefSet *defs);
+/* dump an objdef set */
+void kmpp_objdefset_dump(KmppObjDefSet *defs);
 
 /* normal kernel object allocator both object head and body */
 rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def, const rk_u8 *caller);

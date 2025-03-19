@@ -151,7 +151,7 @@ rk_s32 kmpp_shm_open(osal_fs_dev *file)
 
     shm_dbg_flow("enter - %s\n", mgr->name);
 
-    kmpp_objdef_get_shared(&defs);
+    kmpp_objdefset_get(&defs);
 
     if (!defs) {
         kmpp_loge_f("failed to get shared objdef set\n");
@@ -248,7 +248,7 @@ static rk_s32 kmpp_shm_grp_root_deinit(KmppShmGrpRoot *root)
             }
         }
 
-        kmpp_objdef_put_shared(defs);
+        kmpp_objdefset_put(defs);
     }
 
     kmpp_free(root->grps);

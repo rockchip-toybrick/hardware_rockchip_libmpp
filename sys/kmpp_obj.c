@@ -600,71 +600,84 @@ rk_s32 kmpp_objdef_ioctl(KmppObjDef def, osal_fs_dev *file, KmppIoc ioc)
 }
 EXPORT_SYMBOL(kmpp_objdef_ioctl);
 
-rk_s32 kmpp_objdef_dump(KmppObjDef def)
+rk_s32 kmpp_objdef_dump(KmppObjDef def, rk_u32 flag)
 {
-    if (def) {
-        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
-        KmppTrieInfo *info = NULL;
-        const rk_u8 *name = impl->name;
-        rk_s32 i = 0;
+    KmppObjDefImpl *impl;
+    KmppTrieInfo *info;
+    const rk_u8 *name;
+    rk_s32 i;
 
-        kmpp_logi("--------------------- objdef %-16s ---------------------\n", name);
+    if (!def || !flag)
+        return rk_nok;
+
+    impl = (KmppObjDefImpl *)def;
+    info = NULL;
+    name = impl->name;
+    i = 0;
+
+    kmpp_logi("--------------------- objdef %-16s ---------------------\n", name);
+
+    if (flag & OBJDEF_DUMP_INFO)
         kmpp_logi("entry_size %d element count %d hook count %d\n",
-                  impl->entry_size, kmpp_trie_get_info_count(impl->trie),
-                  kmpp_trie_get_info_count(impl->hook));
+                    impl->entry_size, kmpp_trie_get_info_count(impl->trie),
+                    kmpp_trie_get_info_count(impl->hook));
 
-        if (impl->trie) {
-            info = kmpp_trie_get_info_first(impl->trie);
-            while (info) {
-                name = kmpp_trie_info_name(info);
-                if (!kmpp_trie_info_name_is_self(name)) {
-                    rk_s32 idx = i++;
+    if (impl->trie) {
+        info = kmpp_trie_get_info_first(impl->trie);
+        while (info) {
+            name = kmpp_trie_info_name(info);
+            if (!kmpp_trie_info_name_is_self(name)) {
+                rk_s32 idx = i++;
 
+                if (flag & OBJDEF_DUMP_ENTRY) {
                     if (info->ctx_len) {
                         KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
 
                         kmpp_logi("elem %-2d - %-16s offset %4d size %d\n", idx,
-                                  name, tbl->data_offset, tbl->data_size);
+                                    name, tbl->data_offset, tbl->data_size);
                     } else {
                         /* meta key */
                         if (idx != info->index)
                             kmpp_logi("elem %-2d - key - %c%c%c%c - index %d mismatch\n",
-                                      idx, name[3], name[2], name[1], name[0], info->index);
+                                        idx, name[3], name[2], name[1], name[0], info->index);
                         else
                             kmpp_logi("elem %-2d - key - %c%c%c%c\n",
-                                      idx, name[3], name[2], name[1], name[0]);
+                                        idx, name[3], name[2], name[1], name[0]);
                     }
                 }
-                info = kmpp_trie_get_info_next(impl->trie, info);
             }
+            info = kmpp_trie_get_info_next(impl->trie, info);
+        }
 
-            info = kmpp_trie_get_info_first(impl->trie);
-            while (info) {
-                name = kmpp_trie_info_name(info);
-                if (kmpp_trie_info_name_is_self(name)) {
-                    void *p = kmpp_trie_info_ctx(info);
-                    rk_s32 idx = i++;
+        info = kmpp_trie_get_info_first(impl->trie);
+        while (info) {
+            name = kmpp_trie_info_name(info);
+            if (kmpp_trie_info_name_is_self(name)) {
+                void *p = kmpp_trie_info_ctx(info);
+                rk_s32 idx = i++;
 
+                if (flag & OBJDEF_DUMP_SELF) {
                     if (info->ctx_len == sizeof(rk_u32)) {
-
                         kmpp_logi("trie %-2d - %-16s val %d\n", idx, name, *(rk_u32 *)p);
                     } else {
                         kmpp_logi("trie %-2d - %-16s str %s\n", idx, name, p);
                     }
                 }
-                info = kmpp_trie_get_info_next(impl->trie, info);
             }
+            info = kmpp_trie_get_info_next(impl->trie, info);
         }
+    }
 
-        /* dump hook info */
-        if (impl->hook) {
-            i = 0;
-            info = kmpp_trie_get_info_first(impl->hook);
-            while (info) {
-                name = kmpp_trie_info_name(info);
-                if (!kmpp_trie_info_name_is_self(name)) {
-                    rk_s32 idx = i++;
+    /* dump hook info */
+    if (impl->hook) {
+        i = 0;
+        info = kmpp_trie_get_info_first(impl->hook);
+        while (info) {
+            name = kmpp_trie_info_name(info);
+            if (!kmpp_trie_info_name_is_self(name)) {
+                rk_s32 idx = i++;
 
+                if (flag & OBJDEF_DUMP_HOOK) {
                     if (info->ctx_len) {
                         KmppObjHook *hook = (KmppObjHook *)kmpp_trie_info_ctx(info);
 
@@ -673,37 +686,36 @@ rk_s32 kmpp_objdef_dump(KmppObjDef def)
                         /* meta key */
                         if (idx != info->index)
                             kmpp_logi("hook %-2d - key - %c%c%c%c - index %d mismatch\n",
-                                      idx, name[3], name[2], name[1], name[0], info->index);
+                                        idx, name[3], name[2], name[1], name[0], info->index);
                         else
                             kmpp_logi("hook %-2d - key - %c%c%c%c\n",
-                                      idx, name[3], name[2], name[1], name[0]);
+                                        idx, name[3], name[2], name[1], name[0]);
                     }
                 }
-                info = kmpp_trie_get_info_next(impl->hook, info);
             }
+            info = kmpp_trie_get_info_next(impl->hook, info);
+        }
 
-            info = kmpp_trie_get_info_first(impl->hook);
-            while (info) {
-                name = kmpp_trie_info_name(info);
-                if (kmpp_trie_info_name_is_self(name)) {
-                    void *p = kmpp_trie_info_ctx(info);
-                    rk_s32 idx = i++;
+        info = kmpp_trie_get_info_first(impl->hook);
+        while (info) {
+            name = kmpp_trie_info_name(info);
+            if (kmpp_trie_info_name_is_self(name)) {
+                void *p = kmpp_trie_info_ctx(info);
+                rk_s32 idx = i++;
 
+                if (flag & OBJDEF_DUMP_SELF) {
                     if (info->ctx_len == sizeof(rk_u32)) {
-
                         kmpp_logi("trie %-2d - %-16s val %d\n", idx, name, *(rk_u32 *)p);
                     } else {
                         kmpp_logi("trie %-2d - %-16s str %s\n", idx, name, p);
                     }
                 }
-                info = kmpp_trie_get_info_next(impl->hook, info);
             }
+            info = kmpp_trie_get_info_next(impl->hook, info);
         }
-
-        return rk_ok;
     }
 
-    return rk_nok;
+    return rk_ok;
 }
 EXPORT_SYMBOL(kmpp_objdef_dump);
 
@@ -714,7 +726,7 @@ void kmpp_objdef_dump_all(void)
     KmppObjDefImpl *n = NULL;
 
     osal_list_for_each_entry_safe(impl, n, &srv->list, KmppObjDefImpl, list) {
-        kmpp_objdef_dump(impl);
+        kmpp_objdef_dump(impl, OBJDEF_DUMP_ALL);
     }
 }
 EXPORT_SYMBOL(kmpp_objdef_dump_all);
@@ -763,7 +775,7 @@ rk_s32 kmpp_objdef_share(KmppObjDef def)
 }
 EXPORT_SYMBOL(kmpp_objdef_share);
 
-rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs)
+rk_s32 kmpp_objdefset_get(KmppObjDefSet **defs)
 {
     KmppObjSrv *srv = get_obj_srv_f();
     KmppObjDefInfo *info = NULL;
@@ -805,7 +817,6 @@ rk_s32 kmpp_objdef_get_shared(KmppObjDefSet **defs)
     ret = kmpp_trie_init(&trie, "kmpp_objs");
     if (ret) {
         kmpp_loge_f("trie init failed\n");
-        kmpp_free(impl);
         goto done;
     }
 
@@ -906,9 +917,9 @@ done:
 
     return ret;
 }
-EXPORT_SYMBOL(kmpp_objdef_get_shared);
+EXPORT_SYMBOL(kmpp_objdefset_get);
 
-rk_s32 kmpp_objdef_put_shared(KmppObjDefSet *defs)
+rk_s32 kmpp_objdefset_put(KmppObjDefSet *defs)
 {
     if (defs) {
         KmppTrie trie = defs->trie;
@@ -921,7 +932,21 @@ rk_s32 kmpp_objdef_put_shared(KmppObjDefSet *defs)
 
     return rk_ok;
 }
-EXPORT_SYMBOL(kmpp_objdef_put_shared);
+EXPORT_SYMBOL(kmpp_objdefset_put);
+
+void kmpp_objdefset_dump(KmppObjDefSet *defs)
+{
+    if (defs) {
+        rk_s32 i;
+
+        kmpp_logi("dump objdefset %#px count %d buf size %d\n",
+                  defs, defs->count, defs->buf_size);
+
+        for (i = 0; i < defs->count; i++)
+            kmpp_objdef_dump(defs->defs[i], OBJDEF_DUMP_INFO);
+    }
+}
+EXPORT_SYMBOL(kmpp_objdefset_dump);
 
 rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def, const rk_u8 *caller)
 {
