@@ -172,6 +172,7 @@ SET(KMPP_SRC
     hack/mpp_hack_rk3576.c
     hack/mpp_rkvdec2_hack_rk3568.c
     hack/mpp_rkvdec2_link_hack_rk3568.c
+    ../kmpp/objs/kmpp_buffer.c
     ../kmpp/objs/kmpp_frame.c
     ../kmpp/objs/kmpp_meta.c
     ../kmpp/objs/kmpp_venc_objs.c

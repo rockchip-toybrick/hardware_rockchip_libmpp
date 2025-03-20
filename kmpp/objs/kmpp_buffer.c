@@ -943,6 +943,9 @@ rk_s32 kmpp_buffer_flush_for_device_partial(KmppBuffer buffer, void *device, rk_
 
 #include <linux/export.h>
 
+EXPORT_SYMBOL(kmpp_buf_init);
+EXPORT_SYMBOL(kmpp_buf_deinit);
+
 EXPORT_SYMBOL(kmpp_buf_grp_get_cfg_s);
 EXPORT_SYMBOL(kmpp_buf_grp_get_cfg_k);
 EXPORT_SYMBOL(kmpp_buf_grp_get_cfg_u);
