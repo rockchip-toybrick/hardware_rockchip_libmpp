@@ -493,8 +493,8 @@ rk_s32 kmpp_dmabuf_alloc(KmppDmaBuf *buf, KmppDmaHeap heap, rk_s32 size, rk_u32 
     func = impl_heap->heaps->alloc;
 
     dma_buf = (struct dma_buf *)func(impl_heap->handle, size, O_CLOEXEC | O_RDWR, 0, "kmpp");
-    if (!dma_buf) {
-        kmpp_loge_f("failed to alloc dma_buf %d bytes\n", size);
+    if (IS_ERR_OR_NULL(dma_buf)) {
+        kmpp_loge_f("failed to alloc dma_buf %d bytes ret %d\n", size, PTR_ERR(dma_buf));
         kmpp_free(impl);
         return rk_nok;
     }
