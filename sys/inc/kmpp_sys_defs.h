@@ -8,6 +8,13 @@
 
 #include "kmpi_defs.h"
 
+typedef enum EntryFlagType_e {
+    ENTRY_FLAG_NONE,            /* entry without update flag */
+    ENTRY_FLAG_START,           /* entry update flag will align to new 32bit */
+    ENTRY_FLAG_UPDATE,          /* entry flag increase by one */
+    ENTRY_FLAG_HOLD,            /* entry flag equal to previous one */
+} EntryFlagType;
+
 typedef enum EntryType_e {
     /* commaon fix size value */
     ENTRY_TYPE_FIX      = 0x0,

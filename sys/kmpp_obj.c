@@ -9,8 +9,9 @@
 #include "rk-mpp-kobj.h"
 
 #include "rk_list.h"
-#include "kmpp_macro.h"
 #include "kmpp_atomic.h"
+#include "kmpp_bitops.h"
+#include "kmpp_macro.h"
 #include "kmpp_mem.h"
 #include "kmpp_log.h"
 #include "kmpp_string.h"
@@ -53,7 +54,19 @@
 #define ENTRY_TO_uptr_PTR(tbl, entry)   ((rk_u64 *)ENTRY_TO_PTR(tbl, entry))
 #define ENTRY_TO_ufp_PTR(tbl, entry)    ((rk_u64 *)ENTRY_TO_PTR(tbl, entry))
 
-#define ENTRY_TO_FLAG_PTR(tbl, entry)   ((rk_u16 *)((rk_u8 *)entry + tbl->flag_offset))
+/* 32bit unsigned long pointer */
+#define ENTRY_FLAG_U32_POS(offset)      (((offset) & (~31)) / 8)
+#define ENTRY_FLAG_BIT_POS(offset)      ((offset) & 31)
+#define ENTRY_TO_FLAG_PTR(tbl, entry)   ((rk_ul *)((rk_u8 *)entry + ENTRY_FLAG_U32_POS(tbl->flag_offset)))
+
+#define ENTRY_SET_FLAG(tbl, entry) \
+    osal_set_bit(ENTRY_FLAG_BIT_POS(tbl->flag_offset), ENTRY_TO_FLAG_PTR(tbl, entry))
+
+#define ENTRY_CLR_FLAG(tbl, entry) \
+    osal_clear_bit(ENTRY_FLAG_BIT_POS(tbl->flag_offset), ENTRY_TO_FLAG_PTR(tbl, entry))
+
+#define ENTRY_TEST_FLAG(tbl, entry) \
+    osal_test_bit(ENTRY_FLAG_BIT_POS(tbl->flag_offset), ENTRY_TO_FLAG_PTR(tbl, entry))
 
 #define get_obj_srv(caller) \
     ({ \
@@ -82,6 +95,8 @@ typedef struct KmppObjDefImpl_t {
     rk_s32 ref_cnt;
     rk_s32 index;
     rk_s32 entry_size;
+    rk_s32 flag_max_pos;
+    rk_s32 flag_offset;
     rk_s32 buf_size;
     KmppMemPool pool;
     KmppTrie trie;
@@ -151,13 +166,13 @@ const rk_u8 *strof_entry_type(EntryType type)
         base_type *dst = ENTRY_TO_##type##_PTR(tbl, entry); \
         base_type old = dst[0]; \
         dst[0] = val; \
-        if (!tbl->flag_value) { \
+        if (!tbl->flag_offset) { \
             obj_dbg_set("%px + %x set " #type " change " #log_str " -> " #log_str "\n", entry, tbl->data_offset, old, val); \
         } else { \
             if (old != val) { \
-                obj_dbg_set("%px + %x set " #type " update " #log_str " -> " #log_str " flag %d|%x\n", \
-                            entry, tbl->data_offset, old, val, tbl->flag_offset, tbl->flag_value); \
-                ENTRY_TO_FLAG_PTR(tbl, entry)[0] |= tbl->flag_value; \
+                obj_dbg_set("%px + %x set " #type " update " #log_str " -> " #log_str " flag %#x\n", \
+                            entry, tbl->data_offset, old, val, tbl->flag_offset); \
+                ENTRY_SET_FLAG(tbl, entry); \
             } else { \
                 obj_dbg_set("%px + %x set " #type " keep   " #log_str "\n", entry, tbl->data_offset, old); \
             } \
@@ -190,7 +205,7 @@ KMPP_OBJ_ACCESS_IMPL(ufp, rk_u64, %llx)
     rk_s32 kmpp_obj_impl_set_##type(KmppLocTbl *tbl, void *entry, base_type *val) \
     { \
         rk_u8 *dst = ENTRY_TO_##type##_PTR(tbl, entry); \
-        if (!tbl->flag_value) { \
+        if (!tbl->flag_offset) { \
             /* simple copy */ \
             obj_dbg_set("%px + %x set " #type " change %px -> %px\n", \
                         entry, tbl->data_offset, dst, val); \
@@ -199,10 +214,10 @@ KMPP_OBJ_ACCESS_IMPL(ufp, rk_u64, %llx)
         } else { \
             /* copy with flag check and updata */ \
             if (osal_memcmp(dst, val, tbl->data_size)) { \
-                obj_dbg_set("%px + %x set " #type " update %px -> %px flag %d|%x\n", \
-                            entry, tbl->data_offset, dst, val, tbl->flag_offset, tbl->flag_value); \
+                obj_dbg_set("%px + %x set " #type " update %px -> %px flag %#x\n", \
+                            entry, tbl->data_offset, dst, val, tbl->flag_offset); \
                 osal_memcpy(dst, val, tbl->data_size); \
-                ENTRY_TO_FLAG_PTR(tbl, entry)[0] |= tbl->flag_value; \
+                ENTRY_SET_FLAG(tbl, entry); \
             } else { \
                 obj_dbg_set("%px + %x set " #type " keep   %px\n", \
                             entry, tbl->data_offset, dst); \
@@ -279,12 +294,6 @@ rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name)
     impl->name = (rk_u8 *)(impl + 1);
     impl->entry_size = size;
     impl->buf_size = size + sizeof(KmppObjImpl);
-    impl->pool = kmpp_mem_get_pool_f(name, impl->buf_size, 0, 0);
-    if (!impl->pool) {
-        kmpp_loge_f("get mem pool size %d failed\n", impl->buf_size);
-        kmpp_free(impl);
-        return rk_nok;
-    }
 
     osal_strncpy(impl->name, name, len);
 
@@ -325,7 +334,10 @@ rk_s32 kmpp_objdef_put(KmppObjDef def)
             osal_list_del_init(&impl->list);
             srv->count--;
 
-            kmpp_mem_put_pool_f(impl->pool);
+            if (impl->pool) {
+                kmpp_mem_put_pool_f(impl->pool);
+                impl->pool = NULL;
+            }
             kmpp_free(impl->hooks);
             kmpp_free(impl);
         }
@@ -385,11 +397,38 @@ rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppLocTbl *tbl)
 
         if (name) {
             ret = kmpp_trie_add_info(trie, name, tbl, tbl ? sizeof(*tbl) : 0);
+
+            if (tbl->flag_offset > impl->flag_max_pos)
+                impl->flag_max_pos = tbl->flag_offset;
+
+            obj_dbg_entry("objdef %-16s add entry %-16s flag offset %4d\n",
+                          impl->name, name, tbl->flag_offset);
         } else {
+            rk_s32 old_size = impl->buf_size;
+
             /* record object impl size */
             ret = kmpp_trie_add_info(trie, "__index", &impl->index, sizeof(rk_s32));
             ret = kmpp_trie_add_info(trie, "__size", &impl->entry_size, sizeof(rk_s32));
             ret |= kmpp_trie_add_info(trie, NULL, NULL, 0);
+
+            /* When last entry finish update and create memory pool */
+            if (impl->flag_max_pos) {
+                rk_s32 flag_size = KMPP_ALIGN(impl->flag_max_pos, 8) / 8;
+
+                impl->flag_offset = impl->buf_size;
+                flag_size -= impl->entry_size;
+                flag_size = KMPP_ALIGN(flag_size, 4);
+                impl->buf_size += flag_size;
+            }
+
+            obj_dbg_entry("objdef %-16s entry size %4d buf size %4d -> %4d\n", impl->name,
+                          impl->entry_size, old_size, impl->buf_size);
+
+            impl->pool = kmpp_mem_get_pool_f(impl->name, impl->buf_size, 0, 0);
+            if (!impl->pool) {
+                kmpp_loge_f("get mem pool size %d failed\n", impl->buf_size);
+                ret = rk_nok;
+            }
         }
     }
 
@@ -960,6 +999,10 @@ rk_s32 kmpp_obj_get(KmppObj *obj, KmppObjDef def, const rk_u8 *caller)
 
     *obj = NULL;
     impl_def = (KmppObjDefImpl *)def;
+    if (!impl_def->pool) {
+        kmpp_loge_f("objdef %s pool is not ready\n", impl_def->name);
+        return rk_nok;
+    }
     impl = (KmppObjImpl *)kmpp_mem_pool_get(impl_def->pool, caller);
     if (!impl) {
         kmpp_loge_f("malloc %d failed\n", impl_def->buf_size);
@@ -1153,6 +1196,17 @@ void *kmpp_obj_to_entry(KmppObj obj)
     return impl ? impl->entry : NULL;
 }
 EXPORT_SYMBOL(kmpp_obj_to_entry);
+
+void *kmpp_obj_to_flags(KmppObj obj)
+{
+    KmppObjImpl *impl = (KmppObjImpl *)obj;
+
+    if (impl && impl->def && impl->def->flag_offset)
+        return impl->entry + impl->def->flag_offset;
+
+    return NULL;
+}
+EXPORT_SYMBOL(kmpp_obj_to_flags);
 
 KmppShm kmpp_obj_to_shm(KmppObj obj)
 {
@@ -1364,6 +1418,32 @@ KMPP_OBJ_TBL_ACCESS(ufp, rk_u64)
 
 KMPP_OBJ_TBL_ACCESS_ST(st, void)
 KMPP_OBJ_TBL_ACCESS_ST(shm, KmppShmPtr)
+
+rk_s32 kmpp_obj_test(KmppObj obj, const rk_u8 *name)
+{
+    KmppObjImpl *impl = (KmppObjImpl *)obj;
+
+    if (impl && impl->trie) {
+        KmppTrieInfo *info = kmpp_trie_get_info(impl->trie, name);
+
+        if (info) {
+            KmppLocTbl *tbl = (KmppLocTbl *)kmpp_trie_info_ctx(info);
+
+            return ENTRY_TEST_FLAG(tbl, impl->entry);;
+        }
+    }
+
+    return 0;
+}
+EXPORT_SYMBOL(kmpp_obj_test);
+
+rk_s32 kmpp_obj_tbl_test(KmppObj obj, KmppLocTbl *tbl)
+{
+    KmppObjImpl *impl = (KmppObjImpl *)obj;
+
+    return (impl && tbl) ? ENTRY_TEST_FLAG(tbl, impl->entry) : 0;
+}
+EXPORT_SYMBOL(kmpp_obj_tbl_test);
 
 static inline rk_s32 kmpp_obj_impl_run(rk_s32 (*run)(void *ctx, void *arg), void *ctx, void *arg)
 {

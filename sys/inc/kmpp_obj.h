@@ -144,6 +144,8 @@ rk_s32 kmpp_obj_reset(KmppObj obj, const rk_u8 *caller);
 
 /* object implement element entry access */
 void *kmpp_obj_to_entry(KmppObj obj);
+/* object implement element update flags access */
+void *kmpp_obj_to_flags(KmppObj obj);
 /* object implement element shm access */
 KmppShm kmpp_obj_to_shm(KmppObj obj);
 rk_s32 kmpp_obj_to_shmptr(KmppObj obj, KmppShmPtr *sptr);
@@ -190,6 +192,10 @@ rk_s32 kmpp_obj_set_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
 rk_s32 kmpp_obj_get_shm(KmppObj obj, const rk_u8 *name, KmppShmPtr *val);
 rk_s32 kmpp_obj_tbl_set_shm(KmppObj obj, KmppLocTbl *tbl, KmppShmPtr *val);
 rk_s32 kmpp_obj_tbl_get_shm(KmppObj obj, KmppLocTbl *tbl, KmppShmPtr *val);
+
+/* update flag check function */
+rk_s32 kmpp_obj_test(KmppObj obj, const rk_u8 *name);
+rk_s32 kmpp_obj_tbl_test(KmppObj obj, KmppLocTbl *tbl);
 
 /* run callback function */
 
