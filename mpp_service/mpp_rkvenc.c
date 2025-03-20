@@ -26,6 +26,7 @@
 #include <linux/proc_fs.h>
 #include <linux/nospec.h>
 #include <linux/workqueue.h>
+#include <linux/version.h>
 #include <soc/rockchip/pm_domains.h>
 #include <soc/rockchip/rockchip_iommu.h>
 #include <soc/rockchip/rockchip_ipa.h>
@@ -921,7 +922,9 @@ static struct devfreq_dev_profile rkvenc_devfreq_profile = {
 	.target	= rkvenc_devfreq_target,
 	.get_dev_status	= rkvenc_devfreq_get_dev_status,
 	.get_cur_freq = rkvenc_devfreq_get_cur_freq,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	.is_cooling_device = true,
+#endif
 };
 
 static int devfreq_venc_ondemand_func(struct devfreq *df, unsigned long *freq)

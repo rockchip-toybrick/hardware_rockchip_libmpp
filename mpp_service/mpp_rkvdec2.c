@@ -8,6 +8,7 @@
  *
  */
 #include <linux/pm_runtime.h>
+#include <linux/version.h>
 
 #include "mpp_debug.h"
 #include "mpp_common.h"
@@ -1050,7 +1051,9 @@ static struct devfreq_dev_profile rkvdec2_devfreq_profile = {
 	.target	= rkvdec2_devfreq_target,
 	.get_dev_status	= rkvdec2_devfreq_get_dev_status,
 	.get_cur_freq = rkvdec2_devfreq_get_cur_freq,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	.is_cooling_device = true,
+#endif
 };
 
 static int devfreq_vdec2_ondemand_func(struct devfreq *df, unsigned long *freq)

@@ -27,6 +27,7 @@
 #include <linux/proc_fs.h>
 #include <linux/rockchip/rockchip_sip.h>
 #include <linux/regulator/consumer.h>
+#include <linux/version.h>
 
 #include <soc/rockchip/pm_domains.h>
 #include <soc/rockchip/rockchip_sip.h>
@@ -416,7 +417,9 @@ static struct devfreq_dev_profile devfreq_profile = {
 	.target	= devfreq_target,
 	.get_cur_freq = devfreq_get_cur_freq,
 	.get_dev_status	= devfreq_get_dev_status,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	.is_cooling_device = true,
+#endif
 };
 
 static int devfreq_notifier_call(struct notifier_block *nb,
@@ -459,11 +462,11 @@ static int fill_scaling_list_pps(struct rkvdec_task *task,
 				 int pps_info_size, int sub_addr_offset)
 {
 	struct dma_buf *dmabuf = NULL;
-	struct iosys_map map;
 	u8 *pps = NULL;
 	u32 scaling_fd = 0;
 	int ret = 0;
 	u32 base = sub_addr_offset;
+	void *vaddr = NULL;
 
 	dmabuf = dma_buf_get(fd);
 	if (IS_ERR_OR_NULL(dmabuf)) {
@@ -476,13 +479,26 @@ static int fill_scaling_list_pps(struct rkvdec_task *task,
 		mpp_err("can't access the pps buffer\n");
 		goto access_failed;
 	}
-
-	ret = dma_buf_vmap(dmabuf, &map);
-	if (ret) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+	vaddr = dma_buf_vmap(dmabuf);
+	if (!vaddr) {
 		mpp_err("can't access the pps buffer\n");
+		ret = -EIO;
 		goto vmap_failed;
 	}
-	pps = map.vaddr + offset;
+#else
+	{
+		struct iosys_map map;
+
+		ret = dma_buf_vmap(dmabuf, &map);
+		if (ret) {
+			mpp_err("can't access the pps buffer\n");
+			goto vmap_failed;
+		}
+		vaddr = map.vaddr;
+	}
+#endif
+	pps = vaddr + offset;
 	/* NOTE: scaling buffer in pps, have no offset */
 	memcpy(&scaling_fd, pps + base, sizeof(scaling_fd));
 	scaling_fd = le32_to_cpu(scaling_fd);
@@ -511,7 +527,15 @@ static int fill_scaling_list_pps(struct rkvdec_task *task,
 	}
 
 task_fd_failed:
-	dma_buf_vunmap(dmabuf, &map);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+	dma_buf_vunmap(dmabuf, vaddr);
+#else
+	{
+		struct iosys_map map = { .vaddr = vaddr };
+
+		dma_buf_vunmap(dmabuf, &map);
+	}
+#endif
 vmap_failed:
 	dma_buf_end_cpu_access(dmabuf, DMA_FROM_DEVICE);
 access_failed:

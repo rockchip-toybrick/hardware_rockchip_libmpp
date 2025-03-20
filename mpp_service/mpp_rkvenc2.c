@@ -27,6 +27,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/nospec.h>
 #include <linux/workqueue.h>
+#include <linux/version.h>
 #include <soc/rockchip/pm_domains.h>
 #include <soc/rockchip/rockchip_ipa.h>
 #include <soc/rockchip/rockchip_opp_select.h>
@@ -1577,6 +1578,7 @@ static void rkvenc2_calc_timeout_thd(struct mpp_dev *mpp)
 	u32 timeout_ms		= 0;
 	u32 timeout_thd		= 0;
 	u32 timeout_thd_cnt	= 0;
+	u32 i;
 
 	timeout_thd = mpp_read(mpp, RKVENC_WDG) & 0xff000000;
 	frm_rsl.val = mpp_read(mpp, hw->enc_rsl);
@@ -1584,7 +1586,7 @@ static void rkvenc2_calc_timeout_thd(struct mpp_dev *mpp)
 
 	/* Assign appropriate timeout thresholds for videos of different resolutions */
 	timeout_thd_cnt = ARRAY_SIZE(rkvenc2_timeout_thd_by_rsl);
-	for (u32 i = 0; i < timeout_thd_cnt; i++) {
+	for (i = 0; i < timeout_thd_cnt; i++) {
 		if (frm_rsl.val <= rkvenc2_timeout_thd_by_rsl[i][0]) {
 			timeout_ms = rkvenc2_timeout_thd_by_rsl[i][1];
 			break;
@@ -2390,7 +2392,11 @@ static const struct of_device_id rockchip_rkvenc_of_match[] = {
 
 static struct monitor_dev_profile venc_mdevp = {
 	.type = MONITOR_TYPE_DEV,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	.check_rate_volt = rockchip_monitor_check_rate_volt,
+#else
+	.update_volt = rockchip_monitor_check_rate_volt,
+#endif
 };
 
 static int rkvenc_devfreq_init(struct mpp_dev *mpp)

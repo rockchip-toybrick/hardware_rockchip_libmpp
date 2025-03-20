@@ -64,8 +64,5 @@ ${KMPP_SRC}-$(CONFIG_ROCKCHIP_MPP_VDPP)    += $(MPP_SERVICE_DIR)/mpp_vdpp.o
 # hack for workaround
 ${KMPP_SRC}-$(CONFIG_CPU_PX30) += $(MPP_SERVICE_DIR)/hack/mpp_hack_px30.o
 ${KMPP_SRC}-$(CONFIG_CPU_RK3576) += $(MPP_SERVICE_DIR)/hack/mpp_hack_rk3576.o
-${KMPP_SRC}-$(CONFIG_CPU_RK3576) += $(MPP_SERVICE_DIR)/hack/mpp_rkvdec2_hack_rk3568.o
-${KMPP_SRC}-$(CONFIG_CPU_RK3576) += $(MPP_SERVICE_DIR)/hack/mpp_rkvdec2_link_hack_rk3568.o
-
-${KMPP_SRC}-$(CONFIG_CPU_RV1126B) += $(MPP_SERVICE_DIR)/hack/mpp_rkvdec2_hack_rk3568.o
-${KMPP_SRC}-$(CONFIG_CPU_RV1126B) += $(MPP_SERVICE_DIR)/hack/mpp_rkvdec2_link_hack_rk3568.o
+${KMPP_SRC}-objs += $(MPP_SERVICE_DIR)/hack/mpp_rkvdec2_hack_rk3568.o
+${KMPP_SRC}-objs += $(MPP_SERVICE_DIR)/hack/mpp_rkvdec2_link_hack_rk3568.o
