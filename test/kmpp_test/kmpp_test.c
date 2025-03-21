@@ -118,9 +118,9 @@ static rk_s32 kmpp_obj_test_impl_dump(void *ctx)
     return kmpp_obj_test_impl_show(ctx, NULL);
 }
 
-static rk_s32 kmpp_obj_test_impl_init(void *obj, osal_fs_dev *file, const rk_u8 *caller)
+static rk_s32 kmpp_obj_test_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
-    KmppObjMacroTestImpl *cb = (KmppObjMacroTestImpl *)obj;
+    KmppObjMacroTestImpl *cb = (KmppObjMacroTestImpl *)entry;
 
     cb->arg0 = NULL;
     cb->arg1 = 1234;

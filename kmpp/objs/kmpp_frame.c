@@ -23,7 +23,7 @@ static const char *module_name = MODULE_TAG;
 
 static rk_u32 kmpp_frame_debug = 0;
 
-static rk_s32 kmpp_frame_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
+static rk_s32 kmpp_frame_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
     if (entry) {
         KmppFrameImpl *impl = (KmppFrameImpl*)entry;

@@ -51,7 +51,7 @@ typedef struct KmppMetaSrv_s {
 
 static KmppMetaSrv *kmpp_meta_srv = NULL;
 
-static rk_s32 kmpp_meta_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
+static rk_s32 kmpp_meta_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
     KmppMetaSrv *srv = kmpp_meta_srv;
     KmppMetaImpl *impl = (KmppMetaImpl*)entry;
@@ -124,12 +124,12 @@ static rk_s32 kmpp_meta_impl_dump(void *entry)
 
 #define META_LOCTBL_ADD(key, ktype, field) \
     do { \
-        KmppLocTbl tbl = { .val = 0, }; \
+        KmppEntry entry = { .val = 0, }; \
         rk_u64 name = META_KEY_TO_U64(key, ktype); \
-        tbl.data_offset = offsetof(KmppMetaImpl, field); \
-        tbl.data_size = sizeof(((KmppMetaImpl *)(0))->field); \
-        tbl.data_type = ENTRY_TYPE_st; \
-        kmpp_objdef_add_entry(def, (const rk_u8 *)&name, &tbl); \
+        entry.tbl.elem_offset = offsetof(KmppMetaImpl, field); \
+        entry.tbl.elem_size = sizeof(((KmppMetaImpl *)(0))->field); \
+        entry.tbl.elem_type = ELEM_TYPE_st; \
+        kmpp_objdef_add_entry(def, (const rk_u8 *)&name, &entry); \
     } while (0);
 
 #define META_ENTRY_TABLE(ENTRY) \
@@ -243,11 +243,11 @@ static void *meta_key_to_addr(KmppMetaImpl *impl, KmppMetaKey key, KmppMetaType 
     if (impl) {
         KmppMetaSrv *srv = kmpp_meta_srv;
         rk_u64 val = META_KEY_TO_U64(key, type);
-        KmppLocTbl *tbl = NULL;
+        KmppEntry *tbl = NULL;
 
         kmpp_objdef_get_entry(srv->def, (const rk_u8 *)&val, &tbl);
         if (tbl)
-            return ((rk_u8 *)impl) + tbl->data_offset;
+            return ((rk_u8 *)impl) + tbl->tbl.elem_offset;
     }
 
     return NULL;

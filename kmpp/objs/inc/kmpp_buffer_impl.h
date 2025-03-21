@@ -15,6 +15,15 @@
 /* buffer group share name storage for both name and allocator */
 #define BUF_GRP_STR_BUF_SIZE    (64)
 
+#define BUF_ST_NONE             (0)
+#define BUF_ST_INIT             (1)
+#define BUF_ST_INIT_TO_USED     (2)
+#define BUF_ST_USED             (3)
+#define BUF_ST_UNUSED           (4)
+#define BUF_ST_USED_TO_DEINIT   (5)
+#define BUF_ST_DEINIT_AT_GRP    (6)
+#define BUF_ST_DEINIT_AT_SRV    (7)
+
 typedef struct KmppBufGrpCfgImpl_t {
     rk_u32              flag;
     rk_u32              count;
@@ -105,6 +114,10 @@ typedef struct KmppBufferImpl_t {
     KmppBufCfgImpl      *cfg_usr;
 
     KmppBufGrpImpl      *grp;
+    /* when grp is valid used grp lock else use srv lock */
+    osal_spinlock       *lock;
+    KmppObj             obj;
+
     KmppDmaBuf          buf;
     void                *kptr;
     rk_u64              uaddr;
@@ -115,6 +128,7 @@ typedef struct KmppBufferImpl_t {
     rk_s32              buf_uid;
     rk_s32              ref_cnt;
 
+    rk_u32              status;
     osal_list_head      list_status;
     osal_list_head      list_maps;
     KmppBufCfgImpl      cfg_int;

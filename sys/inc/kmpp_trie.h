@@ -7,6 +7,7 @@
 #define __KMPP_TRIE_H__
 
 #include "kmpp_string.h"
+#include "kmpp_sys_defs.h"
 
 typedef void* KmppTrie;
 
@@ -40,6 +41,7 @@ rk_s32 kmpp_trie_init_by_root(KmppTrie *trie, void *root);
 rk_s32 kmpp_trie_deinit(KmppTrie trie);
 
 rk_s32 kmpp_trie_add_info(KmppTrie trie, const rk_u8 *name, void *ctx, rk_u32 ctx_len);
+rk_s32 kmpp_trie_add_entry(KmppTrie trie, const rk_u8 *name, KmppEntry entry);
 
 rk_s32 kmpp_trie_get_node_count(KmppTrie trie);
 rk_s32 kmpp_trie_get_info_count(KmppTrie trie);

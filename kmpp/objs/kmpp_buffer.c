@@ -57,8 +57,15 @@ typedef struct KmppBufferSrv_t {
     osal_fs_dev_mgr     *mgr;
     KmppEnvNode         env;
 
+    /* list for list_srv in KmppBufGrpImpl */
     osal_list_head      list_grp;
-    osal_list_head      list_buf;
+    /* list for list_status in KmppBufferImpl on buffer init */
+    osal_list_head      list_buf_init;
+    /* list for list_status in KmppBufferImpl on buffer / buf grp deinit */
+    osal_list_head      list_buf_deinit;
+
+    rk_s32              buf_init_cnt;
+    rk_s32              buf_deinit_cnt;
 
     rk_s32              grp_id;
     rk_s32              grp_cnt;
@@ -93,7 +100,8 @@ rk_s32 kmpp_buf_init(void)
     osal_spinlock_assign(&srv->lock, (void *)(srv + 1), lock_size);
 
     OSAL_INIT_LIST_HEAD(&srv->list_grp);
-    OSAL_INIT_LIST_HEAD(&srv->list_buf);
+    OSAL_INIT_LIST_HEAD(&srv->list_buf_init);
+    OSAL_INIT_LIST_HEAD(&srv->list_buf_deinit);
 
     kmpp_buf_grp_init();
     kmpp_buf_grp_cfg_init();
@@ -143,11 +151,20 @@ rk_s32 kmpp_buf_deinit(void)
         kmpp_buf_grp_put(grp);
     }
 
-    if (srv->group_default)
+    if (srv->group_default) {
+        osal_list_add_tail(&srv->grp->list_srv, &srv->list_grp);
         kmpp_buf_grp_put(srv->group_default);
+    }
 
     srv->group_default = NULL;
     srv->grp = NULL;
+
+    if (srv->grp_cnt)
+        kmpp_logi_f("still have %d buffer group not released\n", srv->grp_cnt);
+
+    if (srv->buf_cnt || srv->buf_init_cnt || srv->buf_deinit_cnt)
+        kmpp_logi_f("still have %d : %d : %d buffer not released\n", srv->buf_cnt,
+                    srv->buf_init_cnt, srv->buf_deinit_cnt);
 
     osal_spinlock_deinit(&srv->lock);
 
@@ -205,7 +222,7 @@ static void kmpp_buf_grp_cfg_sync(KmppBufGrpImpl *impl)
     impl->cfg_usr->unused   = impl->count_unused;
 }
 
-static rk_s32 kmpp_buf_grp_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
+static rk_s32 kmpp_buf_grp_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
     KmppBufGrpImpl *impl = (KmppBufGrpImpl *)entry;
     KmppBufferSrv *srv = get_buf_srv(caller);
@@ -251,7 +268,10 @@ static rk_s32 kmpp_buf_grp_impl_init(void *entry, osal_fs_dev *file, const rk_u8
 static rk_s32 kmpp_buf_grp_impl_deinit(void *entry, const rk_u8 *caller)
 {
     KmppBufGrpImpl *impl = (KmppBufGrpImpl *)entry;
+    KmppBufferImpl *buf, *n;
     KmppBufferSrv *srv = get_buf_srv(caller);
+    OSAL_LIST_HEAD(list);
+    rk_s32 count;
 
     buf_dbg_flow("buf grp %d put enter at %s\n", impl->grp_id, caller);
 
@@ -266,7 +286,53 @@ static rk_s32 kmpp_buf_grp_impl_deinit(void *entry, const rk_u8 *caller)
     buf_dbg_info("buf grp %d deinit total %d\n", impl->grp_id, srv->grp_cnt);
     osal_spin_unlock(srv->lock);
 
-    /* TODO: check buffer list here */
+    /* move all still used buffer to service list_buf_deinit */
+    count = 0;
+    osal_spin_lock(impl->lock);
+    osal_list_for_each_entry_safe(buf, n, &impl->list_used, KmppBufferImpl, list_status) {
+        osal_list_move_tail(&buf->list_status, &list);
+        buf->status = BUF_ST_USED_TO_DEINIT;
+        buf->grp = NULL;
+        buf->lock = NULL;
+        impl->count_used--;
+        count++;
+    }
+    osal_spin_unlock(impl->lock);
+
+    if (count) {
+        osal_spin_lock(srv->lock);
+        osal_list_for_each_entry_safe(buf, n, &list, KmppBufferImpl, list_status) {
+            osal_list_move_tail(&buf->list_status, &srv->list_buf_deinit);
+            buf->status = BUF_ST_DEINIT_AT_SRV;
+            buf->lock = srv->lock;
+            srv->buf_deinit_cnt++;
+        }
+        osal_spin_unlock(srv->lock);
+    }
+
+    /* deinit all unused buffer */
+    count = 0;
+    osal_spin_lock(impl->lock);
+    osal_list_for_each_entry_safe(buf, n, &impl->list_unused, KmppBufferImpl, list_status) {
+        osal_list_move_tail(&buf->list_status, &list);
+        buf->status = BUF_ST_DEINIT_AT_GRP;
+        buf->grp = NULL;
+        buf->lock = NULL;
+        impl->count_unused--;
+        count++;
+    }
+    osal_spin_unlock(impl->lock);
+
+    if (count) {
+        osal_list_for_each_entry_safe(buf, n, &list, KmppBufferImpl, list_status) {
+            kmpp_obj_put_f(buf->obj);
+        }
+    }
+
+    if (impl->count_used || impl->count_unused) {
+        kmpp_loge_f("buf grp %d still has %d used %d unused buffer\n",
+                    impl->grp_id, impl->count_used, impl->count_unused);
+    }
 
     if (impl->heap) {
         kmpp_dmaheap_put(impl->heap, caller);
@@ -543,7 +609,7 @@ static void kmpp_buf_cfg_sync(KmppBufferImpl *impl)
     impl->cfg_usr->buf_uid      = impl->buf_uid;
 }
 
-rk_s32 kmpp_buffer_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
+rk_s32 kmpp_buffer_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
     KmppBufferSrv *srv = get_buf_srv(caller);
     KmppBufferImpl *impl = (KmppBufferImpl *)entry;
@@ -572,11 +638,16 @@ rk_s32 kmpp_buffer_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller
     impl->cfg_int.buf_impl = impl;
     kmpp_obj_to_shmptr(impl->cfg_ext, &impl->cfg);
 
+    impl->grp = NULL;
+    impl->obj = obj;
     impl->ref_cnt = 1;
 
     osal_spin_lock(srv->lock);
-    osal_list_add_tail(&impl->list_status, &srv->list_buf);
+    osal_list_add_tail(&impl->list_status, &srv->list_buf_init);
+    impl->status = BUF_ST_INIT;
     impl->buf_uid = srv->buf_id++;
+    impl->lock = srv->lock;
+    srv->buf_init_cnt++;
     srv->buf_cnt++;
     buf_dbg_info("buf %d init total %d\n", impl->buf_uid, srv->buf_cnt);
     osal_spin_unlock(srv->lock);
@@ -586,53 +657,8 @@ rk_s32 kmpp_buffer_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller
     return rk_ok;
 }
 
-rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
+static void buf_deinit(KmppBufferImpl *impl, const rk_u8 *caller)
 {
-    KmppBufferSrv *srv = get_buf_srv(caller);
-    KmppBufferImpl *impl = (KmppBufferImpl *)entry;
-    rk_s32 ref_cnt;
-    rk_s32 old;
-
-    if (!impl) {
-        kmpp_loge_f("invalid param buffer %px at %s\n", impl, caller);
-        return rk_nok;
-    }
-
-    old = impl->ref_cnt;
-    ref_cnt = KMPP_SUB_FETCH(&impl->ref_cnt, 1);
-
-    buf_dbg_flow("buf %d dec ref %d -> %d at %s\n",
-                 impl->buf_uid, old, ref_cnt, caller);
-
-    if (ref_cnt < 0) {
-        kmpp_loge_f("invalid negative ref_cnt %d buffer %px at %s\n",
-                    ref_cnt, impl, caller);
-        return rk_nok;
-    }
-
-    if (ref_cnt > 0)
-        return rk_nok;
-
-    if (impl->grp) {
-        KmppBufGrpImpl *grp = impl->grp;
-
-        osal_spin_lock(grp->lock);
-        osal_list_del_init(&impl->list_status);
-        grp->buf_cnt--;
-        grp->count_used--;
-        kmpp_buf_grp_cfg_sync(grp);
-        impl->grp = NULL;
-        osal_spin_unlock(grp->lock);
-    }
-
-    osal_spin_lock(srv->lock);
-    if (!osal_list_empty(&impl->list_status)) {
-        osal_list_del_init(&impl->list_status);
-        srv->buf_cnt--;
-    }
-    buf_dbg_info("buf %d init total %d\n", impl->buf_uid, srv->buf_cnt);
-    osal_spin_unlock(srv->lock);
-
     if (impl->cfg_ext)
         kmpp_buf_cfg_put(impl->cfg_ext);
 
@@ -644,7 +670,93 @@ rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
         impl->buf = NULL;
     }
 
-    buf_dbg_flow("buf %d put leave at %s\n", impl->buf_uid, caller);
+    buf_dbg_info("buf %d deinited at %s\n", impl->buf_uid, caller);
+}
+
+rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
+{
+    KmppBufferSrv *srv = get_buf_srv(caller);
+    KmppBufferImpl *impl = (KmppBufferImpl *)entry;
+    rk_s32 deinit = 0;
+    rk_s32 buf_uid;
+    rk_s32 ref_cnt;
+    rk_s32 old;
+
+    if (!impl) {
+        kmpp_loge_f("invalid param buffer %px at %s\n", impl, caller);
+        return rk_nok;
+    }
+
+    old = impl->ref_cnt;
+    buf_uid = impl->buf_uid;
+    ref_cnt = KMPP_SUB_FETCH(&impl->ref_cnt, 1);
+
+    buf_dbg_flow("buf %d dec ref %d -> %d at %s\n",
+                 buf_uid, old, ref_cnt, caller);
+
+    if (ref_cnt < 0) {
+        kmpp_loge_f("invalid negative ref_cnt %d buffer %px at %s\n",
+                    ref_cnt, impl, caller);
+        return rk_nok;
+    }
+
+    if (ref_cnt > 0)
+        return rk_nok;
+
+    if (!impl->lock) {
+        if (impl->status != BUF_ST_DEINIT_AT_GRP) {
+            kmpp_loge_f("buf %d:[%d:%d] has no lock but status grp at %s\n",
+                        buf_uid, impl->grp_id, impl->buf_gid, caller);
+        }
+    } else {
+        KmppBufGrpImpl *grp;
+
+        /* lock and handle buffer by status */
+        osal_spin_lock(impl->lock);
+        grp = impl->grp;
+        /* deinit on valid group */
+        switch (impl->status) {
+        case BUF_ST_INIT : {
+            osal_list_del_init(&impl->list_status);
+            srv->buf_init_cnt--;
+            srv->buf_cnt--;
+            buf_dbg_info("buf %d init total %d\n", impl->buf_uid, srv->buf_cnt);
+            deinit = 1;
+        } break;
+        case BUF_ST_USED : {
+            osal_list_move_tail(&impl->list_status, &grp->list_unused);
+            impl->status = BUF_ST_UNUSED;
+            grp->count_used--;
+            grp->count_unused++;
+        } break;
+        case BUF_ST_DEINIT_AT_SRV : {
+            osal_list_del_init(&impl->list_status);
+            srv->buf_deinit_cnt--;
+            srv->buf_cnt--;
+            buf_dbg_info("buf %d init total %d\n", impl->buf_uid, srv->buf_cnt);
+            deinit = 1;
+        } break;
+        default : {
+            kmpp_loge_f("invalid buf %d status %d at %s\n",
+                        impl->buf_uid, impl->status, caller);
+        } break;
+        }
+
+        if (grp) {
+            if (deinit) {
+                grp->buf_cnt--;
+                impl->grp = NULL;
+            }
+
+            kmpp_buf_grp_cfg_sync(grp);
+        }
+        osal_spin_unlock(impl->lock);
+    }
+
+    if (deinit)
+        buf_deinit(impl, caller);
+
+    buf_dbg_flow("buf %d put leave at %s\n", buf_uid, caller);
 
     return rk_ok;
 }
@@ -736,10 +848,13 @@ rk_s32 kmpp_buffer_setup(KmppBuffer buffer, osal_fs_dev *file, const rk_u8 *call
 
     osal_spin_lock(srv->lock);
     osal_list_del_init(&impl->list_status);
+    impl->status = BUF_ST_INIT_TO_USED;
+    srv->buf_init_cnt--;
     osal_spin_unlock(srv->lock);
 
     osal_spin_lock(grp->lock);
     osal_list_add_tail(&impl->list_status, &grp->list_used);
+    impl->status = BUF_ST_USED;
     impl->grp = grp;
     impl->grp_id = grp->grp_id;
     impl->buf_gid = grp->buf_id++;

@@ -10,7 +10,7 @@
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
 
-static rk_s32 kmpp_venc_init_cfg_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
+static rk_s32 kmpp_venc_init_cfg_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
     if (entry) {
         KmppVencInitCfgImpl *impl = (KmppVencInitCfgImpl*)entry;
@@ -74,7 +74,7 @@ static rk_s32 kmpp_venc_init_cfg_impl_dump(void *entry)
 #include "kmpp_obj_helper.h"
 
 /* ------------------------ kmpp notify infos ------------------------- */
-static rk_s32 kmpp_venc_notify_impl_init(void *entry, osal_fs_dev *file, const rk_u8 *caller)
+static rk_s32 kmpp_venc_notify_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
     if (entry) {
         KmppVencNtfyImpl *impl = (KmppVencNtfyImpl*)entry;

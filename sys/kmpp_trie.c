@@ -712,6 +712,72 @@ rk_s32 kmpp_trie_add_info(KmppTrie trie, const rk_u8 *name, void *ctx, rk_u32 ct
     return rk_ok;
 }
 
+rk_s32 kmpp_trie_add_entry(KmppTrie trie, const rk_u8 *name, KmppEntry entry)
+{
+    KmppTrieImpl *p = (KmppTrieImpl *)trie;
+    rk_s32 info_size;
+    rk_s32 str_real;
+    rk_s32 str_len;
+    rk_s32 idx;
+
+    if (!p) {
+        kmpp_loge_f("invalid trie %#px name %s entry %llx\n", p, name, entry.val);
+        return rk_nok;
+    }
+
+    if (!name)
+        return kmpp_trie_last_info(p);
+
+    str_real = osal_strnlen(name, KMPP_TRIE_NAME_MAX) + 1;
+    str_len = KMPP_ALIGN(str_real, 4);
+    info_size = sizeof(KmppTrieInfo) + str_len + sizeof(entry);
+
+    if (str_len >= KMPP_TRIE_NAME_MAX) {
+        kmpp_loge_f("invalid trie name %s len %d larger than max %d\n",
+                    name, str_len, KMPP_TRIE_NAME_MAX);
+        return rk_nok;
+    }
+
+    if (trie_prepare_buf(p, info_size))
+        return rk_nok;
+
+    idx = trie_pave_node(p, name, str_real);
+    if (idx < 0) {
+        kmpp_loge_f("trie %#px pave node %s failed\n", p, name);
+        return rk_nok;
+    }
+    if (p->nodes[idx].id != -1) {
+        kmpp_loge_f("trie %#px add info %s already exist\n", p, name);
+        return rk_nok;
+    }
+
+    p->nodes[idx].id = p->info_buf_pos;
+
+    {
+        KmppTrieInfo *info = (KmppTrieInfo *)(p->info_buf + p->info_buf_pos);
+        rk_u8 *buf = (rk_u8 *)(info + 1);
+
+        info->index = p->info_count;
+        info->ctx_len = sizeof(entry);
+        info->str_len = str_len;
+
+        osal_memcpy(buf, name, str_real);
+        while (str_real < str_len)
+            buf[str_real++] = 0;
+
+        buf += str_len;
+        ((KmppEntry *)buf)->val = entry.val;
+    }
+
+    trie_dbg_set("trie %#px add info %d - %s at node %d pos %d entry %llx\n",
+                 p, p->info_count, name, idx, p->info_buf_pos, entry.val);
+
+    p->info_buf_pos += info_size;
+    p->info_count++;
+
+    return rk_ok;
+}
+
 rk_s32 kmpp_trie_get_node_count(KmppTrie trie)
 {
     KmppTrieImpl *p = (KmppTrieImpl *)trie;
@@ -879,6 +945,7 @@ EXPORT_SYMBOL(kmpp_trie_init);
 EXPORT_SYMBOL(kmpp_trie_init_by_root);
 EXPORT_SYMBOL(kmpp_trie_deinit);
 EXPORT_SYMBOL(kmpp_trie_add_info);
+EXPORT_SYMBOL(kmpp_trie_add_entry);
 EXPORT_SYMBOL(kmpp_trie_get_node_count);
 EXPORT_SYMBOL(kmpp_trie_get_info_count);
 EXPORT_SYMBOL(kmpp_trie_get_buf_size);

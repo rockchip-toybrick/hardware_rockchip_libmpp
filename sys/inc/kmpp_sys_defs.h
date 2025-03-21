@@ -8,48 +8,145 @@
 
 #include "kmpi_defs.h"
 
-typedef enum EntryFlagType_e {
-    ENTRY_FLAG_NONE,            /* entry without update flag */
-    ENTRY_FLAG_START,           /* entry update flag will align to new 32bit */
-    ENTRY_FLAG_UPDATE,          /* entry flag increase by one */
-    ENTRY_FLAG_HOLD,            /* entry flag equal to previous one */
-} EntryFlagType;
-
+/*
+ * kernel - userspace transaction trie node ctx info (64 bit) definition
+ *
+ * +------+--------------------+---------------------------+
+ * | 8bit |       24 bit       |          32 bit           |
+ * +------+--------------------+---------------------------+
+ *
+ * bit 0~3 - 4-bit entry type (EntryType)
+ * 0 - invalid entry
+ * 1 - trie self info node
+ * 2 - access location table node
+ * 3 - ioctl cmd node
+ *
+ * bit 4~7 - 4-bit entry flag (EntryFlag) for different entry type
+ */
 typedef enum EntryType_e {
+    ENTRY_TYPE_NONE     = 0x0,  /* invalid entry type */
+    ENTRY_TYPE_VAL      = 0x1,  /* 32-bit value  */
+    ENTRY_TYPE_STR      = 0x2,  /* string info property */
+    ENTRY_TYPE_LOC_TBL  = 0x3,  /* entry location table */
+    ENTRY_TYPE_BUTT,
+} EntryType;
+
+/*
+ * 4-bit extention flag for different entry property
+ * EntryValFlag     - for ENTRY_TYPE_VAL
+ * EntryValFlag     - for ENTRY_TYPE_STR
+ * EntryLocTblFlag  - for ENTRY_TYPE_LOC_TBL
+ */
+typedef enum EntryValFlag_e {
+    /*
+     * 0 - value is unsigned value
+     * 1 - value is signed value
+     */
+    VALUE_SIGNED        = 0x1,
+} EntryValFlag;
+
+typedef enum EntryValUsage_e {
+    VALUE_NORMAL        = 0x0,
+
+    VALUE_TRIE          = 0x10,
+    /* trie info value */
+    VALUE_TRIE_INFO     = (VALUE_TRIE + 1),
+    /* trie offset from the trie root */
+    VALUE_TRIE_OFFSET   = (VALUE_TRIE + 2),
+
+    /* ioctl cmd */
+    VALUE_IOCTL_CMD     = 0x20,
+} EntryValUsage;
+
+typedef enum EntryStrFlag_e {
+    STRING_NORMAL       = 0x0,
+    /* string is trie self info */
+    STRING_TRIE         = 0x1,
+} EntryStrFlag;
+
+typedef enum EntryLocTblFlag_e {
+    /*
+     * bit 4    - element can be accessed by kernel
+     * bit 5    - element can be accessed by userspace
+     * bit 6    - element is read-only
+     */
+    LOCTBL_KERNEL       = 0x1,
+    LOCTBL_USERSPACE    = 0x2,
+    LOCTBL_READONLY     = 0x4,
+} EntryLocTblFlag;
+
+typedef enum ElemType_e {
     /* commaon fix size value */
-    ENTRY_TYPE_FIX      = 0x0,
-    ENTRY_TYPE_s32      = (ENTRY_TYPE_FIX + 0),
-    ENTRY_TYPE_u32      = (ENTRY_TYPE_FIX + 1),
-    ENTRY_TYPE_s64      = (ENTRY_TYPE_FIX + 2),
-    ENTRY_TYPE_u64      = (ENTRY_TYPE_FIX + 3),
+    ELEM_TYPE_FIX       = 0x0,
+    ELEM_TYPE_s32       = (ELEM_TYPE_FIX + 0),
+    ELEM_TYPE_u32       = (ELEM_TYPE_FIX + 1),
+    ELEM_TYPE_s64       = (ELEM_TYPE_FIX + 2),
+    ELEM_TYPE_u64       = (ELEM_TYPE_FIX + 3),
+    /* pointer type stored by 64-bit */
+    ELEM_TYPE_ptr       = (ELEM_TYPE_FIX + 4),
     /* value only structure */
-    ENTRY_TYPE_st       = (ENTRY_TYPE_FIX + 4),
+    ELEM_TYPE_st        = (ELEM_TYPE_FIX + 5),
 
     /* kernel and userspace share data */
-    ENTRY_TYPE_SHARE    = 0x6,
+    ELEM_TYPE_SHARE     = 0x6,
     /* share memory between kernel and userspace */
-    ENTRY_TYPE_shm      = (ENTRY_TYPE_SHARE + 0),
+    ELEM_TYPE_shm       = (ELEM_TYPE_SHARE + 0),
 
     /* kernel access only data */
-    ENTRY_TYPE_KERNEL   = 0x8,
+    ELEM_TYPE_KERNEL    = 0x8,
     /* kenrel object poineter */
-    ENTRY_TYPE_kobj     = (ENTRY_TYPE_KERNEL + 0),
+    ELEM_TYPE_kobj      = (ELEM_TYPE_KERNEL + 0),
     /* kenrel normal data poineter */
-    ENTRY_TYPE_kptr     = (ENTRY_TYPE_KERNEL + 1),
+    ELEM_TYPE_kptr      = (ELEM_TYPE_KERNEL + 1),
     /* kernel function poineter */
-    ENTRY_TYPE_kfp      = (ENTRY_TYPE_KERNEL + 2),
+    ELEM_TYPE_kfp       = (ELEM_TYPE_KERNEL + 2),
 
     /* userspace access only data */
-    ENTRY_TYPE_USER     = 0xc,
+    ELEM_TYPE_USER      = 0xc,
     /* userspace object poineter */
-    ENTRY_TYPE_uobj     = (ENTRY_TYPE_USER + 0),
+    ELEM_TYPE_uobj      = (ELEM_TYPE_USER + 0),
     /* userspace normal data poineter */
-    ENTRY_TYPE_uptr     = (ENTRY_TYPE_USER + 1),
+    ELEM_TYPE_uptr      = (ELEM_TYPE_USER + 1),
     /* userspace function poineter */
-    ENTRY_TYPE_ufp      = (ENTRY_TYPE_USER + 2),
+    ELEM_TYPE_ufp       = (ELEM_TYPE_USER + 2),
 
-    ENTRY_TYPE_BUTT     = 0xf,
-} EntryType;
+    ELEM_TYPE_BUTT      = 0xf,
+} ElemType;
+
+/* element update flag type */
+typedef enum ElemFlagType_e {
+    ELEM_FLAG_NONE,     /* element without update flag */
+    ELEM_FLAG_START,    /* element update flag will align to new 32bit */
+    ELEM_FLAG_UPDATE,   /* element flag increase by one */
+    ELEM_FLAG_HOLD,     /* element flag equal to previous one */
+} ElemFlagType;
+
+typedef union KmppEntry_u {
+    rk_u64                  val;
+    union {
+        EntryType           type            : 4;
+        struct {
+            EntryType       prop            : 4;
+            EntryValFlag    flag            : 4;
+            EntryValUsage   usage           : 24;
+            rk_u32          val;
+        } v;
+        struct {
+            EntryType       prop            : 4;
+            EntryValFlag    flag            : 4;
+            rk_u32          len             : 24;
+            rk_u32          offset;
+        } str;
+        struct {
+            EntryType       type            : 4;
+            EntryLocTblFlag flag            : 4;
+            ElemType        elem_type       : 8;
+            rk_u16          elem_size;
+            rk_u16          elem_offset;
+            rk_u16          flag_offset;    /* define by ElemFlagType */
+        } tbl;
+    };
+} KmppEntry;
 
 /*
  * kmpp system definitions including the kernel space accessor and
