@@ -11,7 +11,7 @@
 #include "kmpp_osal.h"
 #include "kmpp_trie.h"
 
-#define KMPP_TRIE_DBG_FUNC              (0x00000001)
+#define KMPP_TRIE_DBG_PAVE              (0x00000001)
 #define KMPP_TRIE_DBG_SET               (0x00000002)
 #define KMPP_TRIE_DBG_GET               (0x00000004)
 #define KMPP_TRIE_DBG_CNT               (0x00000008)
@@ -22,7 +22,7 @@
 #define KMPP_TRIE_DBG_IMPORT            (0x00000100)
 
 #define trie_dbg(flag, fmt, ...)        kmpp_dbg_f(kmpp_trie_debug, flag, fmt, ## __VA_ARGS__)
-#define trie_dbg_func(fmt, ...)         trie_dbg(KMPP_TRIE_DBG_FUNC, fmt, ## __VA_ARGS__)
+#define trie_dbg_pave(fmt, ...)         trie_dbg(KMPP_TRIE_DBG_PAVE, fmt, ## __VA_ARGS__)
 #define trie_dbg_set(fmt, ...)          trie_dbg(KMPP_TRIE_DBG_SET, fmt, ## __VA_ARGS__)
 #define trie_dbg_get(fmt, ...)          trie_dbg(KMPP_TRIE_DBG_GET, fmt, ## __VA_ARGS__)
 #define trie_dbg_cnt(fmt, ...)          trie_dbg(KMPP_TRIE_DBG_CNT, fmt, ## __VA_ARGS__)
@@ -102,7 +102,7 @@ static rk_s32 trie_get_node(KmppTrieImpl *trie, rk_s32 prev, rk_u64 key)
         /* NOTE: new memory should be osal_memset to zero */
         osal_memset(new_nodes + old_count, 0, sizeof(*new_nodes) * old_count);
 
-        trie_dbg_cnt("trie %p enlarge node %p:%d -> %p:%d\n",
+        trie_dbg_cnt("trie %#px enlarge node %#px:%d -> %#px:%d\n",
                      trie, trie->nodes, trie->node_count, new_nodes, new_count);
 
         trie->nodes = new_nodes;
@@ -124,6 +124,98 @@ static rk_s32 trie_get_node(KmppTrieImpl *trie, rk_s32 prev, rk_u64 key)
     return idx;
 }
 
+static rk_s32 trie_prepare_buf(KmppTrieImpl *p, rk_s32 info_size)
+{
+    if (p->info_count >= KMPP_TRIE_INFO_MAX) {
+        kmpp_loge_f("invalid trie info count %d larger than max %d\n",
+                    p->info_count, KMPP_TRIE_INFO_MAX);
+        return rk_nok;
+    }
+
+    /* check and enlarge info buffer */
+    if (p->info_buf_pos + info_size > p->info_buf_size) {
+        rk_s32 old_size = p->info_buf_size;
+        rk_s32 new_size = old_size * 2;
+        void *ptr = kmpp_realloc(p->info_buf, old_size, new_size);
+
+        if (!ptr) {
+            kmpp_loge_f("failed to realloc new info buffer %d\n", new_size);
+            return rk_nok;
+        }
+
+        trie_dbg_cnt("trie %#px enlarge info_buf %#px:%d -> %#px:%d\n",
+                     p, p->info_buf, old_size, ptr, new_size);
+
+        p->info_buf = ptr;
+        p->info_buf_size = new_size;
+    }
+
+    return rk_ok;
+}
+
+static rk_s32 trie_pave_node(KmppTrieImpl *p, const rk_u8 *name, rk_s32 str_len)
+{
+    KmppTrieNode *node = NULL;
+    const rk_u8 *s = (rk_u8 *)name;
+    rk_s32 next = 0;
+    rk_s32 idx = 0;
+    rk_s32 i;
+
+    trie_dbg_pave("trie %#px add info %s len %d\n", p, s, str_len);
+
+    for (i = 0; i < str_len && s[i]; i++) {
+        rk_u32 key = s[i];
+        rk_s32 key0 = (key >> 4) & 0xf;
+        rk_s32 key1 = (key >> 0) & 0xf;
+
+        node = p->nodes + idx;
+        next = node->next[key0];
+
+        trie_dbg_pave("trie %#px add %s at %2d rk_u8 %c:%3d:%x:%x node %d -> %d\n",
+                      p, name, i, key, key, key0, key1, idx, next);
+
+        if (!next) {
+            next = trie_get_node(p, idx, key0);
+            if (next < 0)
+                return next;
+
+            /* realloc may cause memory address change */
+            node = p->nodes + idx;
+            node->next[key0] = next;
+
+            trie_dbg_pave("trie %#px add %s at %2d rk_u8 %c:%3d node %d -> %d as new key0\n",
+                          p, name, i, key, key, node->idx, next);
+        }
+
+        idx = next;
+        node = p->nodes + idx;
+        next = node->next[key1];
+
+        trie_dbg_pave("trie %#px add %s at %2d rk_u8 %c:%3d:%x:%x node %d -> %d as key0\n",
+                      p, s, i, key, key, key0, key1, idx, next);
+
+        if (!next) {
+            next = trie_get_node(p, idx, key1);
+            if (next < 0)
+                return next;
+
+            /* realloc may cause memory address change */
+            node = p->nodes + idx;
+            node->next[key1] = next;
+
+            trie_dbg_pave("trie %#px add %s at %2d rk_u8 %c:%3d node %d -> %d as new child\n",
+                          p, name, i, key, key, node->idx, next);
+        }
+
+        idx = next;
+
+        trie_dbg_pave("trie %#px add %s at %2d rk_u8 %c:%3d:%x:%x node %d -> %d as key1\n",
+                      p, name, i, key, key, key0, key1, idx, next);
+    }
+
+    return idx;
+}
+
 rk_s32 kmpp_trie_init(KmppTrie *trie, const rk_u8 *name)
 {
     KmppTrieImpl *p;
@@ -131,7 +223,7 @@ rk_s32 kmpp_trie_init(KmppTrie *trie, const rk_u8 *name)
     rk_s32 ret = rk_nok;
 
     if (!trie || !name) {
-        kmpp_loge_f("invalid trie %px name %px\n", trie, name);
+        kmpp_loge_f("invalid trie %#px name %#px\n", trie, name);
         return ret;
     }
 
@@ -183,7 +275,7 @@ rk_s32 kmpp_trie_init_by_root(KmppTrie *trie, void *root)
     rk_s32 i;
 
     if (!trie || !root) {
-        kmpp_loge_f("invalid trie %px root %px\n", trie, root);
+        kmpp_loge_f("invalid trie %#px root %#px\n", trie, root);
         return rk_nok;
     }
 
@@ -224,7 +316,7 @@ rk_s32 kmpp_trie_init_by_root(KmppTrie *trie, void *root)
         if (info_ret && info_set == info_ret && info_ret->index == i)
             continue;
 
-        kmpp_loge_f("trie check on import found mismatch info %s [%d:%p] - [%d:%p]\n",
+        kmpp_loge_f("trie check on import found mismatch info %s [%d:%#px] - [%d:%#px]\n",
                     name, i, info_set, info_ret ? info_ret->index : -1, info_ret);
         return rk_nok;
     }
@@ -300,11 +392,11 @@ static KmppTrieNode *kmpp_trie_get_node(KmppTrieNode *root, const rk_u8 *name)
     rk_s32 idx = 0;
 
     if (!root || !name) {
-        kmpp_loge_f("invalid root %p name %p\n", root, name);
+        kmpp_loge_f("invalid root %#px name %#px\n", root, name);
         return NULL;
     }
 
-    trie_dbg_get("root %p search %s start\n", root, name);
+    trie_dbg_get("root %#px search %s start\n", root, name);
 
     do {
         rk_u8 key = *s++;
@@ -549,27 +641,20 @@ rk_s32 kmpp_trie_last_info(KmppTrie trie)
 
 rk_s32 kmpp_trie_add_info(KmppTrie trie, const rk_u8 *name, void *ctx, rk_u32 ctx_len)
 {
-    KmppTrieImpl *p;
-    KmppTrieInfo *info;
-    KmppTrieNode *node;
+    KmppTrieImpl *p = (KmppTrieImpl *)trie;
     rk_s32 info_size;
     rk_s32 ctx_real;
     rk_s32 str_real;
     rk_s32 str_len;
-    rk_s32 next;
     rk_s32 idx;
-    rk_s32 i;
-    rk_u8 *s;
 
-    if (!trie) {
-        kmpp_loge_f("invalid trie %p name %s ctx %p\n", trie, name, ctx);
+    if (!p) {
+        kmpp_loge_f("invalid trie %#px name %s ctx %#px\n", p, name, ctx);
         return rk_nok;
     }
 
     if (!name)
-        return kmpp_trie_last_info(trie);
-
-    p = (KmppTrieImpl *)trie;
+        return kmpp_trie_last_info(p);
 
     str_real = osal_strnlen(name, KMPP_TRIE_NAME_MAX) + 1;
     str_len = KMPP_ALIGN(str_real, 4);
@@ -583,108 +668,46 @@ rk_s32 kmpp_trie_add_info(KmppTrie trie, const rk_u8 *name, void *ctx, rk_u32 ct
                     name, str_len, KMPP_TRIE_NAME_MAX);
         return rk_nok;
     }
-    if (p->info_count >= KMPP_TRIE_INFO_MAX) {
-        kmpp_loge_f("invalid trie info count %d larger than max %d\n",
-                    str_len, KMPP_TRIE_INFO_MAX);
+
+    if (trie_prepare_buf(p, info_size))
+        return rk_nok;
+
+    idx = trie_pave_node(p, name, str_real);
+    if (idx < 0) {
+        kmpp_loge_f("trie %#px pave node %s failed\n", p, name);
         return rk_nok;
     }
-
-    /* check and enlarge info buffer */
-    if (p->info_buf_pos + info_size > p->info_buf_size) {
-        rk_s32 old_size = p->info_buf_size;
-        rk_s32 new_size = old_size * 2;
-        void *ptr = kmpp_realloc(p->info_buf, old_size, new_size);
-
-        if (!ptr) {
-            kmpp_loge_f("failed to realloc new info buffer %d\n", new_size);
-            return rk_nok;
-        }
-
-        trie_dbg_cnt("trie %p enlarge info_buf %p:%d -> %p:%d\n",
-                     trie, p->info_buf, old_size, ptr, new_size);
-
-        p->info_buf = ptr;
-        p->info_buf_size = new_size;
-    }
-
-    node = NULL;
-    s = (rk_u8 *)name;
-    next = 0;
-    idx = 0;
-
-    trie_dbg_set("trie %p add info %s len %d\n", trie, s, str_len);
-
-    for (i = 0; i < str_len && s[i]; i++) {
-        rk_u32 key = s[i];
-        rk_s32 key0 = (key >> 4) & 0xf;
-        rk_s32 key1 = (key >> 0) & 0xf;
-
-        node = p->nodes + idx;
-        next = node->next[key0];
-
-        trie_dbg_set("trie %p add %s at %2d rk_u8 %c:%3d:%x:%x node %d -> %d\n",
-                     trie, s, i, key, key, key0, key1, idx, next);
-
-        if (!next) {
-            next = trie_get_node(p, idx, key0);
-            /* realloc may cause memory address change */
-            node = p->nodes + idx;
-            node->next[key0] = next;
-
-            trie_dbg_set("trie %p add %s at %2d rk_u8 %c:%3d node %d -> %d as new key0\n",
-                         trie, s, i, key, key, node->idx, next);
-        }
-
-        idx = next;
-        node = p->nodes + idx;
-        next = node->next[key1];
-
-        trie_dbg_set("trie %p add %s at %2d rk_u8 %c:%3d:%x:%x node %d -> %d as key0\n",
-                     trie, s, i, key, key, key0, key1, idx, next);
-
-        if (!next) {
-            next = trie_get_node(p, idx, key1);
-            /* realloc may cause memory address change */
-            node = p->nodes + idx;
-            node->next[key1] = next;
-
-            trie_dbg_set("trie %p add %s at %2d rk_u8 %c:%3d node %d -> %d as new child\n",
-                         trie, s, i, key, key, node->idx, next);
-        }
-
-        idx = next;
-
-        trie_dbg_set("trie %p add %s at %2d rk_u8 %c:%3d:%x:%x node %d -> %d as key1\n",
-                     trie, s, i, key, key, key0, key1, idx, next);
-    }
-
     if (p->nodes[idx].id != -1) {
-        kmpp_loge_f("trie %p add info %s already exist\n", trie, name);
+        kmpp_loge_f("trie %#px add info %s already exist\n", p, name);
         return rk_nok;
     }
 
     p->nodes[idx].id = p->info_buf_pos;
 
+    {
+        KmppTrieInfo *info = (KmppTrieInfo *)(p->info_buf + p->info_buf_pos);
+        rk_u8 *buf = (rk_u8 *)(info + 1);
 
-    info = (KmppTrieInfo *)(p->info_buf + p->info_buf_pos);
-    info->index = p->info_count++;;
-    info->ctx_len = ctx_len;
-    info->str_len = str_len;
+        info->index = p->info_count;
+        info->ctx_len = ctx_len;
+        info->str_len = str_len;
 
-    s = (rk_u8 *)(info + 1);
+        osal_memcpy(buf, name, str_real);
+        while (str_real < str_len)
+            buf[str_real++] = 0;
 
-    osal_memcpy(s, name, str_real);
-    if (str_len != str_real)
-        osal_memset(s + str_real, 0, str_len - str_real);
-    s += str_len;
-    osal_memcpy(s, ctx, ctx_real);
-    if (ctx_len != ctx_real)
-        osal_memset(s + ctx_real, 0, ctx_len - ctx_real);
+        buf += str_len;
+
+        osal_memcpy(buf, ctx, ctx_real);
+        while (ctx_real < ctx_len)
+            buf[ctx_real++] = 0;
+    }
+
+    trie_dbg_set("trie %#px add info %d - %s at node %d pos %d ctx %#px size %d\n",
+                 p, p->info_count, name, idx, p->info_buf_pos, ctx, ctx_len);
 
     p->info_buf_pos += info_size;
-
-    trie_dbg_set("trie %p add %d info %s at node %d pos %d ctx %p size %d done\n",
-                 trie, i, s, idx, info->index, ctx, ctx_len);
+    p->info_count++;
 
     return rk_ok;
 }
@@ -723,7 +746,7 @@ KmppTrieInfo *kmpp_trie_get_info(KmppTrie trie, const rk_u8 *name)
     KmppTrieNode *node;
 
     if (!trie || !name) {
-        kmpp_loge_f("invalid trie %p name %p\n", trie, name);
+        kmpp_loge_f("invalid trie %#px name %#px\n", trie, name);
         return NULL;
     }
 
@@ -756,7 +779,7 @@ KmppTrieInfo *kmpp_trie_get_info_from_root(void *root, const rk_u8 *name)
     KmppTrieNode *node;
 
     if (!root || !name) {
-        kmpp_loge_f("invalid root %p name %p\n", root, name);
+        kmpp_loge_f("invalid root %#px name %#px\n", root, name);
         return NULL;
     }
 
@@ -778,7 +801,7 @@ void kmpp_trie_dump(KmppTrie trie, const rk_u8 *func)
     osal_memset(next_cnt, 0, sizeof(next_cnt));
     osal_memset(tag_len, 0, sizeof(tag_len));
 
-    kmpp_logi("%s dumping trie %p\n", func, trie);
+    kmpp_logi("%s dumping trie %#px\n", func, trie);
     kmpp_logi("name %s size %d node %d info %d\n",
               p->name, p->buf_size, p->node_used, p->info_count);
 
