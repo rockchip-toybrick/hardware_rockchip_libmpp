@@ -378,6 +378,10 @@ static MPP_RET h264e_proc_h264_cfg(MppEncH264Cfg *dst, MppEncH264Cfg *src)
 {
 	MPP_RET ret = MPP_OK;
 	RK_U32 change = src->change;
+        RK_S32 entropy_coding_mode;
+        RK_S32 cabac_init_idc;
+        RK_S32 transform8x8_mode;
+        RK_U32 disable_cabac;
 
 	// TODO: do codec check first
 	if (change & MPP_ENC_H264_CFG_STREAM_TYPE)
@@ -409,15 +413,15 @@ static MPP_RET h264e_proc_h264_cfg(MppEncH264Cfg *dst, MppEncH264Cfg *src)
 		dst->change |= MPP_ENC_H264_CFG_CHANGE_GAPS_IN_FRM_NUM;
 	}
 	if ((change & MPP_ENC_H264_CFG_CHANGE_ENTROPY) &&
-	    ((dst->entropy_coding_mode != src->entropy_coding_mode) ||
-	     (dst->cabac_init_idc != src->cabac_init_idc))) {
-		dst->entropy_coding_mode = src->entropy_coding_mode;
-		dst->cabac_init_idc = src->cabac_init_idc;
+	    ((dst->entropy_coding_mode_ex != src->entropy_coding_mode_ex) ||
+	     (dst->cabac_init_idc_ex != src->cabac_init_idc_ex))) {
+		dst->entropy_coding_mode_ex = src->entropy_coding_mode_ex;
+		dst->cabac_init_idc_ex = src->cabac_init_idc_ex;
 		dst->change |= MPP_ENC_H264_CFG_CHANGE_ENTROPY;
 	}
 	if ((change & MPP_ENC_H264_CFG_CHANGE_TRANS_8x8) &&
-	    (dst->transform8x8_mode != src->transform8x8_mode)) {
-		dst->transform8x8_mode = src->transform8x8_mode;
+	    (dst->transform8x8_mode_ex != src->transform8x8_mode_ex)) {
+		dst->transform8x8_mode_ex = src->transform8x8_mode_ex;
 		dst->change |= MPP_ENC_H264_CFG_CHANGE_TRANS_8x8;
 	}
 	if ((change & MPP_ENC_H264_CFG_CHANGE_CONST_INTRA) &&
@@ -481,6 +485,40 @@ static MPP_RET h264e_proc_h264_cfg(MppEncH264Cfg *dst, MppEncH264Cfg *src)
 		dst->base_layer_pid = src->base_layer_pid;
 		dst->change |= MPP_ENC_H264_CFG_CHANGE_BASE_LAYER_PID;
 	}
+
+        // check user h.264 config. If valid, set to HAL.
+        entropy_coding_mode = dst->entropy_coding_mode_ex;
+        cabac_init_idc = dst->cabac_init_idc_ex;
+        transform8x8_mode = dst->transform8x8_mode_ex;
+
+        disable_cabac = (H264_PROFILE_FREXT_CAVLC444 == dst->profile ||
+                         H264_PROFILE_BASELINE == dst->profile ||
+                         H264_PROFILE_EXTENDED == dst->profile);
+
+        if (disable_cabac && entropy_coding_mode) {
+            mpp_err("Warning: invalid cabac_en %d for profile %d, set to 0.\n",
+                    entropy_coding_mode, dst->profile);
+
+            entropy_coding_mode = 0;
+        }
+
+        if (disable_cabac && cabac_init_idc >= 0) {
+            mpp_err("Warning: invalid cabac_init_idc %d for profile %d, set to -1.\n",
+                    cabac_init_idc, dst->profile);
+
+            cabac_init_idc = -1;
+        }
+
+        if (dst->profile < H264_PROFILE_HIGH && transform8x8_mode) {
+            mpp_err("Warning: invalid transform8x8_mode %d for profile %d, set to 0.\n",
+                    transform8x8_mode, dst->profile);
+
+            transform8x8_mode = 0;
+        }
+
+        dst->entropy_coding_mode = entropy_coding_mode;
+        dst->cabac_init_idc = cabac_init_idc;
+        dst->transform8x8_mode = transform8x8_mode;
 
 	src->change = 0;
 	return ret;
