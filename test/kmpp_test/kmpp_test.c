@@ -429,7 +429,6 @@ void kmpp_test_prepare(void)
 
 void kmpp_test_finish(void)
 {
-    kmpp_obj_test_deinit();
     kmpp_logi("kmpp test end\n");
 }
 

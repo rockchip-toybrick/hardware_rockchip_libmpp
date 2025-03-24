@@ -414,7 +414,8 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, init)(void) \
 } \
 rk_s32 KMPP_OBJ_FUNC2(prefix, deinit)(void) \
 { \
-    return kmpp_objdef_put(KMPP_OBJ_DEF(prefix)); \
+    KmppObjDef def = __sync_fetch_and_and(&KMPP_OBJ_DEF(prefix), NULL); \
+    return kmpp_objdef_put(def); \
 } \
 rk_s32 KMPP_OBJ_FUNC2(prefix, size)(void) \
 { \
