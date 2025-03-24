@@ -166,8 +166,8 @@ KmppMemPool kmpp_mem_get_pool(const rk_u8 *name, rk_s32 size, rk_u32 max_cnt, rk
         return NULL;
     }
 
-    str_len = KMPP_ALIGN(osal_strlen(name) + 1, 4);
-    pool = kmpp_calloc_atomic(sizeof(KmppMemPoolImpl) + str_len);
+    str_len = osal_strlen(name) + 1;
+    pool = kmpp_calloc_atomic(sizeof(KmppMemPoolImpl) + KMPP_ALIGN(str_len, 4));
     if (!pool) {
         kmpp_err_f("failed to alloc mem pool %2d - %-16s\n", name);
         return NULL;
@@ -177,7 +177,7 @@ KmppMemPool kmpp_mem_get_pool(const rk_u8 *name, rk_s32 size, rk_u32 max_cnt, rk
     pool->max_cnt = max_cnt;
     pool->size = size;
 
-    osal_memcpy((void *)(pool + 1), name, str_len);
+    osal_memcpy(pool->name, name, str_len);
 
     OSAL_INIT_LIST_HEAD(&pool->list_srv);
     OSAL_INIT_LIST_HEAD(&pool->used);
