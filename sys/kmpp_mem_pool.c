@@ -177,7 +177,7 @@ KmppMemPool kmpp_mem_get_pool(const rk_u8 *name, rk_s32 size, rk_u32 max_cnt, rk
     pool->max_cnt = max_cnt;
     pool->size = size;
 
-    osal_memcpy(pool->name, name, str_len);
+    osal_memcpy((void*)pool->name, name, str_len);
 
     OSAL_INIT_LIST_HEAD(&pool->list_srv);
     OSAL_INIT_LIST_HEAD(&pool->used);
