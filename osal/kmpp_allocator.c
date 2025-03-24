@@ -878,8 +878,8 @@ rk_s32 kmpp_dmabuf_put_iova(KmppDmaBuf buf, rk_u64 iova, osal_dev *dev)
     KmppDmaBufIova *node;
     KmppDmaBufIova *pos, *n;
 
-    if (!impl || !iova || !dev) {
-        kmpp_loge_f("invalid buf %px iova %px dev %px\n", buf, iova, dev);
+    if (!impl || iova == KMPP_INVALID_IOVA || !dev) {
+        kmpp_loge_f("invalid buf %px iova %llx dev %px\n", buf, iova, dev);
         return rk_nok;
     }
 
@@ -927,8 +927,8 @@ rk_s32 kmpp_dmabuf_put_iova_by_device(KmppDmaBuf buf, rk_u64 iova, void *device)
     KmppDmaBufIova *node;
     KmppDmaBufIova *pos, *n;
 
-    if (!impl || !iova || !device) {
-        kmpp_loge_f("invalid buf %px iova %px device %px\n", buf, iova, device);
+    if (!impl || iova == KMPP_INVALID_IOVA || !device) {
+        kmpp_loge_f("invalid buf %px iova %llx device %px\n", buf, iova, device);
         return rk_nok;
     }
 

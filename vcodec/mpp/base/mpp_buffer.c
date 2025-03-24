@@ -33,7 +33,7 @@ struct MppBufferImpl {
 	RK_U32          cir_flag;
 	atomic_t        ref_count;
 	RK_UL           uaddr;
-	RK_U32          iova;
+	RK_U64          iova;
 	struct device   *dev;
 	KmppDmaBuf	buf;
 };
@@ -103,6 +103,7 @@ MPP_RET mpp_buffer_import_with_tag(MppBufferGroup group, MppBufferInfo *info,
 		}
 		info->size = kmpp_dmabuf_get_size(buf->buf);
 		buf->info = *info;
+		buf->iova = KMPP_INVALID_IOVA;
 		atomic_inc(&buf->ref_count);
 		*buffer = buf;
 	}
@@ -134,7 +135,7 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 		kmpp_mem_pool_put_f(mppbuf_pool, buf_impl);
 		return MPP_ERR_UNKNOW;
 	}
-
+	buf_impl->iova = KMPP_INVALID_IOVA;
 	atomic_inc(&buf_impl->ref_count);
 	*buffer = buf_impl;
 
@@ -165,6 +166,7 @@ MPP_RET mpp_ring_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
 	buf_impl->info.fd = -1;
 	atomic_inc(&buf_impl->ref_count);
 	buf_impl->cir_flag = 1;
+	buf_impl->iova = KMPP_INVALID_IOVA;
 	*buffer = buf_impl;
 
 	return (buf_impl) ? (MPP_OK) : (MPP_NOK);
@@ -180,7 +182,7 @@ MPP_RET mpp_buffer_put_with_caller(MppBuffer buffer, const char *caller)
 		return MPP_ERR_UNKNOW;
 	}
 	if (atomic_dec_and_test(&buf_impl->ref_count)) {
-		if (buf_impl->iova)
+		if (buf_impl->iova != KMPP_INVALID_IOVA)
 			kmpp_dmabuf_put_iova_by_device(buf_impl->buf, buf_impl->iova, buf_impl->dev);
 		kmpp_dmabuf_free_f(buf_impl->buf);
 		kmpp_mem_pool_put_f(mppbuf_pool, buf_impl);
@@ -474,7 +476,7 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
 		return -1;
 	}
 
-	if (p->iova) {
+	if (p->iova != KMPP_INVALID_IOVA) {
 		return (RK_U32)p->iova;
 	}
 
@@ -482,9 +484,9 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
 	if (ret)
 		return -1;
 	p->dev = mpp_get_dev(dev);
-	p->iova = (RK_U32)iova;
+	p->iova = iova;
 
-	return p->iova;
+	return (rk_u32)p->iova;
 }
 
 RK_UL mpp_buffer_get_uaddr(MppBuffer buffer)

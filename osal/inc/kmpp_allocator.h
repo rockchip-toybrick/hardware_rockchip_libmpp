@@ -8,6 +8,8 @@
 
 #include "kmpp_dev.h"
 
+#define KMPP_INVALID_IOVA           (~(dma_addr_t)0)
+
 #define KMPP_DMAHEAP_FLAGS_DEFAULT  0x0000
 #define KMPP_DMAHEAP_FLAGS_DMA32    0x0001
 #define KMPP_DMAHEAP_FLAGS_CACHABLE 0x0002
