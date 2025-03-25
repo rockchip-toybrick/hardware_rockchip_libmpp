@@ -286,10 +286,6 @@
         if (KMPP_OBJ_HOOK3(prefix, set, field) >= 0) \
             ret = kmpp_obj_idx_run(s, KMPP_OBJ_HOOK3(prefix, set, field), (void *)&v, __FUNCTION__); \
         return ret; \
-    } \
-    rk_s32 KMPP_OBJ_FUNC3(prefix, test, field)(KMPP_OBJ_INTF_TYPE s) \
-    { \
-        return 0; \
     }
 
 #define KMPP_OBJ_STRUCT_HOOK_FUNC(prefix, ftype, type, field, ...) \
@@ -455,6 +451,11 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
         (void) s; \
         (void) v; \
         return rk_ok; \
+    } \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, test, field)(KMPP_OBJ_INTF_TYPE s) \
+    { \
+        (void) s; \
+        return rk_ok; \
     }
 
 #define KMPP_OBJ_ENTRY_RO_FUNC(prefix, ftype, type, field) \
@@ -476,6 +477,11 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
     { \
         (void) s; \
         (void) v; \
+        return rk_ok; \
+    } \
+    rk_s32 KMPP_OBJ_FUNC3(prefix, test, field)(KMPP_OBJ_INTF_TYPE s) \
+    { \
+        (void) s; \
         return rk_ok; \
     }
 
@@ -519,6 +525,11 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
         (void) s; \
         (void) v; \
         return rk_ok; \
+    } \
+    rk_s32 KMPP_OBJ_FUNC4(prefix, test, f1, f2)(KMPP_OBJ_INTF_TYPE s) \
+    { \
+        (void) s; \
+        return rk_ok; \
     }
 
 #define KMPP_OBJ_STRUCT_FUNC2(prefix, ftype, type, f1, f2) \
@@ -532,6 +543,11 @@ rk_s32 KMPP_OBJ_FUNC2(prefix, dump)(KMPP_OBJ_INTF_TYPE obj, const rk_u8 *caller)
     { \
         (void) s; \
         (void) v; \
+        return rk_ok; \
+    } \
+    rk_s32 KMPP_OBJ_FUNC4(prefix, test, f1, f2)(KMPP_OBJ_INTF_TYPE s) \
+    { \
+        (void) s; \
         return rk_ok; \
     }
 
@@ -582,8 +598,7 @@ KMPP_OBJS_USAGE_SET(KMPP_OBJ_NAME);
 
 #define KMPP_OBJ_EXPORT(prefix, ftype, type, field, ...) \
     EXPORT_SYMBOL(KMPP_OBJ_FUNC3(prefix, get, field)); \
-    EXPORT_SYMBOL(KMPP_OBJ_FUNC3(prefix, set, field)); \
-    EXPORT_SYMBOL(KMPP_OBJ_FUNC3(prefix, test, field));
+    EXPORT_SYMBOL(KMPP_OBJ_FUNC3(prefix, set, field));
 
 #define KMPP_OBJ_EXPORT_RO(prefix, ftype, type, field, ...) \
     EXPORT_SYMBOL(KMPP_OBJ_FUNC3(prefix, get, field));
@@ -594,8 +609,7 @@ KMPP_OBJS_USAGE_SET(KMPP_OBJ_NAME);
 
 #define KMPP_OBJ_EXPORT2(prefix, ftype, type, f1, f2, ...) \
     EXPORT_SYMBOL(KMPP_OBJ_FUNC4(prefix, get, f1, f2)); \
-    EXPORT_SYMBOL(KMPP_OBJ_FUNC4(prefix, set, f1, f2)); \
-    EXPORT_SYMBOL(KMPP_OBJ_FUNC4(prefix, test, f1, f2));
+    EXPORT_SYMBOL(KMPP_OBJ_FUNC4(prefix, set, f1, f2));
 
 #define KMPP_OBJS_USAGE_EXPORT(prefix) \
 EXPORT_SYMBOL(KMPP_OBJ_FUNC2(prefix, size)); \
