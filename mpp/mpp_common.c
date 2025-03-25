@@ -1775,6 +1775,8 @@ static ssize_t fops_write_clk(struct file *file, const char __user *buf,
 	if (clk_rate != cur_rate)
 		clk_set_rate(mpp_clk->clk, clk_rate);
 
+	mpp_clk->debug_rate_hz = clk_rate;
+
 	return count;
 }
 

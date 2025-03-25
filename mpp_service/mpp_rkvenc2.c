@@ -2164,7 +2164,8 @@ static int rkvenc_isr(struct mpp_dev *mpp)
 	}
 
 	mpp_task = mpp->cur_task;
-	mpp_time_diff(mpp_task);
+	mpp_task->hw_cycles = mpp_read(mpp, 0x5200) * 4;
+	mpp_time_diff_with_hw_time(mpp_task, enc->core_clk_info.real_rate_hz);
 	mpp->cur_task = NULL;
 
 	if (mpp_task->mpp && mpp_task->mpp != mpp)
@@ -2522,10 +2523,8 @@ static int rkvenc_procfs_init(struct mpp_dev *mpp)
 	mpp_procfs_create_common(enc->procfs, mpp);
 
 	/* for debug */
-	mpp_procfs_create_u32("aclk", 0644,
-			      enc->procfs, &enc->aclk_info.debug_rate_hz);
-	mpp_procfs_create_u32("clk_core", 0644,
-			      enc->procfs, &enc->core_clk_info.debug_rate_hz);
+	mpp_procfs_create_clk_rw("aclk", 0644, enc->procfs, &enc->aclk_info);
+	mpp_procfs_create_clk_rw("clk_core", 0644, enc->procfs, &enc->core_clk_info);
 	mpp_procfs_create_u32("session_buffers", 0644,
 			      enc->procfs, &mpp->session_max_buffers);
 	/* for show session info */

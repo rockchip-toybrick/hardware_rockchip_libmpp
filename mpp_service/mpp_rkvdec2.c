@@ -940,14 +940,10 @@ static int rkvdec2_procfs_init(struct mpp_dev *mpp)
 	/* for common mpp_dev options */
 	mpp_procfs_create_common(dec->procfs, mpp);
 
-	mpp_procfs_create_u32("aclk", 0644,
-			      dec->procfs, &dec->aclk_info.debug_rate_hz);
-	mpp_procfs_create_u32("clk_core", 0644,
-			      dec->procfs, &dec->core_clk_info.debug_rate_hz);
-	mpp_procfs_create_u32("clk_cabac", 0644,
-			      dec->procfs, &dec->cabac_clk_info.debug_rate_hz);
-	mpp_procfs_create_u32("clk_hevc_cabac", 0644,
-			      dec->procfs, &dec->hevc_cabac_clk_info.debug_rate_hz);
+	mpp_procfs_create_clk_rw("aclk", 0644, dec->procfs, &dec->aclk_info);
+	mpp_procfs_create_clk_rw("clk_core", 0644, dec->procfs, &dec->core_clk_info);
+	mpp_procfs_create_clk_rw("clk_cabac", 0644, dec->procfs, &dec->cabac_clk_info);
+	mpp_procfs_create_clk_rw("clk_hevc_cabac", 0644, dec->procfs, &dec->hevc_cabac_clk_info);
 	mpp_procfs_create_u32("session_buffers", 0644,
 			      dec->procfs, &mpp->session_max_buffers);
 	proc_create_single("perf_sel_offset", 0444,

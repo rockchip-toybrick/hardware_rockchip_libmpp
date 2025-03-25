@@ -390,8 +390,7 @@ static int jpgdec_procfs_init(struct mpp_dev *mpp)
 	/* for common mpp_dev options */
 	mpp_procfs_create_common(dec->procfs, mpp);
 
-	mpp_procfs_create_u32("aclk", 0644,
-			      dec->procfs, &dec->aclk_info.debug_rate_hz);
+	mpp_procfs_create_clk_rw("aclk", 0644, dec->procfs, &dec->aclk_info);
 	mpp_procfs_create_u32("session_buffers", 0644,
 			      dec->procfs, &mpp->session_max_buffers);
 
@@ -462,15 +461,6 @@ static int jpgdec_set_freq(struct mpp_dev *mpp,
 	struct jpgdec_task *task = to_jpgdec_task(mpp_task);
 
 	mpp_clk_set_rate(&dec->aclk_info, task->clk_mode);
-
-	return 0;
-}
-
-static int jpgdec_reduce_freq(struct mpp_dev *mpp)
-{
-	struct jpgdec_dev *dec = to_jpgdec_dev(mpp);
-
-	mpp_clk_set_rate(&dec->aclk_info, CLK_MODE_REDUCE);
 
 	return 0;
 }
@@ -556,7 +546,7 @@ static struct mpp_hw_ops jpgdec_v1_hw_ops = {
 	.clk_on = jpgdec_clk_on,
 	.clk_off = jpgdec_clk_off,
 	.set_freq = jpgdec_set_freq,
-	.reduce_freq = jpgdec_reduce_freq,
+	.reduce_freq = NULL,
 	.reset = jpgdec_reset,
 };
 
