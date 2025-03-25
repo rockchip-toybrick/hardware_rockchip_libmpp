@@ -1176,7 +1176,9 @@ static void setup_vepu511_rdo_pred(HalH264eVepu511Ctx *ctx, H264eSps *sps,
 		regs->reg_frm.rdo_mark_mode.p8_interp_num = 3;
 		regs->reg_frm.rdo_mark_mode.p8t8_rdo_num = 2;
 		regs->reg_frm.rdo_mark_mode.p8t4_rmd_num = 2;
-		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
+		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 1;
+		regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 1;
+		regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 1;
 	}
 
 	if (sm == MPP_ENC_SCENE_MODE_IPC)
