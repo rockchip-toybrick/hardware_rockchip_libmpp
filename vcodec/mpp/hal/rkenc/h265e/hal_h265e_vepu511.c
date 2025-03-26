@@ -403,8 +403,8 @@ static MPP_RET vepu511_h265_setup_hal_bufs(H265eV511HalContext *ctx)
 		ctx->ext_line_buf_size = 0;
 	}
 
-	smear_size = MPP_ALIGN(prep->max_width, 512) / 512 * MPP_ALIGN(prep->max_height, 32) / 32 * 16;
-	smear_r_size = MPP_ALIGN(prep->max_height, 512) / 512 * MPP_ALIGN(prep->max_width, 32) / 32 * 16;
+	smear_size = MPP_ALIGN(prep->max_width, 256) / 256 * MPP_ALIGN(prep->max_height, 32) / 32 * 16;
+	smear_r_size = MPP_ALIGN(prep->max_height, 256) / 256 * MPP_ALIGN(prep->max_width, 32) / 32 * 16;
 	smear_size = MPP_MAX(smear_size, smear_r_size);
 
 	if (frame_size != ctx->frame_size || new_max_cnt != old_max_cnt || smear_size != ctx->smear_size) {
