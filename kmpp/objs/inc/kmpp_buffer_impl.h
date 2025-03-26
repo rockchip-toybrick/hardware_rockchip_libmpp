@@ -44,6 +44,7 @@ typedef struct KmppBufGrpImpl_t {
     KmppShmPtr          cfg;
     KmppBufGrpCfg       cfg_ext;
     KmppBufGrpCfgImpl   *cfg_usr;
+    KmppObj             obj;
 
     /* internal parameter set on used */
     rk_u32              flag;

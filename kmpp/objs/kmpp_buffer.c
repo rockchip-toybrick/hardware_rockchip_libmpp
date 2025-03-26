@@ -148,7 +148,7 @@ rk_s32 kmpp_buf_deinit(void)
         osal_list_del_init(&srv->grp->list_srv);
 
     osal_list_for_each_entry_safe(grp, n, &srv->list_grp, KmppBufGrpImpl, list_srv) {
-        kmpp_buf_grp_put(grp);
+        kmpp_buf_grp_put(grp->obj);
     }
 
     if (srv->group_default) {
@@ -251,6 +251,7 @@ static rk_s32 kmpp_buf_grp_impl_init(void *entry, KmppObj obj, osal_fs_dev *file
     impl->cfg_usr = kmpp_obj_to_entry(impl->cfg_ext);
     impl->cfg_usr->grp_impl = impl;
     impl->cfg_int.grp_impl = impl;
+    impl->obj = obj;
     kmpp_obj_to_shmptr(impl->cfg_ext, &impl->cfg);
 
     osal_spin_lock(srv->lock);
