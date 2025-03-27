@@ -392,7 +392,7 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	thd = venc->thd;
 
 	if (osal_cmpxchg(&chan_entry->frame, chan_entry->frame, chan_entry->frame)) {
-		mpp_err_f("frame is not null %px\n", chan_entry->frame);
+		mpp_err_f("chan %d frame %p is busy\n", chan_entry->chan_id, chan_entry->frame);
 		return MPP_NOK;
 	}
 

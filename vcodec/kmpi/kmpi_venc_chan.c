@@ -237,7 +237,7 @@ rk_s32 kmpp_venc_chan_put_frm(KmppChanId id, KmppFrame frm)
     venc = mpp_vcodec_get_enc_module_entry();
     thd = venc->thd;
     if (osal_cmpxchg(&chan->frame, chan->frame, chan->frame)) {
-        mpp_err_f("chan %d frame %p is not NULL\n", chan_id, chan->frame);
+        mpp_err_f("chan %d frame %p is busy\n", chan_id, chan->frame);
         return MPP_NOK;
     }
     osal_cmpxchg(&chan->frame, chan->frame, frm);
