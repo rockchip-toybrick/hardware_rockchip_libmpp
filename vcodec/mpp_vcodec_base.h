@@ -9,8 +9,11 @@
 #ifndef __ROCKCHIP_MPP_VCODEC_BASE_H__
 #define __ROCKCHIP_MPP_VCODEC_BASE_H__
 
-#include <linux/spinlock.h>
+#include <linux/kref.h>
 #include <linux/mutex.h>
+#include <linux/sched.h>
+#include <linux/spinlock.h>
+#include <linux/wait.h>
 #include <linux/workqueue.h>
 
 #include "mpp_packet.h"
