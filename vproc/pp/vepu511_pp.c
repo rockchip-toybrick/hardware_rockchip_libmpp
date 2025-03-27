@@ -362,7 +362,13 @@ static void vepu511_pp_update_st_reg(vepu511_pp_chn_info *info)
 
     p->int_en.enc_done_en = 1;
     p->int_msk = 0;
-    p->enc_pic.enc_stnd = 2;
+    /* enc_stnd  vepu_pp_en(0x530[31])
+     * 2'b00            1              ->  h264 & vepu_pp(64x16)
+     * 2'b01            1              ->  h265 & vepu_pp(32x32)
+     * 2'b10            1              ->  vepu_pp(64x16)
+     * 2'b11            1              ->  vepu_pp(32x32）
+     */
+    p->enc_pic.enc_stnd = 3;
     p->enc_pic.cur_frm_ref = 1;
     p->enc_rsl.pic_wd8_m1 = (PP_ALIGN(info->width, 8) >> 3) - 1;
     p->enc_rsl.pic_hd8_m1 = (PP_ALIGN(info->height, 8) >> 3) - 1;
