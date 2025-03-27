@@ -622,10 +622,11 @@ static MPP_RET hal_h264e_vepu511_get_task(void *hal, HalEncTask *task)
 	if (!kmpp_frame_get_meta(task->frame, &sptr)) {
 		KmppMeta meta = sptr.kptr;
 
-		kmpp_meta_get_ptr(meta, KEY_ROI_DATA, (void**)&ctx->roi_data);
-		kmpp_meta_get_ptr(meta, KEY_OSD_DATA3, (void**)&ctx->osd_cfg.osd_data3);
+		kmpp_meta_get_ptr_d(meta, KEY_ROI_DATA, (void**)&ctx->roi_data, NULL);
+		kmpp_meta_get_ptr_d(meta, KEY_OSD_DATA3, (void**)&ctx->osd_cfg.osd_data3, NULL);
 		/* Set the osd, because rockit needs to release osd buffer. */
-		kmpp_meta_set_ptr(meta, KEY_OSD_DATA3, ctx->osd_cfg.osd_data3);
+		if (ctx->osd_cfg.osd_data3)
+			kmpp_meta_set_ptr(meta, KEY_OSD_DATA3, ctx->osd_cfg.osd_data3);
 	}
 
 	if (!frm_status->reencode) {
@@ -2471,12 +2472,16 @@ static MPP_RET hal_h264e_vepu511_gen_regs(void *hal, HalEncTask *task)
 			vepu511_h264_tune_qpmap(ctx);
 	}
 
-	if (ctx->osd_cfg.osd_data3)
+	if (ctx->osd_cfg.osd_data3) {
 		vepu511_set_osd(&ctx->osd_cfg);
+		ctx->osd_cfg.osd_data3 = NULL;
+	}
 
-	if (ctx->roi_data)
+	if (ctx->roi_data) {
 		vepu511_set_roi(&regs->reg_rc_roi.roi_cfg, ctx->roi_data,
 				ctx->cfg->prep.width, ctx->cfg->prep.height);
+		ctx->roi_data = NULL;
+	}
 
 	/* two pass register patch */
 	if (frm->save_pass1)

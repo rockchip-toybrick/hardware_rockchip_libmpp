@@ -322,6 +322,8 @@ MPP_RET hal_jpege_vepu511_set_osd(JpegeV511HalContext *ctx)
 	regs->osd_whi_cfg3.osd_csc_ofst_u = 128;
 	regs->osd_whi_cfg3.osd_csc_ofst_v = 128;
 
+	osd_cfg->osd_data3 = NULL;
+
 	return MPP_OK;
 }
 
@@ -616,9 +618,10 @@ MPP_RET hal_jpege_v511_get_task(void *hal, HalEncTask * task)
 	if (!kmpp_frame_get_meta(task->frame, &sptr)) {
 		KmppMeta meta = sptr.kptr;
 
-		kmpp_meta_get_ptr(meta, KEY_OSD_DATA3, (void**)&ctx->osd_cfg.osd_data3);
+		kmpp_meta_get_ptr_d(meta, KEY_OSD_DATA3, (void**)&ctx->osd_cfg.osd_data3, NULL);
 		/* Set the osd, because rockit needs to release osd buffer. */
-		kmpp_meta_set_ptr(meta, KEY_OSD_DATA3, ctx->osd_cfg.osd_data3);
+		if (ctx->osd_cfg.osd_data3)
+			kmpp_meta_set_ptr(meta, KEY_OSD_DATA3, ctx->osd_cfg.osd_data3);
 	}
 
 	if (ctx->cfg->rc.rc_mode != MPP_ENC_RC_MODE_FIXQP) {
