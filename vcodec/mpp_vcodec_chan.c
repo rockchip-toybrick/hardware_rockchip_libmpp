@@ -205,8 +205,8 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 			kmpp_frame_put(chan_entry->frame);
 			chan_entry->frame = NULL;
 		}
-		mpp_enc_deinit(chan_entry->handle);
 		mpp_vcodec_stream_clear(chan_entry);
+		mpp_enc_deinit(chan_entry->handle);
 		mpp_vcodec_dec_chan_num(type);
 		mpp_vcodec_chan_entry_deinit(chan_entry);
 		mutex_unlock(&chan_entry->chan_debug_lock);
