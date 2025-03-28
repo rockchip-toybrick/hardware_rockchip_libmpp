@@ -1611,7 +1611,25 @@ typedef struct Vepu511Dbg_t {
 
 	/* 0x00005074 reg5149 */
 	struct {
-		RK_U32 pp1_frm_done     : 1;
+		RK_U32 vsp1_org_err    : 1;
+		RK_U32 reserved        : 7;
+		RK_U32 vsp1_wrk_ena    : 1;
+		RK_U32 reserved1       : 3;
+		RK_U32 vsp1_wrk        : 1;
+		RK_U32 vsp1_tout       : 1;
+		RK_U32 reserved2       : 2;
+		RK_U32 jsp1_org_err    : 1;
+		RK_U32 reserved3       : 7;
+		RK_U32 jsp1_wrk_ena    : 1;
+		RK_U32 reserved4       : 3;
+		RK_U32 jsp1_wrk        : 1;
+		RK_U32 jsp1_tout       : 1;
+		RK_U32 reserved5       : 2;
+	} dbg_ctrl_pp1;
+
+	/* 0x00005078 reg5150 */
+	struct {
+		RK_U32 pp2_frm_done     : 1;
 		RK_U32 cime_frm_done    : 1;
 		RK_U32 jpeg_frm_done    : 1;
 		RK_U32 rdo_frm_done     : 1;
@@ -1632,16 +1650,13 @@ typedef struct Vepu511Dbg_t {
 		RK_U32 reserved3        : 2;
 	} dbg_tctrl;
 
-	/* 0x00005078 reg5150 */
+	/* 0x0000507c reg5151 */
 	struct {
 		RK_U32 enc_frm_cur     : 3;
 		RK_U32 lkt_src_paus    : 1;
 		RK_U32 lkt_cfg_paus    : 1;
 		RK_U32 reserved        : 27;
 	} dbg_frm_task;
-
-	/* 0x507c */
-	RK_U32 reserved_5151;
 
 	/* 0x00005080 reg5152 */
 	struct {
@@ -1972,8 +1987,8 @@ typedef struct Vepu511Dbg_t {
 	/* 0x0000516c reg5211 */
 	struct {
 		RK_U32 dbg_isp_lcnt    : 14;
-		RK_U32 reserved        : 1;
 		RK_U32 dbg_isp_ltgl    : 1;
+		RK_U32 dvbm_isp_fsid   : 1;
 		RK_U32 dbg_isp_fcnt    : 8;
 		RK_U32 dbg_isp_oflw    : 1;
 		RK_U32 dbg_isp_ftgl    : 1;

@@ -166,30 +166,6 @@ struct rkvenc_hw_info {
 	u32 vepu_type;
 };
 
-union st_enc_u
-{
-	u32 val;
-	struct {
-		u32 st_enc             : 2;
-		u32 st_sclr            : 1;
-		u32 vepu_fbd_err       : 5;
-		u32 isp_src_oflw       : 1;
-		u32 vepu_src_oflw      : 1;
-		u32 vepu_sid_nmch      : 1;
-		u32 vepu_fcnt_nmch     : 1;
-		u32 reserved           : 4;
-		u32 dvbm_finf_wful     : 1;
-		u32 dvbm_linf_wful     : 1;
-		u32 dvbm_fsid_nmch     : 1;
-		u32 dvbm_fcnt_early    : 1;
-		u32 dvbm_fcnt_late     : 1;
-		u32 dvbm_isp_oflw      : 1;
-		u32 dvbm_vepu_oflw     : 1;
-		u32 isp_time_out       : 1;
-		u32 dvbm_vsrc_fcnt     : 8;
-	};
-};
-
 #define INT_STA_ENC_DONE_STA	BIT(0)
 #define INT_STA_SCLR_DONE_STA	BIT(2)
 #define INT_STA_SLC_DONE_STA	BIT(3)

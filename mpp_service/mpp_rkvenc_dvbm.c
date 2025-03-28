@@ -23,6 +23,7 @@
 #define DVBM_VEPU_CONNETC	(BIT(5))
 #define RKVENC_DBG_DVBM_ISP1	(0x516c)
 #define RKVENC_DBG_ISP_WORK	(BIT(27))
+#define RKVENC_DBG_DVBM_CTRL	(0x5190)
 
 #define RKVENC_DVBM_REG_S	(0x68)
 #define RKVENC_DVBM_REG_E	(0x9c)
@@ -68,6 +69,73 @@ union dvbm_cfg {
 		u32 vinf_dly_cycle    : 8;
 		u32 ybuf_full_mgn     : 8;
 		u32 ybuf_oflw_mgn     : 8;
+	};
+};
+
+/* 0x0000516c reg5211 */
+union dbg_dvbm_isp1 {
+	u32 val;
+	struct {
+		u32 dbg_isp_lcnt     : 14;
+		u32 dbg_isp_ltgl     : 1;
+		u32 dbg_isp_fsid     : 1;
+		u32 dbg_isp_fcnt     : 8;
+		u32 dbg_isp_oflw     : 1;
+		u32 dbg_isp_ftgl     : 1;
+		u32 dbg_isp_full     : 1;
+		u32 dbg_isp_work     : 1;
+		u32 dbg_isp_lvld     : 1;
+		u32 dbg_isp_lrdy     : 1;
+		u32 dbg_isp_fvld     : 1;
+		u32 dbg_isp_frdy     : 1;
+	};
+};
+
+/* 0x5170 - 0x518c */
+union dbg_dvbm_buf_inf0 {
+	u32 val;
+	struct {
+		u32 dbg_isp_lcnt    : 14;
+		u32 dbg_isp_llst    : 1;
+		u32 dbg_isp_sofw    : 1;
+		u32 dbg_isp_fcnt    : 8;
+		u32 dbg_isp_fsid    : 1;
+		u32 reserved        : 5;
+		u32 dbg_isp_pnt     : 1;
+		u32 dbg_vpu_pnt     : 1;
+	};
+};
+
+union dbg_dvbm_buf_inf1 {
+	u32 val;
+	struct {
+		u32 dbg_src_lcnt    : 14;
+		u32 dbg_src_llst    : 1;
+		u32 reserved        : 1;
+		u32 dbg_vpu_lcnt    : 14;
+		u32 dbg_vpu_llst    : 1;
+		u32 dbg_vpu_vofw    : 1;
+	};
+};
+
+/* 0x00005190 reg5220 */
+union dbg_dvbm_ctrl {
+	u32 val;
+	struct {
+		u32 dbg_isp_fptr     : 3;
+		u32 dbg_isp_full     : 1;
+		u32 dbg_src_fptr     : 3;
+		u32 dbg_dvbm_ctrl    : 1;
+		u32 dbg_vpu_fptr     : 3;
+		u32 dbg_vpu_empt     : 1;
+		u32 dbg_vpu_lvld     : 1;
+		u32 dbg_vpu_lrdy     : 1;
+		u32 dbg_vpu_fvld     : 1;
+		u32 dbg_vpu_frdy     : 1;
+		u32 dbg_fcnt_misp    : 4;
+		u32 dbg_fcnt_mvpu    : 4;
+		u32 dbg_fcnt_sofw    : 4;
+		u32 dbg_fcnt_vofw    : 4;
 	};
 };
 
@@ -554,6 +622,9 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
                 } else
 			mpp_debug(DEBUG_ISP_INFO, "%s frame %d start\n", dvbm_src[dvbm->source], id);
 		atomic_inc(&dvbm->src_fcnt);
+		dvbm->src_start_time = ktime_get();
+		if (dvbm->src_end_time)
+			dvbm->src_vblank = ktime_us_delta(dvbm->src_start_time, dvbm->src_end_time);
 	} break;
 	case DVBM_VEPU_NOTIFY_FRM_END: {
 		u32 id = *(u32*)arg;
@@ -581,6 +652,9 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 			}
                 } else
 			mpp_debug(DEBUG_ISP_INFO, "%s frame %d end\n", dvbm_src[dvbm->source], id);
+		dvbm->src_end_time = ktime_get();
+		if (dvbm->src_end_time)
+			dvbm->src_time = ktime_us_delta(dvbm->src_end_time, dvbm->src_start_time);
 		rkvenc_dvbm_dump(mpp);
 	} break;
 	default : {
@@ -793,6 +867,43 @@ void mpp_rkvenc_dvbm_clear(struct mpp_dvbm *dvbm)
 		       dvbm_info, dvbm_en);
 }
 
+static void check_dvbm_err(struct mpp_dvbm *dvbm, struct mpp_task *mpp_task)
+{
+	struct mpp_dev *mpp = dvbm->mpp;
+	u32 dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
+	struct mpp_session *session = mpp_task->session;
+	char err[128];
+	u32 len = 0;
+	u32 size = sizeof(err) - 1;
+	union st_enc_u status = { .val = mpp_read(mpp, RKVENC_STATUS) };
+
+	if (status.vepu_src_oflw)
+		len += snprintf(err + len, size - len, "wrap overflow");
+
+	if (status.vepu_sid_nmch)
+		len += snprintf(err + len, size - len, "sid mismatch");
+
+	if (status.vepu_fcnt_nmch)
+		len += snprintf(err + len, size - len, "fid mismatch");
+
+	mpp_err("chan %d task %d frame [%d %d] %s st 0x%08x cfg %#x wrap_line %d\n",
+		session->chn_id, mpp_task->task_index, mpp_task->pipe_id,
+		mpp_task->frame_id, err, status.val, dvbm_cfg, dvbm->wrap_line);
+	mpp_err("src time %lld us vblank %lld us\n", dvbm->src_time, dvbm->src_vblank);
+
+	{
+		u32 buf_inf0s[4] = {0x5170, 0x5178, 0x5180, 0x5188};
+		u32 buf_inf1s[4] = {0x5174, 0x517c, 0x5184, 0x518c};
+		union dbg_dvbm_ctrl dbg_ctl = { .val = mpp_read(mpp, RKVENC_DBG_DVBM_CTRL) };
+		union dbg_dvbm_buf_inf0 buf_inf0 = { .val = mpp_read(mpp, buf_inf0s[dbg_ctl.dbg_isp_fptr & 3]) };
+		union dbg_dvbm_buf_inf1 buf_inf1 = { .val = mpp_read(mpp, buf_inf1s[dbg_ctl.dbg_src_fptr & 3]) };
+
+		mpp_err("src [%d %d %d] -> enc [%d %d %d]\n",
+			buf_inf0.dbg_isp_fsid, buf_inf0.dbg_isp_fcnt, buf_inf0.dbg_isp_lcnt,
+			dvbm->enc_frm.source_id, dvbm->enc_frm.frame_id, buf_inf1.dbg_vpu_lcnt);
+	}
+}
+
 static int mpp_rkvenc_hw_dvbm_hdl(struct mpp_dvbm *dvbm, struct mpp_task *mpp_task)
 {
 	struct mpp_dev *mpp = dvbm->mpp;
@@ -800,22 +911,10 @@ static int mpp_rkvenc_hw_dvbm_hdl(struct mpp_dvbm *dvbm, struct mpp_task *mpp_ta
 	u32 dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
 	struct mpp_session *session = mpp_task->session;
 
-	if (mpp->irq_status & RKVENC_SOURCE_ERR) {
-		// if (atomic_read(&dvbm->src_fcnt) <= 1) {
-		// 	dvbm_cfg &= ~DVBM_VEPU_CONNETC;
-		// 	mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
-		// 	mpp_write(mpp, RKVENC_STATUS, 0);
-		// 	dvbm_cfg |= VEPU_CONNETC_CUR;
-		// 	mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
-		// 	mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg | DVBM_VEPU_CONNETC);
-		// 	mpp_write(mpp, 0x10, 0x100);
-		// 	return 1;
-		// }
-		mpp_err("chan %d task %d pipe %d frame id %d err 0x%08x cfg %#x 0x%08x\n",
-			session->chn_id, mpp_task->task_index, mpp_task->pipe_id,
-			mpp_task->frame_id, enc_st, dvbm_cfg, mpp_read(mpp, 0x516c));
-	}
-	mpp_dbg_dvbm("chan %d task %d st enc 0x%08x dvbm_cfg 0x%08x\n", session->chn_id, mpp_task->task_index, enc_st, dvbm_cfg);
+	if (mpp->irq_status & RKVENC_SOURCE_ERR)
+		check_dvbm_err(dvbm, mpp_task);
+
+	mpp_dbg_dvbm("chan %d task %d st 0x%08x dvbm_cfg 0x%08x\n", session->chn_id, mpp_task->task_index, enc_st, dvbm_cfg);
 
 	if (!(mpp->irq_status & 0x7fff))
 		return 1;

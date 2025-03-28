@@ -15,6 +15,30 @@
 
 #define RKVENC_DVBM_REG_NUM	(14)
 
+union st_enc_u
+{
+	u32 val;
+	struct {
+		u32 st_enc             : 2;
+		u32 st_sclr            : 1;
+		u32 vepu_fbd_err       : 5;
+		u32 isp_src_oflw       : 1;
+		u32 vepu_src_oflw      : 1;
+		u32 vepu_sid_nmch      : 1;
+		u32 vepu_fcnt_nmch     : 1;
+		u32 reserved           : 4;
+		u32 dvbm_finf_wful     : 1;
+		u32 dvbm_linf_wful     : 1;
+		u32 dvbm_fsid_nmch     : 1;
+		u32 dvbm_fcnt_early    : 1;
+		u32 dvbm_fcnt_late     : 1;
+		u32 dvbm_isp_oflw      : 1;
+		u32 dvbm_vepu_oflw     : 1;
+		u32 isp_time_out       : 1;
+		u32 dvbm_vsrc_fcnt     : 8;
+	};
+};
+
 enum dvbm_source {
 	DVBM_SOURCE_ISP,
 	DVBM_SOURCE_VPSS,
@@ -52,6 +76,10 @@ struct mpp_dvbm {
 	struct wrap_buf wrap_buf;
 	struct wrap_frame src_frm;
 	struct wrap_frame enc_frm;
+	ktime_t src_start_time;
+	ktime_t src_end_time;
+	s64 src_time;
+	s64 src_vblank;
 	/* debug for source */
 	void __iomem *isp_base;
 	void __iomem *vpss_base;
