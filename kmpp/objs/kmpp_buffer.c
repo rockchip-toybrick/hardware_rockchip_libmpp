@@ -130,6 +130,7 @@ rk_s32 kmpp_buf_init(void)
 
         srv->group_default = group;
         srv->grp = kmpp_obj_to_entry(group);
+        srv->grp->is_default = 1;
     }
 
     return rk_ok;
@@ -287,14 +288,15 @@ static rk_s32 kmpp_buf_grp_impl_deinit(void *entry, const rk_u8 *caller)
     buf_dbg_info("buf grp %d deinit total %d\n", impl->grp_id, srv->grp_cnt);
     osal_spin_unlock(srv->lock);
 
-    /* move all still used buffer to service list_buf_deinit */
+    /* move all still used buffer to service list_buf_deinit and mark discard */
     count = 0;
     osal_spin_lock(impl->lock);
     osal_list_for_each_entry_safe(buf, n, &impl->list_used, KmppBufferImpl, list_status) {
         osal_list_move_tail(&buf->list_status, &list);
         buf->status = BUF_ST_USED_TO_DEINIT;
+        buf->discard = 1;
         buf->grp = NULL;
-        buf->lock = NULL;
+        buf->lock = srv->lock;
         impl->count_used--;
         count++;
     }
@@ -305,7 +307,6 @@ static rk_s32 kmpp_buf_grp_impl_deinit(void *entry, const rk_u8 *caller)
         osal_list_for_each_entry_safe(buf, n, &list, KmppBufferImpl, list_status) {
             osal_list_move_tail(&buf->list_status, &srv->list_buf_deinit);
             buf->status = BUF_ST_DEINIT_AT_SRV;
-            buf->lock = srv->lock;
             srv->buf_deinit_cnt++;
         }
         osal_spin_unlock(srv->lock);
@@ -317,8 +318,9 @@ static rk_s32 kmpp_buf_grp_impl_deinit(void *entry, const rk_u8 *caller)
     osal_list_for_each_entry_safe(buf, n, &impl->list_unused, KmppBufferImpl, list_status) {
         osal_list_move_tail(&buf->list_status, &list);
         buf->status = BUF_ST_DEINIT_AT_GRP;
+        buf->discard = 1;
         buf->grp = NULL;
-        buf->lock = NULL;
+        buf->lock = srv->lock;
         impl->count_unused--;
         count++;
     }
@@ -326,6 +328,8 @@ static rk_s32 kmpp_buf_grp_impl_deinit(void *entry, const rk_u8 *caller)
 
     if (count) {
         osal_list_for_each_entry_safe(buf, n, &list, KmppBufferImpl, list_status) {
+            /* set ref_cnt to 1 for last no lock release step */
+            buf->ref_cnt = 1;
             kmpp_obj_put_f(buf->obj);
         }
     }
@@ -705,10 +709,12 @@ rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
         return rk_nok;
 
     if (!impl->lock) {
-        if (impl->status != BUF_ST_DEINIT_AT_GRP) {
-            kmpp_loge_f("buf %d:[%d:%d] has no lock but status grp at %s\n",
-                        buf_uid, impl->grp_id, impl->buf_gid, caller);
-        }
+        kmpp_loge_f("buf %d:[%d:%d] has no lock but status grp at %s\n",
+                    buf_uid, impl->grp_id, impl->buf_gid, caller);
+        deinit = 1;
+        osal_spin_lock(srv->lock);
+        srv->buf_cnt--;
+        osal_spin_unlock(srv->lock);
     } else {
         KmppBufGrpImpl *grp;
 
@@ -721,20 +727,40 @@ rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
             osal_list_del_init(&impl->list_status);
             srv->buf_init_cnt--;
             srv->buf_cnt--;
-            buf_dbg_info("buf %d init total %d\n", impl->buf_uid, srv->buf_cnt);
+            buf_dbg_info("buf %d init -> n/a total %d\n", impl->buf_uid, srv->buf_cnt);
             deinit = 1;
         } break;
         case BUF_ST_USED : {
-            osal_list_move_tail(&impl->list_status, &grp->list_unused);
-            impl->status = BUF_ST_UNUSED;
-            grp->count_used--;
-            grp->count_unused++;
+            if (!grp) {
+                kmpp_logi_f("buf %d:[%d:%d] used but no grp at %s\n",
+                            impl->buf_uid, impl->grp_id, impl->buf_gid, caller);
+                break;
+            }
+            if (!grp->is_default && !impl->discard) {
+                osal_list_move_tail(&impl->list_status, &grp->list_unused);
+                impl->status = BUF_ST_UNUSED;
+                grp->count_used--;
+                grp->count_unused++;
+                buf_dbg_info("buf %d used -> unused total %d\n", impl->buf_uid, srv->buf_cnt);
+            } else {
+                osal_list_del_init(&impl->list_status);
+                impl->status = BUF_ST_NONE;
+                grp->count_used--;
+                srv->buf_cnt--;
+                deinit = 1;
+                buf_dbg_info("buf %d used -> n/a total %d\n", impl->buf_uid, srv->buf_cnt);
+            }
+        } break;
+        case BUF_ST_DEINIT_AT_GRP : {
+            srv->buf_cnt--;
+            buf_dbg_info("buf %d deinit at grp -> n/a total %d\n", impl->buf_uid, srv->buf_cnt);
+            deinit = 1;
         } break;
         case BUF_ST_DEINIT_AT_SRV : {
             osal_list_del_init(&impl->list_status);
             srv->buf_deinit_cnt--;
             srv->buf_cnt--;
-            buf_dbg_info("buf %d init total %d\n", impl->buf_uid, srv->buf_cnt);
+            buf_dbg_info("buf %d deinit at srv -> n/a total %d\n", impl->buf_uid, srv->buf_cnt);
             deinit = 1;
         } break;
         default : {
@@ -757,9 +783,10 @@ rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
     if (deinit)
         buf_deinit(impl, caller);
 
-    buf_dbg_flow("buf %d put leave at %s\n", buf_uid, caller);
+    buf_dbg_flow("buf %d put -> %s leave at %s\n", buf_uid,
+                 deinit ? "n/a" : "reuse", caller);
 
-    return rk_ok;
+    return deinit ? rk_ok : rk_nok;
 }
 
 rk_s32 kmpp_buffer_inc_ref(KmppBuffer buffer, const rk_u8 *caller)

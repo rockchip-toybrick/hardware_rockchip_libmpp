@@ -74,6 +74,7 @@ typedef struct KmppBufGrpImpl_t {
     rk_s32              dump_on_exit;
     rk_s32              is_orphan;
     rk_s32              is_finalizing;
+    rk_s32              is_default;
 
     /* string storage */
     rk_s32              name_offset;
@@ -130,6 +131,7 @@ typedef struct KmppBufferImpl_t {
     rk_s32              ref_cnt;
 
     rk_u32              status;
+    rk_u32              discard;
     osal_list_head      list_status;
     osal_list_head      list_maps;
     KmppBufCfgImpl      cfg_int;
