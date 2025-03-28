@@ -1290,6 +1290,9 @@ static MPP_RET mpp_enc_check_frm_pkt(MppEncImpl *enc)
 			mpp_packet_clr_eos(enc->packet);
 	}
 
+	if (enc->online)
+		return enc->frame ? MPP_OK : MPP_NOK;
+
 	return (NULL == enc->frame || NULL == enc->frm_buf) ? MPP_NOK : MPP_OK;
 }
 
