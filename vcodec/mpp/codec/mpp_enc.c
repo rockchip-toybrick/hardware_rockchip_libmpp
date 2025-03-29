@@ -378,6 +378,7 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 	enc_dbg_func("%p in\n", enc);
 	down(&enc->enc_sem);
 	if (enc->stop_flag) {
+		enc->frame = NULL;
 		up(&enc->enc_sem);
 		return MPP_NOK;
 	}
