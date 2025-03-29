@@ -1159,6 +1159,18 @@ static void setup_vepu511_rdo_pred(HalH264eVepu511Ctx *ctx, H264eSps *sps,
 
 	hal_h264e_dbg_func("enter\n");
 
+	/*
+	* H264 Mode Mask of Mode Decision.
+	* More prediction modes lead to better compression performance but increase computational cycles.
+	*
+	* Default speed preset configuration to 0.67 PPC, ~40 FPS for 4K resolution at 500MHz:
+	* - Set i4/i16 partition RDO numbers to 1 for P-frames and all other CU RDO numbers to 2.
+	* - Set cime_fuse = 0,  enable dual-window search for higher compression performance.
+	* - Set fme_lvl_mrg = 1, enable FME's depth1 and depth2 joint search,
+	*   improves real-time performance but will reduce the compression ratio.
+	* - Set cime_srch_lftw/rgtw/uph/dwnh = 12/12/15/15, expand CIME search range degraded real-time performance.
+	* - Set rime_prelvl_en = 0, disable RIME pre-level to improve real-time performance.
+	*/
 	if (slice->slice_type == H264_I_SLICE) {
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 6;
 		lambda_idx = ctx->cfg->tune.lambda_idx_i;
@@ -1170,14 +1182,13 @@ static void setup_vepu511_rdo_pred(HalH264eVepu511Ctx *ctx, H264eSps *sps,
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = (sm == MPP_ENC_SCENE_MODE_IPC) ? 9 : 6;
 		lambda_idx = ctx->cfg->tune.lambda_idx_p;
 
-		regs->reg_frm.rdo_mark_mode.p16_interp_num = 3;
-		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 3;
+		regs->reg_frm.rdo_mark_mode.p16_interp_num = 2;
+		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 2;
 		regs->reg_frm.rdo_mark_mode.p16t4_rmd_num = 2;
-		regs->reg_frm.rdo_mark_mode.rdo_mark_mode = 0;
-		regs->reg_frm.rdo_mark_mode.p8_interp_num = 3;
+		regs->reg_frm.rdo_mark_mode.p8_interp_num = 2;
 		regs->reg_frm.rdo_mark_mode.p8t8_rdo_num = 2;
 		regs->reg_frm.rdo_mark_mode.p8t4_rmd_num = 2;
-		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 1;
+		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
 		regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 1;
 		regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 1;
 	}
@@ -1685,7 +1696,7 @@ static void setup_vepu511_me(HalH264eVepu511Ctx *ctx)
 	reg_frm->me_rnge.cime_srch_lftw   = 12;
 	reg_frm->me_cfg.rme_srch_h        = 3;
 	reg_frm->me_cfg.rme_srch_v        = 3;
-	reg_frm->me_cfg.srgn_max_num      = 54;
+	reg_frm->me_cfg.srgn_max_num      = 72;
 	reg_frm->me_cfg.cime_dist_thre    = 1024;
 	reg_frm->me_cfg.rme_dis           = 0;
 	reg_frm->me_cfg.fme_dis           = 0;
@@ -1694,17 +1705,16 @@ static void setup_vepu511_me(HalH264eVepu511Ctx *ctx)
 
 	/* CIME: 0x1760 - 0x176C */
 	reg_param->me_sqi_cfg.cime_pmv_num = 1;
-	reg_param->me_sqi_cfg.cime_fuse   = 1;
+	reg_param->me_sqi_cfg.cime_fuse   = 0;
 	reg_param->me_sqi_cfg.move_lambda = 0;
 	reg_param->me_sqi_cfg.rime_lvl_mrg     = 1;
 	reg_param->me_sqi_cfg.rime_prelvl_en   = 0;
 	reg_param->me_sqi_cfg.rime_prersu_en   = 0;
+	reg_param->me_sqi_cfg.fme_lvl_mrg = 1;
 	reg_param->cime_mvd_th.cime_mvd_th0 = 16;
 	reg_param->cime_mvd_th.cime_mvd_th1 = 48;
 	reg_param->cime_mvd_th.cime_mvd_th2 = 80;
 	reg_param->cime_madp_th.cime_madp_th = 16;
-	reg_param->cime_madp_th.ratio_consi_cfg = 13;
-	reg_param->cime_madp_th.ratio_bmv_dist = 9;
 	reg_param->cime_multi.cime_multi0 = 8;
 	reg_param->cime_multi.cime_multi1 = 12;
 	reg_param->cime_multi.cime_multi2 = 16;
