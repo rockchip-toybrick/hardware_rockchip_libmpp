@@ -6,7 +6,7 @@
 #ifndef __KMPP_ALLOCATOR_IMPL_H__
 #define __KMPP_ALLOCATOR_IMPL_H__
 
-#include "kmpp_allocator.h"
+#include "kmpp_dmaheap.h"
 
 void kmpp_dmaheap_init(void);
 void kmpp_dmaheap_deinit(void);

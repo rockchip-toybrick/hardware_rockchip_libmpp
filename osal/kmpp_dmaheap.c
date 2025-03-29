@@ -3,7 +3,7 @@
  * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
  */
 
-#define MODULE_TAG "kmpp_allocator"
+#define MODULE_TAG "kmpp_dmaheap"
 
 #include <linux/version.h>
 #include <linux/mman.h>
@@ -20,7 +20,7 @@
 #include "kmpp_log.h"
 #include "kmpp_mem.h"
 #include "kmpp_atomic.h"
-#include "kmpp_allocator.h"
+#include "kmpp_dmaheap_impl.h"
 #include "kmpp_string.h"
 #include "kmpp_spinlock.h"
 #include "kmpp_macro.h"
@@ -41,6 +41,18 @@
 #define dmabuf_dbg_heaps(fmt, ...)      dmabuf_dbg(DMABUF_DBG_HEAPS, fmt, ## __VA_ARGS__)
 #define dmabuf_dbg_buf(fmt, ...)        dmabuf_dbg(DMABUF_DBG_BUF, fmt, ## __VA_ARGS__)
 #define dmabuf_dbg_ioctl(fmt, ...)      dmabuf_dbg(DMABUF_DBG_IOCTL, fmt, ## __VA_ARGS__)
+
+#define get_dmaheaps_srv(caller) \
+    ({ \
+        KmppDmaHeapsSrv *__tmp; \
+        if (srv_dmaheaps) { \
+            __tmp = srv_dmaheaps; \
+        } else { \
+            kmpp_err_f("kmpp dmaheaps srv not init at %s : %s\n", __FUNCTION__, caller); \
+            __tmp = NULL; \
+        } \
+        __tmp; \
+    })
 
 typedef void *(*HeapFindFunc)(const char *name);
 typedef void (*HeapPutFunc)(void *);
@@ -66,6 +78,8 @@ struct KmppDmaHeapImpl_t {
     void                *handle;
     /* list for KmppDmaBuf list */
     osal_list_head      list_used;
+    rk_u32              heap_id;
+    rk_u32              buf_id;
     rk_s32              buf_count;
     /* flag value for the heap */
     rk_s32              index;
@@ -113,10 +127,32 @@ typedef struct KmppDmaBufImpl_t {
 
     void                *kptr;
     rk_u64              uptr;
+    rk_u32              heap_id;
+    rk_u32              buf_id;
     rk_s32              fd;
     rk_s32              size;
     rk_u32              flag;
 } KmppDmaBufImpl;
+
+typedef struct KmppDmaHeapsSrv_t {
+    /* default heaps */
+    KmppDmaHeaps            *heaps;
+
+    /* the reset heaps */
+    osal_list_head          list_heap;
+
+    rk_u32                  heap_id;
+    rk_s32                  heap_cnt;
+
+    /* external buffer for import */
+    osal_list_head          list_ext_buf;
+    rk_u32                  ext_buf_id;
+    rk_s32                  ext_buf_cnt;
+
+    /* dummy device for buf attachment of kernel double range address vmap */
+    struct device           *dev;
+    struct platform_device  *pdev;
+} KmppDmaHeapsSrv;
 
 static KmppDmaHeapInfo dmaheap_infos[] = {
     {    /* default system heap */
@@ -153,16 +189,10 @@ static KmppDmaHeapInfo dmaheap_infos[] = {
     },
 };
 
-static KmppDmaHeaps *kmpp_dmaheaps = NULL;
-static OSAL_LIST_HEAD(kmpp_dmaheap_list);
-static OSAL_LIST_HEAD(ext_dmabuf_list);
-static rk_s32 ext_dmabuf_count = 0;
-static struct platform_device *dmabuf_pdev;
-static struct device *dmabuf_dev;
-
+static KmppDmaHeapsSrv *srv_dmaheaps = NULL;
 static rk_u32 kmpp_dmabuf_debug = 0;
 
-void kmpp_dmabuf_dev_init(void)
+void kmpp_dmabuf_dev_init(KmppDmaHeapsSrv *srv)
 {
     struct platform_device *pdev;
     struct platform_device_info dev_info = {
@@ -173,30 +203,45 @@ void kmpp_dmabuf_dev_init(void)
 
     pdev = platform_device_register_full(&dev_info);
     if (!IS_ERR(pdev)) {
-        dmabuf_pdev = pdev;
-        dmabuf_dev = &pdev->dev;
-
-        dma_set_max_seg_size(dmabuf_dev, (unsigned int)DMA_BIT_MASK(64));
+        dma_set_max_seg_size(&pdev->dev, (unsigned int)DMA_BIT_MASK(64));
+    } else {
+        kmpp_loge_f("register kmpp_dmabuf platform device failed\n");
     }
+
+    srv->pdev = pdev;
+    srv->dev = &pdev->dev;
 }
 
-void kmpp_dmabuf_dev_deinit(void)
+void kmpp_dmabuf_dev_deinit(KmppDmaHeapsSrv *srv)
 {
-    if (dmabuf_pdev) {
-        platform_device_unregister(dmabuf_pdev);
-        dmabuf_pdev = NULL;
-        dmabuf_dev = NULL;
+    if (srv) {
+        platform_device_unregister(srv->pdev);
+        srv->pdev = NULL;
+        srv->dev = NULL;
     }
 }
 
 void kmpp_dmaheap_init(void)
 {
-    KmppDmaHeaps *heaps = kmpp_dmaheaps;
+    KmppDmaHeapsSrv *srv = srv_dmaheaps;
     rk_s32 lock_size = osal_spinlock_size();
     rk_s32 i;
 
-    if (heaps)
+    if (srv) {
+        kmpp_dmaheap_deinit();
+        srv = NULL;
+    }
+
+    srv = kmpp_calloc_atomic(sizeof(KmppDmaHeapsSrv) + lock_size);
+    if (!srv) {
+        kmpp_loge_f("create dmaheaps srv failed\n");
         return;
+    }
+
+    srv_dmaheaps = srv;
+
+    OSAL_INIT_LIST_HEAD(&srv->list_heap);
+    OSAL_INIT_LIST_HEAD(&srv->list_ext_buf);
 
     for (i = 0; i < sizeof(dmaheap_infos) / sizeof(dmaheap_infos[0]); i++) {
         KmppDmaHeapInfo *info = &dmaheap_infos[i];
@@ -206,6 +251,7 @@ void kmpp_dmaheap_init(void)
 
         /* NOTE: put may not exist */
         if (find && alloc) {
+            KmppDmaHeaps *heaps = NULL;
             void *prev_valid = NULL;
             rk_s32 j;
             rk_u8 find_valid = 0;
@@ -245,24 +291,26 @@ void kmpp_dmaheap_init(void)
                 impl->handle = curr;
                 impl->index = j;
                 OSAL_INIT_LIST_HEAD(&impl->list_used);
+                impl->heap_id = srv->heap_id++;
+                srv->heap_cnt++;
             }
 
-            if (!kmpp_dmaheaps && find_valid) {
-                kmpp_dmaheaps = heaps;
+            if (!srv->heaps && find_valid) {
+                srv->heaps = heaps;
                 kmpp_logi("set %s as default\n", info->name);
             } else {
                 kmpp_logi("add %s\n", info->name);
             }
-            osal_list_add_tail(&heaps->list, &kmpp_dmaheap_list);
+            osal_list_add_tail(&heaps->list, &srv->list_heap);
         } else {
             kmpp_logi("probe heap %s failed\n", info->name);
         }
     }
 
-    kmpp_dmabuf_dev_init();
+    kmpp_dmabuf_dev_init(srv);
 }
 
-static void __kmpp_dmaheap_deinit(KmppDmaHeaps *heaps)
+static void __kmpp_dmaheap_deinit(KmppDmaHeapsSrv *srv, KmppDmaHeaps *heaps)
 {
     KmppDmaHeapInfo *info = heaps->info;
     rk_s32 i;
@@ -272,11 +320,16 @@ static void __kmpp_dmaheap_deinit(KmppDmaHeaps *heaps)
     for (i = MAX_DMAHEAP_NUM - 1; i >= 0; i--) {
         KmppDmaHeapImpl *impl = &heaps->heaps[i];
         KmppDmaBufImpl *buf, *n;
+        rk_s32 once = 1;
 
         osal_list_for_each_entry_safe(buf, n, &impl->list_used, KmppDmaBufImpl, list) {
-            kmpp_logi_f("releasing leaked used dmabuf %px\n", buf);
+            if (once) {
+                kmpp_logi("releasing leaked used dmabuf:\n", buf);
+                once = 0;
+            }
             osal_list_del_init(&buf->list);
 
+            kmpp_logi("buf %d:%d - %#px\n", buf->heap_id, buf->buf_id, buf);
             kmpp_dmabuf_free_f(buf);
         }
 
@@ -285,6 +338,7 @@ static void __kmpp_dmaheap_deinit(KmppDmaHeaps *heaps)
 
         impl->handle = NULL;
         impl->valid = 0;
+        srv->heap_cnt--;
     }
 
     if (info) {
@@ -298,33 +352,43 @@ static void __kmpp_dmaheap_deinit(KmppDmaHeaps *heaps)
 
     osal_spinlock_deinit(&heaps->lock);
     kmpp_free(heaps);
-
-    kmpp_dmabuf_dev_deinit();
 }
 
 void kmpp_dmaheap_deinit(void)
 {
-    KmppDmaHeaps *heaps = KMPP_FETCH_AND(&kmpp_dmaheaps, NULL);
-    KmppDmaHeaps *n;
+    KmppDmaHeapsSrv *srv = srv_dmaheaps;
+    KmppDmaHeaps *heaps, *n;
 
-    if (heaps)
-        __kmpp_dmaheap_deinit(heaps);
+    if (!srv)
+        return;
 
-    osal_list_for_each_entry_safe(heaps, n, &kmpp_dmaheap_list, KmppDmaHeaps, list) {
-        __kmpp_dmaheap_deinit(heaps);
+    if (srv->heaps) {
+        __kmpp_dmaheap_deinit(srv, srv->heaps);
+        srv->heaps = NULL;
     }
+
+    osal_list_for_each_entry_safe(heaps, n, &srv->list_heap, KmppDmaHeaps, list) {
+        __kmpp_dmaheap_deinit(srv, heaps);
+    }
+
+    if (srv->heap_cnt)
+        kmpp_loge_f("found %d heaps not deinited\n", srv->heap_cnt);
+
+    kmpp_dmabuf_dev_deinit(srv);
+    kmpp_free(srv);
+
+    srv_dmaheaps = NULL;
 }
 
 rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
 {
-    KmppDmaHeaps *heaps = kmpp_dmaheaps;
+    KmppDmaHeapsSrv *srv = get_dmaheaps_srv(caller);
     KmppDmaHeapImpl *impl;
+    KmppDmaHeaps *heaps;
     rk_s32 old;
 
-    if (!heaps) {
-        kmpp_loge_f("found NULL default dmaheaps\n");
+    if (!srv)
         return rk_nok;
-    }
 
     if (!heap) {
         kmpp_loge_f("invalid NULL heap\n");
@@ -334,6 +398,12 @@ rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
     if (flag >= MAX_DMAHEAP_NUM) {
         kmpp_loge_f("suppoort dmaheap flag %x\n", flag);
         *heap = NULL;
+        return rk_nok;
+    }
+
+    heaps = srv->heaps;
+    if (!heaps) {
+        kmpp_loge_f("found NULL default dmaheaps\n");
         return rk_nok;
     }
 
@@ -356,6 +426,7 @@ rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller)
 
 rk_s32 kmpp_dmaheap_get_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 flag, const rk_u8 *caller)
 {
+    KmppDmaHeapsSrv *srv = get_dmaheaps_srv(caller);
     KmppDmaHeaps *heaps, *n;
 
     if (!heap) {
@@ -370,7 +441,7 @@ rk_s32 kmpp_dmaheap_get_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 fla
         return rk_nok;
     }
 
-    osal_list_for_each_entry_safe(heaps, n, &kmpp_dmaheap_list, KmppDmaHeaps, list) {
+    osal_list_for_each_entry_safe(heaps, n, &srv->list_heap, KmppDmaHeaps, list) {
         dmabuf_dbg_heaps("checking %s for %s\n", heaps->info->name, name);
         if (!osal_strcmp(heaps->info->name, name)) {
             KmppDmaHeapImpl *impl = &heaps->heaps[flag];
@@ -391,20 +462,26 @@ rk_s32 kmpp_dmaheap_get_by_name(KmppDmaHeap *heap, const rk_u8 *name, rk_u32 fla
 
 rk_s32 kmpp_dmaheap_put(KmppDmaHeap heap, const rk_u8 *caller)
 {
-    KmppDmaHeaps *heaps = kmpp_dmaheaps;
-    KmppDmaHeapImpl *impl = (KmppDmaHeapImpl *)heap;
+    KmppDmaHeapsSrv *srv = get_dmaheaps_srv(caller);
+    KmppDmaHeapImpl *impl;
+    KmppDmaHeaps *heaps;
     rk_s32 old;
 
-    if (!heaps) {
-        kmpp_loge_f("found NULL default dmaheaps\n");
+    if (!srv)
         return rk_nok;
-    }
 
     if (!heap) {
         kmpp_loge_f("invalid NULL heap\n");
         return rk_nok;
     }
 
+    heaps = srv->heaps;
+    if (!heaps) {
+        kmpp_loge_f("found NULL default dmaheaps\n");
+        return rk_nok;
+    }
+
+    impl = (KmppDmaHeapImpl *)heap;
     old = KMPP_FETCH_SUB(&impl->ref_cnt, 1);
 
     dmabuf_dbg_heaps("heap %s - %d ref %d -> %d\n", impl->heaps->info->name,
@@ -418,13 +495,14 @@ rk_s32 kmpp_dmaheap_put(KmppDmaHeap heap, const rk_u8 *caller)
 
 static void *dmabuf_double_vmap(struct dma_buf *dma_buf, const rk_u8 *caller)
 {
+    KmppDmaHeapsSrv *srv = get_dmaheaps_srv(caller);
     struct dma_buf_attachment *attach;
     void *vaddr = NULL;
 
-    attach = dma_buf_attach(dma_buf, dmabuf_dev);
+    attach = dma_buf_attach(dma_buf, srv->dev);
     if (IS_ERR_OR_NULL(attach)) {
         kmpp_loge_f("failed to attach dma_buf %px to %px at %s\n",
-                    dma_buf, dmabuf_dev, caller);
+                    dma_buf, srv->dev, caller);
     } else {
         struct sg_table *sgt;
 
@@ -460,6 +538,78 @@ static void *dmabuf_double_vmap(struct dma_buf *dma_buf, const rk_u8 *caller)
 
     return vaddr;
 }
+
+
+static KmppDmaBufIova *attach_iova(KmppDmaBuf buf, osal_dev *dev, struct device *device, const rk_u8 *caller)
+{
+    KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
+    KmppDmaBufIova *node = NULL;
+    struct dma_buf_attachment *attach;
+    struct dma_buf *dmabuf;
+    struct sg_table *sgt;
+    struct scatterlist *sg = NULL;
+    rk_u32 i;
+
+    node = kmpp_calloc(sizeof(*node));
+    if (!node) {
+        kmpp_loge_f("create buffer iova node failed at \n", caller);
+        return NULL;
+    }
+
+    dmabuf = impl->dma_buf;
+
+    attach = dma_buf_attach(dmabuf, device);
+    if (IS_ERR_OR_NULL(attach)) {
+        kmpp_loge_f("dma_buf_attach dmabuf %px:%px failed ret %d at %s\n",
+                    buf, dmabuf, PTR_ERR(attach), caller);
+        goto failed;
+    }
+
+    sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+    if (IS_ERR_OR_NULL(sgt)) {
+        kmpp_loge_f("dma_buf_map_attachment dmabuf %px:%x failed ret %d at %s\n",
+                    buf, dmabuf, PTR_ERR(sgt), caller);
+        goto failed;
+    }
+
+    node->buf = buf;
+    node->dev = dev;
+    node->device = device;
+    node->iova = sg_dma_address(sgt->sgl);
+    node->size = impl->size;
+    node->dmabuf = dmabuf;
+    node->attach = attach;
+    node->sgt = sgt;
+
+    for_each_sgtable_sg(sgt, sg, i) {
+        node->sg_size += sg_dma_len(sg);
+    }
+
+    OSAL_INIT_LIST_HEAD(&node->list);
+    osal_spin_lock(impl->lock_iova);
+    osal_list_add_tail(&node->list, &impl->list_iova);
+    osal_spin_unlock(impl->lock_iova);
+
+    return node;
+
+failed:
+    if (dmabuf && attach) {
+        dma_buf_detach(dmabuf, attach);
+        attach = NULL;
+    }
+
+    kmpp_free(node);
+    return NULL;
+}
+
+static void detach_iova(KmppDmaBufIova *node)
+{
+    dma_buf_unmap_attachment(node->attach, node->sgt, DMA_BIDIRECTIONAL);
+    dma_buf_detach(node->dmabuf, node->attach);
+    kmpp_free(node);
+}
+
+#define attach_iova_f(buf, dev, device) attach_iova(buf, dev, device, __func__)
 
 rk_s32 kmpp_dmabuf_alloc(KmppDmaBuf *buf, KmppDmaHeap heap, rk_s32 size, rk_u32 flag, const rk_u8 *caller)
 {
@@ -511,8 +661,13 @@ rk_s32 kmpp_dmabuf_alloc(KmppDmaBuf *buf, KmppDmaHeap heap, rk_s32 size, rk_u32 
 
     osal_spin_lock(heaps->lock);
     osal_list_add_tail(&impl->list, &impl_heap->list_used);
+    impl->heap_id = impl_heap->heap_id;
+    impl->buf_id = impl_heap->buf_id++;
     impl_heap->buf_count++;
     osal_spin_unlock(heaps->lock);
+
+    dmabuf_dbg_buf("dmabuf %d:%d size %d flag %x alloc\n",
+                   impl->heap_id, impl->buf_id, size, flag);
 
     *buf = impl;
 
@@ -521,7 +676,11 @@ rk_s32 kmpp_dmabuf_alloc(KmppDmaBuf *buf, KmppDmaHeap heap, rk_s32 size, rk_u32 
 
 rk_s32 kmpp_dmabuf_free(KmppDmaBuf buf, const rk_u8 *caller)
 {
+    KmppDmaHeapsSrv *srv = get_dmaheaps_srv(caller);
     KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
+
+    if (!srv)
+        return rk_nok;
 
     if (!impl) {
         kmpp_loge_f("invalid NULL buf\n");
@@ -537,12 +696,28 @@ rk_s32 kmpp_dmabuf_free(KmppDmaBuf buf, const rk_u8 *caller)
         heap->buf_count--;
         osal_spin_unlock(heaps->lock);
     } else {
-        KmppDmaHeaps *heaps = kmpp_dmaheaps;
+        KmppDmaHeaps *heaps = srv->heaps;
 
         osal_spin_lock(heaps->lock);
         osal_list_del_init(&impl->list);
-        ext_dmabuf_count--;
+        srv->ext_buf_cnt--;
         osal_spin_unlock(heaps->lock);
+    }
+
+    {   /* remove all iova attachment */
+        KmppDmaBufIova *iova, *n;
+        OSAL_LIST_HEAD(list_tmp);
+
+        osal_spin_lock(impl->lock_iova);
+        osal_list_for_each_entry_safe(iova, n, &impl->list_iova, KmppDmaBufIova, list) {
+            osal_list_move_tail(&iova->list, &list_tmp);
+        }
+        osal_spin_unlock(impl->lock_iova);
+
+        osal_list_for_each_entry_safe(iova, n, &list_tmp, KmppDmaBufIova, list) {
+            osal_list_del_init(&iova->list);
+            detach_iova(iova);
+        }
     }
 
     if (impl->kptr) {
@@ -583,6 +758,9 @@ rk_s32 kmpp_dmabuf_free(KmppDmaBuf buf, const rk_u8 *caller)
         impl->dma_buf = NULL;
     }
 
+    dmabuf_dbg_buf("dmabuf %d:%d size %d flag %x free\n",
+                   impl->heap_id, impl->buf_id, impl->size, impl->flag);
+
     osal_spinlock_deinit(&impl->lock_iova);
     kmpp_free(impl);
 
@@ -591,9 +769,13 @@ rk_s32 kmpp_dmabuf_free(KmppDmaBuf buf, const rk_u8 *caller)
 
 rk_s32 kmpp_dmabuf_import_fd(KmppDmaBuf *buf, rk_s32 fd, rk_u32 flag, const rk_u8 *caller)
 {
+    KmppDmaHeapsSrv *srv = get_dmaheaps_srv(caller);
     struct dma_buf *dma_buf;
     KmppDmaBufImpl *impl;
     rk_s32 lock_size;
+
+    if (!srv)
+        return rk_nok;
 
     if (!buf || fd < 0) {
         kmpp_loge_f("invalid buf %px fd %d at %s\n", buf, fd, caller);
@@ -625,14 +807,19 @@ rk_s32 kmpp_dmabuf_import_fd(KmppDmaBuf *buf, rk_s32 fd, rk_u32 flag, const rk_u
     impl->flag = flag;
     get_dma_buf(dma_buf);
 
-    if (kmpp_dmaheaps) {
-        KmppDmaHeaps *heaps = kmpp_dmaheaps;
+    if (srv->heaps) {
+        KmppDmaHeaps *heaps = srv->heaps;
 
         osal_spin_lock(heaps->lock);
-        osal_list_add_tail(&impl->list, &ext_dmabuf_list);
-        ext_dmabuf_count++;
+        osal_list_add_tail(&impl->list, &srv->list_ext_buf);
+        srv->ext_buf_cnt++;
+        impl->heap_id = (rk_u32)-1;
+        impl->buf_id = srv->ext_buf_id++;
         osal_spin_unlock(heaps->lock);
     }
+
+    dmabuf_dbg_buf("dmabuf %d:%d size %d flag %x import by fd %d\n",
+                   impl->heap_id, impl->buf_id, impl->size, impl->flag, impl->fd);
 
     *buf = impl;
 
@@ -641,9 +828,13 @@ rk_s32 kmpp_dmabuf_import_fd(KmppDmaBuf *buf, rk_s32 fd, rk_u32 flag, const rk_u
 
 rk_s32 kmpp_dmabuf_import_ctx(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_u8 *caller)
 {
+    KmppDmaHeapsSrv *srv = get_dmaheaps_srv(caller);
     struct dma_buf *dma_buf = (struct dma_buf *)ctx;
     KmppDmaBufImpl *impl;
     rk_s32 lock_size;
+
+    if (!srv)
+        return rk_nok;
 
     if (!buf || !ctx) {
         kmpp_loge_f("invalid buf %px ctx %px at %s\n", buf, ctx, caller);
@@ -667,14 +858,19 @@ rk_s32 kmpp_dmabuf_import_ctx(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_
     impl->flag = flag;
     get_dma_buf(dma_buf);
 
-    if (kmpp_dmaheaps) {
-        KmppDmaHeaps *heaps = kmpp_dmaheaps;
+    if (srv->heaps) {
+        KmppDmaHeaps *heaps = srv->heaps;
 
         osal_spin_lock(heaps->lock);
-        osal_list_add_tail(&impl->list, &ext_dmabuf_list);
-        ext_dmabuf_count++;
+        osal_list_add_tail(&impl->list, &srv->list_ext_buf);
+        srv->ext_buf_cnt++;
+        impl->heap_id = (rk_u32)-1;
+        impl->buf_id = srv->ext_buf_id++;
         osal_spin_unlock(heaps->lock);
     }
+
+    dmabuf_dbg_buf("dmabuf %d:%d size %d flag %x import by ctx %#px\n",
+                   impl->heap_id, impl->buf_id, impl->size, impl->flag, dma_buf);
 
     *buf = impl;
 
@@ -696,6 +892,7 @@ void *kmpp_dmabuf_get_kptr(KmppDmaBuf buf)
     dma_buf = impl->dma_buf;
     if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP) {
         ptr = dmabuf_double_vmap(dma_buf, __FUNCTION__);
+        dmabuf_dbg_buf("dmabuf %d get kptr %#px with double range\n", impl->buf_id, ptr);
     } else {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 01, 0)
         ptr = dma_buf_vmap(dma_buf);
@@ -706,6 +903,7 @@ void *kmpp_dmabuf_get_kptr(KmppDmaBuf buf)
             ptr = map.vaddr;
         }
 #endif
+        dmabuf_dbg_buf("dmabuf %d get kptr %#px\n", impl->buf_id, ptr);
     }
 
     if (IS_ERR_OR_NULL(ptr)) {
@@ -795,6 +993,8 @@ rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf)
     }
     osal_spin_unlock(heaps->lock);
 
+    dmabuf_dbg_buf("dmabuf %d get uptr %#lx\n", impl->buf_id, uptr);
+
     impl->uptr = (rk_u64)uptr;
 
     return impl->uptr;
@@ -814,77 +1014,6 @@ rk_u32 kmpp_dmabuf_get_flag(KmppDmaBuf buf)
     return impl ? impl->flag : 0;
 }
 
-static KmppDmaBufIova *attach_iova(KmppDmaBuf buf, osal_dev *dev, struct device *device, const rk_u8 *caller)
-{
-    KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
-    KmppDmaBufIova *node = NULL;
-    struct dma_buf_attachment *attach;
-    struct dma_buf *dmabuf;
-    struct sg_table *sgt;
-    struct scatterlist *sg = NULL;
-    rk_u32 i;
-
-    node = kmpp_calloc(sizeof(*node));
-    if (!node) {
-        kmpp_loge_f("create buffer iova node failed at \n", caller);
-        return NULL;
-    }
-
-    dmabuf = impl->dma_buf;
-
-    attach = dma_buf_attach(dmabuf, device);
-    if (IS_ERR_OR_NULL(attach)) {
-        kmpp_loge_f("dma_buf_attach dmabuf %px:%px failed ret %d at %s\n",
-                    buf, dmabuf, PTR_ERR(attach), caller);
-        goto failed;
-    }
-
-    sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
-    if (IS_ERR_OR_NULL(sgt)) {
-        kmpp_loge_f("dma_buf_map_attachment dmabuf %px:%x failed ret %d at %s\n",
-                    buf, dmabuf, PTR_ERR(sgt), caller);
-        goto failed;
-    }
-
-    node->buf = buf;
-    node->dev = dev;
-    node->device = device;
-    node->iova = sg_dma_address(sgt->sgl);
-    node->size = impl->size;
-    node->dmabuf = dmabuf;
-    node->attach = attach;
-    node->sgt = sgt;
-
-    for_each_sgtable_sg(sgt, sg, i) {
-        node->sg_size += sg_dma_len(sg);
-    }
-
-    OSAL_INIT_LIST_HEAD(&node->list);
-    osal_spin_lock(impl->lock_iova);
-    osal_list_add_tail(&node->list, &impl->list_iova);
-    osal_spin_unlock(impl->lock_iova);
-
-    return node;
-
-failed:
-    if (dmabuf && attach) {
-        dma_buf_detach(dmabuf, attach);
-        attach = NULL;
-    }
-
-    kmpp_free(node);
-    return NULL;
-}
-
-static void detach_iova(KmppDmaBufIova *node)
-{
-    dma_buf_unmap_attachment(node->attach, node->sgt, DMA_BIDIRECTIONAL);
-    dma_buf_detach(node->dmabuf, node->attach);
-    kmpp_free(node);
-}
-
-#define attach_iova_f(buf, dev, device) attach_iova(buf, dev, device, __func__)
-
 rk_s32 kmpp_dmabuf_get_iova(KmppDmaBuf buf, rk_u64 *iova, osal_dev *dev)
 {
     KmppDmaBufIova *node;
@@ -897,6 +1026,9 @@ rk_s32 kmpp_dmabuf_get_iova(KmppDmaBuf buf, rk_u64 *iova, osal_dev *dev)
     node = attach_iova_f(buf, dev, osal_dev_get_device(dev));
     if (!node)
         return rk_nok;
+
+    dmabuf_dbg_buf("dmabuf %d get %s iova %#llx\n", ((KmppDmaBufImpl *)buf)->buf_id,
+                   dev->name, node->iova);
 
     *iova = node->iova;
     return rk_ok;
@@ -930,6 +1062,9 @@ rk_s32 kmpp_dmabuf_put_iova(KmppDmaBuf buf, rk_u64 iova, osal_dev *dev)
         return rk_nok;
     }
 
+    dmabuf_dbg_buf("dmabuf %d put %s iova %#llx\n", ((KmppDmaBufImpl *)buf)->buf_id,
+                   dev->name, node->iova);
+
     detach_iova(node);
     return rk_ok;
 }
@@ -946,6 +1081,9 @@ rk_s32 kmpp_dmabuf_get_iova_by_device(KmppDmaBuf buf, rk_u64 *iova, void *device
     node = attach_iova_f(buf, NULL, device);
     if (!node)
         return rk_nok;
+
+    dmabuf_dbg_buf("dmabuf %d get %s iova %#llx\n", ((KmppDmaBufImpl *)buf)->buf_id,
+                   osal_device_name(device), node->iova);
 
     *iova = node->iova;
     return rk_ok;
@@ -978,6 +1116,9 @@ rk_s32 kmpp_dmabuf_put_iova_by_device(KmppDmaBuf buf, rk_u64 iova, void *device)
                     buf, iova, device);
         return rk_nok;
     }
+
+    dmabuf_dbg_buf("dmabuf %d put %s iova %#llx\n", ((KmppDmaBufImpl *)buf)->buf_id,
+                   osal_device_name(device), node->iova);
 
     detach_iova(node);
     return rk_ok;

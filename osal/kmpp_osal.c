@@ -8,7 +8,7 @@
 #include "version.h"
 
 #include "kmpp_osal.h"
-#include "kmpp_allocator_impl.h"
+#include "kmpp_dmaheap_impl.h"
 
 static void osal_version_show(KmppEnvNode node, void *data)
 {

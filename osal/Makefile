@@ -5,8 +5,7 @@ ifeq ($(CPU_TYPE), arm64)
     EXTRA_CFLAGS += -mno-outline-atomics
 endif
 
-${KMPP_SRC}-objs += osal/kmpp_allocator.o \
-                    osal/kmpp_atomic.o \
+${KMPP_SRC}-objs += osal/kmpp_atomic.o \
                     osal/kmpp_bitops.o \
                     osal/kmpp_clk.o \
                     osal/kmpp_cls.o \
@@ -17,6 +16,7 @@ ${KMPP_SRC}-objs += osal/kmpp_allocator.o \
                     osal/kmpp_completion.o \
                     osal/kmpp_delay.o \
                     osal/kmpp_dmabuf.o \
+                    osal/kmpp_dmaheap.o \
                     osal/kmpp_dev.o \
                     osal/kmpp_env.o \
                     osal/kmpp_file.o \

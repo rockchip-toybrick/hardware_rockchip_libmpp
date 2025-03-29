@@ -3,8 +3,8 @@
  * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
  */
 
-#ifndef __KMPP_ALLOCATOR_H__
-#define __KMPP_ALLOCATOR_H__
+#ifndef __KMPP_DMAHEAP_H__
+#define __KMPP_DMAHEAP_H__
 
 #include "kmpp_dev.h"
 
@@ -68,4 +68,4 @@ rk_s32 kmpp_dmabuf_flush_for_dev_partial(KmppDmaBuf buf, osal_dev *dev, rk_u32 o
 #define kmpp_dmabuf_import_fd_f(buf, fd, flag)      kmpp_dmabuf_import_fd(buf, fd, flag, __func__)
 #define kmpp_dmabuf_import_ctx_f(buf, ctx, flag)    kmpp_dmabuf_import_ctx(buf, ctx, flag, __func__)
 
-#endif /* __KMPP_ALLOCATOR_H__ */
+#endif /* __KMPP_DMAHEAP_H__ */

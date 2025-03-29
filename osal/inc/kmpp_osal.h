@@ -9,10 +9,10 @@
 #include "rk_list.h"
 #include "kmpp_macro.h"
 
-#include "kmpp_allocator.h"
 #include "kmpp_atomic.h"
 #include "kmpp_completion.h"
 #include "kmpp_dmabuf.h"
+#include "kmpp_dmaheap.h"
 #include "kmpp_bitops.h"
 #include "kmpp_clk.h"
 #include "kmpp_cls.h"

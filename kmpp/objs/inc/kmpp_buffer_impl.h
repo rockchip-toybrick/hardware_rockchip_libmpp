@@ -10,7 +10,7 @@
 #include "kmpp_spinlock.h"
 
 #include "kmpp_buffer.h"
-#include "kmpp_allocator.h"
+#include "kmpp_dmaheap.h"
 
 /* buffer group share name storage for both name and allocator */
 #define BUF_GRP_STR_BUF_SIZE    (64)

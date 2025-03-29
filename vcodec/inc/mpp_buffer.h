@@ -12,7 +12,7 @@
 
 #include "rk_type.h"
 #include "mpp_err.h"
-#include "kmpp_allocator.h"
+#include "kmpp_dmaheap.h"
 
 /*
  * MppBuffer module has several functions:

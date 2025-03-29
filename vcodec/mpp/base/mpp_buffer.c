@@ -24,7 +24,7 @@
 #include "mpp_buffer_impl.h"
 #include "kmpp_mem_pool.h"
 #include "mpp_maths.h"
-#include "kmpp_allocator.h"
+#include "kmpp_dmaheap.h"
 
 static const char *module_name = MODULE_TAG;
 struct MppBufferImpl {

@@ -10,7 +10,7 @@
 
 #include <linux/types.h>
 
-#include "kmpp_allocator.h"
+#include "kmpp_dmaheap.h"
 
 #include "kmpp_vsp_objs_impl.h"
 #include "vepu_pp_common.h"
