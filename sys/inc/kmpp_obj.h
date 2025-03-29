@@ -137,7 +137,7 @@ void *kmpp_obj_to_flags(KmppObj obj);
 /* object implement element shm access */
 KmppShm kmpp_obj_to_shm(KmppObj obj);
 rk_s32 kmpp_obj_to_shmptr(KmppObj obj, KmppShmPtr *sptr);
-rk_s32 kmpp_obj_from_shmptr(KmppObj *obj, KmppShmPtr *sptr);
+KmppObj kmpp_obj_from_shmptr(KmppShmPtr *sptr);
 
 /* value access function */
 rk_s32 kmpp_obj_set_s32(KmppObj obj, const rk_u8 *name, rk_s32 val);

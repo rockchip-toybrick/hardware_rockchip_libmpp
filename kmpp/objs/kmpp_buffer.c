@@ -827,18 +827,19 @@ rk_s32 kmpp_buffer_setup(KmppBuffer buffer, osal_fs_dev *file, const rk_u8 *call
     buf_dbg_flow("buf %d setup enter at %s\n", impl->buf_uid, caller);
 
     buf_cfg = impl->cfg_usr;
-    if (kmpp_obj_from_shmptr(&obj, &buf_cfg->group)) {
-        kmpp_loge_f("invalid buffer group [u:k] %#llx:%#llx at %s\n",
-                    buf_cfg->group.uaddr, buf_cfg->group.kaddr, caller);
-        return rk_nok;
+    obj = kmpp_obj_from_shmptr(&buf_cfg->group);
+    if (obj) {
+        if (kmpp_obj_check_f(obj)) {
+            kmpp_loge_f("invalid buffer group %px object check at %s\n", obj, caller);
+            return rk_nok;
+        }
+
+        grp = (KmppBufGrpImpl *)kmpp_obj_to_entry(obj);
+    } else {
+        /* if group is not set use default group */
+        grp = NULL;
     }
 
-    if (kmpp_obj_check_f(obj)) {
-        kmpp_loge_f("invalid buffer group %px object check at %s\n", obj, caller);
-        return rk_nok;
-    }
-
-    grp = (KmppBufGrpImpl *)kmpp_obj_to_entry(obj);
     size = buf_cfg->size;
 
     if (!grp)

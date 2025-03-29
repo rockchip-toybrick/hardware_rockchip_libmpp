@@ -1243,27 +1243,18 @@ rk_s32 kmpp_obj_to_shmptr(KmppObj obj, KmppShmPtr *sptr)
 }
 EXPORT_SYMBOL(kmpp_obj_to_shmptr);
 
-rk_s32 kmpp_obj_from_shmptr(KmppObj *obj, KmppShmPtr *sptr)
+KmppObj kmpp_obj_from_shmptr(KmppShmPtr *sptr)
 {
-    KmppObj ret;
-
-    if (!obj || !sptr || !sptr->kptr) {
-        kmpp_loge("invalid input obj %px sptr %px shm %px\n",
-                  obj, sptr, sptr ? sptr->kptr : NULL);
-        return rk_nok;
-    }
+    if (!sptr || !sptr->kptr)
+        return NULL;
 
     if (sptr->uaddr) {
         KmppShm shm = sptr->kptr;
 
-        ret = kmpp_shm_get_kpriv(shm);
-    } else {
-        ret = (KmppObj)(sptr->kptr);
+        return kmpp_shm_get_kpriv(shm);
     }
 
-    *obj = ret;
-
-    return ret ? rk_ok : rk_nok;
+    return sptr->kptr;
 }
 EXPORT_SYMBOL(kmpp_obj_from_shmptr);
 

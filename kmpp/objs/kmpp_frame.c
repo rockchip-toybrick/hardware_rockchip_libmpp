@@ -52,7 +52,7 @@ static rk_s32 kmpp_frame_impl_deinit(void *entry, const rk_u8 *caller)
         KmppFrameImpl *impl = (KmppFrameImpl*)entry;
         KmppMeta meta = NULL;
 
-        kmpp_obj_from_shmptr(&meta, &impl->meta);
+        meta = kmpp_obj_from_shmptr(&impl->meta);
 
         if (kmpp_frame_debug)
             kmpp_logi_f("meta %px : sptr %#llx:%#llx\n",
