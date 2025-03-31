@@ -944,6 +944,18 @@ typedef struct HevcVepu511RcRoi_t {
 		RK_U32 delta6_thre_mad_fme_ratio_inter    : 4;
 		RK_U32 delta7_thre_mad_fme_ratio_inter    : 4;
 	} cudecis_thd11;
+
+	/* 0x00001160 reg1112 */
+	struct {
+		RK_U32 delta0_thre_cme32_static_inter    : 4;
+		RK_U32 delta1_thre_cme32_static_inter    : 4;
+		RK_U32 delta2_thre_cme32_static_inter    : 4;
+		RK_U32 delta3_thre_cme32_static_inter    : 4;
+		RK_U32 delta4_thre_cme32_static_inter    : 4;
+		RK_U32 delta5_thre_cme32_static_inter    : 4;
+		RK_U32 delta6_thre_cme32_static_inter    : 4;
+		RK_U32 delta7_thre_cme32_static_inter    : 4;
+	} cudecis_thd12;
 } HevcVepu511RcRoi;
 
 /* class: iprd/iprd_wgt/rdo_wgta/prei_dif*/
