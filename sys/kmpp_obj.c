@@ -1131,6 +1131,11 @@ rk_s32 kmpp_obj_put(KmppObj obj, const rk_u8 *caller)
         KmppObjImpl *impl = (KmppObjImpl *)obj;
         KmppObjDefImpl *def = impl->def;
 
+        if (!def) {
+            kmpp_loge_f("obj %px has empty def at %s\n", impl, caller);
+            return rk_nok;
+        }
+
         /* handle object implement reference here */
         if (def->deinit) {
             if (def->deinit(impl->entry, caller))
@@ -1143,7 +1148,10 @@ rk_s32 kmpp_obj_put(KmppObj obj, const rk_u8 *caller)
             impl->shm = NULL;
         }
 
-        kmpp_mem_pool_put(impl->pool, impl, caller);
+        if (impl->pool) {
+            kmpp_mem_pool_put(impl->pool, impl, caller);
+            impl->pool = NULL;
+        }
 
         return rk_ok;
     }
