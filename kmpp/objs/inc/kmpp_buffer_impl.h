@@ -7,6 +7,7 @@
 #define __KMPP_BUFFER_IMPL_H__
 
 #include "rk_list.h"
+#include "kmpp_mutex.h"
 #include "kmpp_spinlock.h"
 
 #include "kmpp_buffer.h"
@@ -94,8 +95,8 @@ typedef struct KmppBufCfgImpl_t {
     rk_s32              buf_gid;
     rk_s32              buf_uid;
 
-    void                *khnd;
-    void                *kdmabuf;
+    void                *hnd;
+    void                *dmabuf;
     void                *kdev;
     osal_dev            *dev;
     rk_u64              iova;
@@ -118,6 +119,7 @@ typedef struct KmppBufferImpl_t {
     KmppBufGrpImpl      *grp;
     /* when grp is valid used grp lock else use srv lock */
     osal_spinlock       *lock;
+    osal_list_head      list_status;
     KmppObj             obj;
 
     KmppDmaBuf          buf;
@@ -132,10 +134,30 @@ typedef struct KmppBufferImpl_t {
 
     rk_u32              status;
     rk_u32              discard;
-    osal_list_head      list_status;
+
+    /* mutex for list_maps */
+    osal_mutex          *mutex_maps;
+    /* list for list in KmppBufIovaMap */
     osal_list_head      list_maps;
+
     KmppBufCfgImpl      cfg_int;
 } KmppBufferImpl;
+
+#define KMPP_BUF_MAP_BY_OSAL_DEV        0
+#define KMPP_BUF_MAP_BY_SYS_DEVICE      1
+
+typedef struct KmppBufIovaMap_t {
+    /* list to list_maps in KmppBufferImpl */
+    osal_list_head      list;
+    KmppBufferImpl      *buf;
+
+    rk_u64              iova;
+    rk_u32              size;
+
+    /* mode 0 for osal_dev, mode 1 for system struct device */
+    rk_u32              mode;
+    void                *device;
+} KmppBufIovaMap;
 
 rk_s32 kmpp_buf_grp_get_size(KmppBufGrpImpl *grp);
 rk_s32 kmpp_buf_grp_get_count(KmppBufGrpImpl *grp);

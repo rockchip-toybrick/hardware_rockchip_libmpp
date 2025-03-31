@@ -7,6 +7,7 @@
 #define __KMPP_BUFFER_H__
 
 #include "kmpp_dmaheap.h"
+#include "kmpp_cls.h"
 
 /*
  * KmppBuffer module has several functions:
@@ -263,8 +264,8 @@ rk_s32 kmpp_buffer_get_fd(KmppBuffer buffer);
     ENTRY(prefix, s32,  rk_s32,         grp_id) \
     ENTRY(prefix, s32,  rk_s32,         buf_gid) \
     ENTRY(prefix, s32,  rk_s32,         buf_uid) \
-    ENTRY(prefix, kptr, void *,         khnd) \
-    ENTRY(prefix, kptr, void *,         kdmabuf)
+    ENTRY(prefix, kptr, void *,         hnd) \
+    ENTRY(prefix, kptr, void *,         dmabuf)
 
 #define KMPP_BUF_CFG_STRUCT_TABLE(ENTRY, prefix) \
     ENTRY(prefix, shm,  KmppShmPtr,     sptr) \

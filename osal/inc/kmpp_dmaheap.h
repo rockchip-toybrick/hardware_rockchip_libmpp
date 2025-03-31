@@ -8,8 +8,6 @@
 
 #include "kmpp_dev.h"
 
-#define KMPP_INVALID_IOVA           (~(dma_addr_t)0)
-
 #define KMPP_DMAHEAP_FLAGS_DEFAULT  0x0000
 #define KMPP_DMAHEAP_FLAGS_DMA32    0x0001
 #define KMPP_DMAHEAP_FLAGS_CACHABLE 0x0002
@@ -25,6 +23,7 @@
 
 typedef void* KmppDmaHeap;
 typedef void* KmppDmaBuf;
+typedef void* KmppDmaBufDevMap;
 
 /* open default dmaheap with flag */
 rk_s32 kmpp_dmaheap_get(KmppDmaHeap *heap, rk_u32 flag, const rk_u8 *caller);
@@ -52,6 +51,7 @@ rk_s32 kmpp_dmabuf_get_iova_by_device(KmppDmaBuf buf, rk_u64 *iova, void *device
 /* detach dmabuf frome device */
 rk_s32 kmpp_dmabuf_put_iova_by_device(KmppDmaBuf buf, rk_u64 iova, void *device);
 
+rk_u64 kmpp_invalid_iova(void);
 
 void kmpp_dmabuf_set_priv(KmppDmaBuf buf, void *priv);
 void *kmpp_dmabuf_get_priv(KmppDmaBuf buf);

@@ -27,6 +27,7 @@
 
 #define MAX_DMAHEAP_NUM                 8
 #define CACHE_LINE_SIZE                 (64)
+#define KMPP_INVALID_IOVA               (~(dma_addr_t)0)
 
 #define DMABUF_DBG_FLOW                 (0x00000001)
 #define DMABUF_DBG_HEAPS                (0x00000002)
@@ -1124,6 +1125,11 @@ rk_s32 kmpp_dmabuf_put_iova_by_device(KmppDmaBuf buf, rk_u64 iova, void *device)
     return rk_ok;
 }
 
+rk_u64 kmpp_invalid_iova(void)
+{
+    return (rk_u64)(~(dma_addr_t)0);
+}
+
 void kmpp_dmabuf_set_priv(KmppDmaBuf buf, void *priv)
 {
     KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
@@ -1228,6 +1234,7 @@ EXPORT_SYMBOL(kmpp_dmabuf_get_iova);
 EXPORT_SYMBOL(kmpp_dmabuf_put_iova);
 EXPORT_SYMBOL(kmpp_dmabuf_put_iova_by_device);
 EXPORT_SYMBOL(kmpp_dmabuf_get_iova_by_device);
+EXPORT_SYMBOL(kmpp_invalid_iova);
 
 EXPORT_SYMBOL(kmpp_dmabuf_set_priv);
 EXPORT_SYMBOL(kmpp_dmabuf_get_priv);

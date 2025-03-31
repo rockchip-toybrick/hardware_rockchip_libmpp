@@ -14,7 +14,6 @@
 #include "kmpp_log.h"
 #include "kmpp_macro.h"
 #include "kmpp_mem.h"
-#include "kmpp_spinlock.h"
 #include "kmpp_string.h"
 #include "kmpp_uaccess.h"
 
@@ -626,6 +625,11 @@ rk_s32 kmpp_buffer_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const 
 
     OSAL_INIT_LIST_HEAD(&impl->list_status);
     OSAL_INIT_LIST_HEAD(&impl->list_maps);
+    osal_mutex_assign(&impl->mutex_maps, (void *)(impl + 1), osal_mutex_size());
+    if (!impl->mutex_maps) {
+        kmpp_loge_f("failed to create mutex for %px at %s\n", impl, caller);
+        return rk_nok;
+    }
 
     if (file) {
         kmpp_buf_cfg_get_share(&impl->cfg_ext, file);
@@ -640,7 +644,8 @@ rk_s32 kmpp_buffer_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const 
 
     impl->cfg_usr = kmpp_obj_to_entry(impl->cfg_ext);
     impl->cfg_usr->buf_impl = impl;
-    impl->cfg_int.buf_impl = impl;
+    /* sync internal config and user config */
+    osal_memcpy(&impl->cfg_int, impl->cfg_usr, sizeof(impl->cfg_int));
     kmpp_obj_to_shmptr(impl->cfg_ext, &impl->cfg);
 
     impl->grp = NULL;
@@ -664,16 +669,47 @@ rk_s32 kmpp_buffer_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const 
 
 static void buf_deinit(KmppBufferImpl *impl, const rk_u8 *caller)
 {
+    KmppBufIovaMap *map, *n;
+    OSAL_LIST_HEAD(list);
+    rk_s32 iova_count = 0;
+
     if (impl->cfg_ext)
         kmpp_buf_cfg_put(impl->cfg_ext);
 
     impl->cfg_ext = NULL;
     impl->cfg_usr = NULL;
 
+    /* release all remaining iova map */
+    osal_mutex_lock(impl->mutex_maps);
+    osal_list_for_each_entry_safe(map, n, &impl->list_maps, KmppBufIovaMap, list) {
+        osal_list_move_tail(&map->list, &list);
+        iova_count++;
+    }
+    osal_mutex_unlock(impl->mutex_maps);
+
+    if (iova_count) {
+        osal_list_for_each_entry_safe(map, n, &list, KmppBufIovaMap, list) {
+            if (map->mode == KMPP_BUF_MAP_BY_SYS_DEVICE)
+                kmpp_dmabuf_put_iova_by_device(impl->buf, map->iova, map->device);
+            else if (map->mode == KMPP_BUF_MAP_BY_OSAL_DEV)
+                kmpp_dmabuf_put_iova(impl->buf, map->iova, (osal_dev *)map->device);
+            else
+                kmpp_loge_f("buf %d:[%d:%d] has invalid iova mode %ds\n",
+                            impl->buf_uid, impl->grp_id, impl->buf_gid, map->mode);
+
+            kmpp_free(map);
+        }
+    }
+
     if (impl->buf) {
         kmpp_dmabuf_free(impl->buf, caller);
         impl->buf = NULL;
     }
+
+    if (impl->mutex_maps)
+        osal_mutex_deinit(&impl->mutex_maps);
+
+    impl->lock = NULL;
 
     buf_dbg_info("buf %d deinited at %s\n", impl->buf_uid, caller);
 }
@@ -812,9 +848,8 @@ rk_s32 kmpp_buffer_setup(KmppBuffer buffer, osal_fs_dev *file, const rk_u8 *call
     KmppBufferSrv *srv = get_buf_srv(caller);
     KmppBufferImpl *impl;
     KmppBufCfgImpl *buf_cfg;
-    KmppBufGrpImpl *grp;
-    KmppDmaBuf dmabuf;
-    KmppObj obj;
+    KmppBufGrpImpl *grp = NULL;
+    KmppDmaBuf dmabuf = NULL;
     rk_s32 size;
 
     if (!buffer) {
@@ -827,24 +862,57 @@ rk_s32 kmpp_buffer_setup(KmppBuffer buffer, osal_fs_dev *file, const rk_u8 *call
     buf_dbg_flow("buf %d setup enter at %s\n", impl->buf_uid, caller);
 
     buf_cfg = impl->cfg_usr;
-    obj = kmpp_obj_from_shmptr(&buf_cfg->group);
-    if (obj) {
-        if (kmpp_obj_check_f(obj)) {
-            kmpp_loge_f("invalid buffer group %px object check at %s\n", obj, caller);
-            return rk_nok;
+    /*
+     * The buffer setup flow:
+     * 1. Check fd import from userspace
+     * 2. Check struct dma_buf handle import from kernel
+     * 3. Try user config group to alloc
+     * 4. Try default group to alloc
+     */
+
+    /* get user config group or default group */
+    {
+        KmppObj obj = kmpp_obj_from_shmptr(&buf_cfg->group);
+
+        if (obj) {
+            if (kmpp_obj_check_f(obj)) {
+                kmpp_loge_f("invalid buffer group %px object check at %s\n", obj, caller);
+                return rk_nok;
+            }
+
+            grp = (KmppBufGrpImpl *)kmpp_obj_to_entry(obj);
+        } else {
+            /* if group is not set use default group */
+            grp = NULL;
         }
-
-        grp = (KmppBufGrpImpl *)kmpp_obj_to_entry(obj);
-    } else {
-        /* if group is not set use default group */
-        grp = NULL;
     }
-
-    size = buf_cfg->size;
 
     if (!grp)
         grp = srv->grp;
 
+    size = buf_cfg->size;
+
+    /* step 1 - import userspace fd */
+    if (buf_cfg->fd >= 0) {
+        kmpp_dmabuf_import_fd(&dmabuf, buf_cfg->fd, buf_cfg->flag, caller);
+        if (!dmabuf) {
+            kmpp_loge_f("failed to import fd %d at %s\n", buf_cfg->fd, caller);
+            return rk_nok;
+        }
+        goto done;
+    }
+
+    /* step 2 - import kernel struct dma_buf */
+    if (buf_cfg->dmabuf) {
+        kmpp_dmabuf_import_ctx(&dmabuf, buf_cfg->dmabuf, buf_cfg->flag, caller);
+        if (!dmabuf) {
+            kmpp_loge_f("failed to import dmabuf %px at %s\n", buf_cfg->dmabuf, caller);
+            return rk_nok;
+        }
+        goto done;
+    }
+
+    /* step 3 - use buf grp to alloc */
     if (!size)
         size = kmpp_buf_grp_get_size(grp);
 
@@ -864,9 +932,10 @@ rk_s32 kmpp_buffer_setup(KmppBuffer buffer, osal_fs_dev *file, const rk_u8 *call
         return rk_nok;
     }
 
+done:
     osal_memcpy(&impl->cfg_int, buf_cfg, sizeof(impl->cfg_int));
     impl->buf = dmabuf;
-    impl->size = size;
+    impl->size = kmpp_dmabuf_get_size(dmabuf);
     impl->kptr = kmpp_dmabuf_get_kptr(dmabuf);
 
     /* userspace call can get uaddr */
@@ -984,6 +1053,7 @@ static KmppObjIoctls kmpp_buffer_ioctls = {
 #define KMPP_OBJ_NAME               kmpp_buffer
 #define KMPP_OBJ_INTF_TYPE          KmppBuffer
 #define KMPP_OBJ_IMPL_TYPE          KmppBufferImpl
+#define KMPP_OBJ_EXTRA_SIZE         osal_mutex_size()
 #define KMPP_OBJ_STRUCT_TABLE       KMPP_BUFFER_STRUCT_TABLE
 #define KMPP_OBJ_FUNC_INIT          kmpp_buffer_impl_init
 #define KMPP_OBJ_FUNC_DEINIT        kmpp_buffer_impl_deinit
@@ -993,6 +1063,15 @@ static KmppObjIoctls kmpp_buffer_ioctls = {
 #define KMPP_OBJ_SHARE_ENABLE
 #include "kmpp_obj_helper.h"
 
+
+rk_s32 kmpp_buf_cfg_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
+{
+    KmppBufCfgImpl *impl = (KmppBufCfgImpl *)entry;
+
+    impl->fd = -1;
+
+    return rk_ok;
+}
 
 static rk_s32 kmpp_buf_cfg_impl_dump(void *entry)
 {
@@ -1018,6 +1097,7 @@ static rk_s32 kmpp_buf_cfg_impl_dump(void *entry)
 #define KMPP_OBJ_IMPL_TYPE          KmppBufCfgImpl
 #define KMPP_OBJ_ENTRY_TABLE        KMPP_BUF_CFG_ENTRY_TABLE
 #define KMPP_OBJ_STRUCT_TABLE       KMPP_BUF_CFG_STRUCT_TABLE
+#define KMPP_OBJ_FUNC_INIT          kmpp_buf_cfg_impl_init
 #define KMPP_OBJ_FUNC_DUMP          kmpp_buf_cfg_impl_dump
 #define KMPP_OBJ_FUNC_EXPORT_ENABLE
 #define KMPP_OBJ_SHARE_ENABLE
@@ -1046,12 +1126,106 @@ rk_s32 kmpp_buffer_put_iova(KmppBuffer buffer, rk_u64 iova, osal_dev *dev)
 
 rk_s32 kmpp_buffer_get_iova_by_device(KmppBuffer buffer, rk_u64 *iova, void *device)
 {
-    return rk_nok;
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+    rk_s32 ret = rk_nok;
+
+    if (!iova) {
+        kmpp_loge_f("invalid param iova %px\n", iova);
+        return ret;
+    }
+
+    *iova = kmpp_invalid_iova();
+
+    if (!impl || !impl->buf) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px\n",
+                    impl, impl ? impl->buf : NULL);
+        return ret;
+    }
+
+    osal_mutex_lock(impl->mutex_maps);
+    do {
+        KmppBufIovaMap *map, *n;
+
+        osal_list_for_each_entry_safe(map, n, &impl->list_maps, KmppBufIovaMap, list) {
+            if (map->device == device) {
+                *iova = map->iova;
+                ret = rk_ok;
+                break;;
+            }
+        }
+
+        map = kmpp_calloc_atomic(sizeof(*map));
+        if (!map) {
+            kmpp_loge_f("failed to create iova node\n");
+            break;
+        }
+
+        ret = kmpp_dmabuf_get_iova_by_device(impl->buf, iova, device);
+        if (ret) {
+            kmpp_loge_f("failed to get iova from dev %s\n", osal_device_name(device));
+            kmpp_free(map);
+            break;
+        }
+
+        OSAL_INIT_LIST_HEAD(&map->list);
+        osal_list_add_tail(&map->list, &impl->list_maps);
+        map->buf = impl;
+        map->iova = *iova;
+        map->size = impl->size;
+        map->mode = KMPP_BUF_MAP_BY_SYS_DEVICE;
+        map->device = device;
+    } while (0);
+
+    osal_mutex_unlock(impl->mutex_maps);
+
+    buf_dbg_info("buf %d [%d:%d] get iova %llx from dev %s\n", impl->buf_uid,
+                 impl->grp_id, impl->buf_gid, *iova, osal_device_name(device));
+
+    return ret;
 }
 
 rk_s32 kmpp_buffer_put_iova_by_device(KmppBuffer buffer, rk_u64 iova, void *device)
 {
-    return rk_nok;
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+    KmppBufIovaMap *map = NULL;
+    rk_s32 ret = rk_nok;
+
+    if (!impl || !impl->buf || iova == kmpp_invalid_iova()) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px iova %#llx\n",
+                    impl, impl ? impl->buf : NULL, iova);
+        return ret;
+    }
+
+    osal_mutex_lock(impl->mutex_maps);
+
+    do {
+        KmppBufIovaMap *pos, *n;
+
+        osal_list_for_each_entry_safe(pos, n, &impl->list_maps, KmppBufIovaMap, list) {
+            if (pos->device == device && pos->iova == iova) {
+                osal_list_del_init(&pos->list);
+                map = pos;
+                break;
+            }
+        }
+    } while (0);
+
+    osal_mutex_unlock(impl->mutex_maps);
+
+    if (!map) {
+        kmpp_loge_f("failed to find iova %#llx from dev %s\n",
+                    iova, osal_device_name(device));
+        return ret;
+    }
+
+    ret = kmpp_dmabuf_put_iova_by_device(impl->buf, iova, device);
+
+    buf_dbg_info("buf %d [%d:%d] put iova %#llx from dev %s\n", impl->buf_uid,
+                 impl->grp_id, impl->buf_gid, iova, osal_device_name(device));
+
+    kmpp_free(map);
+
+    return ret;
 }
 
 rk_s32 kmpp_buffer_flush_for_cpu(KmppBuffer buffer)
