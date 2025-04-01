@@ -658,7 +658,7 @@ rk_s32 kmpp_buffer_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const 
     impl->buf_uid = srv->buf_id++;
     impl->lock = srv->lock;
     srv->buf_init_cnt++;
-    srv->buf_cnt++;
+    KMPP_FETCH_ADD(&srv->buf_cnt, 1);
     buf_dbg_info("buf %d init total %d\n", impl->buf_uid, srv->buf_cnt);
     osal_spin_unlock(srv->lock);
 
@@ -749,7 +749,7 @@ rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
                     buf_uid, impl->grp_id, impl->buf_gid, caller);
         deinit = 1;
         osal_spin_lock(srv->lock);
-        srv->buf_cnt--;
+        KMPP_FETCH_SUB(&srv->buf_cnt, 1);
         osal_spin_unlock(srv->lock);
     } else {
         KmppBufGrpImpl *grp;
@@ -762,7 +762,7 @@ rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
         case BUF_ST_INIT : {
             osal_list_del_init(&impl->list_status);
             srv->buf_init_cnt--;
-            srv->buf_cnt--;
+            KMPP_FETCH_SUB(&srv->buf_cnt, 1);
             buf_dbg_info("buf %d init -> n/a total %d\n", impl->buf_uid, srv->buf_cnt);
             deinit = 1;
         } break;
@@ -782,20 +782,20 @@ rk_s32 kmpp_buffer_impl_deinit(void *entry, const rk_u8 *caller)
                 osal_list_del_init(&impl->list_status);
                 impl->status = BUF_ST_NONE;
                 grp->count_used--;
-                srv->buf_cnt--;
+                KMPP_FETCH_SUB(&srv->buf_cnt, 1);
                 deinit = 1;
                 buf_dbg_info("buf %d used -> n/a total %d\n", impl->buf_uid, srv->buf_cnt);
             }
         } break;
         case BUF_ST_DEINIT_AT_GRP : {
-            srv->buf_cnt--;
+            KMPP_FETCH_SUB(&srv->buf_cnt, 1);
             buf_dbg_info("buf %d deinit at grp -> n/a total %d\n", impl->buf_uid, srv->buf_cnt);
             deinit = 1;
         } break;
         case BUF_ST_DEINIT_AT_SRV : {
             osal_list_del_init(&impl->list_status);
             srv->buf_deinit_cnt--;
-            srv->buf_cnt--;
+            KMPP_FETCH_SUB(&srv->buf_cnt, 1);
             buf_dbg_info("buf %d deinit at srv -> n/a total %d\n", impl->buf_uid, srv->buf_cnt);
             deinit = 1;
         } break;
@@ -936,7 +936,6 @@ done:
     osal_memcpy(&impl->cfg_int, buf_cfg, sizeof(impl->cfg_int));
     impl->buf = dmabuf;
     impl->size = kmpp_dmabuf_get_size(dmabuf);
-    impl->kptr = kmpp_dmabuf_get_kptr(dmabuf);
 
     /* userspace call can get uaddr */
     if (file)
@@ -954,6 +953,7 @@ done:
     osal_list_add_tail(&impl->list_status, &grp->list_used);
     impl->status = BUF_ST_USED;
     impl->grp = grp;
+    impl->lock = grp->lock;
     impl->grp_id = grp->grp_id;
     impl->buf_gid = grp->buf_id++;
     grp->buf_cnt++;
@@ -1009,6 +1009,29 @@ void *kmpp_buffer_get_kptr(KmppBuffer buffer)
         impl->kptr = kmpp_dmabuf_get_kptr(impl->buf);
 
     return impl->kptr;
+}
+
+rk_u64 kmpp_buffer_get_uptr(KmppBuffer buffer)
+{
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    if (!impl)
+        return 0;
+
+    if (impl->uaddr)
+        return impl->uaddr;
+
+    if (impl->buf)
+        impl->uaddr = kmpp_dmabuf_get_uptr(impl->buf);
+
+    return impl->uaddr;
+}
+
+KmppDmaBuf kmpp_buffer_get_dmabuf(KmppBuffer buffer)
+{
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    return impl ? impl->buf : NULL;
 }
 
 static rk_s32 kmpp_buffer_ioc_setup(osal_fs_dev *file, KmppShmPtr *in, KmppShmPtr *out)
@@ -1230,32 +1253,80 @@ rk_s32 kmpp_buffer_put_iova_by_device(KmppBuffer buffer, rk_u64 iova, void *devi
 
 rk_s32 kmpp_buffer_flush_for_cpu(KmppBuffer buffer)
 {
-    return rk_nok;
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    if (!impl || !impl->buf) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px\n",
+                    impl, impl ? impl->buf : NULL);
+        return rk_nok;
+    }
+
+    return kmpp_dmabuf_flush_for_cpu(impl->buf);
 }
 
 rk_s32 kmpp_buffer_flush_for_dev(KmppBuffer buffer, osal_dev *dev)
 {
-    return rk_nok;
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    if (!impl || !impl->buf) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px\n",
+                    impl, impl ? impl->buf : NULL);
+        return rk_nok;
+    }
+
+    return kmpp_dmabuf_flush_for_dev(impl->buf, dev);
 }
 
 rk_s32 kmpp_buffer_flush_for_device(KmppBuffer buffer, void *device)
 {
-    return rk_nok;
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    if (!impl || !impl->buf) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px\n",
+                    impl, impl ? impl->buf : NULL);
+        return rk_nok;
+    }
+
+    return kmpp_dmabuf_flush_for_dev(impl->buf, NULL);
 }
 
 rk_s32 kmpp_buffer_flush_for_cpu_partial(KmppBuffer buffer, rk_u32 offset, rk_u32 size)
 {
-    return rk_nok;
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    if (!impl || !impl->buf) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px\n",
+                    impl, impl ? impl->buf : NULL);
+        return rk_nok;
+    }
+
+    return kmpp_dmabuf_flush_for_cpu_partial(impl->buf, offset, size);
 }
 
 rk_s32 kmpp_buffer_flush_for_dev_partial(KmppBuffer buffer, osal_dev *dev, rk_u32 offset, rk_u32 size)
 {
-    return rk_nok;
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    if (!impl || !impl->buf) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px\n",
+                    impl, impl ? impl->buf : NULL);
+        return rk_nok;
+    }
+
+    return kmpp_dmabuf_flush_for_dev_partial(impl->buf, dev, offset, size);
 }
 
 rk_s32 kmpp_buffer_flush_for_device_partial(KmppBuffer buffer, void *device, rk_u32 offset, rk_u32 size)
 {
-    return rk_nok;
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    if (!impl || !impl->buf) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px\n",
+                    impl, impl ? impl->buf : NULL);
+        return rk_nok;
+    }
+
+    return kmpp_dmabuf_flush_for_dev_partial(impl->buf, NULL, offset, size);
 }
 
 
@@ -1276,6 +1347,8 @@ EXPORT_SYMBOL(kmpp_buffer_get_cfg_s);
 EXPORT_SYMBOL(kmpp_buffer_get_cfg_k);
 EXPORT_SYMBOL(kmpp_buffer_get_cfg_u);
 EXPORT_SYMBOL(kmpp_buffer_get_kptr);
+EXPORT_SYMBOL(kmpp_buffer_get_uptr);
+EXPORT_SYMBOL(kmpp_buffer_get_dmabuf);
 
 EXPORT_SYMBOL(kmpp_buffer_read);
 EXPORT_SYMBOL(kmpp_buffer_write);
