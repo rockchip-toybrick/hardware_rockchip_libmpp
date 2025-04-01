@@ -173,39 +173,47 @@ rk_s32 kmpp_vsp_get_rt_cfg(KmppCtx ctx, KmppVspRtCfg *cfg, const rk_u8 *name)
     KmppObj rt_cfg;
     KmppVspPpCfg *entry = NULL;
     rk_s32 one_shot = 0;
+    rk_s32 ret = rk_nok;
 
     if (!ctx || !cfg) {
         kmpp_loge_f("invalid ctx %px cfg %px\n", ctx, cfg);
-        return rk_nok;
+        return ret;
     }
 
     impl = (KmpiVspImpl *)ctx;
     if (!impl->api || !impl->api->ctrl) {
         kmpp_loge_f("invalid impl %px with invalid ctrl api\n", impl);
-        return rk_nok;
+        return ret;
     }
 
     rt_cfg = *cfg;
     if (rt_cfg) {
         if (kmpp_obj_check(rt_cfg, __FUNCTION__)) {
             kmpp_loge_f("invalid rt_cfg %px\n", rt_cfg);
-            return rk_nok;
+            return ret;
         }
     } else {
         kmpp_obj_get_by_name_f(&rt_cfg, "KmppVspRtCfg");
         if (!rt_cfg) {
             kmpp_loge_f("failed to get one_shot rt_cfg\n");
-            return rk_nok;
+            return ret;
         }
 
         one_shot = 1;
     }
 
     entry = kmpp_obj_to_entry(rt_cfg);
+    ret = impl->api->ctrl(impl->ctx, KMPP_VSP_CMD_GET_RT_CFG, entry);
+    if (ret) {
+        kmpp_loge_f("failed to get rt_cfg ret %d\n", ret);
+        if (one_shot)
+            kmpp_obj_put_f(rt_cfg);
+        return ret;
+    }
     entry->one_shot = one_shot;
     *cfg = rt_cfg;
 
-    return impl->api->ctrl(impl->ctx, KMPP_VSP_CMD_GET_RT_CFG, entry);
+    return ret;
 }
 
 rk_s32 kmpp_vsp_set_rt_cfg(KmppCtx ctx, KmppVspRtCfg cfg)
