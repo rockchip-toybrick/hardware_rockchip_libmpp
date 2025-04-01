@@ -116,7 +116,8 @@ typedef struct HevcVepu511Frame_t {
 		RK_U32 cur_frm_ref             : 1;
 		RK_U32 mei_stor                : 1;
 		RK_U32 bs_scp                  : 1;
-		RK_U32 reserved                : 3;
+		RK_U32 meiw_mode               : 1;
+		RK_U32 reserved                : 2;
 		RK_U32 pic_qp                  : 6;
 		RK_U32 num_pic_tot_cur_hevc    : 5;
 		RK_U32 log2_ctu_num_hevc       : 5;

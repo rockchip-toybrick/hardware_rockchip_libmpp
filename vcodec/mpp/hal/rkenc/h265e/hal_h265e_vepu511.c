@@ -151,7 +151,7 @@ typedef struct H265eV511HalContext_t {
 	RK_S32                  smart_en;
 	RK_U32                  is_gray;
 
-	/* external line buffer over 2880 */
+	/* external line buffer over 4096 */
 	RK_S32                  ext_line_buf_size;
 	MppBuffer               ext_line_buf;
 	RK_U32                  only_smartp;
@@ -380,8 +380,8 @@ static MPP_RET vepu511_h265_setup_hal_bufs(H265eV511HalContext *ctx)
 		max_lt_cnt = info->max_lt_cnt;
 	}
 
-	if (aligned_w > 2880) {
-		RK_S32 ext_line_buf_size = ((ctu_w - 80) * 27 + 15) / 16 * 16 * 16;
+	if (aligned_w > SZ_4K) {
+		RK_S32 ext_line_buf_size = (ctu_w - 118) * 27 * 16;
 
 		if (!ctx->shared_buf->ext_line_buf ) {
 			if (ctx->ext_line_buf && (ext_line_buf_size > ctx->ext_line_buf_size)) {

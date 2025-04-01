@@ -111,8 +111,7 @@ typedef struct HalH264eVepu511Ctx_t {
 	RK_U32			recn_buf_clear;
 
 	/* external line buffer over 4K */
-	MppBufferGroup          ext_line_buf_grp;
-	MppBuffer               ext_line_bufs[MAX_TASK_CNT];
+	MppBuffer               ext_line_buf;
 	RK_S32                  ext_line_buf_size;
 
 	/* syntax for input from enc_impl */
@@ -143,8 +142,6 @@ typedef struct HalH264eVepu511Ctx_t {
 	RK_S32                  prev_idx;
 	H264ePrefixNal          *prefix;
 	H264eSlice              *slice;
-
-	MppBuffer               ext_line_buf;
 
 	RK_S32	                online;
 	struct hal_shared_buf   *shared_buf;
@@ -236,18 +233,6 @@ static RK_S32 h264_I_aq_step_smart[16] = {
 	1,  2,  3,  4,  6,  8,  8,  10
 };
 
-static void clear_ext_line_bufs(HalH264eVepu511Ctx *ctx)
-{
-	RK_U32 i;
-
-	for (i = 0; i < ctx->task_cnt; i++) {
-		if (ctx->ext_line_bufs[i]) {
-			mpp_buffer_put(ctx->ext_line_bufs[i]);
-			ctx->ext_line_bufs[i] = NULL;
-		}
-	}
-}
-
 static MPP_RET hal_h264e_vepu511_deinit(void *hal)
 {
 	HalH264eVepu511Ctx *p = (HalH264eVepu511Ctx *)hal;
@@ -259,8 +244,10 @@ static MPP_RET hal_h264e_vepu511_deinit(void *hal)
 		p->dev = NULL;
 	}
 
-	if (!p->shared_buf->ext_line_buf && p->ext_line_buf)
-		clear_ext_line_bufs(p);
+	if (!p->shared_buf->ext_line_buf && p->ext_line_buf) {
+		mpp_buffer_put(p->ext_line_buf);
+		p->ext_line_buf = NULL;
+	}
 
 	if (!p->shared_buf->dpb_bufs && p->hw_recn) {
 		hal_bufs_deinit(p->hw_recn);
@@ -471,9 +458,9 @@ static void setup_hal_bufs(HalH264eVepu511Ctx *ctx)
 	}
 
 	/* ext line buffer */
-	if (aligned_w > 2880) {
+	if (aligned_w > SZ_4K) {
 		RK_S32 ctu_w = aligned_w / 64;
-		RK_S32 ext_line_buf_size = ((ctu_w - 35) * 53 + 15) / 16 * 16 * 16;
+		RK_S32 ext_line_buf_size = (ctu_w - 55) * 53 * 16;
 
 		if (ctx->shared_buf->ext_line_buf) {
 			ctx->ext_line_buf = ctx->shared_buf->ext_line_buf;
