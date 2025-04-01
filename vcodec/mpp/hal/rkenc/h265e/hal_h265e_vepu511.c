@@ -902,6 +902,15 @@ static MPP_RET vepu511_h265_set_rdo_regs(H265eV511HalContext *ctx, H265eV511RegS
 	reg_rc->cudecis_thd11.delta6_thre_mad_fme_ratio_inter    = 4;
 	reg_rc->cudecis_thd11.delta7_thre_mad_fme_ratio_inter    = 4;
 
+	reg_rc->cudecis_thd12.delta0_thre_cme32_static_inter = 1;
+	reg_rc->cudecis_thd12.delta1_thre_cme32_static_inter = 3;
+	reg_rc->cudecis_thd12.delta2_thre_cme32_static_inter = 6;
+	reg_rc->cudecis_thd12.delta3_thre_cme32_static_inter = 9;
+	reg_rc->cudecis_thd12.delta4_thre_cme32_static_inter = 10;
+	reg_rc->cudecis_thd12.delta5_thre_cme32_static_inter = 11;
+	reg_rc->cudecis_thd12.delta6_thre_cme32_static_inter = 12;
+	reg_rc->cudecis_thd12.delta7_thre_cme32_static_inter = 15;
+
 	return MPP_OK;
 }
 
