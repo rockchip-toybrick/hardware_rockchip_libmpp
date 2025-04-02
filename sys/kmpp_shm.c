@@ -22,6 +22,7 @@
 #define SHM_DBG_DETAIL              (0x00000002)
 #define SHM_DBG_IOCTL               (0x00000004)
 #define SHM_DBG_DUMP                (0x00000008)
+#define SHM_DBG_LEAK                (0x00000010)
 
 #define shm_dbg(flag, fmt, ...)     kmpp_dbg(kmpp_shm_debug, flag, fmt, ## __VA_ARGS__)
 #define shm_dbg_f(flag, fmt, ...)   kmpp_dbg_f(kmpp_shm_debug, flag, fmt, ## __VA_ARGS__)
@@ -29,6 +30,7 @@
 #define shm_dbg_flow(fmt, ...)      shm_dbg_f(SHM_DBG_FLOW, fmt, ## __VA_ARGS__)
 #define shm_dbg_detail(fmt, ...)    shm_dbg_f(SHM_DBG_DETAIL, fmt, ## __VA_ARGS__)
 #define shm_dbg_ioctl(fmt, ...)     shm_dbg(SHM_DBG_IOCTL, fmt, ## __VA_ARGS__)
+#define shm_dbg_leak(fmt, ...)      shm_dbg(SHM_DBG_LEAK, fmt, ## __VA_ARGS__)
 
 #define KMPP_SHM_IOC_MAGIC          'm'
 #define KMPP_SHM_IOC_QUERY_INFO     _IOW(KMPP_SHM_IOC_MAGIC, 1, unsigned int)
@@ -244,7 +246,13 @@ static rk_s32 kmpp_shm_grp_root_deinit(KmppShmGrpRoot *root)
             osal_spin_unlock(root->lock);
 
             osal_list_for_each_entry_safe(shm, n, &list, KmppShmImpl, list_grp) {
-                kmpp_shm_put(shm);
+                shm_dbg_leak("leak shm %px obj %px\n", shm, shm->kpriv);
+
+                if (shm->kpriv) {
+                    kmpp_obj_put_f(shm->kpriv);
+                } else {
+                    kmpp_shm_put(shm);
+                }
             }
         }
 
