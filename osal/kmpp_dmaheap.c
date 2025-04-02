@@ -908,7 +908,7 @@ void *kmpp_dmabuf_get_kptr(KmppDmaBuf buf)
     }
 
     if (IS_ERR_OR_NULL(ptr)) {
-        kmpp_loge_f("buf %px vmap failed ret %d\n", PTR_ERR(ptr));
+        kmpp_loge_f("buf %px vmap failed ret %d\n", buf, PTR_ERR(ptr));
         ptr = NULL;
     }
 
