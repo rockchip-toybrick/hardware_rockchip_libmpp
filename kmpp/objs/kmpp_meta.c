@@ -17,6 +17,13 @@
 #include "kmpp_obj.h"
 #include "kmpp_meta_impl.h"
 
+#define META_DBG_FLOW               (0x00000001)
+
+#define meta_dbg(flag, fmt, ...)    kmpp_dbg(kmpp_meta_debug, flag, fmt, ## __VA_ARGS__)
+#define meta_dbg_f(flag, fmt, ...)  kmpp_dbg_f(kmpp_meta_debug, flag, fmt, ## __VA_ARGS__)
+
+#define meta_dbg_flow(fmt, ...)     meta_dbg_f(META_DBG_FLOW, fmt, ## __VA_ARGS__)
+
 #define META_ON_OPS         (0x00010000)
 #define META_VAL_INVALID    (0x00000000)
 #define META_VAL_VALID      (0x00000001)
@@ -50,6 +57,7 @@ typedef struct KmppMetaSrv_s {
 #define META_KEY_TO_U64(key, type)      ((rk_u64)((rk_u32)cpu_to_be32(key)) | ((rk_u64)type << 32))
 
 static KmppMetaSrv *kmpp_meta_srv = NULL;
+static rk_u32 kmpp_meta_debug = 0;
 
 static rk_s32 kmpp_meta_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
@@ -62,6 +70,7 @@ static rk_s32 kmpp_meta_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, c
     }
 
     impl->caller = caller;
+    impl->obj = obj;
     impl->meta_id = KMPP_FETCH_ADD(&srv->meta_id, 1);
     OSAL_INIT_LIST_HEAD(&impl->list);
     impl->ref_count = 1;
@@ -72,6 +81,9 @@ static rk_s32 kmpp_meta_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, c
     osal_spin_unlock(srv->lock);
     KMPP_FETCH_ADD(&srv->meta_count, 1);
 
+    meta_dbg_flow("meta %d obj %px entry %px at %s\n",
+                  impl->meta_id, obj, entry, caller);
+
     return rk_ok;
 }
 
@@ -80,11 +92,17 @@ static rk_s32 kmpp_meta_impl_deinit(void *entry, const rk_u8 *caller)
     KmppMetaSrv *srv = kmpp_meta_srv;
     KmppMetaImpl *impl = (KmppMetaImpl*)entry;
     rk_s32 ref_count;
+    rk_s32 old;
 
     if (srv->finished)
         return rk_nok;
 
+    old = impl->ref_count;
     ref_count = KMPP_SUB_FETCH(&impl->ref_count, 1);
+
+    meta_dbg_flow("meta %d ref_cnt %d -> %d at %s\n",
+                  impl->meta_id, old, ref_count, caller);
+
     if (ref_count > 0)
         return rk_nok;
 
@@ -198,6 +216,16 @@ void kmpp_meta_init(void)
 
             kmpp_objdef_get(&def, sizeof(KmppMetaImpl), "KmppMeta");
 
+            /* add meta size */
+            do {
+                KmppEntry entry = { .val = 0, };
+
+                entry.tbl.elem_offset = &(((KmppMetaImpl *)(0))->node_count);
+                entry.tbl.elem_size = sizeof(((KmppMetaImpl *)(0))->node_count);
+                entry.tbl.elem_type = ELEM_TYPE_s32;
+                kmpp_objdef_add_entry(def, "size", &entry);
+            } while (0);
+
             META_ENTRY_TABLE(META_LOCTBL_ADD)
 
             kmpp_objdef_add_entry(def, NULL, NULL);
@@ -214,18 +242,19 @@ void kmpp_meta_init(void)
 
 void kmpp_meta_deinit(void)
 {
-    KmppMetaSrv *srv = KMPP_FETCH_AND(&kmpp_meta_srv, NULL);
+    KmppMetaSrv *srv = kmpp_meta_srv;
     KmppMetaImpl *meta, *n;
     OSAL_LIST_HEAD(list);
 
     osal_spin_lock(srv->lock);
     osal_list_for_each_entry_safe(meta, n, &srv->list, KmppMetaImpl, list) {
-        osal_list_move(&meta->list, &list);
+        osal_list_move_tail(&meta->list, &list);
     }
     osal_spin_unlock(srv->lock);
 
-    osal_list_for_each_entry_safe(meta, n, &srv->list, KmppMetaImpl, list) {
-        kmpp_meta_put_f(meta);
+    osal_list_for_each_entry_safe(meta, n, &list, KmppMetaImpl, list) {
+        osal_list_del_init(&meta->list);
+        kmpp_meta_put_f(meta->obj);
     }
 
     osal_spinlock_deinit(&srv->lock);
@@ -236,6 +265,7 @@ void kmpp_meta_deinit(void)
     }
 
     kmpp_free(srv);
+    kmpp_meta_srv = NULL;
 }
 
 static void *meta_key_to_addr(KmppMetaImpl *impl, KmppMetaKey key, KmppMetaType type)

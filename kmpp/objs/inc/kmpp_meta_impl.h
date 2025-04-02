@@ -91,6 +91,7 @@ typedef struct __attribute__((packed)) KmppMetaVals_t {
 
 typedef struct __attribute__((packed)) KmppMetaImpl_t {
     const rk_u8         *caller;
+    KmppObj             obj;
     rk_s32              meta_id;
     rk_s32              ref_count;
 
