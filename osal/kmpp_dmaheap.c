@@ -23,6 +23,7 @@
 #include "kmpp_dmaheap_impl.h"
 #include "kmpp_string.h"
 #include "kmpp_spinlock.h"
+#include "kmpp_mutex.h"
 #include "kmpp_macro.h"
 
 #define MAX_DMAHEAP_NUM                 8
@@ -92,6 +93,7 @@ struct KmppDmaHeaps_t {
     osal_list_head      list;
     KmppDmaHeapInfo     *info;
     osal_spinlock       *lock;
+    osal_mutex          *mutex;
     HeapFindFunc        find;
     HeapPutFunc         put;
     HeapAllocFunc       alloc;
@@ -233,7 +235,7 @@ void kmpp_dmaheap_init(void)
         srv = NULL;
     }
 
-    srv = kmpp_calloc_atomic(sizeof(KmppDmaHeapsSrv) + lock_size);
+    srv = kmpp_calloc_atomic(sizeof(KmppDmaHeapsSrv));
     if (!srv) {
         kmpp_loge_f("create dmaheaps srv failed\n");
         return;
@@ -256,14 +258,17 @@ void kmpp_dmaheap_init(void)
             void *prev_valid = NULL;
             rk_s32 j;
             rk_u8 find_valid = 0;
+            rk_s32 mutex_size = osal_mutex_size();
 
-            heaps = (KmppDmaHeaps *)kmpp_calloc_atomic(sizeof(KmppDmaHeaps) + lock_size);
+            heaps = (KmppDmaHeaps *)kmpp_calloc_atomic(sizeof(KmppDmaHeaps) +
+                                                       lock_size + mutex_size);
             if (!heaps) {
                 kmpp_loge_f("create heap impl failed\n");
                 return;
             }
 
             osal_spinlock_assign(&heaps->lock, (void *)(heaps + 1), lock_size);
+            osal_mutex_assign(&heaps->mutex, (void *)heaps->lock + lock_size, mutex_size);
 
             heaps->info = info;
             heaps->find = find;
@@ -352,6 +357,7 @@ static void __kmpp_dmaheap_deinit(KmppDmaHeapsSrv *srv, KmppDmaHeaps *heaps)
     }
 
     osal_spinlock_deinit(&heaps->lock);
+    osal_mutex_deinit(&heaps->mutex);
     kmpp_free(heaps);
 }
 
@@ -941,7 +947,7 @@ rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf)
     dmabuf_dbg_heaps("dmabuf %px file %px size %d at mm %px\n",
                       dma_buf, file, size, current->mm);
 
-    osal_spin_lock(heaps->lock);
+    osal_mutex_lock(heaps->mutex);
     if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP) {
         rk_ul uptr0;
         rk_ul uptr1;
@@ -992,7 +998,7 @@ rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf)
             uptr = 0;
         }
     }
-    osal_spin_unlock(heaps->lock);
+    osal_mutex_unlock(heaps->mutex);
 
     dmabuf_dbg_buf("dmabuf %d get uptr %#lx\n", impl->buf_id, uptr);
 
