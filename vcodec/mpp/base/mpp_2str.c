@@ -232,3 +232,16 @@ const char *strof_suprmode(RK_U32 mode)
 
 	return mode_str[0];
 }
+
+const char *strof_color_range(MppFrameColorRange range)
+{
+	static const char *mode_str[] = {
+		"limit",
+		"full",
+	};
+
+	if (range == MPP_FRAME_RANGE_JPEG)
+		return mode_str[1];
+	else
+		return mode_str[0];
+}

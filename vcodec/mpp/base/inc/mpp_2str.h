@@ -28,6 +28,7 @@ const char *strof_bool(RK_U32 enable);
 const char *strof_drop(RK_U32 mode);
 const char *strof_suprmode(RK_U32 mode);
 const char *strof_rotation(MppEncRotationCfg rotation);
+const char *strof_color_range(MppFrameColorRange range);
 
 #ifdef  __cplusplus
 }

@@ -2379,15 +2379,16 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 
 	seq_puts(seq,
 		 "\n--------venc chn attr 1---------------------------------------------------------------------------\n");
-	seq_printf(seq, "%8s|%8s|%8s|%6s|%9s|%10s|%10s|%6s|%10s|%11s|%8s|%10s\n",
+	seq_printf(seq, "%8s|%8s|%8s|%6s|%9s|%10s|%10s|%6s|%10s|%11s|%8s|%10s|%12s\n",
 		   "ID", "Width", "Height", "Type", "ByFrame",
 		   "Sequence", "GopMode", "Prio", "MaxWidth", "MaxHeight",
-		   "Online", "RefShare");
+		   "Online", "RefShare", "ColorRange");
 
-	seq_printf(seq, "%8d|%8u|%8u|%6s|%9s|%10u|%10s|%6d|%10d|%11d|%8d|%10d\n",
+	seq_printf(seq, "%8d|%8u|%8u|%6s|%9s|%10u|%10s|%6d|%10d|%11d|%8d|%10d|%12s\n",
 		   chl_id, cfg->prep.width, cfg->prep.height, strof_coding_type(cfg->codec.coding), "y",
 		   task->seq_idx, strof_gop_mode((MppEncRcGopMode)enc->gop_mode), 0,
-		   cfg->prep.max_width, cfg->prep.max_height, enc->online, enc->ref_buf_shared);
+		   cfg->prep.max_width, cfg->prep.max_height,
+		   enc->online, enc->ref_buf_shared, strof_color_range(cfg->prep.range));
 
 	source_frate = cfg->rc.fps_in_num / cfg->rc.fps_in_denom;
 	target_frame_rate = cfg->rc.fps_out_num / cfg->rc.fps_out_denom;
