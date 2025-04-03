@@ -220,7 +220,7 @@ void kmpp_meta_init(void)
             do {
                 KmppEntry entry = { .val = 0, };
 
-                entry.tbl.elem_offset = &(((KmppMetaImpl *)(0))->node_count);
+                entry.tbl.elem_offset = (rk_u32)(&(((KmppMetaImpl *)(0))->node_count));
                 entry.tbl.elem_size = sizeof(((KmppMetaImpl *)(0))->node_count);
                 entry.tbl.elem_type = ELEM_TYPE_s32;
                 kmpp_objdef_add_entry(def, "size", &entry);
