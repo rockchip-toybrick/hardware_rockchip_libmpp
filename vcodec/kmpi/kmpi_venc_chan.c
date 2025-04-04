@@ -227,12 +227,21 @@ rk_s32 kmpp_venc_chan_put_frm(KmppChanId id, KmppFrame frm)
     struct venc_module *venc = NULL;
     struct vcodec_threads *thd;
     KmppChanId chan_id = id;
+    unsigned long flags;
 
     chan = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
     if (!chan || !chan->handle) {
         mpp_err_f("invalid chan id %d\n", chan_id);
         return MPP_NOK;
     }
+
+    spin_lock_irqsave(&chan->chan_lock, flags);
+    if (chan->state != CHAN_STATE_RUN) {
+        mpp_err_f("chan %d state %d is not run\n", chan_id, chan->state);
+        spin_unlock_irqrestore(&chan->chan_lock, flags);
+        return MPP_NOK;
+    }
+    spin_unlock_irqrestore(&chan->chan_lock, flags);
 
     venc = mpp_vcodec_get_enc_module_entry();
     thd = venc->thd;
