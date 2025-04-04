@@ -852,6 +852,9 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 			ret = MPP_ERR_VALUE;
 		}
 
+		if (change & MPP_ENC_TUNE_CFG_CHANGE_SPEED)
+			dst->speed = src->speed;
+
 		dst->change |= change;
 
 		if (ret) {
