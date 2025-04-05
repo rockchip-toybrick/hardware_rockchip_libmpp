@@ -1169,8 +1169,8 @@ static void setup_vepu511_rdo_pred(HalH264eVepu511Ctx *ctx, H264eSps *sps,
 		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = (sm == MPP_ENC_SCENE_MODE_IPC) ? 9 : 6;
 		lambda_idx = ctx->cfg->tune.lambda_idx_p;
 
-		regs->reg_frm.rdo_mark_mode.p16_interp_num = 2;
-		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 2;
+		regs->reg_frm.rdo_mark_mode.p16_interp_num = 3;
+		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 3;
 		regs->reg_frm.rdo_mark_mode.p16t4_rmd_num = 2;
 		regs->reg_frm.rdo_mark_mode.p8_interp_num = 2;
 		regs->reg_frm.rdo_mark_mode.p8t8_rdo_num = 2;
@@ -1695,13 +1695,15 @@ static void setup_vepu511_me(HalH264eVepu511Ctx *ctx)
 	reg_param->me_sqi_cfg.cime_fuse   = 0;
 	reg_param->me_sqi_cfg.move_lambda = 0;
 	reg_param->me_sqi_cfg.rime_lvl_mrg     = 1;
-	reg_param->me_sqi_cfg.rime_prelvl_en   = 0;
+	reg_param->me_sqi_cfg.rime_prelvl_en   = 3;
 	reg_param->me_sqi_cfg.rime_prersu_en   = 0;
-	reg_param->me_sqi_cfg.fme_lvl_mrg = 1;
+	reg_param->me_sqi_cfg.fme_lvl_mrg = 0;
 	reg_param->cime_mvd_th.cime_mvd_th0 = 16;
 	reg_param->cime_mvd_th.cime_mvd_th1 = 48;
 	reg_param->cime_mvd_th.cime_mvd_th2 = 80;
 	reg_param->cime_madp_th.cime_madp_th = 16;
+	reg_param->cime_madp_th.ratio_consi_cfg = 13;
+	reg_param->cime_madp_th.ratio_bmv_dist = 9;
 	reg_param->cime_multi.cime_multi0 = 8;
 	reg_param->cime_multi.cime_multi1 = 12;
 	reg_param->cime_multi.cime_multi2 = 16;
@@ -1990,26 +1992,32 @@ static void setup_vepu511_anti_flicker(HalH264eVepu511Ctx *ctx)
 	Vepu511SqiCfg *reg = &regs->reg_sqi;
 	RK_U32 str = ctx->cfg->tune.atf_str;
 
-	static RK_U8 pskip_atf_th0[4] = { 0, 0, 0, 1 };
-	static RK_U8 pskip_atf_th1[4] = { 7, 7, 7, 10 };
-	static RK_U8 pskip_atf_wgt0[4] = { 16, 16, 16, 20 };
-	static RK_U8 pskip_atf_wgt1[4] = { 16, 16, 14, 16 };
+	static RK_U8 pskip_atf_th0[4] = { 0, 0, 1, 1 };
+	static RK_U8 pskip_atf_th1[4] = { 7, 7, 10, 10 };
+	static RK_U8 pskip_atf_th2[4] = { 15, 15, 15, 15 };
+	static RK_U8 pskip_atf_th3[4] = { 25, 25, 25, 25 };
+	static RK_U8 pskip_atf_wgt0[4] = { 16, 16, 20, 20 };
+	static RK_U8 pskip_atf_wgt1[4] = { 16, 16, 15, 14 };
+	static RK_U8 pskip_atf_wgt2[4] = { 16, 16, 16, 15 };
+	static RK_U8 pskip_atf_wgt3[4] = { 16, 16, 16, 15 };
+	static RK_U8 pskip_atf_wgt4[4] = { 16, 16, 16, 16 };
 	static RK_U8 intra_atf_th0[4] = { 8, 16, 20, 20 };
 	static RK_U8 intra_atf_th1[4] = { 16, 32, 40, 40 };
 	static RK_U8 intra_atf_th2[4] = { 32, 56, 72, 72 };
-	static RK_U8 intra_atf_wgt0[4] = { 16, 24, 27, 27 };
-	static RK_U8 intra_atf_wgt1[4] = { 16, 22, 25, 25 };
-	static RK_U8 intra_atf_wgt2[4] = { 16, 19, 20, 20 };
+	static RK_U8 intra_atf_wgt0[4] = { 16, 24, 28, 28 };
+	static RK_U8 intra_atf_wgt1[4] = { 16, 22, 26, 26 };
+	static RK_U8 intra_atf_wgt2[4] = { 16, 20, 22, 22 };
+	static RK_U8 intra_atf_wgt3[4] = { 16, 16, 16, 18 };
 
 	reg->rdo_b16_skip_atf_thd0.madp_thd0 = pskip_atf_th0[str];
 	reg->rdo_b16_skip_atf_thd0.madp_thd1 = pskip_atf_th1[str];
-	reg->rdo_b16_skip_atf_thd1.madp_thd2 = 15;
-	reg->rdo_b16_skip_atf_thd1.madp_thd3 = 25;
+	reg->rdo_b16_skip_atf_thd1.madp_thd2 = pskip_atf_th2[str];
+	reg->rdo_b16_skip_atf_thd1.madp_thd3 = pskip_atf_th3[str];
 	reg->rdo_b16_skip_atf_wgt0.wgt0 = pskip_atf_wgt0[str];
 	reg->rdo_b16_skip_atf_wgt0.wgt1 = pskip_atf_wgt1[str];
-	reg->rdo_b16_skip_atf_wgt0.wgt2 = 16;
-	reg->rdo_b16_skip_atf_wgt0.wgt3 = 16;
-	reg->rdo_b16_skip_atf_wgt1.wgt4 = 16;
+	reg->rdo_b16_skip_atf_wgt0.wgt2 = pskip_atf_wgt2[str];
+	reg->rdo_b16_skip_atf_wgt0.wgt3 = pskip_atf_wgt3[str];
+	reg->rdo_b16_skip_atf_wgt1.wgt4 = pskip_atf_wgt4[str];
 
 	reg->rdo_b16_inter_atf_thd0.madp_thd0 = 20;
 	reg->rdo_b16_inter_atf_thd0.madp_thd1 = 40;
@@ -2025,7 +2033,7 @@ static void setup_vepu511_anti_flicker(HalH264eVepu511Ctx *ctx)
 	reg->rdo_b16_intra_atf_wgt.wgt0 = intra_atf_wgt0[str];
 	reg->rdo_b16_intra_atf_wgt.wgt1 = intra_atf_wgt1[str];
 	reg->rdo_b16_intra_atf_wgt.wgt2 = intra_atf_wgt2[str];
-	reg->rdo_b16_intra_atf_wgt.wgt3 = 16;
+	reg->rdo_b16_intra_atf_wgt.wgt3 = intra_atf_wgt3[str];
 
 	reg->rdo_b16_intra_atf_cnt_thd.cnt_thd0 = 1;
 	reg->rdo_b16_intra_atf_cnt_thd.cnt_thd1 = 4;
