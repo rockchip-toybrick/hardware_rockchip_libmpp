@@ -2108,6 +2108,7 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 		    (irq_status & RKVENC_JPEG_OVERFLOW))
 		    priv->info.bsbuf_overflow_cnt++;
 		priv->info.enc_err_cnt++;
+		mpp_write(mpp, hw->int_mask_base, irq_status);
 		dev_err(mpp->dev, "chan %d task %d error %08x\n",
 			session->chn_id, mpp_task->task_index, irq_status);
 		ret = IRQ_WAKE_THREAD;
