@@ -2454,7 +2454,7 @@ static MPP_RET hal_h264e_vepu511_gen_regs(void *hal, HalEncTask *task)
 	setup_vepu511_ext_line_buf(regs, ctx);
 	setup_vepu511_scaling_list(ctx);
 
-	if (ctx->qpmap_en) {
+	if (0 && ctx->qpmap_en) {
 		hal_h264e_vepu511_init_qpmap_buf(ctx);
 
 		if (ctx->mv_info) {

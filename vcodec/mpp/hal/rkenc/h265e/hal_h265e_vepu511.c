@@ -2814,7 +2814,7 @@ MPP_RET hal_h265e_v511_gen_regs(void *hal, HalEncTask *task)
 	vepu511_h265_set_scaling_list(ctx);
 	vepu511_h265_set_aq(ctx);
 
-	if (ctx->qpmap_en) {
+	if (0 && ctx->qpmap_en) {
 		hal_h265e_vepu511_init_qpmap_buf(ctx);
 
 		if (ctx->mv_info) {
