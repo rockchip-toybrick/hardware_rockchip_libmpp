@@ -181,6 +181,16 @@ rk_s32 kmpp_buf_deinit(void)
     return rk_nok;
 }
 
+rk_s32 kmpp_buf_grp_cfg_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
+{
+    KmppBufGrpCfgImpl *impl = (KmppBufGrpCfgImpl *)entry;
+
+    impl->fd = -1;
+    impl->flag = KMPP_DMAHEAP_FLAGS_CACHABLE;
+
+    return rk_ok;
+}
+
 static rk_s32 kmpp_buf_grp_cfg_impl_dump(void *entry)
 {
     KmppBufGrpCfgImpl *impl = (KmppBufGrpCfgImpl*)entry;
@@ -206,6 +216,7 @@ static rk_s32 kmpp_buf_grp_cfg_impl_dump(void *entry)
 #define KMPP_OBJ_IMPL_TYPE          KmppBufGrpCfgImpl
 #define KMPP_OBJ_ENTRY_TABLE        KMPP_BUF_GRP_CFG_ENTRY_TABLE
 #define KMPP_OBJ_STRUCT_TABLE       KMPP_BUF_GRP_CFG_STRUCT_TABLE
+#define KMPP_OBJ_FUNC_INIT          kmpp_buf_grp_cfg_impl_init
 #define KMPP_OBJ_FUNC_DUMP          kmpp_buf_grp_cfg_impl_dump
 #define KMPP_OBJ_FUNC_EXPORT_ENABLE
 #define KMPP_OBJ_SHARE_ENABLE
@@ -1085,7 +1096,6 @@ static KmppObjIoctls kmpp_buffer_ioctls = {
 #define KMPP_OBJ_FUNC_EXPORT_ENABLE
 #define KMPP_OBJ_SHARE_ENABLE
 #include "kmpp_obj_helper.h"
-
 
 rk_s32 kmpp_buf_cfg_impl_init(void *entry, KmppObj obj, osal_fs_dev *file, const rk_u8 *caller)
 {
