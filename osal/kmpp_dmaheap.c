@@ -87,6 +87,7 @@ struct KmppDmaHeapImpl_t {
     rk_s32              index;
     rk_s32              valid;
     rk_s32              ref_cnt;
+    rk_u32              flag;
 };
 
 struct KmppDmaHeaps_t {
@@ -259,6 +260,7 @@ void kmpp_dmaheap_init(void)
             rk_s32 j;
             rk_u8 find_valid = 0;
             rk_s32 mutex_size = osal_mutex_size();
+            rk_u32 heap_flag = 0;
 
             heaps = (KmppDmaHeaps *)kmpp_calloc_atomic(sizeof(KmppDmaHeaps) +
                                                        lock_size + mutex_size);
@@ -287,6 +289,7 @@ void kmpp_dmaheap_init(void)
                     prev_valid = curr;
                     impl->valid = 1;
                     find_valid = 1;
+                    heap_flag = j;
                 } else {
                     /* use previous valid heap */
                     curr = prev_valid;
@@ -296,6 +299,7 @@ void kmpp_dmaheap_init(void)
                 impl->heaps = heaps;
                 impl->handle = curr;
                 impl->index = j;
+                impl->flag = heap_flag;
                 OSAL_INIT_LIST_HEAD(&impl->list_used);
                 impl->heap_id = srv->heap_id++;
                 srv->heap_cnt++;
@@ -500,7 +504,7 @@ rk_s32 kmpp_dmaheap_put(KmppDmaHeap heap, const rk_u8 *caller)
     return rk_ok;
 }
 
-static void *dmabuf_double_vmap(struct dma_buf *dma_buf, const rk_u8 *caller)
+static void *dmabuf_double_vmap(struct dma_buf *dma_buf, rk_u32 cacheable, const rk_u8 *caller)
 {
     KmppDmaHeapsSrv *srv = get_dmaheaps_srv(caller);
     struct dma_buf_attachment *attach;
@@ -523,6 +527,10 @@ static void *dmabuf_double_vmap(struct dma_buf *dma_buf, const rk_u8 *caller)
             struct page **pages = kmpp_calloc(sizeof(struct page *) * npages * 2);
             struct page **tmp = pages;
             struct sg_page_iter piter;
+            pgprot_t pgprot = PAGE_KERNEL;
+
+            if (!cacheable)
+                pgprot = pgprot_writecombine(PAGE_KERNEL);
 
             for_each_sgtable_page(table, &piter, 0) {
                 // WARN_ON(tmp - pages >= npages);
@@ -534,7 +542,7 @@ static void *dmabuf_double_vmap(struct dma_buf *dma_buf, const rk_u8 *caller)
                 *tmp++ = sg_page_iter_page(&piter);
             }
 
-            vaddr = vmap(pages, 2 * npages, VM_MAP, PAGE_KERNEL);
+            vaddr = vmap(pages, 2 * npages, VM_MAP, pgprot);
 
             dma_buf_unmap_attachment(attach, sgt, DMA_BIDIRECTIONAL);
             kmpp_free(pages);
@@ -898,7 +906,9 @@ void *kmpp_dmabuf_get_kptr(KmppDmaBuf buf)
 
     dma_buf = impl->dma_buf;
     if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP) {
-        ptr = dmabuf_double_vmap(dma_buf, __FUNCTION__);
+        rk_u32 cacheable = impl->heap->flag & KMPP_DMAHEAP_FLAGS_CACHABLE;
+
+        ptr = dmabuf_double_vmap(dma_buf, cacheable, __FUNCTION__);
         dmabuf_dbg_buf("dmabuf %d get kptr %#px with double range\n", impl->buf_id, ptr);
     } else {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 01, 0)
