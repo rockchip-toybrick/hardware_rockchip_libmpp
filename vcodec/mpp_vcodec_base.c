@@ -584,14 +584,16 @@ int mpp_vcodec_deinit(void)
 		vcodec_thread_destroy(venc->thd);
 		venc->thd = NULL;
 	}
+
+	kfree(venc->name);
 	mpp_packet_pool_deinit();
 	mpp_buffer_pool_deinit();
 
-    kmpp_venc_ntfy_deinit();
-    kmpp_venc_init_cfg_deinit();
-    kmpp_frame_deinit();
-    kmpp_meta_deinit();
-    kmpp_buf_deinit();
+	kmpp_venc_ntfy_deinit();
+	kmpp_venc_init_cfg_deinit();
+	kmpp_frame_deinit();
+	kmpp_meta_deinit();
+	kmpp_buf_deinit();
 
 	return 0;
 }
