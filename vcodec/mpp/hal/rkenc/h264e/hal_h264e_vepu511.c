@@ -504,8 +504,11 @@ static void setup_hal_bufs(HalH264eVepu511Ctx *ctx)
 		ctx->pixel_buf_fbc_hdr_size = pixel_buf_fbc_hdr_size;
 		ctx->pixel_buf_fbc_bdy_size = pixel_buf_fbc_bdy_size;
 
-		if (!ctx->shared_buf->dpb_bufs)
+		if (!ctx->shared_buf->dpb_bufs) {
+			if (ctx->hw_recn)
+				hal_bufs_deinit(ctx->hw_recn);
 			hal_bufs_init(&ctx->hw_recn);
+		}
 
 		if (ctx->recn_ref_wrap) {
 			sizes[RECREF_TYPE] = 0;
