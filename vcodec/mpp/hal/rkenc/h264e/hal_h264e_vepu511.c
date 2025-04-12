@@ -1150,37 +1150,93 @@ static void setup_vepu511_rdo_pred(HalH264eVepu511Ctx *ctx, H264eSps *sps,
 	hal_h264e_dbg_func("enter\n");
 
 	/*
-	* H264 Mode Mask of Mode Decision.
-	* More prediction modes lead to better compression performance but increase computational cycles.
-	*
-	* Default speed preset configuration to 0.67 PPC, ~40 FPS for 4K resolution at 500MHz:
-	* - Set i4/i16 partition RDO numbers to 1 for P-frames and all other CU RDO numbers to 2.
-	* - Set cime_fuse = 0,  enable dual-window search for higher compression performance.
-	* - Set fme_lvl_mrg = 1, enable FME's depth1 and depth2 joint search,
-	*   improves real-time performance but will reduce the compression ratio.
-	* - Set cime_srch_lftw/rgtw/uph/dwnh = 12/12/15/15, expand CIME search range degraded real-time performance.
-	* - Set rime_prelvl_en = 0, disable RIME pre-level to improve real-time performance.
-	*/
-	if (slice->slice_type == H264_I_SLICE) {
-		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 6;
-		lambda_idx = ctx->cfg->tune.lambda_idx_i;
-
-		regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 2;
-		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
-		regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 2;
-	} else {
-		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = (sm == MPP_ENC_SCENE_MODE_IPC) ? 9 : 6;
-		lambda_idx = ctx->cfg->tune.lambda_idx_p;
-
+	 * H264 Mode Mask of Mode Decision.
+	 * More prediction modes lead to better compression performance but increase computational cycles.
+	 *
+	 * Default speed preset configuration to 0.67 PPC, ~40 FPS for 4K resolution at 500MHz:
+	 * - Set i4/i16 partition RDO numbers to 1 for P-frames and all other CU RDO numbers to 2.
+	 * - Set cime_fuse = 0,  enable dual-window search for higher compression performance.
+	 * - Set fme_lvl_mrg = 1, enable FME's depth1 and depth2 joint search,
+	 *   improves real-time performance but will reduce the compression ratio.
+	 * - Set cime_srch_lftw/rgtw/uph/dwnh = 12/12/15/15, expand CIME search range degraded real-time performance.
+	 * - Set rime_prelvl_en = 0, disable RIME pre-level to improve real-time performance.
+	 */
+	switch (ctx->cfg->tune.speed) {
+	default :
+	case 0 : {
+		// FULL RDO MODE, 0.63ppc
 		regs->reg_frm.rdo_mark_mode.p16_interp_num = 3;
 		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 3;
+		regs->reg_frm.rdo_mark_mode.p16t4_rmd_num = 2;
+		regs->reg_frm.rdo_mark_mode.p8_interp_num = 3;
+		regs->reg_frm.rdo_mark_mode.p8t8_rdo_num = 2;
+		regs->reg_frm.rdo_mark_mode.p8t4_rmd_num = 2;
+		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
+		if (slice->slice_type == H264_I_SLICE) {
+			regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 2;
+			regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 2;
+		} else {
+			regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 1;
+			regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 1;
+		}
+	} break;
+	case 1 : {
+		// 0.69ppc
+		regs->reg_frm.rdo_mark_mode.p16_interp_num = 2;
+		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 2;
 		regs->reg_frm.rdo_mark_mode.p16t4_rmd_num = 2;
 		regs->reg_frm.rdo_mark_mode.p8_interp_num = 2;
 		regs->reg_frm.rdo_mark_mode.p8t8_rdo_num = 2;
 		regs->reg_frm.rdo_mark_mode.p8t4_rmd_num = 2;
 		regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
 		regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 1;
-		regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 1;
+		if (slice->slice_type == H264_I_SLICE) {
+			regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 2;
+		} else {
+			regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 1;
+		}
+	} break;
+	case 2 : {
+		// 0.71
+		regs->reg_frm.rdo_mark_mode.p16_interp_num = 2;
+		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 2;
+		regs->reg_frm.rdo_mark_mode.p16t4_rmd_num = 1;
+		regs->reg_frm.rdo_mark_mode.p8_interp_num = 2;
+		regs->reg_frm.rdo_mark_mode.p8t8_rdo_num = 1;
+		regs->reg_frm.rdo_mark_mode.p8t4_rmd_num = 1;
+		regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 1;
+		if (slice->slice_type == H264_I_SLICE) {
+			regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 2;
+			regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
+		} else {
+			regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 1;
+			regs->reg_frm.rdo_mark_mode.i8_rdo_num = 1;
+		}
+	} break;
+	case 3 : {
+		// 0.73ppc
+		regs->reg_frm.rdo_mark_mode.p16_interp_num = 2;
+		regs->reg_frm.rdo_mark_mode.p16t8_rdo_num = 1;
+		regs->reg_frm.rdo_mark_mode.p16t4_rmd_num = 1;
+		regs->reg_frm.rdo_mark_mode.p8_interp_num = 2;
+		regs->reg_frm.rdo_mark_mode.p8t8_rdo_num = 1;
+		regs->reg_frm.rdo_mark_mode.p8t4_rmd_num = 1;
+		regs->reg_frm.rdo_mark_mode.iframe_i4_rdo_num = 1;
+		if (slice->slice_type == H264_I_SLICE) {
+			regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 2;
+			regs->reg_frm.rdo_mark_mode.i8_rdo_num = 2;
+		} else {
+			regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 1;
+			regs->reg_frm.rdo_mark_mode.i8_rdo_num = 1;
+		}
+	} break;
+	}
+	if (slice->slice_type == H264_I_SLICE) {
+		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = 6;
+		lambda_idx = ctx->cfg->tune.lambda_idx_i;
+	} else {
+		regs->reg_rc_roi.klut_ofst.chrm_klut_ofst = (sm == MPP_ENC_SCENE_MODE_IPC) ? 9 : 6;
+		lambda_idx = ctx->cfg->tune.lambda_idx_p;
 	}
 
 	if (sm == MPP_ENC_SCENE_MODE_IPC || sm == MPP_ENC_SCENE_MODE_IPC_PTZ)
