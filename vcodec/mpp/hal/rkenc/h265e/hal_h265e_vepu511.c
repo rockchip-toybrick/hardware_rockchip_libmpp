@@ -2124,19 +2124,21 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 	RK_S16 flag_cover = 0;
 	RK_S16 flag_bndry = 0;
 
-	static RK_U8 qp_strength[H265E_SMEAR_STR_NUM] = { 4, 6, 7, 7, 3, 5, 7, 7 };
-	static RK_U8 smear_strength[H265E_SMEAR_STR_NUM] = { 1, 1, 1, 1, 1, 1, 1, 1 };
+	static RK_U8 qp_strength[H265E_SMEAR_STR_NUM] = { 5, 5, 5, 5, 5, 5, 5, 5 };
+	static RK_U8 smear_strength[H265E_SMEAR_STR_NUM] = { 3, 3, 3, 3, 3, 3, 3, 3 };
 	static RK_U8 bndry_intra_r_dep0[H265E_SMEAR_STR_NUM] = { 240, 240, 240, 240, 240, 240, 240, 240 };
 	static RK_U8 bndry_intra_r_dep1[H265E_SMEAR_STR_NUM] = { 240, 240, 240, 240, 240, 240, 240, 240 };
-	static RK_U8 thre_madp_stc_cover0[H265E_SMEAR_STR_NUM] = { 20, 22, 22, 22, 20, 22, 22, 30 };
-	static RK_U8 thre_madp_stc_cover1[H265E_SMEAR_STR_NUM] = { 20, 22, 22, 22, 20, 22, 22, 30 };
-	static RK_U8 thre_madp_mov_cover0[H265E_SMEAR_STR_NUM] = { 10, 9, 9, 9, 10, 9, 9, 6 };
-	static RK_U8 thre_madp_mov_cover1[H265E_SMEAR_STR_NUM] = { 10, 9, 9, 9, 10, 9, 9, 6 };
 
-	static RK_U8 flag_cover_thd0[H265E_SMEAR_STR_NUM] = { 12, 13, 13, 13, 12, 13, 13, 17 };
-	static RK_U8 flag_cover_thd1[H265E_SMEAR_STR_NUM] = { 61, 70, 70, 70, 61, 70, 70, 90 };
+	static RK_U8 flag_cover_thd0[H265E_SMEAR_STR_NUM] = { 12, 13, 13, 17, 12, 13, 13, 17 };
+	static RK_U8 flag_cover_thd1[H265E_SMEAR_STR_NUM] = { 61, 70, 70, 90, 61, 70, 70, 90 };
 	static RK_U8 flag_bndry_thd0[H265E_SMEAR_STR_NUM] = { 12, 12, 12, 12, 12, 12, 12, 12 };
 	static RK_U8 flag_bndry_thd1[H265E_SMEAR_STR_NUM] = { 73, 73, 73, 73, 73, 73, 73, 73 };
+
+	static RK_U8 smear_cfc_en[H265E_SMEAR_STR_NUM] = {0, 0, 1, 1, 0, 0, 1, 1};
+	static RK_U8 thre_dsp_mov[H265E_SMEAR_STR_NUM] = {15, 15, 46, 46, 15, 15, 46, 46};
+	static RK_U8 thre_madp_mov_dep0[H265E_SMEAR_STR_NUM] = {16, 16, 48, 48, 16, 16, 48, 48};
+	static RK_U8 thre_madp_mov_dep1[H265E_SMEAR_STR_NUM] = {18, 18, 50, 50, 18, 18, 50, 50};
+	static RK_U8 thre_madp_mov_dep2[H265E_SMEAR_STR_NUM] = {20, 20, 52, 52, 20, 20, 52, 52};
 
 	static RK_S8 flag_cover_wgt[3] = { 1, 0, -3 };
 	static RK_S8 flag_bndry_wgt[3] = { 0, 0, 0 };
@@ -2155,12 +2157,13 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 					   (smear_strength[str] + flag_bndry_wgt[flag_bndry]) : smear_strength[str];
 
 	s->smear_opt_cfg0.thre_mv_inconfor_cime       = 8;
-	s->smear_opt_cfg0.thre_mv_confor_cime         = 2;
-	s->smear_opt_cfg0.thre_mv_inconfor_cime_gmv   = 0;
-	s->smear_opt_cfg0.thre_mv_confor_cime_gmv     = 2;
+	s->smear_opt_cfg0.thre_mv_confor_cime         = 0;
+	s->smear_opt_cfg0.thre_mv_inconfor_cime_gmv   = 8;
+	s->smear_opt_cfg0.thre_mv_confor_cime_gmv     = 0;
 	s->smear_opt_cfg0.thre_num_mv_confor_cime     = 3;
 	s->smear_opt_cfg0.thre_num_mv_confor_cime_gmv = 2;
 	s->smear_opt_cfg0.frm_static                  = 1;
+	s->smear_opt_cfg0.smear_cfc_en                = smear_cfc_en[str];
 
 	s->smear_opt_cfg0.smear_load_en = ((frm_num % gop == 0) ||
 					   (s->smear_opt_cfg0.frm_static == 0) || (frm_num % gop == 1)) ? 0 : 1;
@@ -2169,15 +2172,15 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 
 	s->smear_opt_cfg1.dist0_frm_avg               = 0;
 	s->smear_opt_cfg1.thre_dsp_static             = 10;
-	s->smear_opt_cfg1.thre_dsp_mov                = 15;
+	s->smear_opt_cfg1.thre_dsp_mov                = thre_dsp_mov[str];
 	s->smear_opt_cfg1.thre_dist_mv_confor_cime    = 32;
 
 	s->smear_madp_thd.thre_madp_stc_dep0          = 10;
 	s->smear_madp_thd.thre_madp_stc_dep1          = 8;
 	s->smear_madp_thd.thre_madp_stc_dep2          = 8;
-	s->smear_madp_thd.thre_madp_mov_dep0          = 16;
-	s->smear_madp_thd.thre_madp_mov_dep1          = 18;
-	s->smear_madp_thd.thre_madp_mov_dep2          = 20;
+	s->smear_madp_thd.thre_madp_mov_dep0          = thre_madp_mov_dep0[str];
+	s->smear_madp_thd.thre_madp_mov_dep1          = thre_madp_mov_dep1[str];
+	s->smear_madp_thd.thre_madp_mov_dep2          = thre_madp_mov_dep2[str];
 
 	s->smear_stat_thd.thre_num_pt_stc_dep0        = 47;
 	s->smear_stat_thd.thre_num_pt_stc_dep1        = 11;
@@ -2200,30 +2203,30 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 	s->smear_min_bndry_gmv.thre_min_num_inconfor_csu0_bndry_cime_gmv    = 0;
 	s->smear_min_bndry_gmv.thre_max_num_inconfor_csu0_bndry_cime_gmv    = 3;
 	s->smear_min_bndry_gmv.thre_split_dep0                              = 2;
-	s->smear_min_bndry_gmv.thre_zero_srgn                               = 0;
+	s->smear_min_bndry_gmv.thre_zero_srgn                               = 8;
 	s->smear_min_bndry_gmv.madi_thre_dep0                               = 22;
 	s->smear_min_bndry_gmv.madi_thre_dep1                               = 18;
 
-	s->smear_madp_cov_thd.thre_madp_stc_cover0    = thre_madp_stc_cover0[str];
-	s->smear_madp_cov_thd.thre_madp_stc_cover1    = thre_madp_stc_cover1[str];
-	s->smear_madp_cov_thd.thre_madp_mov_cover0    = thre_madp_mov_cover0[str];
-	s->smear_madp_cov_thd.thre_madp_mov_cover1    = thre_madp_mov_cover1[str];
+	s->smear_madp_cov_thd.thre_madp_stc_cover0    = 16;
+	s->smear_madp_cov_thd.thre_madp_stc_cover1    = 16;
+	s->smear_madp_cov_thd.thre_madp_mov_cover0    = 12;
+	s->smear_madp_cov_thd.thre_madp_mov_cover1    = 12;
 	s->smear_madp_cov_thd.smear_qp_strength       = qp_strength[str] +
 							flag_cover_wgt[flag_cover];
-	s->smear_madp_cov_thd.smear_thre_qp           = 30;
+	s->smear_madp_cov_thd.smear_thre_qp           = 25;
 
 	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d0   = bndry_intra_r_dep0[str] +
-							    flag_bndry_intra_wgt0[flag_bndry];
+							   flag_bndry_intra_wgt0[flag_bndry];
 	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d1   = bndry_intra_r_dep1[str] +
-							    flag_bndry_intra_wgt1[flag_bndry];
+							   flag_bndry_intra_wgt1[flag_bndry];
 
-	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d0 = 15;
-	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d1 = 14;
+	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d0 = 24;
+	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d1 = 24;
 	s->subj_opt_dqp1.smear_frame_thre_qp = 35;
-	s->smear_opt_rmd_intra.cover_rmd_mode_intra_jcoef_d0 = 8;
-	s->smear_opt_rmd_intra.cover_rmd_mode_intra_jcoef_d1 = 8;
-	s->smear_opt_rmd_intra.cover_rdo_mode_intra_jcoef_d0 = 12;
-	s->smear_opt_rmd_intra.cover_rdo_mode_intra_jcoef_d1 = 10;
+	s->smear_opt_rmd_intra.cover_rmd_mode_intra_jcoef_d0 = 16;
+	s->smear_opt_rmd_intra.cover_rmd_mode_intra_jcoef_d1 = 16;
+	s->smear_opt_rmd_intra.cover_rdo_mode_intra_jcoef_d0 = 16;
+	s->smear_opt_rmd_intra.cover_rdo_mode_intra_jcoef_d1 = 16;
 	s->smear_opt_rmd_intra.cover_rdoq_rcoef_d0 = 7;
 	s->smear_opt_rmd_intra.cover_rdoq_rcoef_d1 = 7;
 
