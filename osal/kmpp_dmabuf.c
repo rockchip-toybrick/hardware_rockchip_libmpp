@@ -134,6 +134,7 @@ rk_s32 osal_dmabuf_free(osal_dmabuf *dmabuf)
         osal_dmabuf_impl *buf = osal_dmabuf_to_impl(dmabuf);
         struct device *dev = dmabuf_to_device(dmabuf);
 
+        sg_free_table(buf->sgt);
         dma_free_attrs(dev, dmabuf->size, dmabuf->kaddr, dmabuf->daddr, DMA_ATTR_NO_WARN);
         osal_kfree(buf);
         return rk_ok;
