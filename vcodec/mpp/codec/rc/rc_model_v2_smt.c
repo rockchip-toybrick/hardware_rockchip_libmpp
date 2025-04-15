@@ -148,31 +148,46 @@ MPP_RET bits_model_smt_init(RcModelV2SmtCtx * ctx)
 	ctx->qp_min = 10;
 	ctx->qp_max = 51;
 
-	if (ctx->motion_level)
-		mpp_data_deinit_v2(ctx->motion_level);
+	bits_model_smt_deinit(ctx);
+
 	mpp_data_init_v2(&ctx->motion_level, mad_len, 0);
+	if (ctx->motion_level == NULL) {
+		mpp_err("motion_level init fail");
+		return MPP_ERR_MALLOC;
+	}
 
-	if (ctx->complex_level)
-		mpp_data_deinit_v2(ctx->complex_level);
 	mpp_data_init_v2(&ctx->complex_level, mad_len, 0);
+	if (ctx->complex_level == NULL) {
+		mpp_err("complex_level init fail");
+		return MPP_ERR_MALLOC;
+	}
 
-	if (ctx->stat_bits)
-		mpp_data_deinit_v2(ctx->stat_bits);
 	mpp_data_init_v2(&ctx->stat_bits, stat_len, ctx->bits_per_phr);
+	if (ctx->stat_bits == NULL) {
+		mpp_err("stat_bits init fail");
+		return MPP_ERR_MALLOC;
+	}
 
-	if (ctx->pid_plr)
-		mpp_data_deinit_v2(ctx->pid_plr);
 	mpp_data_init_v2(&ctx->pid_plr, stat_len, 0);
+	if (ctx->pid_plr == NULL) {
+		mpp_err("pid_plr init fail");
+		return MPP_ERR_MALLOC;
+	}
 
-	if (ctx->pid_phr)
-		mpp_data_deinit_v2(ctx->pid_phr);
 	mpp_data_init_v2(&ctx->pid_phr, stat_len, 0);
+	if (ctx->pid_phr == NULL) {
+		mpp_err("pid_phr init fail");
+		return MPP_ERR_MALLOC;
+	}
 
 	{
 		RK_S32 qp_stat_len = nfps < 15 ? 4 * nfps : (nfps < 25 ? 3 * nfps : 2 * nfps);
-		if (ctx->qp_p)
-			mpp_data_deinit(ctx->qp_p);
+
 		mpp_data_init(&ctx->qp_p, mpp_clip(MPP_MAX(gop_len, qp_stat_len), 20, 50));
+		if (ctx->qp_p == NULL) {
+			mpp_err("qp_p init fail");
+			return MPP_ERR_MALLOC;
+		}
 	}
 
 	/* 3 frames for luma average */
