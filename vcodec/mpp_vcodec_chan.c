@@ -325,10 +325,12 @@ int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
 	enc_packet->u64pts = mpp_packet_get_pts(packet);
 	enc_packet->u64dts = mpp_packet_get_dts(packet);
 	enc_packet->data_num = 1;
-	enc_packet->u64priv_data = mpp_buffer_get_uaddr(packet->buf.buf);
-	enc_packet->offset = packet->buf.start_offset;
 	enc_packet->u64packet_addr = (uintptr_t )packet;
-	enc_packet->buf_size = mpp_buffer_get_size(packet->buf.buf);
+	if (packet->buf.buf) {
+		enc_packet->u64priv_data = mpp_buffer_get_uaddr(packet->buf.buf);
+		enc_packet->offset = packet->buf.start_offset;
+		enc_packet->buf_size = mpp_buffer_get_size(packet->buf.buf);
+	}
 
 	chan_entry->seq_user_get = mpp_packet_get_dts(packet);
 	atomic_inc(&chan_entry->str_out_cnt);
@@ -401,6 +403,16 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 	if (info->fd) {
 		buf_info.fd = info->fd;
 		mpp_buffer_import(&buffer, &buf_info);
+	}
+	if (info->eos && info->fd > 0) {
+		MppPacket packet = NULL;
+
+		mpp_packet_new(&packet);
+		mpp_packet_set_eos(packet);
+		mpp_packet_set_pts(packet, info->pts);
+		mpp_packet_set_dts(packet, info->dts);
+		mpp_vcodec_enc_add_packet_list(chan_entry, packet);
+		return 0;
 	}
 	kmpp_frame_get(&frame);
 	kmpp_frame_set_width(frame, info->width);
