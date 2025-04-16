@@ -1888,6 +1888,7 @@ static void vepu511_h265_set_atf_regs(H265eV511HalContext *ctx)
 	reg->rdo_b32_skip.atf_thd0.flckr_en = !!str;
 	reg->rdo_b32_skip.atf_thd0.flckr_frame_qp_en = !!str;
 	reg->rdo_b32_skip.atf_thd0.flckr_lgt_chng_en = !!str;
+	reg->subj_opt_cfg.thre_sum_grdn_point = 1800;
 
 	if (str == 0)
 		return;
