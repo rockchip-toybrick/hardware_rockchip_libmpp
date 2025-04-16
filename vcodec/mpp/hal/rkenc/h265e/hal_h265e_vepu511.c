@@ -2034,7 +2034,7 @@ static void vepu511_h265_set_atr_regs(H265eV511HalContext *ctx)
 
 	s->subj_opt_cfg.subj_opt_en = 1;
 	s->subj_opt_cfg.subj_opt_strength = 3;
-	s->subj_opt_cfg.aq_subj_en = 0;
+	s->subj_opt_cfg.aq_subj_en = 1;
 	s->subj_opt_cfg.aq_subj_strength = 4;
 	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep0   = 64;
 	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep1   = 32;
