@@ -269,8 +269,8 @@ void kmpp_dmaheap_init(void)
                 return;
             }
 
-            osal_spinlock_assign(&heaps->lock, (void *)(heaps + 1), lock_size);
-            osal_mutex_assign(&heaps->mutex, (void *)heaps->lock + lock_size, mutex_size);
+            osal_mutex_assign(&heaps->mutex, (void *)(heaps + 1), mutex_size);
+            osal_spinlock_assign(&heaps->lock, (void *)heaps->mutex + mutex_size, lock_size);
 
             heaps->info = info;
             heaps->find = find;
