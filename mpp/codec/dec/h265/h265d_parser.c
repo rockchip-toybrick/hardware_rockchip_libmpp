@@ -1531,7 +1531,7 @@ RK_S32 mpp_hevc_extract_rbsp(HEVCContext *s, const RK_U8 *src, int length,
     s->skipped_bytes = 0;
 
 #define STARTCODE_TEST                                              \
-    if (i + 2 < length && src[i + 1] == 0 && src[i + 2] < 2) {      \
+    if (i + 2 < length && src[i + 1] == 0 && src[i + 2] == 1) {     \
             /* startcode, so we must be past the end */             \
         length = i;                                                 \
         break;                                                      \
