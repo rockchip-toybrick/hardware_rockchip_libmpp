@@ -2785,8 +2785,10 @@ static void vepu511_h265_set_aq(H265eV511HalContext *ctx)
 	rc_regs->aq_clip.aq16_dif0 = aq_rnge[3];
 	rc_regs->aq_clip.aq16_dif1 = aq_rnge[4];
 
-	rc_regs->aq_clip.aq_rme_en = 1;
 	rc_regs->aq_clip.aq_cme_en = 1;
+	rc_regs->aq_clip.aq_subj_cme_en = 0;
+	rc_regs->aq_clip.aq_rme_en = 1;
+	rc_regs->aq_clip.aq_subj_rme_en = 1;
 }
 
 static void hal_h265e_vepu511_init_qpmap_buf(H265eV511HalContext *ctx)
