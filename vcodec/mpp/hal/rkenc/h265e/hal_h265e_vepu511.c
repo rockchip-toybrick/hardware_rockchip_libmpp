@@ -1231,7 +1231,7 @@ static void vepu511_h265_set_me_regs(H265eV511HalContext *ctx, H265eSyntax_new *
 	reg_frm->reg0221_me_cfg.cime_dist_thre    = 1024;
 	reg_frm->reg0221_me_cfg.rme_dis           = 0;
 	reg_frm->reg0221_me_cfg.fme_dis           = 0;
-	reg_frm->reg0220_me_rnge.dlt_frm_num      = 0x1;
+	reg_frm->reg0220_me_rnge.dlt_frm_num      = 0;
 
 	if (syn->pp.sps_temporal_mvp_enabled_flag && (ctx->frame_type != INTRA_FRAME)) {
 		if (ctx->last_frame_fb.frame_type == INTRA_FRAME)
@@ -1247,12 +1247,12 @@ static void vepu511_h265_set_me_regs(H265eV511HalContext *ctx, H265eSyntax_new *
 
 	/* CIME: 0x1760 - 0x176C */
 	s->me_sqi_cfg.cime_pmv_num = 1;
-	s->me_sqi_cfg.cime_fuse   = 1;
+	s->me_sqi_cfg.cime_fuse   = 0;
 	s->me_sqi_cfg.move_lambda = 2;
 	s->me_sqi_cfg.rime_lvl_mrg     = 0;
-	s->me_sqi_cfg.rime_prelvl_en   = 0;
+	s->me_sqi_cfg.rime_prelvl_en   = 3;
 	s->me_sqi_cfg.rime_prersu_en   = 0;
-	s->me_sqi_cfg.fme_lvl_mrg = 1;
+	s->me_sqi_cfg.fme_lvl_mrg = 0;
 
 	s->cime_mvd_th.cime_mvd_th0 = 8;
 	s->cime_mvd_th.cime_mvd_th1 = 20;
@@ -1268,7 +1268,7 @@ static void vepu511_h265_set_me_regs(H265eV511HalContext *ctx, H265eSyntax_new *
 	/* RFME: 0x1770 - 0x177C */
 	s->rime_mvd_th.rime_mvd_th0  = 1;
 	s->rime_mvd_th.rime_mvd_th1  = 2;
-	s->rime_mvd_th.fme_madp_th = 0;
+	s->rime_mvd_th.fme_madp_th   = 10;
 	s->rime_madp_th.rime_madp_th0 = 8;
 	s->rime_madp_th.rime_madp_th1 = 16;
 	s->rime_multi.rime_multi0 = 4;
@@ -1279,6 +1279,7 @@ static void vepu511_h265_set_me_regs(H265eV511HalContext *ctx, H265eSyntax_new *
 	s->cmv_st_th.cmv_th2 = 128;
 
 	if (ctx->cfg->tune.scene_mode != MPP_ENC_SCENE_MODE_IPC) {
+		s->me_sqi_cfg.move_lambda = 8;
 		s->cime_madp_th.cime_madp_th = 0;
 		s->rime_madp_th.rime_madp_th0 = 0;
 		s->rime_madp_th.rime_madp_th1 = 0;
@@ -1295,13 +1296,9 @@ static void vepu511_h265_set_me_regs(H265eV511HalContext *ctx, H265eSyntax_new *
 		s->cime_multi.cime_multi2 = 8;
 		s->cime_multi.cime_multi3 = 12;
 		s->rime_multi.rime_multi0 = 4;
-		s->rime_multi.rime_multi1 = 6;
-		s->rime_multi.rime_multi2 = 8;
+		s->rime_multi.rime_multi1 = 4;
+		s->rime_multi.rime_multi2 = 4;
 	}
-
-	s->rime_multi.rime_multi0   = 0;
-	s->rime_multi.rime_multi1   = 0;
-	s->rime_multi.rime_multi2   = 0;
 }
 
 static void setup_recn_refr_wrap(H265eV511HalContext *ctx, HevcVepu511Frame *regs, HalEncTask *task)
