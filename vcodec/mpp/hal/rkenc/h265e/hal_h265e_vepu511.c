@@ -2148,8 +2148,8 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 
 	static RK_U8 qp_strength[H265E_SMEAR_STR_NUM] = { 5, 5, 5, 5, 5, 5, 5, 5 };
 	static RK_U8 smear_strength[H265E_SMEAR_STR_NUM] = { 3, 3, 3, 3, 3, 3, 3, 3 };
-	static RK_U8 bndry_intra_r_dep0[H265E_SMEAR_STR_NUM] = { 240, 240, 240, 240, 240, 240, 240, 240 };
-	static RK_U8 bndry_intra_r_dep1[H265E_SMEAR_STR_NUM] = { 240, 240, 240, 240, 240, 240, 240, 240 };
+	static RK_U8 bndry_intra_r_dep0[H265E_SMEAR_STR_NUM] = { 24, 24, 24, 24, 24, 24, 24, 24 };
+	static RK_U8 bndry_intra_r_dep1[H265E_SMEAR_STR_NUM] = { 24, 24, 24, 24, 24, 24, 24, 24 };
 
 	static RK_U8 flag_cover_thd0[H265E_SMEAR_STR_NUM] = { 12, 13, 13, 17, 12, 13, 13, 17 };
 	static RK_U8 flag_cover_thd1[H265E_SMEAR_STR_NUM] = { 61, 70, 70, 90, 61, 70, 70, 90 };
@@ -2242,8 +2242,6 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d1   = bndry_intra_r_dep1[str] +
 							   flag_bndry_intra_wgt1[flag_bndry];
 
-	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d0 = 24;
-	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d1 = 24;
 	s->subj_opt_dqp1.smear_frame_thre_qp = 35;
 	s->smear_opt_rmd_intra.cover_rmd_mode_intra_jcoef_d0 = 16;
 	s->smear_opt_rmd_intra.cover_rmd_mode_intra_jcoef_d1 = 16;
