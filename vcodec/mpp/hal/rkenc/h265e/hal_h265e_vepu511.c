@@ -793,24 +793,14 @@ static MPP_RET vepu511_h265_set_rc_regs(H265eV511HalContext *ctx, H265eV511RegSe
 		reg_rc->roi_qthd3.qpmax_area7 = h265->qpmax_map[7] > 0 ? h265->qpmax_map[7] : rc_cfg->quality_max;
 	}
 
-	if (ctx->frame_type == INTRA_FRAME) {
-		reg_rc->fmdc_adj1.fmdc_adju_split32 = 0;
-	} else {
-		if (ctx->cfg->tune.speed == 0) 	    // 0.63ppc
-			reg_rc->fmdc_adj1.fmdc_adju_split32 = 0;
-		else if (ctx->cfg->tune.speed == 1) // 0.65ppc
-			reg_rc->fmdc_adj1.fmdc_adju_split32 = 0;
-		else if (ctx->cfg->tune.speed == 2) // 0.67ppc
- 			reg_rc->fmdc_adj1.fmdc_adju_split32 = 0;
-		else				    // 0.7ppc
-			reg_rc->fmdc_adj1.fmdc_adju_split32 = 1;
-	}
-
 	return MPP_OK;
 }
 
 static MPP_RET vepu511_h265_set_rdo_regs(H265eV511HalContext *ctx, H265eV511RegSet *regs)
 {
+	static RK_U32 fmdc_adju_split32[4] = { 0, 0, 0, 1 };
+	static RK_U32 fmdc_adju_intra32[4] = { 0, 0, 15, 0 };
+
 	HevcVepu511RcRoi *reg_rc = &regs->reg_rc_roi;
 	(void)ctx;
 
@@ -922,6 +912,28 @@ static MPP_RET vepu511_h265_set_rdo_regs(H265eV511HalContext *ctx, H265eV511RegS
 	reg_rc->cudecis_thd12.delta5_thre_cme32_static_inter = 11;
 	reg_rc->cudecis_thd12.delta6_thre_cme32_static_inter = 12;
 	reg_rc->cudecis_thd12.delta7_thre_cme32_static_inter = 15;
+
+	reg_rc->fmdc_adj1.fmdc_adju_split32 = 0;
+	reg_rc->fmdc_adj1.fmdc_adju_intra32 = 0;
+
+	if (ctx->frame_type == INTER_P_FRAME) {
+		RK_U32 speed_idx = ctx->cfg->tune.speed;
+
+		// 0 - 0.63ppc; 1 - 0.68ppc; 2 - 0.69ppc; 3 - 0.7ppc
+		reg_rc->fmdc_adj1.fmdc_adju_split32 = fmdc_adju_split32[speed_idx];
+		reg_rc->fmdc_adj1.fmdc_adju_intra32 = fmdc_adju_intra32[speed_idx];
+
+		if (speed_idx >= 1) {
+			reg_rc->cudecis_thd9.base_thre_fme32_inter    = 0;
+			reg_rc->cudecis_thd9.delta0_thre_fme32_inter  = 0;
+			reg_rc->cudecis_thd9.delta1_thre_fme32_inter  = 0;
+			reg_rc->cudecis_thd9.delta2_thre_fme32_inter  = 0;
+			reg_rc->cudecis_thd10.delta3_thre_fme32_inter = 0;
+			reg_rc->cudecis_thd10.delta4_thre_fme32_inter = 0;
+			reg_rc->cudecis_thd10.delta5_thre_fme32_inter = 0;
+			reg_rc->cudecis_thd10.delta6_thre_fme32_inter = 0;
+		}
+	}
 
 	return MPP_OK;
 }
@@ -1165,14 +1177,10 @@ static void vepu511_h265_set_slice_regs(H265eV511HalContext *ctx, H265eSyntax_ne
 	regs->reg0240_synt_sli1.sli_cb_qp_ofst = syn->pp.pps_slice_chroma_qp_offsets_present_flag ?
 						 syn->sp.sli_cb_qp_ofst : syn->pp.pps_cb_qp_offset;
 
-	if (ctx->cfg->tune.speed == 0) 	    // 0.63ppc
+	if (ctx->cfg->tune.speed == 0) // 0.63ppc
 		regs->reg0240_synt_sli1.max_mrg_cnd = 3;
-	else if (ctx->cfg->tune.speed == 1) // 0.65ppc
+	else
 		regs->reg0240_synt_sli1.max_mrg_cnd = 2;
-	else if (ctx->cfg->tune.speed == 2) // 0.67ppc
-		regs->reg0240_synt_sli1.max_mrg_cnd = 1;
-	else   			            // 0.7ppc
-		regs->reg0240_synt_sli1.max_mrg_cnd = 3;
 
 	regs->reg0240_synt_sli1.col_ref_idx           = syn->sp.col_ref_idx;
 	regs->reg0240_synt_sli1.col_frm_l0_flg        = syn->sp.col_frm_l0_flg;
@@ -1688,6 +1696,13 @@ static void vepu511_h265_set_split(H265eV511RegSet *regs, MppEncCfgSet *enc_cfg)
 
 static MPP_RET vepu511_h265_set_prep(void *hal, HalEncTask *task)
 {
+	static RK_U32 cu_inter_e[4] = { (3 << 6) | (3 << 3) | (3 << 0), (1 << 6) | (3 << 3) | (3 << 0),
+					(1 << 6) | (3 << 3) | (3 << 0), (0 << 6) | (3 << 3) | (3 << 0) };
+	static RK_U32 intra_pu4_mode_num[4]  = { 2, 1, 1, 1 };
+	static RK_U32 intra_pu8_mode_num[4]  = { 2, 1, 1, 1 };
+	static RK_U32 intra_pu16_mode_num[4] = { 2, 1, 1, 1 };
+	static RK_U32 intra_pu32_mode_num[4] = { 2, 1, 1, 1 };
+
 	H265eV511HalContext *ctx = (H265eV511HalContext *)hal;
 	H265eV511RegSet *regs = ctx->regs;
 	HevcVepu511Frame *reg_frm = &regs->reg_frm;
@@ -1734,38 +1749,21 @@ static MPP_RET vepu511_h265_set_prep(void *hal, HalEncTask *task)
 	* - Set fmdc_adju_split32 = 0, enable CU32 block prediction.
 	*   Setting fmdc_adju_split32 = 1 restricts prediction to CU16/8 only, improving real-time performance.
 	*/
-	if (ctx->frame_type == INTRA_FRAME) {
-		reg_frm->reg0232_rdo_cfg.cu_inter_e = (3 << 6) | (3 << 3) | (3 << 0);
-		reg_frm->reg0233_rdo_intra_mode.intra_pu4_mode_num  = 2;
-		reg_frm->reg0233_rdo_intra_mode.intra_pu8_mode_num  = 2;
-		reg_frm->reg0233_rdo_intra_mode.intra_pu16_mode_num = 2;
-		reg_frm->reg0233_rdo_intra_mode.intra_pu32_mode_num = 2;
-	} else {
-		if (ctx->cfg->tune.speed == 0) { 	// 0.63ppc
-			reg_frm->reg0232_rdo_cfg.cu_inter_e = (3 << 6) | (3 << 3) | (3 << 0);
-			reg_frm->reg0233_rdo_intra_mode.intra_pu4_mode_num  = 2;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu8_mode_num  = 2;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu16_mode_num = 2;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu32_mode_num = 2;
-		} else if (ctx->cfg->tune.speed == 1) { // 0.65ppc
-			reg_frm->reg0232_rdo_cfg.cu_inter_e = (1 << 6) | (2 << 3) | (2 << 0);
-			reg_frm->reg0233_rdo_intra_mode.intra_pu4_mode_num  = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu8_mode_num  = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu16_mode_num = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu32_mode_num = 1;
-		} else if (ctx->cfg->tune.speed == 2) { // 0.67ppc
-			reg_frm->reg0232_rdo_cfg.cu_inter_e = (1 << 6) | (3 << 3) | (2 << 0);
-			reg_frm->reg0233_rdo_intra_mode.intra_pu4_mode_num  = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu8_mode_num  = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu16_mode_num = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu32_mode_num = 1;
-		} else {				// 0.7ppc
-			reg_frm->reg0232_rdo_cfg.cu_inter_e = (0 << 6) | (3 << 3) | (3 << 0);
-			reg_frm->reg0233_rdo_intra_mode.intra_pu4_mode_num  = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu8_mode_num  = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu16_mode_num = 1;
-			reg_frm->reg0233_rdo_intra_mode.intra_pu32_mode_num = 1;
-		}
+	reg_frm->reg0232_rdo_cfg.cu_inter_e = (3 << 6) | (3 << 3) | (3 << 0);
+	reg_frm->reg0233_rdo_intra_mode.intra_pu4_mode_num  = 2;
+	reg_frm->reg0233_rdo_intra_mode.intra_pu8_mode_num  = 2;
+	reg_frm->reg0233_rdo_intra_mode.intra_pu16_mode_num = 2;
+	reg_frm->reg0233_rdo_intra_mode.intra_pu32_mode_num = 2;
+
+	if (ctx->frame_type == INTER_P_FRAME) {
+		RK_U32 speed_idx = ctx->cfg->tune.speed;
+
+		// 0 - 0.63ppc; 1 - 0.68ppc; 2 - 0.69ppc; 3 - 0.7ppc
+		reg_frm->reg0232_rdo_cfg.cu_inter_e = cu_inter_e[speed_idx];
+		reg_frm->reg0233_rdo_intra_mode.intra_pu4_mode_num  = intra_pu4_mode_num[speed_idx];
+		reg_frm->reg0233_rdo_intra_mode.intra_pu8_mode_num  = intra_pu8_mode_num[speed_idx];
+		reg_frm->reg0233_rdo_intra_mode.intra_pu16_mode_num = intra_pu16_mode_num[speed_idx];
+		reg_frm->reg0233_rdo_intra_mode.intra_pu32_mode_num = intra_pu32_mode_num[speed_idx];
 	}
 
 	if (syn->pp.num_long_term_ref_pics_sps) {

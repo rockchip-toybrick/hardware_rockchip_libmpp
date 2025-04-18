@@ -107,6 +107,7 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 	p->cfg->tune.madp16_th = 15;
 	p->cfg->tune.skip16_wgt = 6;
 	p->cfg->tune.skip32_wgt = 6;
+	p->cfg->tune.speed = 1;
 
 	/*
 	 * default prep:
