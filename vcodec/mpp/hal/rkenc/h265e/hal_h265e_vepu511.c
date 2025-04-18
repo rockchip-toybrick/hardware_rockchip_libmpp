@@ -1885,7 +1885,6 @@ static void vepu511_h265_set_atf_regs(H265eV511HalContext *ctx)
 	reg->rdo_b32_skip.atf_thd0.flckr_en = !!str;
 	reg->rdo_b32_skip.atf_thd0.flckr_frame_qp_en = !!str;
 	reg->rdo_b32_skip.atf_thd0.flckr_lgt_chng_en = !!str;
-	reg->subj_opt_cfg.thre_sum_grdn_point = 1800;
 
 	if (str == 0)
 		return;
@@ -2029,14 +2028,6 @@ static void vepu511_h265_set_atr_regs(H265eV511HalContext *ctx)
 		s->line_opt_cfg.line_en = 1;
 	}
 
-	s->subj_opt_cfg.subj_opt_en = 1;
-	s->subj_opt_cfg.subj_opt_strength = 3;
-	s->subj_opt_cfg.aq_subj_en = 1;
-	s->subj_opt_cfg.aq_subj_strength = 4;
-	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep0   = 64;
-	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep1   = 32;
-	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep2   = 16;
-
 	if (str == 3) {
 		s->block_opt_cfg.block_thre_cst_best_mad      = 1000;
 		s->block_opt_cfg.block_thre_cst_best_grdn_blk = 39;
@@ -2071,8 +2062,6 @@ static void vepu511_h265_set_atr_regs(H265eV511HalContext *ctx)
 
         	s->subj_opt_rdo_split.line_rdo_split_rcoef_d0 = 11;
         	s->subj_opt_rdo_split.line_rdo_split_rcoef_d1 = 12;
-        	s->subj_opt_rdo_split.choose_cu32_split_jcoef = 16;
-        	s->subj_opt_rdo_split.choose_cu16_split_jcoef = 8;
 	} else if (str == 2) {
 		s->block_opt_cfg.block_thre_cst_best_mad      = 1000;
 		s->block_opt_cfg.block_thre_cst_best_grdn_blk = 39;
@@ -2107,8 +2096,6 @@ static void vepu511_h265_set_atr_regs(H265eV511HalContext *ctx)
 
         	s->subj_opt_rdo_split.line_rdo_split_rcoef_d0 = 11;
         	s->subj_opt_rdo_split.line_rdo_split_rcoef_d1 = 13;
-        	s->subj_opt_rdo_split.choose_cu32_split_jcoef = 16;
-       		s->subj_opt_rdo_split.choose_cu16_split_jcoef = 8;
 	} else {
 		s->block_opt_cfg.block_thre_cst_best_mad      = 1000;
 		s->block_opt_cfg.block_thre_cst_best_grdn_blk = 39;
@@ -2143,8 +2130,6 @@ static void vepu511_h265_set_atr_regs(H265eV511HalContext *ctx)
 
 		s->subj_opt_rdo_split.line_rdo_split_rcoef_d0 = 11;
 		s->subj_opt_rdo_split.line_rdo_split_rcoef_d1 = 13;
-		s->subj_opt_rdo_split.choose_cu32_split_jcoef = 16;
-		s->subj_opt_rdo_split.choose_cu16_split_jcoef = 8;
 	}
 }
 
@@ -2273,9 +2258,6 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 	s->smear_opt_cfg_coef.cfc_rdo_mode_intra_jcoef_d1 = 20;
 	s->smear_opt_cfg_coef.cfc_rdoq_rcoef_d0 = 7;
 	s->smear_opt_cfg_coef.cfc_rdoq_rcoef_d1 = 7;
-
-	s->subj_opt_rdo_split.choose_cu32_split_jcoef = 20;
-	s->subj_opt_rdo_split.choose_cu16_split_jcoef = 8;
 }
 
 static void vepu511_h265_tune_md_info(H265eV511HalContext *ctx)
@@ -2816,6 +2798,31 @@ static void hal_h265e_vepu511_init_qpmap_buf(H265eV511HalContext *ctx)
 	mpp_assert(ctx->mv_flag);
 }
 
+static void vepu511_h265_set_subj_opt_regs(H265eV511HalContext *ctx)
+{
+	H265eV511RegSet *regs = ctx->regs;
+	HevcVepu511Sqi *s = &regs->reg_sqi;
+
+	s->subj_opt_cfg.subj_opt_en = 1;
+	s->subj_opt_cfg.subj_opt_strength = 3;
+	s->subj_opt_cfg.aq_subj_en = 1;
+	s->subj_opt_cfg.aq_subj_strength = 4;
+	s->subj_opt_cfg.thre_sum_grdn_point = 1800;
+	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep0   = 64;
+	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep1   = 32;
+	s->subj_opt_dpth_thd.common_thre_num_grdn_point_dep2   = 16;
+
+	// Set the RDO split cost coefficient.
+	// Priority: smear takes precedence over anti-ring.
+	if (s->smear_opt_cfg0.anti_smear_en == 1) {
+		s->subj_opt_rdo_split.choose_cu32_split_jcoef = 20;
+		s->subj_opt_rdo_split.choose_cu16_split_jcoef = 8;
+	} else if (s->line_opt_cfg.line_en == 1) {
+		s->subj_opt_rdo_split.choose_cu32_split_jcoef = 16;
+		s->subj_opt_rdo_split.choose_cu16_split_jcoef = 8;
+	}
+}
+
 MPP_RET hal_h265e_v511_gen_regs(void *hal, HalEncTask *task)
 {
 	H265eV511HalContext *ctx = (H265eV511HalContext *)hal;
@@ -2870,6 +2877,8 @@ MPP_RET hal_h265e_v511_gen_regs(void *hal, HalEncTask *task)
 		    (ctx->cfg->tune.scene_mode == MPP_ENC_SCENE_MODE_IPC))
 			vepu511_h265_tune_qpmap(ctx);
 	}
+
+	vepu511_h265_set_subj_opt_regs(ctx);
 
 	if (ctx->osd_cfg.osd_data3) {
 		vepu511_set_osd(&ctx->osd_cfg);
