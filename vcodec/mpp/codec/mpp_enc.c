@@ -315,8 +315,17 @@ MPP_RET mpp_enc_online_task_failed(MppEnc ctx)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	u32 connect = 0;
+	MPP_RET ret = MPP_OK;
 
-	return mpp_dev_chnl_control(enc->dev, MPP_CMD_VEPU_CONNECT_DVBM, &connect);
+	down(&enc->enc_sem);
+	if (enc->stop_flag) {
+		up(&enc->enc_sem);
+		return MPP_NOK;
+	}
+	ret = mpp_dev_chnl_control(enc->dev, MPP_CMD_VEPU_CONNECT_DVBM, &connect);
+	up(&enc->enc_sem);
+
+	return ret;
 }
 
 MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet)

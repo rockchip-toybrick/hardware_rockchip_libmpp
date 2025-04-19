@@ -166,6 +166,7 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 	} break;
 	case MPP_CTX_ENC: {
 		bool wait = true;
+		KmppFrame frame = NULL;
 
 		mpp_log("destroy chan %d hnd %p online %d combo %d mst %d\n",
 			chan_id, chan_entry->handle, chan_entry->cfg.online,
@@ -192,18 +193,34 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 		if (chan_entry->cfg.online)
 			mpp_vcodec_chan_unbind(chan_entry);
 		mutex_lock(&chan_entry->chan_debug_lock);
-		if (chan_entry->frame) {
+		frame = osal_force_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
+		if (frame) {
 			KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
 			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+			KmppShmPtr sptr;
+			KmppFrame comb_frame = NULL;
+
+			if (!kmpp_frame_get_meta(frame, &sptr)) {
+				KmppMeta meta = sptr.kptr;
+				kmpp_meta_get_obj_d(meta, KEY_COMBO_FRAME, &comb_frame, NULL);
+				if (comb_frame) {
+					ntfy_impl->chan_id = chan_entry->binder_chan_id;
+					ntfy_impl->frame = comb_frame;
+
+					ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+					ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
+					kmpp_venc_notify(ntfy);
+					kmpp_frame_put(comb_frame);
+				}
+			}
 
 			ntfy_impl->chan_id = chan_id;
-			ntfy_impl->frame = chan_entry->frame;
+			ntfy_impl->frame = frame;
 
 			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
 			ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
 			kmpp_venc_notify(ntfy);
-			kmpp_frame_put(chan_entry->frame);
-			chan_entry->frame = NULL;
+			kmpp_frame_put(frame);
 		}
 		mpp_vcodec_stream_clear(chan_entry);
 		mpp_enc_deinit(chan_entry->handle);

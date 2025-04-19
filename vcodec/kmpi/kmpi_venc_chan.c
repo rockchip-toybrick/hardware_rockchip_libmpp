@@ -241,16 +241,17 @@ rk_s32 kmpp_venc_chan_put_frm(KmppChanId id, KmppFrame frm)
         spin_unlock_irqrestore(&chan->chan_lock, flags);
         return MPP_NOK;
     }
-    spin_unlock_irqrestore(&chan->chan_lock, flags);
 
     venc = mpp_vcodec_get_enc_module_entry();
     thd = venc->thd;
     if (osal_cmpxchg(&chan->frame, chan->frame, chan->frame)) {
         mpp_err_f("chan %d frame %p is busy\n", chan_id, chan->frame);
+        spin_unlock_irqrestore(&chan->chan_lock, flags);
         vcodec_thread_trigger(thd);
         return MPP_NOK;
     }
     osal_cmpxchg(&chan->frame, chan->frame, frm);
+    spin_unlock_irqrestore(&chan->chan_lock, flags);
     vcodec_thread_trigger(thd);
 
     return 0;

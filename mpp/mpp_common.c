@@ -317,11 +317,12 @@ static void mpp_task_timeout_work(struct work_struct *work_s)
 		return;
 	}
 
-	mpp_err("session %d:%d task %d state %#lx processing time out!\n",
-		session->device_type, session->index, task->task_index, task->state);
-
+	mpp_err("chan %d session %d:%d task %d state %#lx processing time out!\n",
+		session->chn_id, session->device_type, session->index, task->task_index, task->state);
+	mpp_dev_debug |= DEBUG_DUMP_ERR_REG;
 	if (mpp && mpp->var->dev_ops->dump_dev)
 		mpp->var->dev_ops->dump_dev(mpp);
+	mpp_dev_debug &= DEBUG_DUMP_ERR_REG;
 	/* hardware maybe dead, reset it */
 	mpp_reset_up_read(mpp->reset_group);
 	mpp_dev_reset(mpp);
@@ -333,12 +334,14 @@ static void mpp_task_timeout_work(struct work_struct *work_s)
 	wake_up(&task->wait);
 
 	/* remove task from taskqueue running list */
-	mpp_taskqueue_pop_running(mpp->queue, task);
 	mpp_iommu_dev_deactivate(mpp->iommu_info, mpp);
 	enable_irq(mpp->irq);
-	if (session->callback && clbk_en)
-		session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
-
+	if (IS_ENABLED(RKVEPU500_ENABLE) || IS_ENABLED(RKVEPU540C_ENABLE)) {
+		mpp_taskqueue_pop_running(mpp->queue, task);
+		if (session->callback && clbk_en)
+			session->callback(session->chn_id, MPP_VCODEC_EVENT_FRAME, NULL);
+	}
+	mpp_taskqueue_trigger_work(mpp);
 }
 
 static int mpp_process_task_default(struct mpp_session *session,

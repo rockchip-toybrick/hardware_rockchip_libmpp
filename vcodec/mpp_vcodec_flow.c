@@ -80,6 +80,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		}
 		if (comb_frame) {
 			RK_S32 jpeg_chan_id = -1;
+			RK_S32 drop = 0;
 
 			if (!kmpp_frame_get_meta(comb_frame, &sptr)) {
 				KmppMeta comb_meta = sptr.kptr;
@@ -88,20 +89,33 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 
 			mpp_vcodec_jpegcomb("attach jpeg id %d\n", jpeg_chan_id);
 			comb_chan = mpp_vcodec_get_chan_entry(jpeg_chan_id, MPP_CTX_ENC);
-			spin_lock_irqsave(&comb_chan->chan_lock, lock_flag);
-			if (comb_chan->state != CHAN_STATE_RUN)
-				comb_chan = NULL;
-
-			if (comb_chan && atomic_read(&comb_chan->runing) > 0) {
-				mpp_err_f("chan %d combo chan %d state is wating irq\n",
-					  chan_id, jpeg_chan_id);
-				comb_chan = NULL;
-			}
 			if (comb_chan) {
+				spin_lock_irqsave(&comb_chan->chan_lock, lock_flag);
+				if (comb_chan->state != CHAN_STATE_RUN)
+					drop = 1;
+
+				if (atomic_read(&comb_chan->runing) > 0) {
+					mpp_err_f("chan %d combo chan %d state is wating irq\n",
+						  chan_id, jpeg_chan_id);
+					drop = 1;
+				}
 				atomic_inc(&comb_chan->runing);
 				atomic_inc(&chan_entry->cfg.comb_runing);
+				spin_unlock_irqrestore(&comb_chan->chan_lock, lock_flag);
 			}
-			spin_unlock_irqrestore(&comb_chan->chan_lock, lock_flag);
+			if (drop) {
+				KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
+				KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+				ntfy_impl->chan_id = comb_chan->chan_id;
+				ntfy_impl->frame = comb_frame;
+				kmpp_venc_notify(ntfy);
+				kmpp_frame_put(comb_frame);
+				comb_frame = NULL;
+				comb_chan = NULL;
+			}
 
 			if (comb_chan && comb_chan->handle) {
 				chan_entry->combo_gap_time = (RK_S32)(mpp_time() - chan_entry->last_jeg_combo_start);
