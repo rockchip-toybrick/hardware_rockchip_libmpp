@@ -594,11 +594,11 @@ static MPP_RET smt_start_prepare(void *ctx, EncRcTask *task, RK_S32 *fm_min_iqp,
 			if (p->last_frame_type == INTRA_FRAME) {
 				RK_S32 bits_prev_i = p->intra_prerealbit;
 
-				p->bits_per_plr = (b_min * p->igop / fps_out - bits_prev_i +
-						   p->pre_gop_left_bit) / (p->igop - 1);
+				p->bits_per_plr = ((RK_S32)div64_s64((RK_S64)b_min * p->igop, fps_out) -
+									bits_prev_i + p->pre_gop_left_bit) / (p->igop - 1);
 				p->bits_target_lr = p->bits_per_plr;
-				p->bits_per_phr = (b_max * p->igop / fps_out - bits_prev_i +
-						   p->pre_gop_left_bit) / (p->igop - 1);
+				p->bits_per_phr = ((RK_S32)div64_s64((RK_S64)b_max * p->igop, fps_out) -
+									bits_prev_i + p->pre_gop_left_bit) / (p->igop - 1);
 				p->bits_target_hr = p->bits_per_phr;
 			} else {
 				RK_S32 diff_bit_lr = mpp_data_mean_v2(p->pid_plr);
