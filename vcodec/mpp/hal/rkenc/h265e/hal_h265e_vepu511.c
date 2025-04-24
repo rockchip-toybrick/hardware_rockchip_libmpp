@@ -2240,20 +2240,15 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 	s->subj_opt_dqp1.bndry_rdo_mode_intra_jcoef_d1   = bndry_intra_r_dep1[str] +
 							   flag_bndry_intra_wgt1[flag_bndry];
 
-	s->subj_opt_dqp1.smear_frame_thre_qp = 35;
 	s->smear_opt_rmd_intra.cover_rmd_mode_intra_jcoef_d0 = 16;
 	s->smear_opt_rmd_intra.cover_rmd_mode_intra_jcoef_d1 = 16;
 	s->smear_opt_rmd_intra.cover_rdo_mode_intra_jcoef_d0 = 16;
 	s->smear_opt_rmd_intra.cover_rdo_mode_intra_jcoef_d1 = 16;
-	s->smear_opt_rmd_intra.cover_rdoq_rcoef_d0 = 7;
-	s->smear_opt_rmd_intra.cover_rdoq_rcoef_d1 = 7;
 
 	s->smear_opt_cfg_coef.cfc_rmd_mode_intra_jcoef_d0 = 20;
 	s->smear_opt_cfg_coef.cfc_rmd_mode_intra_jcoef_d1 = 20;
 	s->smear_opt_cfg_coef.cfc_rdo_mode_intra_jcoef_d0 = 20;
 	s->smear_opt_cfg_coef.cfc_rdo_mode_intra_jcoef_d1 = 20;
-	s->smear_opt_cfg_coef.cfc_rdoq_rcoef_d0 = 7;
-	s->smear_opt_cfg_coef.cfc_rdoq_rcoef_d1 = 7;
 }
 
 static void vepu511_h265_tune_md_info(H265eV511HalContext *ctx)
