@@ -94,7 +94,6 @@ struct KmppDmaHeaps_t {
     osal_list_head      list;
     KmppDmaHeapInfo     *info;
     osal_spinlock       *lock;
-    osal_mutex          *mutex;
     HeapFindFunc        find;
     HeapPutFunc         put;
     HeapAllocFunc       alloc;
@@ -259,18 +258,15 @@ void kmpp_dmaheap_init(void)
             void *prev_valid = NULL;
             rk_s32 j;
             rk_u8 find_valid = 0;
-            rk_s32 mutex_size = osal_mutex_size();
             rk_u32 heap_flag = 0;
 
-            heaps = (KmppDmaHeaps *)kmpp_calloc_atomic(sizeof(KmppDmaHeaps) +
-                                                       lock_size + mutex_size);
+            heaps = (KmppDmaHeaps *)kmpp_calloc_atomic(sizeof(KmppDmaHeaps) + lock_size);
             if (!heaps) {
                 kmpp_loge_f("create heap impl failed\n");
                 return;
             }
 
-            osal_mutex_assign(&heaps->mutex, (void *)(heaps + 1), mutex_size);
-            osal_spinlock_assign(&heaps->lock, (void *)heaps->mutex + mutex_size, lock_size);
+            osal_spinlock_assign(&heaps->lock, (void *)(heaps + 1), lock_size);
 
             heaps->info = info;
             heaps->find = find;
@@ -361,7 +357,6 @@ static void __kmpp_dmaheap_deinit(KmppDmaHeapsSrv *srv, KmppDmaHeaps *heaps)
     }
 
     osal_spinlock_deinit(&heaps->lock);
-    osal_mutex_deinit(&heaps->mutex);
     kmpp_free(heaps);
 }
 
@@ -957,48 +952,33 @@ rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf)
     dmabuf_dbg_heaps("dmabuf %px file %px size %d at mm %px\n",
                       dma_buf, file, size, current->mm);
 
-    osal_mutex_lock(heaps->mutex);
     if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP) {
         rk_ul uptr0;
-        rk_ul uptr1;
 
         do {
-            uptr0 = get_unmapped_area(file, 0, size * 2, 0, MAP_SHARED);
-            if (IS_ERR_VALUE(uptr0)) {
-                kmpp_loge_f("get_unmapped_area failed ret %d\n", uptr0);
-                break;
-            }
-
-            uptr1 = vm_mmap(file, uptr0 + size, size, PROT_READ | PROT_WRITE, MAP_SHARED, 0);
+            uptr = vm_mmap(NULL, 0, 2 * size, PROT_READ | PROT_WRITE, MAP_SHARED, 0);
             if (IS_ERR_VALUE(uptr)) {
-                kmpp_loge_f("vm_mmap size %d failed ret %d\n", size, uptr);
+                kmpp_loge_f("vm_mmap anonymous failed ret %d\n", uptr);
+                uptr = 0;
+                break;
+            }
+
+            uptr0 = vm_mmap(file, uptr, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, 0);
+            if (IS_ERR_VALUE(uptr0) || uptr0 != uptr) {
+                kmpp_loge_f("vm_mmap size %d failed ret %d %d\n", size, uptr0, uptr);
+                vm_munmap(uptr, 2 * size);
+                uptr = 0;
                 break;
             }
 
-            if (uptr1 != (uptr0 + size)) {
-                kmpp_loge_f("vm_mmap double size %d -> %d mismatch uptr seg0 %lx seg1 %lx\n",
-                            size, size * 2, uptr1, uptr0 + size);
-                vm_munmap(uptr1, size);
-                uptr = 0;
-                continue;
-            }
-
-            uptr = vm_mmap(file, uptr0, size, PROT_READ | PROT_WRITE, MAP_SHARED, 0);
-            if (IS_ERR_VALUE(uptr)) {
-                kmpp_loge_f("vm_mmap double size %d -> %d failed ret %d\n",
-                            size, size * 2, uptr1);
-                vm_munmap(uptr0, size);
+            uptr0 = vm_mmap(file, uptr + size, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, 0);
+            if (IS_ERR_VALUE(uptr0) || uptr0 != uptr + size) {
+                kmpp_loge_f("vm_mmap double size %d -> %d failed ret %d %d\n",
+                            size, size * 2, uptr0, uptr);
+                vm_munmap(uptr, 2 * size);
                 uptr = 0;
                 break;
-            } else if (uptr1 != (uptr + size)) {
-                kmpp_loge_f("vm_mmap double size %d -> %d mismatch uptr base %lx seg0 %lx seg1 %lx\n",
-                            size, size * 2, uptr0, uptr, uptr1);
-                vm_munmap(uptr, size);
-                vm_munmap(uptr1, size);
-                uptr = 0;
-                continue;
             }
-
             break;
         } while (1);
     } else {
@@ -1008,7 +988,6 @@ rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf)
             uptr = 0;
         }
     }
-    osal_mutex_unlock(heaps->mutex);
 
     dmabuf_dbg_buf("dmabuf %d get uptr %#lx\n", impl->buf_id, uptr);
 
