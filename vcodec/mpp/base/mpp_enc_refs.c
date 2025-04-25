@@ -407,6 +407,7 @@ static RK_S32 check_ref_cpb_pos(EncVirtualCpb * cpb, EncFrmStatus * frm)
 
 			if (cpb_ref->valid && cpb_ref->lt_idx == frm->lt_idx) {
 				pos = cpb_idx;
+				enc_refs_dbg_flow("found ltr ref %d at pos %d\n", seq_idx, pos);
 				found = 1;
 				break;
 			}
@@ -578,6 +579,7 @@ MPP_RET mpp_enc_refs_dryrun(MppEncRefs refs)
 	MppEncCpbInfo *info = NULL;
 	RK_S32 lt_cfg_cnt;
 	RK_S32 st_cfg_cnt;
+	RK_S32 walk_len;
 	RK_S32 cpb_st_used_size = 0;
 	RK_S32 seq_idx = 0;
 	RK_S32 st_idx;
@@ -596,6 +598,7 @@ MPP_RET mpp_enc_refs_dryrun(MppEncRefs refs)
 	info = &cpb->info;
 	lt_cfg_cnt = cfg->lt_cfg_cnt;
 	st_cfg_cnt = cfg->st_cfg_cnt;
+	walk_len = MPP_MAX(lt_cfg_cnt, st_cfg_cnt);
 
 	if (cfg->ready)
 		goto DONE;
@@ -605,7 +608,8 @@ MPP_RET mpp_enc_refs_dryrun(MppEncRefs refs)
 	enc_refs_dbg_flow("dryrun start: lt_cfg %d st_cfg %d\n",
 			  lt_cfg_cnt, st_cfg_cnt);
 
-	for (st_idx = 0; st_idx < st_cfg_cnt; st_idx++, st_cfg++) {
+	for (st_idx = 0; st_idx < walk_len; st_idx++) {
+		st_cfg = &cfg->st_cfg[st_idx % st_cfg_cnt];
 		EncFrmStatus frm;
 		RK_S32 repeat = (st_cfg->repeat) ? st_cfg->repeat : 1;
 
