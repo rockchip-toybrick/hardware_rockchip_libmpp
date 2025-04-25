@@ -1382,6 +1382,7 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 		ret = ring_buf_init(enc->ring_pool, buffer, enc->max_strm_cnt);
 		if (ret) {
 			mpp_err_f("ring buffer %d init failed\n", enc->ring_buf_size);
+			mpp_buffer_put(buffer);
 			return MPP_NOK;
 		}
 	}
