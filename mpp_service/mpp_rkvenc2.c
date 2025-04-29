@@ -2092,7 +2092,6 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 	sli_num = mpp_read_relaxed(mpp, RKVENC2_REG_SLICE_NUM_BASE);
 	irq_status = mpp_read(mpp, hw->int_sta_base);
 	enc_st.val = mpp_read(mpp, RKVENC_STATUS);
-	mpp->irq_status = irq_status;
 
 	mpp_debug(DEBUG_IRQ_STATUS, "%s irq_status: %08x st 0x%08x\n",
 		  dev_name(mpp->dev), irq_status, enc_st.val);
@@ -2106,6 +2105,10 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 	if (!mpp_task)
 		return IRQ_HANDLED;
 
+	if (test_bit(TASK_STATE_HANDLE, &mpp_task->state))
+		return IRQ_HANDLED;
+
+	mpp->irq_status = irq_status;
 	/*
 	 * prevent watch dog irq storm.
 	 * The encoder did not stop working when watchdog interrupt is triggered,
