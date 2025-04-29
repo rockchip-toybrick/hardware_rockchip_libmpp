@@ -51,7 +51,7 @@ struct mpp_chan {
 	RK_U32 reenc;
 	spinlock_t chan_lock;
 	/* protect debug info when destory channel */
-	struct mutex chan_debug_lock;
+	struct mutex chan_mutex;
 	void *handle;
 	wait_queue_head_t wait;
 	wait_queue_head_t stop_wait;

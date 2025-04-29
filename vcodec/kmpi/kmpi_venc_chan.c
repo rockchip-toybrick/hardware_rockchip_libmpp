@@ -102,12 +102,12 @@ rk_s32 kmpp_venc_chan_deinit(KmppChanId id, KmppVencDeinitCfg cfg)
 
     // if (chan->cfg.online)
     //     mpp_vcodec_chan_unbind(chan);
-    mutex_lock(&chan->chan_debug_lock);
+    mutex_lock(&chan->chan_mutex);
     mpp_enc_deinit(chan->handle);
     mpp_vcodec_stream_clear(chan);
     mpp_vcodec_dec_chan_num(MPP_CTX_ENC);
     mpp_vcodec_chan_entry_deinit(chan);
-    mutex_unlock(&chan->chan_debug_lock);
+    mutex_unlock(&chan->chan_mutex);
 
     mpp_log("destroy chan %d done\n", chan_id);
 

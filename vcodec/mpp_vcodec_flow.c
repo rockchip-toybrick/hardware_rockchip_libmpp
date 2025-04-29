@@ -50,15 +50,18 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		return MPP_NOK;
 	}
 
+	mutex_lock(&chan_entry->chan_mutex);
 	spin_lock_irqsave(&chan_entry->chan_lock, lock_flag);
 	if (chan_entry->state != CHAN_STATE_RUN) {
 		mpp_err("cur chnl %d state is no runing\n", chan_id);
 		spin_unlock_irqrestore(&chan_entry->chan_lock, lock_flag);
+		mutex_unlock(&chan_entry->chan_mutex);
 		return MPP_OK;
 	}
 	if (atomic_read(&chan_entry->runing) > 0) {
 		mpp_vcodec_detail("cur chnl %d state is wating irq\n", chan_id);
 		spin_unlock_irqrestore(&chan_entry->chan_lock, lock_flag);
+		mutex_unlock(&chan_entry->chan_mutex);
 		return MPP_OK;
 	}
 	atomic_inc(&chan_entry->runing);
@@ -70,6 +73,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		if (!frame) {
 			atomic_dec(&chan_entry->runing);
 			wake_up(&chan_entry->stop_wait);
+			mutex_unlock(&chan_entry->chan_mutex);
 			return MPP_OK;
 		}
 		chan_entry->gap_time = (RK_S32)(mpp_time() - chan_entry->last_yuv_time);
@@ -90,9 +94,13 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			mpp_vcodec_jpegcomb("attach jpeg id %d\n", jpeg_chan_id);
 			comb_chan = mpp_vcodec_get_chan_entry(jpeg_chan_id, MPP_CTX_ENC);
 			if (comb_chan) {
+				mutex_lock(&comb_chan->chan_mutex);
 				spin_lock_irqsave(&comb_chan->chan_lock, lock_flag);
-				if (comb_chan->state != CHAN_STATE_RUN)
+				if (comb_chan->state != CHAN_STATE_RUN) {
+					mpp_err_f("chan %d combo chan %d state is no runing\n",
+						  chan_id, jpeg_chan_id);
 					drop = 1;
+				}
 
 				if (atomic_read(&comb_chan->runing) > 0) {
 					mpp_err_f("chan %d combo chan %d state is wating irq\n",
@@ -104,7 +112,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 				spin_unlock_irqrestore(&comb_chan->chan_lock, lock_flag);
 			}
 			if (drop) {
-				KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
+				KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
 				KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
 				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
@@ -113,6 +121,9 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 				ntfy_impl->frame = comb_frame;
 				kmpp_venc_notify(ntfy);
 				kmpp_frame_put(comb_frame);
+				atomic_dec(&chan_entry->cfg.comb_runing);
+				atomic_dec(&comb_chan->runing);
+				mutex_unlock(&comb_chan->chan_mutex);
 				comb_frame = NULL;
 				comb_chan = NULL;
 			}
@@ -185,15 +196,9 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 			if (comb_chan && comb_chan->handle) {
 				ret = mpp_enc_cfg_reg((MppEnc)comb_chan->handle, comb_frame);
 				if (MPP_OK == ret) {
+					comb_chan->master_chan_id = chan_entry->chan_id;
 					ret = mpp_enc_hw_start((MppEnc)chan_entry->handle,
 							       (MppEnc)comb_chan->handle);
-					if (MPP_OK != ret) {
-						mpp_err("combo start fail \n");
-						atomic_dec(&chan_entry->cfg.comb_runing);
-						atomic_dec(&comb_chan->runing);
-						wake_up(&comb_chan->stop_wait);
-					} else
-						comb_chan->master_chan_id = chan_entry->chan_id;
 
 				} else {
 					KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
@@ -209,8 +214,9 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 						kmpp_frame_put(comb_frame);
 						comb_frame = NULL;
 					}
-					atomic_dec(&comb_chan->runing);
+
 					atomic_dec(&chan_entry->cfg.comb_runing);
+					atomic_dec(&comb_chan->runing);
 					wake_up(&comb_chan->stop_wait);
 
 					ret = mpp_enc_hw_start( (MppEnc)chan_entry->handle, NULL);
@@ -246,6 +252,10 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 				kmpp_venc_notify(ntfy);
 				kmpp_frame_put(comb_frame);
 				comb_frame = NULL;
+				comb_chan->master_chan_id = -1;
+				atomic_dec(&chan_entry->cfg.comb_runing);
+				atomic_dec(&comb_chan->runing);
+				wake_up(&comb_chan->stop_wait);
 			}
 			if (chan_entry->cfg.online)
 				mpp_enc_online_task_failed(chan_entry->handle);
@@ -261,6 +271,9 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 
 __RETURN:
 	enc_chan_update_tab_after_enc(chan_id);
+	if (comb_chan)
+		mutex_unlock(&comb_chan->chan_mutex);
+	mutex_unlock(&chan_entry->chan_mutex);
 
 	return MPP_OK;
 }

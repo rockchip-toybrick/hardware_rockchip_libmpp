@@ -1117,6 +1117,21 @@ fail:
 	return ret;
 }
 
+static const char* rkvenc_fmt2str(u32 fmt, u32 jpeg_en)
+{
+	/* fmt is 2 bits and jpeg_en is 1 bit */
+	u32 id = (fmt << 1) + jpeg_en;
+	char *str[] = {
+		[0] = "h264",	  //000
+		[1] = "h264+jpeg",//001
+		[2] = "h265",	  //010
+		[3] = "h265+jpeg",//011
+		[5] = "jpeg",	  //101
+	};
+
+	return str[id];
+}
+
 static int rkvenc_task_get_format(struct mpp_dev *mpp,
 				  struct rkvenc_task *task)
 {
@@ -1737,6 +1752,8 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 	struct mpp_session *session = mpp_task->session;
 	struct rkvenc2_session_priv *priv = session->priv;
 	u32 dvbm_cfg = 0;
+	u32 *reg = NULL;
+	u32 jpeg_en = 0;
 
 	/* pp flow handle */
 	if (session->pp_session) {
@@ -1758,11 +1775,12 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 	rkvenc2_patch_dchs(enc, task);
 
-	if (mpp_task->disable_jpeg) {
-		u32 *reg = rkvenc_get_class_reg(task, RKVENC_JPEG_BASE_CFG);
-
-		if (reg)
+	reg = rkvenc_get_class_reg(task, RKVENC_JPEG_BASE_CFG);
+	if (reg) {
+		if (mpp_task->disable_jpeg)
 			(*reg) &= (~JRKVENC_PEGE_ENABLE);
+
+		jpeg_en = !!((*reg) & JRKVENC_PEGE_ENABLE);
 	}
 
 	for (i = 0; i < task->w_req_cnt; i++) {
@@ -1804,13 +1822,16 @@ static int rkvenc_run(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 	if (session->online) {
 		mpp_rkvenc_dvbm_update(&enc->dvbm, mpp_task, session->online);
-		mpp_debug(DEBUG_RUN, "chan %d task %d pipe %d frame %d start\n",
-			  session->chn_id, mpp_task->task_index,
+		mpp_debug(DEBUG_RUN, "chan %d task %d [%d %d] fmt %s pipe %d frame %d start\n",
+			  session->chn_id, mpp_task->task_index, mpp_task->width, mpp_task->height,
+			  rkvenc_fmt2str(task->fmt, jpeg_en),
 			  mpp_task->pipe_id, mpp_task->frame_id);
 		mpp_rkvenc_dvbm_connect(&enc->dvbm, dvbm_cfg);
 	} else {
-		mpp_debug(DEBUG_RUN, "chan %d task %d start\n",
-			  session->chn_id, mpp_task->task_index);
+		mpp_debug(DEBUG_RUN, "chan %d task %d [%d %d] fmt %s start\n",
+			  session->chn_id, mpp_task->task_index,
+			  mpp_task->width, mpp_task->height,
+			  rkvenc_fmt2str(task->fmt, jpeg_en));
 	}
 
 	/* init current task */
@@ -2093,7 +2114,7 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 	irq_status = mpp_read(mpp, hw->int_sta_base);
 	enc_st.val = mpp_read(mpp, RKVENC_STATUS);
 
-	mpp_debug(DEBUG_IRQ_STATUS, "%s irq_status: %08x st 0x%08x\n",
+	mpp_debug(DEBUG_IRQ_STATUS, "%s irq_status: 0x%08x st 0x%08x\n",
 		  dev_name(mpp->dev), irq_status, enc_st.val);
 
 	if (!irq_status)
@@ -2171,8 +2192,8 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 		    priv->info.bsbuf_overflow_cnt++;
 		priv->info.enc_err_cnt++;
 		mpp_write(mpp, hw->int_mask_base, irq_status);
-		dev_err(mpp->dev, "chan %d task %d error %08x\n",
-			session->chn_id, mpp_task->task_index, irq_status);
+		dev_err(mpp->dev, "chan %d task %d error 0x%08x st 0x%08x\n",
+			session->chn_id, mpp_task->task_index, irq_status, enc_st.val);
 		ret = IRQ_WAKE_THREAD;
 	}
 	priv->info.hw_running = 0;

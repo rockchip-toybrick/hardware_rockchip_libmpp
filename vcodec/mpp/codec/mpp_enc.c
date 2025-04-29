@@ -396,13 +396,18 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 		up(&enc->enc_sem);
 		return MPP_NOK;
 	}
-	enc->enc_status = ENC_STATUS_START_IN;
-	if (jpeg_enc)
+	if (jpeg_enc) {
+		down(&jpeg_enc->enc_sem);
+		if (jpeg_enc->stop_flag) {
+			jpeg_enc->frame = NULL;
+			up(&jpeg_enc->enc_sem);
+			return MPP_NOK;
+		}
 		jpeg_enc->enc_status = ENC_STATUS_START_IN;
+	}
+	enc->enc_status = ENC_STATUS_START_IN;
 	ret = mpp_enc_impl_hw_start(ctx, jpeg_ctx);
 	enc->enc_status = ENC_STATUS_START_DONE;
-	if (jpeg_enc)
-		jpeg_enc->enc_status = ENC_STATUS_START_DONE;
 
 	if (MPP_OK == ret) {
 		if (enc->online) {
@@ -415,6 +420,10 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 			kmpp_venc_notify(ntfy);
 		}
 		atomic_set(&enc->hw_run, 1);
+	}
+	if (jpeg_enc) {
+		jpeg_enc->enc_status = ENC_STATUS_START_DONE;
+		up(&jpeg_enc->enc_sem);
 	}
 	up(&enc->enc_sem);
 	enc_dbg_func("%p out\n", enc);

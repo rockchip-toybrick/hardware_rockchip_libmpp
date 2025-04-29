@@ -552,7 +552,7 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		if (mpp->online_mode == MPP_ENC_ONLINE_MODE_SW)
 			return 0;
 
-		mpp_debug(DEBUG_ISP_INFO, "%s %d connect dvbm %#x\n", dvbm_src[dvbm->source], source_id, dvbm_cfg.val);
+		mpp_err("%s %d connect dvbm %#x\n", dvbm_src[dvbm->source], source_id, dvbm_cfg.val);
 		if (!VEPU_IS_ONLINE_WORK(mpp)) {
 			dvbm_cfg.dvbm_isp_cnct = 1;
 			dvbm_cfg.dvbm_en = 1;
@@ -568,7 +568,7 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 		if (mpp->online_mode == MPP_ENC_ONLINE_MODE_SW)
 			return 0;
 		clear_bit(source_id, &dvbm->dvbm_setup);
-		mpp_debug(DEBUG_ISP_INFO, "%s %d disconnect 0x%lx\n",
+		mpp_err("%s %d disconnect 0x%lx\n",
 			  dvbm_src[dvbm->source], source_id, dvbm->dvbm_setup);
 		if (!dvbm->dvbm_setup) {
 			mpp_write(mpp, RKVENC_DVBM_CFG, 0);
@@ -591,22 +591,25 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 	} break;
 	case DVBM_VEPU_NOTIFY_FRM_STR: {
 		u32 id = *(u32*)arg;
-		if (dvbm->isp_base && dvbm->vpss_base) {
-			u32 dvbm_cfg = readl(mpp->reg_base + RKVENC_DVBM_CFG);
 
+		if (dvbm->isp_base && dvbm->vpss_base) {
 			/* isp */
 			if (dvbm->source == DVBM_SOURCE_ISP) {
 				union isp2enc_fcnt fcnt = { .val = readl(dvbm->isp_base + ISP2ENC_FCNT) };
-				union isp2enc_lcnt lcnt = { .val = readl(dvbm->isp_base + ISP2ENC_LCNT) };
 				union isp_sensor_id sensor_id = { .val = readl(dvbm->isp_base + ISP2ENC_SENSOR_ID) };
-				union isp2enc isp2enc = { .val = readl(dvbm->isp_base + ISP2ENC_CTL) };
 
 				dvbm->src_frm.source_id = sensor_id.id;
 				dvbm->src_frm.frame_id = fcnt.frm_cnt;
 
-				mpp_debug(DEBUG_ISP_INFO, "isp frame %d start isp2enc %d pipe %d hold %d frm [%d %d %d] dvbm %#x\n",
-				          id, isp2enc.path_en, isp2enc.pipe_en, isp2enc.hold, sensor_id.id,
-					  fcnt.frm_cnt, lcnt.line_cnt, dvbm_cfg);
+				if (mpp_debug_unlikely(DEBUG_ISP_INFO)) {
+					union isp2enc_lcnt lcnt = { .val = readl(dvbm->isp_base + ISP2ENC_LCNT) };
+					union isp2enc isp2enc = { .val = readl(dvbm->isp_base + ISP2ENC_CTL) };
+					u32 dvbm_cfg = readl(mpp->reg_base + RKVENC_DVBM_CFG);
+
+					mpp_err("isp frame %d start isp2enc %d pipe %d hold %d frm [%d %d %d] dvbm %#x\n",
+						  id, isp2enc.path_en, isp2enc.pipe_en, isp2enc.hold, sensor_id.id,
+						  fcnt.frm_cnt, lcnt.line_cnt, dvbm_cfg);
+				}
 			} else {
 				union vpss2enc vpss2enc = { .val = readl(dvbm->vpss_base + VPSS2ENC_CTL) };
 				union vpss2enc_frm frm = { .val = readl(dvbm->vpss_base + VPSS2ENC_FRM) };
@@ -614,9 +617,13 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 				dvbm->src_frm.source_id = vpss2enc.sensor_id;
 				dvbm->src_frm.frame_id = frm.frm_cnt;
 
-				mpp_debug(DEBUG_ISP_INFO, "vpss frame %d start vpss2enc %d pipe %d lcnt_sel %d hold %d frm [%d %d %d] dvbm 0x%08x\n",
-				          id, vpss2enc.path_en, vpss2enc.pipe_en, vpss2enc.cnt_sel, frm.hold, vpss2enc.sensor_id,
-					  frm.frm_cnt, frm.line_cnt, dvbm_cfg);
+				if (mpp_debug_unlikely(DEBUG_ISP_INFO)) {
+					u32 dvbm_cfg = readl(mpp->reg_base + RKVENC_DVBM_CFG);
+
+					mpp_err("vpss frame %d start vpss2enc %d pipe %d lcnt_sel %d hold %d frm [%d %d %d] dvbm 0x%08x\n",
+						id, vpss2enc.path_en, vpss2enc.pipe_en, vpss2enc.cnt_sel, frm.hold, vpss2enc.sensor_id,
+						frm.frm_cnt, frm.line_cnt, dvbm_cfg);
+				}
 			}
 			mpp_rkvenc_dvbm_hack(dvbm);
                 } else
@@ -628,6 +635,13 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 	} break;
 	case DVBM_VEPU_NOTIFY_FRM_END: {
 		u32 id = *(u32*)arg;
+
+		dvbm->src_end_time = ktime_get();
+		if (dvbm->src_end_time)
+			dvbm->src_time = ktime_us_delta(dvbm->src_end_time, dvbm->src_start_time);
+
+		if (!mpp_debug_unlikely(DEBUG_ISP_INFO))
+			break;
 
 		if (dvbm->isp_base && dvbm->vpss_base) {
 			u32 dvbm_cfg = readl(mpp->reg_base + RKVENC_DVBM_CFG);
@@ -652,9 +666,6 @@ static int rkvenc_dvbm_callback(void *ctx, enum dvbm_cb_event event, void *arg)
 			}
                 } else
 			mpp_debug(DEBUG_ISP_INFO, "%s frame %d end\n", dvbm_src[dvbm->source], id);
-		dvbm->src_end_time = ktime_get();
-		if (dvbm->src_end_time)
-			dvbm->src_time = ktime_us_delta(dvbm->src_end_time, dvbm->src_start_time);
 		rkvenc_dvbm_dump(mpp);
 	} break;
 	default : {
@@ -907,16 +918,16 @@ static void check_dvbm_err(struct mpp_dvbm *dvbm, struct mpp_task *mpp_task)
 static int mpp_rkvenc_hw_dvbm_hdl(struct mpp_dvbm *dvbm, struct mpp_task *mpp_task)
 {
 	struct mpp_dev *mpp = dvbm->mpp;
-	u32 enc_st = mpp_read(mpp, RKVENC_STATUS);
+	union st_enc_u enc_st = { .val = mpp_read(mpp, RKVENC_STATUS) };
 	u32 dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
 	struct mpp_session *session = mpp_task->session;
 
 	if (mpp->irq_status & RKVENC_SOURCE_ERR)
 		check_dvbm_err(dvbm, mpp_task);
 
-	mpp_dbg_dvbm("chan %d task %d st 0x%08x dvbm_cfg 0x%08x\n", session->chn_id, mpp_task->task_index, enc_st, dvbm_cfg);
+	mpp_dbg_dvbm("chan %d task %d st 0x%08x dvbm_cfg 0x%08x\n", session->chn_id, mpp_task->task_index, enc_st.val, dvbm_cfg);
 
-	if (!(mpp->irq_status & 0x7fff))
+	if (!(mpp->irq_status & 0x7fff) && !enc_st.dvbm_isp_oflw)
 		return 1;
 
 	if (dvbm->skip_dvbm_discnct) {

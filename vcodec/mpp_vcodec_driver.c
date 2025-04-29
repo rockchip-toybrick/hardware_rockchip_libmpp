@@ -387,7 +387,7 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 
 		if (chan->state != CHAN_STATE_RUN)
 			continue;
-		mutex_lock(&chan->chan_debug_lock);
+		mutex_lock(&chan->chan_mutex);
 		if (chan->handle) {
 			RK_U32 runing = atomic_read(&chan->runing) > 0;
 			RK_U32 comb_run = atomic_read(&chan->cfg.comb_runing) > 0;
@@ -414,7 +414,7 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 
 			mpp_enc_proc_debug(seq, chan->handle, i);
 		}
-		mutex_unlock(&chan->chan_debug_lock);
+		mutex_unlock(&chan->chan_mutex);
 	}
 	mpp_packet_pool_info_show(seq);
 	mpp_buf_pool_info_show(seq);

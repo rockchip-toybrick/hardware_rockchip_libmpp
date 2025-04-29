@@ -158,9 +158,9 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 	int ret;
 	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, type);
 
-	if (!chan_entry->handle)
+	if (!chan_entry || !chan_entry->handle)
 		return 0;
-	mpp_assert(chan_entry->handle != NULL);
+
 	switch (type) {
 	case MPP_CTX_DEC: {
 	} break;
@@ -168,6 +168,7 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 		bool wait = true;
 		KmppFrame frame = NULL;
 
+		mutex_lock(&chan_entry->chan_mutex);
 		mpp_log("destroy chan %d hnd %p online %d combo %d mst %d\n",
 			chan_id, chan_entry->handle, chan_entry->cfg.online,
 			chan_entry->binder_chan_id, chan_entry->master_chan_id);
@@ -192,7 +193,7 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 
 		if (chan_entry->cfg.online)
 			mpp_vcodec_chan_unbind(chan_entry);
-		mutex_lock(&chan_entry->chan_debug_lock);
+
 		frame = osal_force_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
 		if (frame) {
 			KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
@@ -226,7 +227,7 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 		mpp_enc_deinit(chan_entry->handle);
 		mpp_vcodec_dec_chan_num(type);
 		mpp_vcodec_chan_entry_deinit(chan_entry);
-		mutex_unlock(&chan_entry->chan_debug_lock);
+		mutex_unlock(&chan_entry->chan_mutex);
 		mpp_log("destroy chan %d done\n", chan_id);
 	} break;
 	default: {
@@ -514,7 +515,7 @@ static int mpp_vcodec_chan_change_coding_type(int chan_id, void *arg)
 
 	if (entry->cfg.online)
 		mpp_vcodec_chan_unbind(entry);
-	mutex_lock(&entry->chan_debug_lock);
+	mutex_lock(&entry->chan_mutex);
 	mpp_enc_deinit(entry->handle);
 	mpp_vcodec_stream_clear(entry);
 	mpp_vcodec_dec_chan_num(MPP_CTX_ENC);
@@ -523,7 +524,7 @@ static int mpp_vcodec_chan_change_coding_type(int chan_id, void *arg)
 	entry->reenc = 0;
 	entry->binder_chan_id = -1;
 	entry->master_chan_id = -1;
-	mutex_unlock(&entry->chan_debug_lock);
+	mutex_unlock(&entry->chan_mutex);
 	mpp_vcodec_chan_create(attr);
 	entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
 
