@@ -2806,10 +2806,8 @@ static void vepu511_h265_set_subj_opt_regs(H265eV511HalContext *ctx)
 	// Set the RDO split cost coefficient.
 	// Priority: smear takes precedence over anti-ring.
 	if (s->smear_opt_cfg0.anti_smear_en == 1) {
-		s->subj_opt_rdo_split.choose_cu32_split_jcoef = 20;
 		s->subj_opt_rdo_split.choose_cu16_split_jcoef = 8;
 	} else if (s->line_opt_cfg.line_en == 1) {
-		s->subj_opt_rdo_split.choose_cu32_split_jcoef = 16;
 		s->subj_opt_rdo_split.choose_cu16_split_jcoef = 8;
 	}
 }
