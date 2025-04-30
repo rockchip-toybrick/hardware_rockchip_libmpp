@@ -44,6 +44,10 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 	RK_U64 dts = 0;
 	KmppShmPtr sptr;
 	KmppMeta meta = NULL;
+	RK_U32 pskip_num = 0;
+	RK_U32 pskip = 0;
+	void *comb_handle = NULL;
+	MPP_RET ret = MPP_OK;
 
 	if (!chan_entry) {
 		mpp_err_f("chan_entry is NULL\n");
@@ -51,6 +55,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 	}
 
 	mutex_lock(&chan_entry->chan_mutex);
+	/* 1. check channel state */
 	spin_lock_irqsave(&chan_entry->chan_lock, lock_flag);
 	if (chan_entry->state != CHAN_STATE_RUN) {
 		mpp_err("cur chnl %d state is no runing\n", chan_id);
@@ -67,50 +72,60 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 	atomic_inc(&chan_entry->runing);
 	spin_unlock_irqrestore(&chan_entry->chan_lock, lock_flag);
 
-	mpp_vcodec_detail("enc_chan_process_single_chan id %d\n", chan_id);
-	if (!chan_entry->reenc) {
-		frame = osal_force_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
-		if (!frame) {
-			atomic_dec(&chan_entry->runing);
-			wake_up(&chan_entry->stop_wait);
-			mutex_unlock(&chan_entry->chan_mutex);
-			return MPP_OK;
-		}
-		chan_entry->gap_time = (RK_S32)(mpp_time() - chan_entry->last_yuv_time);
-		chan_entry->last_yuv_time = mpp_time();
-		if (!kmpp_frame_get_meta(frame, &sptr)) {
-			meta = sptr.kptr;
-			kmpp_meta_get_obj_d(meta, KEY_COMBO_FRAME, &comb_frame, NULL);
-		}
-		if (comb_frame) {
-			RK_S32 jpeg_chan_id = -1;
-			RK_S32 drop = 0;
+	mpp_vcodec_detail("chan %d\n", chan_id);
 
-			if (!kmpp_frame_get_meta(comb_frame, &sptr)) {
-				KmppMeta comb_meta = sptr.kptr;
-				kmpp_meta_get_s32(comb_meta, KEY_CHANNEL_ID, &jpeg_chan_id);
+	/* 2. check re-encode */
+	if (chan_entry->reenc) {
+		mpp_enc_cfg_reg((MppEnc)chan_entry->handle, NULL);
+		mpp_enc_hw_start((MppEnc)chan_entry->handle, NULL);
+		goto __RETURN;
+	}
+
+	/* 3. try to get frame to process */
+	frame = osal_force_cmpxchg(&chan_entry->frame, chan_entry->frame, NULL);
+	if (!frame) {
+		atomic_dec(&chan_entry->runing);
+		wake_up(&chan_entry->stop_wait);
+		mutex_unlock(&chan_entry->chan_mutex);
+		return MPP_OK;
+	}
+	chan_entry->gap_time = (RK_S32)(mpp_time() - chan_entry->last_yuv_time);
+	chan_entry->last_yuv_time = mpp_time();
+
+	/* 4. check combo frame */
+	if (!kmpp_frame_get_meta(frame, &sptr)) {
+		meta = sptr.kptr;
+		kmpp_meta_get_obj_d(meta, KEY_COMBO_FRAME, &comb_frame, NULL);
+	}
+	if (comb_frame) {
+		RK_S32 jpeg_chan_id = -1;
+		RK_S32 drop = 0;
+
+		if (!kmpp_frame_get_meta(comb_frame, &sptr)) {
+			KmppMeta comb_meta = sptr.kptr;
+			kmpp_meta_get_s32(comb_meta, KEY_CHANNEL_ID, &jpeg_chan_id);
+		}
+
+		mpp_vcodec_jpegcomb("attach jpeg id %d\n", jpeg_chan_id);
+		comb_chan = mpp_vcodec_get_chan_entry(jpeg_chan_id, MPP_CTX_ENC);
+		if (comb_chan) {
+			mutex_lock(&comb_chan->chan_mutex);
+			spin_lock_irqsave(&comb_chan->chan_lock, lock_flag);
+			if (comb_chan->state != CHAN_STATE_RUN) {
+				mpp_err_f("chan %d combo chan %d state is no runing\n",
+						chan_id, jpeg_chan_id);
+				drop = 1;
 			}
 
-			mpp_vcodec_jpegcomb("attach jpeg id %d\n", jpeg_chan_id);
-			comb_chan = mpp_vcodec_get_chan_entry(jpeg_chan_id, MPP_CTX_ENC);
-			if (comb_chan) {
-				mutex_lock(&comb_chan->chan_mutex);
-				spin_lock_irqsave(&comb_chan->chan_lock, lock_flag);
-				if (comb_chan->state != CHAN_STATE_RUN) {
-					mpp_err_f("chan %d combo chan %d state is no runing\n",
-						  chan_id, jpeg_chan_id);
-					drop = 1;
-				}
-
-				if (atomic_read(&comb_chan->runing) > 0) {
-					mpp_err_f("chan %d combo chan %d state is wating irq\n",
-						  chan_id, jpeg_chan_id);
-					drop = 1;
-				}
-				atomic_inc(&comb_chan->runing);
-				atomic_inc(&chan_entry->cfg.comb_runing);
-				spin_unlock_irqrestore(&comb_chan->chan_lock, lock_flag);
+			if (atomic_read(&comb_chan->runing) > 0) {
+				mpp_err_f("chan %d combo chan %d state is wating irq\n",
+						chan_id, jpeg_chan_id);
+				drop = 1;
 			}
+			atomic_inc(&comb_chan->runing);
+			atomic_inc(&chan_entry->cfg.comb_runing);
+			spin_unlock_irqrestore(&comb_chan->chan_lock, lock_flag);
+
 			if (drop) {
 				KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
 				KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
@@ -136,140 +151,129 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		}
 	}
 
-	if (frame != NULL || chan_entry->reenc) {
-		MPP_RET ret = MPP_OK;
-		RK_U32 pskip = 0;
+	/* 5. check pskip frame */
+	if (meta)
+		kmpp_meta_get_s32(meta, KEY_INPUT_PSKIP, &pskip);
+	if (pskip) {
+		MppPacket packet = NULL;
+		KmppVencNtfy ntfy;
+		KmppVencNtfyImpl* ntfy_impl;
 
-		if (meta)
-			kmpp_meta_get_s32(meta, KEY_INPUT_PSKIP, &pskip);
+		ret = mpp_enc_force_pskip(chan_entry->handle, frame, &packet);
+		if (packet)
+			mpp_vcodec_enc_add_packet_list(chan_entry, packet);
 
-		cfg_start = mpp_time();
-		if (frame && pskip) {
-			MppPacket packet = NULL;
-			struct venc_module *venc = NULL;
-			KmppVencNtfy ntfy;
-			KmppVencNtfyImpl* ntfy_impl;
+		ntfy = mpp_enc_get_notify(chan_entry->handle);
+		ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
-			venc = mpp_vcodec_get_enc_module_entry();
-			ret = mpp_enc_force_pskip(chan_entry->handle, frame, &packet);
-			if (packet)
-				mpp_vcodec_enc_add_packet_list(chan_entry, packet);
+		ntfy_impl->chan_id = chan_id;
+		ntfy_impl->frame = frame;
 
-			ntfy = mpp_enc_get_notify(chan_entry->handle);
-			ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
+		ntfy_impl->is_intra = 0;
+		kmpp_venc_notify(ntfy);
 
-			ntfy_impl->chan_id = chan_id;
-			ntfy_impl->frame = frame;
-
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
-			ntfy_impl->is_intra = 0;
-			kmpp_venc_notify(ntfy);
-
-			kmpp_frame_put(frame);
-			frame = NULL;
-			atomic_dec(&chan_entry->runing);
-			wake_up(&chan_entry->stop_wait);
-			vcodec_thread_trigger(venc->thd);
-			goto __RETURN;
-		} else {
-			RK_U32 pskip_num = 0;
-
-			if (meta)
-				kmpp_meta_get_s32(meta, KEY_INPUT_PSKIP_NUM, &pskip_num);
-
-			ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
-
-			if (frame && pskip_num > 0) {
-				kmpp_frame_get(&chan_entry->pskip_frame);
-				kmpp_frame_copy(chan_entry->pskip_frame, frame);
-				if (!kmpp_frame_get_meta(chan_entry->pskip_frame, &sptr)) {
-					meta = sptr.kptr;
-
-					kmpp_meta_set_s32(meta, KEY_INPUT_PSKIP_NUM, pskip_num);
-				}
-			}
-		}
-
-		kmpp_frame_get_dts(frame, &dts);
-		chan_entry->seq_encoding = dts;
-		if (MPP_OK == ret) {
-			if (comb_chan && comb_chan->handle) {
-				ret = mpp_enc_cfg_reg((MppEnc)comb_chan->handle, comb_frame);
-				if (MPP_OK == ret) {
-					comb_chan->master_chan_id = chan_entry->chan_id;
-					ret = mpp_enc_hw_start((MppEnc)chan_entry->handle,
-							       (MppEnc)comb_chan->handle);
-
-				} else {
-					KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
-					KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
-
-					mpp_err("combo cfg fail \n");
-					ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-					ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
-					ntfy_impl->chan_id = comb_chan->chan_id;
-					ntfy_impl->frame = comb_frame;
-					kmpp_venc_notify(ntfy);
-					if (comb_frame) {
-						kmpp_frame_put(comb_frame);
-						comb_frame = NULL;
-					}
-
-					atomic_dec(&chan_entry->cfg.comb_runing);
-					atomic_dec(&comb_chan->runing);
-					wake_up(&comb_chan->stop_wait);
-
-					ret = mpp_enc_hw_start( (MppEnc)chan_entry->handle, NULL);
-				}
-			} else
-				ret = mpp_enc_hw_start((MppEnc)chan_entry->handle, NULL);
-		}
-
-		if (MPP_OK != ret) {
-			struct venc_module *venc = NULL;
-
-			venc = mpp_vcodec_get_enc_module_entry();
-			if (frame) {
-				KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
-				KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
-
-				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
-				ntfy_impl->chan_id = chan_entry->chan_id;
-				ntfy_impl->frame = frame;
-				kmpp_venc_notify(ntfy);
-				kmpp_frame_put(frame);
-				frame = NULL;
-			}
-			if (comb_frame) {
-				KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
-				KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
-
-				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
-				ntfy_impl->chan_id = comb_chan->chan_id;
-				ntfy_impl->frame = comb_frame;
-				kmpp_venc_notify(ntfy);
-				kmpp_frame_put(comb_frame);
-				comb_frame = NULL;
-				comb_chan->master_chan_id = -1;
-				atomic_dec(&chan_entry->cfg.comb_runing);
-				atomic_dec(&comb_chan->runing);
-				wake_up(&comb_chan->stop_wait);
-			}
-			if (chan_entry->cfg.online)
-				mpp_enc_online_task_failed(chan_entry->handle);
-
-			atomic_dec(&chan_entry->runing);
-			wake_up(&chan_entry->stop_wait);
-			vcodec_thread_trigger(venc->thd);
-		}
-
-		cfg_end = mpp_time();
-		chan_entry->last_cfg_time = cfg_end - cfg_start;
+		kmpp_frame_put(frame);
+		frame = NULL;
+		atomic_dec(&chan_entry->runing);
+		wake_up(&chan_entry->stop_wait);
+		goto __RETURN;
 	}
 
+	if (meta)
+		kmpp_meta_get_s32(meta, KEY_INPUT_PSKIP_NUM, &pskip_num);
+
+	/* 6. generate enc reg cfg */
+	cfg_start = mpp_time();
+	ret = mpp_enc_cfg_reg((MppEnc)chan_entry->handle, frame);
+	if (ret)
+		goto __RETURN;
+
+	if (pskip_num > 0) {
+		kmpp_frame_get(&chan_entry->pskip_frame);
+		kmpp_frame_copy(chan_entry->pskip_frame, frame);
+		if (!kmpp_frame_get_meta(chan_entry->pskip_frame, &sptr)) {
+			meta = sptr.kptr;
+			kmpp_meta_set_s32(meta, KEY_INPUT_PSKIP_NUM, pskip_num);
+		}
+	}
+
+	/* 7. generate combo frame reg cfg */
+	if (comb_chan && comb_chan->handle) {
+		comb_handle = (void*)comb_chan->handle;
+		comb_chan->master_chan_id = chan_entry->chan_id;
+		ret = mpp_enc_cfg_reg((MppEnc)comb_chan->handle, comb_frame);
+		if (ret) {
+			KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
+			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+			mpp_err("combo cfg fail \n");
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+			ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+			ntfy_impl->chan_id = comb_chan->chan_id;
+			ntfy_impl->frame = comb_frame;
+			kmpp_venc_notify(ntfy);
+			if (comb_frame) {
+				kmpp_frame_put(comb_frame);
+				comb_frame = NULL;
+			}
+
+			atomic_dec(&chan_entry->cfg.comb_runing);
+			atomic_dec(&comb_chan->runing);
+			wake_up(&comb_chan->stop_wait);
+			comb_handle = NULL;
+			comb_chan->master_chan_id = -1;
+		}
+	}
+
+	/* 8. send reg task to hw */
+	ret = mpp_enc_hw_start((MppEnc)chan_entry->handle, comb_handle);
+
+	kmpp_frame_get_dts(frame, &dts);
+	chan_entry->seq_encoding = dts;
+	cfg_end = mpp_time();
+	chan_entry->last_cfg_time = cfg_end - cfg_start;
+
 __RETURN:
+	if (ret) {
+		struct venc_module *venc = NULL;
+
+		venc = mpp_vcodec_get_enc_module_entry();
+		if (frame) {
+			KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
+			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+			ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+			ntfy_impl->chan_id = chan_entry->chan_id;
+			ntfy_impl->frame = frame;
+			kmpp_venc_notify(ntfy);
+			kmpp_frame_put(frame);
+			frame = NULL;
+		}
+		if (comb_frame) {
+			KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
+			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+			ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+			ntfy_impl->chan_id = comb_chan->chan_id;
+			ntfy_impl->frame = comb_frame;
+			kmpp_venc_notify(ntfy);
+			kmpp_frame_put(comb_frame);
+			comb_frame = NULL;
+			comb_chan->master_chan_id = -1;
+			atomic_dec(&chan_entry->cfg.comb_runing);
+			atomic_dec(&comb_chan->runing);
+			wake_up(&comb_chan->stop_wait);
+		}
+		if (chan_entry->cfg.online)
+			mpp_enc_online_task_failed(chan_entry->handle);
+
+		atomic_dec(&chan_entry->runing);
+		wake_up(&chan_entry->stop_wait);
+		vcodec_thread_trigger(venc->thd);
+	}
 	enc_chan_update_tab_after_enc(chan_id);
 	if (comb_chan)
 		mutex_unlock(&comb_chan->chan_mutex);
