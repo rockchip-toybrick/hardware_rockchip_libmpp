@@ -521,8 +521,6 @@ MPP_RET enc_chan_update_tab_after_enc(RK_U32 curr_chan)
 	unsigned long lock_flags;
 
 	spin_lock_irqsave(&venc->enc_lock, lock_flags);
-	venc->chan_pri_tab_index = 0;
-
 	/* snap current prior status */
 	for (i = 0; i < venc->started_chan_num; i++) {
 		if (venc->chan_pri_tab[i][0] == (RK_S32) curr_chan) {
@@ -536,7 +534,7 @@ MPP_RET enc_chan_update_tab_after_enc(RK_U32 curr_chan)
 			venc->chan_pri_tab[i][0] = venc->chan_pri_tab[i + 1][0];
 		venc->chan_pri_tab[venc->started_chan_num - 1][0] = curr_chan;
 	}
-
+	venc->chan_pri_tab_index = tmp_index;
 	spin_unlock_irqrestore(&venc->enc_lock, lock_flags);
 
 	return MPP_OK;
