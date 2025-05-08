@@ -669,7 +669,7 @@ static void setup_vepu511_normal(HalVepu511RegSet *regs)
 	regs->reg_ctl.int_en.jslc_done_en       = 1;
 	regs->reg_ctl.int_en.jbsf_oflw_en       = 1;
 	regs->reg_ctl.int_en.jbuf_lens_en       = 1;
-	regs->reg_ctl.int_en.dvbm_err_en        = 1;
+	regs->reg_ctl.int_en.dvbm_err_en        = 0;
 
 	/* reg005 INT_MSK */
 	regs->reg_ctl.int_msk.enc_done_msk        = 0;
@@ -1793,6 +1793,8 @@ static MPP_RET vepu511_h264e_set_dvbm(HalH264eVepu511Ctx *ctx, HalEncTask *task)
 	regs->reg_frm.enc_id.ch_id = 1;
 	regs->reg_frm.enc_id.vinf_req_en = 1;
 	regs->reg_frm.enc_id.vrsp_rtn_en = 1;
+
+	regs->reg_ctl.int_en.dvbm_err_en = 1;
 
 	return MPP_OK;
 }

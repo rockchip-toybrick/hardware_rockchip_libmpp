@@ -1585,6 +1585,8 @@ static MPP_RET vepu511_h265_set_dvbm(H265eV511HalContext *ctx, HalEncTask *task)
 	regs->reg_frm.reg0194_enc_id.vinf_req_en = 1;
 	regs->reg_frm.reg0194_enc_id.vrsp_rtn_en = 1;
 
+	regs->reg_ctl.int_en.dvbm_err_en = 1;
+
 	return MPP_OK;
 }
 
@@ -1613,7 +1615,7 @@ static MPP_RET vepu511_h265_set_normal(H265eV511HalContext *ctx)
 	reg_ctl->int_en.jslc_done_en       = 1;
 	reg_ctl->int_en.jbsf_oflw_en       = 1;
 	reg_ctl->int_en.jbuf_lens_en       = 1;
-	reg_ctl->int_en.dvbm_err_en        = 1;
+	reg_ctl->int_en.dvbm_err_en        = 0;
 
 	reg_ctl->dtrns_map.jpeg_bus_edin    = 0x7;
 	reg_ctl->int_clr.enc_done_clr = 1;

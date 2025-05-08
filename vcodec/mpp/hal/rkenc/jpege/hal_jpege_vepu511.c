@@ -354,6 +354,8 @@ static void vepu511_jpeg_set_dvbm(JpegeV511HalContext *ctx, RK_U32 width)
 	regs->reg_frm.enc_id.ch_id = 1;
 	regs->reg_frm.enc_id.vinf_req_en = 1;
 	regs->reg_frm.enc_id.vrsp_rtn_en = 1;
+
+	regs->reg_ctl.int_en.dvbm_err_en = 1;
 }
 
 MPP_RET hal_jpege_v511_gen_regs(void *hal, HalEncTask * task)
@@ -424,7 +426,7 @@ MPP_RET hal_jpege_v511_gen_regs(void *hal, HalEncTask * task)
 	reg_ctl->int_en.jslc_done_en         = 1;
 	reg_ctl->int_en.jbsf_oflw_en         = 1;
 	reg_ctl->int_en.jbuf_lens_en         = 1;
-	reg_ctl->int_en.dvbm_err_en          = 1;
+	reg_ctl->int_en.dvbm_err_en          = 0;
 
 	reg_ctl->dtrns_map.jpeg_bus_edin = 0x7;
 	reg_ctl->dtrns_map.src_bus_edin = 0x0;
