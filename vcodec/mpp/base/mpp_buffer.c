@@ -143,6 +143,8 @@ MPP_RET mpp_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
         return MPP_ERR_UNKNOW;
     }
 
+    osal_atomic_assign(&buf_impl->ref_count, (void *)(buf_impl + 1), osal_atomic_size());
+
     ret = kmpp_buffer_get(&kmpp_buf);
     if (ret) {
         kmpp_loge_f("kmpp buffer get failed ret %d\n", ret);
@@ -198,6 +200,8 @@ MPP_RET mpp_ring_buffer_get_with_tag(MppBufferGroup group, MppBuffer *buffer,
         kmpp_loge_f("buf impl pool get failed at %s\n", caller);
         return MPP_ERR_UNKNOW;
     }
+
+    osal_atomic_assign(&buf_impl->ref_count, (void *)(buf_impl + 1), osal_atomic_size());
 
     ret = kmpp_buffer_get(&kmpp_buf);
     if (ret) {
