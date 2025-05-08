@@ -322,7 +322,7 @@ static void mpp_task_timeout_work(struct work_struct *work_s)
 	mpp_dev_debug |= DEBUG_DUMP_ERR_REG;
 	if (mpp && mpp->var->dev_ops->dump_dev)
 		mpp->var->dev_ops->dump_dev(mpp);
-	mpp_dev_debug &= DEBUG_DUMP_ERR_REG;
+	mpp_dev_debug &= ~DEBUG_DUMP_ERR_REG;
 	/* hardware maybe dead, reset it */
 	mpp_reset_up_read(mpp->reset_group);
 	mpp_dev_reset(mpp);
