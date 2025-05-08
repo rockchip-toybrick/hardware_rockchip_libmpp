@@ -390,6 +390,7 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 	spin_lock_init(&entry->stream_list_lock);
 	init_waitqueue_head(&entry->wait);
 	init_waitqueue_head(&entry->stop_wait);
+	INIT_KFIFO(entry->frame_fifo);
 
 	entry->state = CHAN_STATE_SUSPEND_PENDING;
 	spin_unlock_irqrestore(&entry->chan_lock, lock_flag);

@@ -102,7 +102,6 @@ int mpp_vcodec_chan_create(struct vcodec_attr *attr)
 			return -1;
 		}
 #endif
-		INIT_KFIFO(chan_entry->frame_fifo);
 		mpp_vcodec_inc_chan_num(type);
 		chan_entry->cfg.online = online;
 		chan_entry->last_yuv_time = mpp_time();
