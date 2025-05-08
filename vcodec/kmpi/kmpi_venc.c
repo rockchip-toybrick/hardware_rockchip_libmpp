@@ -49,7 +49,7 @@ rk_s32 kmpp_venc_init(KmppCtx *ctx, KmppVencInitCfg cfg)
     p = mpp_calloc(KmppVencCtx, 1);
     if (!p)
         return MPP_NOK;
-
+    init_cfg->shared_buf = &chan->shared_buf;
     ret = mpp_enc_init(&enc, init_cfg);
     if (ret) {
         mpp_err("mpp_enc_init failed ret %d\n", ret);
@@ -251,6 +251,8 @@ rk_s32 kmpp_venc_put_frm(KmppCtx ctx, KmppFrame frm)
     struct mpp_chan *chan = NULL;
     struct venc_module *venc = NULL;
     struct vcodec_threads *thd;
+    unsigned long flags;
+    rk_u32 chan_id;
 
     if (!ctx) {
         mpp_err_f("ctx is null\n");
@@ -258,13 +260,30 @@ rk_s32 kmpp_venc_put_frm(KmppCtx ctx, KmppFrame frm)
     }
 
     p = (KmppVencCtx *)ctx;
-    chan = mpp_vcodec_get_chan_entry(p->chan_id, MPP_CTX_ENC);
-    mpp_assert(chan->handle != NULL);
-    if (!chan->handle)
+    chan_id = p->chan_id;
+    chan = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
+    if (!chan || !chan->handle) {
+        mpp_err_f("invalid chan id %d\n", chan_id);
         return MPP_NOK;
+    }
+
+    spin_lock_irqsave(&chan->chan_lock, flags);
+    if (chan->state != CHAN_STATE_RUN) {
+        mpp_err_f("chan %d state %d is not run\n", chan_id, chan->state);
+        spin_unlock_irqrestore(&chan->chan_lock, flags);
+        return MPP_NOK;
+    }
 
     venc = mpp_vcodec_get_enc_module_entry();
     thd = venc->thd;
+    if (kfifo_is_full(&chan->frame_fifo)) {
+        mpp_err_f("chan %d frame fifo is full\n", chan->chan_id);
+        spin_unlock_irqrestore(&chan->chan_lock, flags);
+        vcodec_thread_trigger(thd);
+        return MPP_NOK;
+    }
+    kfifo_in(&chan->frame_fifo, &frm, 1);
+    spin_unlock_irqrestore(&chan->chan_lock, flags);
 
     vcodec_thread_trigger(thd);
 
