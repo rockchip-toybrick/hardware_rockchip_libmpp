@@ -380,14 +380,40 @@ rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name)
 }
 EXPORT_SYMBOL(kmpp_objdef_find);
 
+static rk_s32 create_objdef_mem_pool(KmppObjDefImpl *impl)
+{
+    rk_s32 old_size = impl->buf_size;
+
+    /* When last entry finish update and create memory pool */
+    if (impl->flag_max_pos) {
+        rk_s32 flag_size = KMPP_ALIGN(impl->flag_max_pos, 8) / 8;
+
+        impl->flag_offset = impl->buf_size;
+        flag_size -= impl->entry_size;
+        flag_size = KMPP_ALIGN(flag_size, 4);
+        impl->buf_size += flag_size;
+    }
+
+    obj_dbg_entry("objdef %-16s entry size %4d buf size %4d -> %4d\n", impl->name,
+                    impl->entry_size, old_size, impl->buf_size);
+
+    impl->pool = kmpp_mem_get_pool_f(impl->name, impl->buf_size, 0, 0);
+    if (!impl->pool)
+        kmpp_loge_f("get mem pool size %d failed\n", impl->buf_size);
+
+    return impl->pool ? rk_ok : rk_nok;
+}
+
 rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppEntry *tbl)
 {
     KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
     rk_s32 ret = rk_nok;
 
     if (!impl->trie) {
-        if (!name)
-            return rk_ok;
+        if (!name) {
+            /* NOTE: no entry objdef still need to create mempool */
+            return create_objdef_mem_pool(impl);
+        }
 
         kmpp_trie_init(&impl->trie, impl->name);
     }
@@ -404,31 +430,11 @@ rk_s32 kmpp_objdef_add_entry(KmppObjDef def, const rk_u8 *name, KmppEntry *tbl)
             obj_dbg_entry("objdef %-16s add entry %-16s flag offset %4d\n",
                           impl->name, name, tbl->tbl.flag_offset);
         } else {
-            rk_s32 old_size = impl->buf_size;
-
             /* record object impl size */
             ret = kmpp_trie_add_info(trie, "__index", &impl->index, sizeof(rk_s32));
             ret = kmpp_trie_add_info(trie, "__size", &impl->entry_size, sizeof(rk_s32));
             ret |= kmpp_trie_add_info(trie, NULL, NULL, 0);
-
-            /* When last entry finish update and create memory pool */
-            if (impl->flag_max_pos) {
-                rk_s32 flag_size = KMPP_ALIGN(impl->flag_max_pos, 8) / 8;
-
-                impl->flag_offset = impl->buf_size;
-                flag_size -= impl->entry_size;
-                flag_size = KMPP_ALIGN(flag_size, 4);
-                impl->buf_size += flag_size;
-            }
-
-            obj_dbg_entry("objdef %-16s entry size %4d buf size %4d -> %4d\n", impl->name,
-                          impl->entry_size, old_size, impl->buf_size);
-
-            impl->pool = kmpp_mem_get_pool_f(impl->name, impl->buf_size, 0, 0);
-            if (!impl->pool) {
-                kmpp_loge_f("get mem pool size %d failed\n", impl->buf_size);
-                ret = rk_nok;
-            }
+            ret |= create_objdef_mem_pool(impl);
         }
     }
 
