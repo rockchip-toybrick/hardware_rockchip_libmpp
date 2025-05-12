@@ -2192,6 +2192,17 @@ static int rkvenc_irq(struct mpp_dev *mpp)
 		    priv->info.bsbuf_overflow_cnt++;
 		priv->info.enc_err_cnt++;
 		mpp_write(mpp, hw->int_mask_base, irq_status);
+
+		/*
+		* Fix bug:
+		* When the wrong rkfbc data is input, the vsp module will be abnormal,
+		* causing the encoder to not receive read data and the bus to be busy.
+		* In this case, need to send reset cmd to mmu first, and then force reset
+		* the encoder to receive read data and finally the bus will return to the idle state.
+		*/
+		if (hw->vepu_type == RKVENC_VEPU_511 && enc_st.vepu_vsp_err)
+			mpp_iommu_force_reset(mpp->iommu_info);
+
 		dev_err(mpp->dev, "chan %d task %d error 0x%08x st 0x%08x\n",
 			session->chn_id, mpp_task->task_index, irq_status, enc_st.val);
 		ret = IRQ_WAKE_THREAD;

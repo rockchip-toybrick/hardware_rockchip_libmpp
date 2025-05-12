@@ -28,6 +28,27 @@
 #include "mpp_iommu.h"
 #include "mpp_common.h"
 
+/** MMU register offsets */
+#define RK_MMU_DTE_ADDR		0x00	/* Directory table address */
+#define RK_MMU_STATUS		0x04
+#define RK_MMU_COMMAND		0x08
+#define RK_MMU_PAGE_FAULT_ADDR	0x0C	/* IOVA of last page fault */
+#define RK_MMU_ZAP_ONE_LINE	0x10	/* Shootdown one IOTLB entry */
+#define RK_MMU_INT_RAWSTAT	0x14	/* IRQ status ignoring mask */
+#define RK_MMU_INT_CLEAR	0x18	/* Acknowledge and re-arm irq */
+#define RK_MMU_INT_MASK		0x1C	/* IRQ enable */
+#define RK_MMU_INT_STATUS	0x20	/* IRQ status after masking */
+#define RK_MMU_AUTO_GATING	0x24
+
+/* RK_MMU_COMMAND command values */
+#define RK_MMU_CMD_ENABLE_PAGING    0  /* Enable memory translation */
+#define RK_MMU_CMD_DISABLE_PAGING   1  /* Disable memory translation */
+#define RK_MMU_CMD_ENABLE_STALL     2  /* Stall paging to allow other cmds */
+#define RK_MMU_CMD_DISABLE_STALL    3  /* Stop stall re-enables paging */
+#define RK_MMU_CMD_ZAP_CACHE        4  /* Shoot down entire IOTLB */
+#define RK_MMU_CMD_PAGE_FAULT_DONE  5  /* Clear page fault */
+#define RK_MMU_CMD_FORCE_RESET      6  /* Reset all registers */
+
 struct mpp_dma_buffer *
 mpp_dma_find_buffer_fd(struct mpp_dma_session *dma, int fd)
 {
@@ -556,9 +577,11 @@ mpp_iommu_probe(struct device *dev)
 	struct mpp_iommu_info *info = NULL;
 	struct iommu_domain *domain = NULL;
 	struct iommu_group *group = NULL;
+	int num_res, i;
 #ifdef CONFIG_ARM_DMA_USE_IOMMU
 	struct dma_iommu_mapping *mapping;
 #endif
+
 	np = of_parse_phandle(dev->of_node, "iommus", 0);
 	if (!np || !of_device_is_available(np)) {
 		mpp_err("failed to get device node\n");
@@ -604,6 +627,27 @@ mpp_iommu_probe(struct device *dev)
 		goto err_put_group;
 	}
 
+	num_res = pdev->num_resources;
+	info->base = devm_kcalloc(dev, num_res, sizeof(*info->base), GFP_KERNEL);
+	if (!info->base)
+		mpp_err("failed to alloc mmu base\n");
+
+	if (info->base) {
+		for (i = 0; i < num_res; i++) {
+			struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, i);
+
+			if (!res)
+				continue;
+
+			info->base[i] = devm_ioremap(dev, res->start, resource_size(res));
+			if (IS_ERR_OR_NULL(info->base[i])) {
+				mpp_err("failed to map base %d\n", i);
+				info->base[i] = NULL;
+			}
+		}
+	}
+
+	info->iommu_num = num_res;
 	init_rwsem(&info->rw_sem_self);
 	info->rw_sem = &info->rw_sem_self;
 	spin_lock_init(&info->dev_lock);
@@ -740,4 +784,18 @@ int mpp_iommu_reserve_iova(struct mpp_iommu_info *info, dma_addr_t iova, size_t 
 
 	return 0;
 
+}
+
+void mpp_iommu_force_reset(struct mpp_iommu_info *info)
+{
+	u32 i;
+
+	if (!info)
+		return;
+
+	for (i = 0; i < info->iommu_num; i++) {
+		if (info->base[i])
+			writel(RK_MMU_CMD_FORCE_RESET, info->base[i] + RK_MMU_COMMAND);
+	}
+	udelay(5);
 }

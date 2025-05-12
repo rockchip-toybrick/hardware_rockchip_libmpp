@@ -102,6 +102,8 @@ struct mpp_iommu_info {
 
 	int irq;
 	int got_irq;
+	void __iomem **base;
+	u32 iommu_num;
 };
 
 struct mpp_dma_session *
@@ -144,6 +146,8 @@ int mpp_av1_iommu_enable(struct device *dev);
 int mpp_iommu_dev_activate(struct mpp_iommu_info *info, struct mpp_dev *dev);
 int mpp_iommu_dev_deactivate(struct mpp_iommu_info *info, struct mpp_dev *dev);
 int mpp_iommu_reserve_iova(struct mpp_iommu_info *info, dma_addr_t iova, size_t size);
+
+void mpp_iommu_force_reset(struct mpp_iommu_info *info);
 
 static inline int mpp_iommu_down_read(struct mpp_iommu_info *info)
 {
