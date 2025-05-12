@@ -822,12 +822,14 @@ typedef struct Vepu511Status_t {
 	struct {
 		RK_U32 st_enc             : 2;
 		RK_U32 st_sclr            : 1;
-		RK_U32 vepu_fbd_err       : 5;
+		RK_U32 vepu_fbd_err       : 1;
+		RK_U32 vepu_vsp_err       : 1;
+		RK_U32 reserved           : 3;
 		RK_U32 isp_src_oflw       : 1;
 		RK_U32 vepu_src_oflw      : 1;
 		RK_U32 vepu_sid_nmch      : 1;
 		RK_U32 vepu_fcnt_nmch     : 1;
-		RK_U32 reserved           : 4;
+		RK_U32 reserved1          : 4;
 		RK_U32 dvbm_finf_wful     : 1;
 		RK_U32 dvbm_linf_wful     : 1;
 		RK_U32 dvbm_fsid_nmch     : 1;
@@ -836,7 +838,11 @@ typedef struct Vepu511Status_t {
 		RK_U32 dvbm_isp_oflw      : 1;
 		RK_U32 dvbm_vepu_oflw     : 1;
 		RK_U32 isp_time_out       : 1;
-		RK_U32 dvbm_vsrc_fcnt     : 8;
+		RK_U32 anti_info_oflw     : 1;
+		RK_U32 anti_vsrc_oflw     : 1;
+		RK_U32 reserved2          : 1;
+		RK_U32 dvbm_vsrc_sid      : 1;
+		RK_U32 dvbm_vsrc_fcnt     : 4;
 	} st_enc;
 
 	/* 0x00004024 reg4105 */

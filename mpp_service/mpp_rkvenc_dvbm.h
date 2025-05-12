@@ -21,12 +21,14 @@ union st_enc_u
 	struct {
 		u32 st_enc             : 2;
 		u32 st_sclr            : 1;
-		u32 vepu_fbd_err       : 5;
+		u32 vepu_fbd_err       : 1;
+		u32 vepu_vsp_err       : 1;
+		u32 reserved           : 3;
 		u32 isp_src_oflw       : 1;
 		u32 vepu_src_oflw      : 1;
 		u32 vepu_sid_nmch      : 1;
 		u32 vepu_fcnt_nmch     : 1;
-		u32 reserved           : 4;
+		u32 reserved1          : 4;
 		u32 dvbm_finf_wful     : 1;
 		u32 dvbm_linf_wful     : 1;
 		u32 dvbm_fsid_nmch     : 1;
@@ -35,7 +37,11 @@ union st_enc_u
 		u32 dvbm_isp_oflw      : 1;
 		u32 dvbm_vepu_oflw     : 1;
 		u32 isp_time_out       : 1;
-		u32 dvbm_vsrc_fcnt     : 8;
+		u32 anti_info_oflw     : 1;
+		u32 anti_vsrc_oflw     : 1;
+		u32 reserved2          : 1;
+		u32 dvbm_vsrc_sid      : 1;
+		u32 dvbm_vsrc_fcnt     : 4;
 	};
 };
 
