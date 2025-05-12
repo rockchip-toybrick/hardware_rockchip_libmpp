@@ -994,4 +994,29 @@ int mpp_rkvenc_dvbm_handle(struct mpp_dvbm *dvbm, struct mpp_task *mpp_task)
 	else
 		return mpp_rkvenc_sw_dvbm_hdl(dvbm, mpp_task);
 }
+
+void mpp_rkvenc_dvbm_reg_sav_restore(struct mpp_dvbm *dvbm, bool is_save)
+{
+	struct mpp_dev *mpp = dvbm->mpp;
+	u32 off;
+
+	if (is_save) {
+		dvbm->dvbm_cfg = mpp_read(mpp, RKVENC_DVBM_CFG);
+		if (!(dvbm->dvbm_cfg & RKVENC_DVBM_EN))
+			return;
+		for (off = RKVENC_DVBM_REG_S; off <= RKVENC_DVBM_REG_E; off += 4)
+			dvbm->dvbm_reg_save[off / 4] = mpp_read(mpp, off);
+	} else {
+		u32 dvbm_cfg;
+
+		if (!(dvbm->dvbm_cfg & RKVENC_DVBM_EN))
+			return;
+
+		for (off = RKVENC_DVBM_REG_S; off <= RKVENC_DVBM_REG_E; off += 4)
+			mpp_write(mpp, off, dvbm->dvbm_reg_save[off / 4]);
+		dvbm_cfg = dvbm->dvbm_cfg & (~DVBM_VEPU_CONNETC);
+		mpp_write(mpp, RKVENC_DVBM_CFG, dvbm_cfg);
+	}
+}
+
 #endif

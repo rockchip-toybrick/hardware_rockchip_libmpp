@@ -3632,6 +3632,57 @@ static void rkvenc_shutdown(struct platform_device *pdev)
 		mpp_dev_shutdown(pdev);
 }
 
+static int __maybe_unused rkvenc_runtime_suspend(struct device *dev)
+{
+	struct rkvenc_dev *enc = dev_get_drvdata(dev);
+	struct mpp_dev *mpp = &enc->mpp;
+
+	mpp_debug(DEBUG_POWER, "%s suspend device ++\n", dev_name(dev));
+	if (!atomic_xchg(&mpp->suspend_en, 1)) {
+		unsigned long flags;
+		struct mpp_task *task = NULL;
+
+		spin_lock_irqsave(&mpp->queue->running_lock, flags);
+		task = list_first_entry_or_null(&mpp->queue->running_list,
+						struct mpp_task,
+						queue_link);
+		if (task)
+			kref_get(&task->ref);
+		spin_unlock_irqrestore(&mpp->queue->running_lock, flags);
+
+		if (task) {
+			wait_event_timeout(task->wait, test_bit(TASK_STATE_DONE, &task->state),
+					   msecs_to_jiffies(200));
+			kref_put(&task->ref, mpp_free_task);
+		}
+	}
+
+	mpp_rkvenc_dvbm_reg_sav_restore(&enc->dvbm, true);
+	mpp_dev_load_clear(mpp);
+	mpp_debug(DEBUG_POWER, "%s suspend device --\n", dev_name(dev));
+
+	return 0;
+}
+
+static int __maybe_unused rkvenc_runtime_resume(struct device *dev)
+{
+	struct rkvenc_dev *enc = dev_get_drvdata(dev);
+	struct mpp_dev *mpp = &enc->mpp;
+
+	mpp_debug(DEBUG_POWER, "%s resume device ++\n", dev_name(dev));
+	atomic_xchg(&mpp->suspend_en, 0);
+
+	mpp_rkvenc_dvbm_reg_sav_restore(&enc->dvbm, false);
+	mpp_taskqueue_trigger_work(mpp);
+	mpp_debug(DEBUG_POWER, "%s resume device --\n", dev_name(dev));
+
+	return 0;
+}
+
+static const struct dev_pm_ops rkvenc_pm_ops = {
+	MPP_SET_SYSTEM_SLEEP_PM_OPS(rkvenc_runtime_suspend, rkvenc_runtime_resume)
+};
+
 struct platform_driver rockchip_rkvenc2_driver = {
 	.probe = rkvenc_probe,
 	.remove = rkvenc_remove,
@@ -3639,6 +3690,6 @@ struct platform_driver rockchip_rkvenc2_driver = {
 	.driver = {
 		.name = RKVENC_DRIVER_NAME,
 		.of_match_table = of_match_ptr(mpp_rkvenc_dt_match),
-		.pm = &mpp_common_pm_ops,
+		.pm = &rkvenc_pm_ops,
 	},
 };

@@ -100,5 +100,6 @@ int mpp_rkvenc_dvbm_disconnect(struct mpp_dvbm *dvbm, u32 dvbm_cfg);
 int mpp_rkvenc_dvbm_handle(struct mpp_dvbm *dvbm, struct mpp_task *mpp_task);
 void mpp_rkvenc_dvbm_clear(struct mpp_dvbm *dvbm);
 void mpp_rkvenc_dvbm_hack(struct mpp_dvbm *dvbm);
+void mpp_rkvenc_dvbm_reg_sav_restore(struct mpp_dvbm *dvbm, bool is_save);
 
 #endif

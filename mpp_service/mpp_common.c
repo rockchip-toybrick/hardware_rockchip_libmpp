@@ -979,6 +979,10 @@ static void mpp_task_worker_default(struct kthread_work *work_s)
 
 		/* Push a pending task to running queue */
 		mpp = mpp_get_task_used_device(task, task->session);
+		if (atomic_read(&mpp->suspend_en)) {
+			spin_unlock_irqrestore(&queue->dev_lock, flags);
+			break;
+		}
 
 		atomic_inc(&mpp->task_count);
 		mpp_taskqueue_pending_to_run(queue, task);
