@@ -191,9 +191,6 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 						 !atomic_read(&chan_entry->runing),
 						 msecs_to_jiffies(VCODEC_WAIT_TIMEOUT_DELAY));
 
-		if (chan_entry->cfg.online)
-			mpp_vcodec_chan_unbind(chan_entry);
-
 		while(kfifo_get(&chan_entry->frame_fifo, &frame)) {
 			KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
 			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
@@ -204,7 +201,8 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 				KmppMeta meta = sptr.kptr;
 				kmpp_meta_get_obj_d(meta, KEY_COMBO_FRAME, &comb_frame, NULL);
 				if (comb_frame) {
-					ntfy_impl->chan_id = chan_entry->binder_chan_id;
+					ntfy_impl->chan_id = chan_entry->binder_chan_id >= 0 ?
+							     chan_entry->binder_chan_id : chan_id;
 					ntfy_impl->frame = comb_frame;
 
 					ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
@@ -222,6 +220,8 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 			kmpp_venc_notify(ntfy);
 			kmpp_frame_put(frame);
 		}
+		if (chan_entry->cfg.online)
+			mpp_vcodec_chan_unbind(chan_entry);
 		mpp_vcodec_stream_clear(chan_entry);
 		mpp_enc_deinit(chan_entry->handle);
 		mpp_vcodec_dec_chan_num(type);
