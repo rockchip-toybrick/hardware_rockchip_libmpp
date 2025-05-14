@@ -88,5 +88,6 @@ rk_s32 osal_fs_vm_mmap(osal_fs_vm **vm, osal_fs_dev *dev, void *kaddr, rk_s32 si
 rk_s32 osal_fs_vm_munmap(osal_fs_vm *vm);
 
 rk_s32 osal_getpid(void);
+rk_s32 osal_gettid(void);
 
 #endif /* __KMPP_CLS_H__ */

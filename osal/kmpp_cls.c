@@ -672,6 +672,12 @@ EXPORT_SYMBOL(osal_fs_vm_munmap);
 
 rk_s32 osal_getpid(void)
 {
-    return task_pid_nr(current);
+    return task_tgid_vnr(current);
 }
 EXPORT_SYMBOL(osal_getpid);
+
+rk_s32 osal_gettid(void)
+{
+    return task_pid_nr(current);
+}
+EXPORT_SYMBOL(osal_gettid);
