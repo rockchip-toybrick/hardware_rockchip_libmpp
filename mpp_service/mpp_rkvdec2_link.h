@@ -137,6 +137,7 @@ struct rkvdec_link_info {
 	u32 en_base;
 	u32 ip_en_base;
 	u32 ip_en_val;
+	u32 en_sw_iommu_zap;
 };
 
 struct rkvdec_link_dev {
