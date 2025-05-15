@@ -55,18 +55,18 @@
 #define ENTRY_TO_ufp_PTR(tbl, entry)    ((rk_u64 *)ENTRY_TO_PTR(tbl, entry))
 
 /* 32bit unsigned long pointer */
-#define ELEM_FLAG_U32_POS(offset)      (((offset) & (~31)) / 8)
-#define ELEM_FLAG_BIT_POS(offset)      ((offset) & 31)
-#define ENTRY_TO_FLAG_PTR(tbl, entry)   ((rk_ul *)((rk_u8 *)entry + ELEM_FLAG_U32_POS(tbl->tbl.flag_offset)))
+#define ELEM_FLAG_U32_POS(offset)       (((offset) & (~31)) / 8)
+#define ELEM_FLAG_BIT_POS(offset)       ((offset) & 31)
+#define ENTRY_TO_FLAG_PTR(e, entry)     ((rk_ul *)((rk_u8 *)entry + ELEM_FLAG_U32_POS(e->tbl.flag_offset)))
 
-#define ENTRY_SET_FLAG(tbl, entry) \
-    osal_set_bit(ELEM_FLAG_BIT_POS(tbl->tbl.flag_offset), ENTRY_TO_FLAG_PTR(tbl, entry))
+#define ENTRY_SET_FLAG(e, entry) \
+    osal_set_bit(ELEM_FLAG_BIT_POS(e->tbl.flag_offset), ENTRY_TO_FLAG_PTR(e, entry))
 
-#define ENTRY_CLR_FLAG(tbl, entry) \
-    osal_clear_bit(ELEM_FLAG_BIT_POS(tbl->tbl.flag_offset), ENTRY_TO_FLAG_PTR(tbl, entry))
+#define ENTRY_CLR_FLAG(e, entry) \
+    osal_clear_bit(ELEM_FLAG_BIT_POS(e->tbl.flag_offset), ENTRY_TO_FLAG_PTR(e, entry))
 
-#define ENTRY_TEST_FLAG(tbl, entry) \
-    osal_test_bit(ELEM_FLAG_BIT_POS(tbl->tbl.flag_offset), ENTRY_TO_FLAG_PTR(tbl, entry))
+#define ENTRY_TEST_FLAG(e, entry) \
+    osal_test_bit(ELEM_FLAG_BIT_POS(e->tbl.flag_offset), ENTRY_TO_FLAG_PTR(e, entry))
 
 #define get_obj_srv(caller) \
     ({ \
@@ -1449,6 +1449,71 @@ rk_s32 kmpp_obj_tbl_test(KmppObj obj, KmppEntry *tbl)
     return (impl && tbl) ? ENTRY_TEST_FLAG(tbl, impl->entry) : 0;
 }
 EXPORT_SYMBOL(kmpp_obj_tbl_test);
+
+rk_s32 kmpp_obj_update(KmppObj dst, KmppObj src)
+{
+    KmppObjImpl *dst_impl = (KmppObjImpl *)dst;
+    KmppObjImpl *src_impl = (KmppObjImpl *)src;
+    KmppTrie trie = NULL;
+    KmppTrieInfo *info = NULL;
+
+    if (kmpp_obj_check_f(src) || kmpp_obj_check_f(dst) || src_impl->def != dst_impl->def) {
+        kmpp_loge_f("obj %p update to %p failed invalid param\n", src, dst);
+        return rk_nok;
+    }
+
+    trie = src_impl->def->trie;
+
+    info = kmpp_trie_get_info_first(trie);
+    do {
+        KmppEntry *e;
+
+        if (kmpp_trie_info_is_self(info))
+            continue;
+
+        e = (KmppEntry *)kmpp_trie_info_ctx(info);
+        if (ENTRY_TEST_FLAG(e, src_impl->entry)) {
+            rk_s32 offset = e->tbl.elem_offset;
+            rk_s32 size = e->tbl.elem_size;
+
+            osal_memcpy(dst_impl->entry + offset, src_impl->entry + offset, size);
+        }
+    } while ((info = kmpp_trie_get_info_next(trie, info)));
+
+    return rk_ok;
+}
+
+rk_s32 kmpp_obj_update_entry(void *entry, KmppObj src)
+{
+    KmppObjImpl *src_impl = (KmppObjImpl *)src;
+    KmppTrie trie = NULL;
+    KmppTrieInfo *info = NULL;
+
+    if (kmpp_obj_check_f(src) || !entry) {
+        kmpp_loge_f("obj %p update to entry %p failed invalid param\n", src, entry);
+        return rk_nok;
+    }
+
+    trie = src_impl->def->trie;
+
+    info = kmpp_trie_get_info_first(trie);
+    do {
+        KmppEntry *e;
+
+        if (kmpp_trie_info_is_self(info))
+            continue;
+
+        e = (KmppEntry *)kmpp_trie_info_ctx(info);
+        if (ENTRY_TEST_FLAG(e, src_impl->entry)) {
+            rk_s32 offset = e->tbl.elem_offset;
+            rk_s32 size = e->tbl.elem_size;
+
+            osal_memcpy(entry + offset, src_impl->entry + offset, size);
+        }
+    } while ((info = kmpp_trie_get_info_next(trie, info)));
+
+    return rk_ok;
+}
 
 static inline rk_s32 kmpp_obj_impl_run(rk_s32 (*run)(void *ctx, void *arg), void *ctx, void *arg)
 {
