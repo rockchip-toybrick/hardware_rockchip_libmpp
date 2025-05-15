@@ -596,7 +596,7 @@ int mpp_chnl_run_task(struct mpp_session *session, void *param)
 	struct mpp_task *task = NULL;
 	int ret = 0;
 	struct mpp_task_info *info = (struct mpp_task_info *)param;
-	unsigned long flags;
+	unsigned long flags, flags1;
 
 	disable_irq(mpp->irq);
 	spin_lock_irqsave(&queue->dev_lock, flags);
@@ -629,7 +629,7 @@ again:
 
 	/* if task timeout and aborted, remove it */
 	if (atomic_read(&task->abort_request) > 0) {
-		mpp_taskqueue_pop_pending(queue, task);
+		kref_put(&task->ref, mpp_free_task);
 		goto again;
 	}
 
@@ -663,7 +663,11 @@ again:
 
 	/* run task */
 	mpp = mpp_get_task_used_device(task, session);
-	mpp_taskqueue_pending_to_run(queue, task);
+
+	spin_lock_irqsave(&queue->running_lock, flags1);
+	list_move_tail(&task->queue_link, &queue->running_list);
+	spin_unlock_irqrestore(&queue->running_lock, flags1);
+
 	mpp_reset_down_read(mpp->reset_group);
 	mpp_time_record(task);
 	mpp_iommu_dev_activate(mpp->iommu_info, mpp);
@@ -672,11 +676,10 @@ again:
 	set_bit(TASK_STATE_START, &task->state);
 
 done:
-	mpp_session_clean_detach(queue);
-
 	mpp_debug_func(DEBUG_TASK_INFO, "chan_id %d --\n", session->chn_id);
 	spin_unlock_irqrestore(&queue->dev_lock, flags);
 	enable_irq(mpp->irq);
+	mpp_taskqueue_trigger_work(mpp);
 
 	return ret;
 }
