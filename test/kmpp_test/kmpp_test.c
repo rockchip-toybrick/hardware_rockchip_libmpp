@@ -89,11 +89,11 @@ done:
 }
 
 
-#define ENTRY_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, kptr, void *, arg0) \
-    ENTRY(prefix, u32, rk_u32, arg1) \
-    ENTRY(prefix, u64, rk_u64, arg2) \
-    ENTRY(prefix, kfp, void *, func)
+#define ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    ENTRY(prefix, kptr, void *, arg0, ELEM_FLAG_NONE, arg0) \
+    ENTRY(prefix, u32,  rk_u32, arg1, ELEM_FLAG_NONE, arg1) \
+    ENTRY(prefix, u64,  rk_u64, arg2, ELEM_FLAG_NONE, arg2) \
+    ENTRY(prefix, kfp,  void *, func, ELEM_FLAG_NONE, func)
 
 typedef struct KmppObjMacroTestImpl_t {
     void *arg0;

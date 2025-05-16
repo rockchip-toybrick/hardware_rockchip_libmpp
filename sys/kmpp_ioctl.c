@@ -299,7 +299,4 @@ rk_s32 kmpp_ioctl_deinit(void)
 #define KMPP_OBJ_INTF_TYPE          KmppIoc
 #define KMPP_OBJ_IMPL_TYPE          KmppIocImpl
 #define KMPP_OBJ_ENTRY_TABLE        KMPP_IOC_ENTRY_TABLE
-#define KMPP_OBJ_STRUCT_TABLE       KMPP_IOC_STRUCT_TABLE
-#define KMPP_OBJ_FUNC_EXPORT_ENABLE
-#define KMPP_OBJ_SHARE_ENABLE
 #include "kmpp_obj_helper.h"

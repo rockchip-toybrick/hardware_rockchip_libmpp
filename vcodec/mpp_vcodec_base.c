@@ -560,6 +560,7 @@ int mpp_vcodec_init(void)
     kmpp_meta_init();
     kmpp_frame_init();
     kmpp_venc_init_cfg_init();
+    kmpp_venc_st_cfg_init();
     kmpp_venc_ntfy_init();
 
     mpp_enc_module_init();
@@ -589,6 +590,7 @@ int mpp_vcodec_deinit(void)
 	mpp_buffer_pool_deinit();
 
 	kmpp_venc_ntfy_deinit();
+	kmpp_venc_st_cfg_deinit();
 	kmpp_venc_init_cfg_deinit();
 	kmpp_frame_deinit();
 	kmpp_meta_deinit();

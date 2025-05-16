@@ -30,10 +30,7 @@ static rk_s32 kmpp_vsp_init_cfg_impl_dump(void *entry)
 #define KMPP_OBJ_INTF_TYPE          KmppVspInitCfg
 #define KMPP_OBJ_IMPL_TYPE          KmppVspInitCfgImpl
 #define KMPP_OBJ_ENTRY_TABLE        KMPP_VSP_INIT_CFG_ENTRY_TABLE
-#define KMPP_OBJ_STRUCT_TABLE       KMPP_VSP_INIT_CFG_STRUCT_TABLE
 #define KMPP_OBJ_FUNC_DUMP          kmpp_vsp_init_cfg_impl_dump
-#define KMPP_OBJ_FUNC_EXPORT_ENABLE
-#define KMPP_OBJ_SHARE_ENABLE
 #include "kmpp_obj_helper.h"
 
 static rk_s32 kmpp_vsp_pp_cfg_dump(void *entry)
@@ -55,10 +52,8 @@ static rk_s32 kmpp_vsp_pp_cfg_dump(void *entry)
 #define KMPP_OBJ_INTF_TYPE          KmppVspRtCfg
 #define KMPP_OBJ_IMPL_TYPE          KmppVspPpCfg
 #define KMPP_OBJ_ENTRY_TABLE        KMPP_VSP_PP_CFG_ENTRY_TABLE
-#define KMPP_OBJ_ENTRY_TABLE2       KMPP_VSP_PP_CFG_ENTRY_TABLE2
 #define KMPP_OBJ_FUNC_DUMP          kmpp_vsp_pp_cfg_dump
-#define KMPP_OBJ_FUNC_EXPORT_ENABLE
-#define KMPP_OBJ_SHARE_ENABLE
+#define KMPP_OBJ_HIERARCHY_ENABLE
 #include "kmpp_obj_helper.h"
 
 static rk_s32 kmpp_vsp_pp_out_dump(void *entry)
@@ -79,8 +74,6 @@ static rk_s32 kmpp_vsp_pp_out_dump(void *entry)
 #define KMPP_OBJ_NAME               kmpp_vsp_pp_rt_out
 #define KMPP_OBJ_INTF_TYPE          KmppVspRtOut
 #define KMPP_OBJ_IMPL_TYPE          KmppVspPpOut
-#define KMPP_OBJ_ENTRY_TABLE2       KMPP_VSP_PP_OUT_ENTRY_TABLE2
+#define KMPP_OBJ_ENTRY_TABLE        KMPP_VSP_PP_OUT_ENTRY_TABLE
 #define KMPP_OBJ_FUNC_DUMP          kmpp_vsp_pp_out_dump
-#define KMPP_OBJ_FUNC_EXPORT_ENABLE
-#define KMPP_OBJ_SHARE_ENABLE
 #include "kmpp_obj_helper.h"

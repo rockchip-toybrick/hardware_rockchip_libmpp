@@ -9,57 +9,61 @@
 #include "kmpi_vsp.h"
 
 /* vsp pp init config */
-#define KMPP_VSP_INIT_CFG_ENTRY_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, s32, rk_s32,      chan_id) \
-    ENTRY(prefix, s32, rk_s32,      max_width) \
-    ENTRY(prefix, s32, rk_s32,      max_height)
-
-#define KMPP_VSP_INIT_CFG_STRUCT_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, shm, KmppShmPtr,  name)
+#define KMPP_VSP_INIT_CFG_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    ENTRY(prefix, s32, rk_s32,      chan_id,            ELEM_FLAG_NONE, chan_id) \
+    ENTRY(prefix, s32, rk_s32,      max_width,          ELEM_FLAG_NONE, max_width) \
+    ENTRY(prefix, s32, rk_s32,      max_height,         ELEM_FLAG_NONE, max_height) \
+    STRCT(prefix, shm, KmppShmPtr,  name,               ELEM_FLAG_NONE, name) \
 
 #define KMPP_OBJ_NAME           kmpp_vsp_init_cfg
 #define KMPP_OBJ_INTF_TYPE      KmppVspInitCfg
 #define KMPP_OBJ_ENTRY_TABLE    KMPP_VSP_INIT_CFG_ENTRY_TABLE
-#define KMPP_OBJ_STRUCT_TABLE   KMPP_VSP_INIT_CFG_STRUCT_TABLE
 #include "kmpp_obj_func.h"
 
 /* vsp pp runtime config */
-#define KMPP_VSP_PP_CFG_ENTRY_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, s32, rk_s32,      width) \
-    ENTRY(prefix, s32, rk_s32,      height) \
-    ENTRY(prefix, s32, rk_s32,      down_scale_en)
-
-#define KMPP_VSP_PP_CFG_ENTRY_TABLE2(ENTRY, prefix) \
-    ENTRY(prefix, s32, rk_s32,      md, enable) \
-    ENTRY(prefix, s32, rk_s32,      md, switch_sad) \
-    ENTRY(prefix, s32, rk_s32,      md, thres_sad) \
-    ENTRY(prefix, s32, rk_s32,      md, thres_move) \
-    ENTRY(prefix, s32, rk_s32,      md, night_mode) \
-    ENTRY(prefix, s32, rk_s32,      md, filter_switch) \
-    ENTRY(prefix, s32, rk_s32,      md, thres_dust_move) \
-    ENTRY(prefix, s32, rk_s32,      md, thres_dust_blk) \
-    ENTRY(prefix, s32, rk_s32,      md, thres_dust_chng) \
-    ENTRY(prefix, s32, rk_s32,      od, enable) \
-    ENTRY(prefix, s32, rk_s32,      od, is_background) \
-    ENTRY(prefix, s32, rk_s32,      od, thres_complex) \
-    ENTRY(prefix, s32, rk_s32,      od, thres_area_complex) \
-    ENTRY(prefix, s32, rk_s32,      od, thres_complex_cnt) \
-    ENTRY(prefix, s32, rk_s32,      od, thres_sad)
+#define KMPP_VSP_PP_CFG_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    CFG_DEF_START() \
+    ENTRY(prefix, s32, rk_s32,      width,              ELEM_FLAG_NONE, width) \
+    ENTRY(prefix, s32, rk_s32,      height,             ELEM_FLAG_NONE, height) \
+    ENTRY(prefix, s32, rk_s32,      down_scale_en,      ELEM_FLAG_NONE, down_scale_en) \
+    STRUCT_START(md) \
+    ENTRY(prefix, s32, rk_s32,      enable,             ELEM_FLAG_NONE, md, enable) \
+    ENTRY(prefix, s32, rk_s32,      switch_sad,         ELEM_FLAG_NONE, md, switch_sad) \
+    ENTRY(prefix, s32, rk_s32,      thres_sad,          ELEM_FLAG_NONE, md, thres_sad) \
+    ENTRY(prefix, s32, rk_s32,      thres_move,         ELEM_FLAG_NONE, md, thres_move) \
+    ENTRY(prefix, s32, rk_s32,      night_mode,         ELEM_FLAG_NONE, md, night_mode) \
+    ENTRY(prefix, s32, rk_s32,      filter_switch,      ELEM_FLAG_NONE, md, filter_switch) \
+    ENTRY(prefix, s32, rk_s32,      thres_dust_move,    ELEM_FLAG_NONE, md, thres_dust_move) \
+    ENTRY(prefix, s32, rk_s32,      thres_dust_blk,     ELEM_FLAG_NONE, md, thres_dust_blk) \
+    ENTRY(prefix, s32, rk_s32,      thres_dust_chng,    ELEM_FLAG_NONE, md, thres_dust_chng) \
+    STRUCT_END(md) \
+    STRUCT_START(od) \
+    ENTRY(prefix, s32, rk_s32,      enable,             ELEM_FLAG_NONE, od, enable) \
+    ENTRY(prefix, s32, rk_s32,      is_background,      ELEM_FLAG_NONE, od, is_background) \
+    ENTRY(prefix, s32, rk_s32,      thres_complex,      ELEM_FLAG_NONE, od, thres_complex) \
+    ENTRY(prefix, s32, rk_s32,      thres_area_complex, ELEM_FLAG_NONE, od, thres_area_complex) \
+    ENTRY(prefix, s32, rk_s32,      thres_complex_cnt,  ELEM_FLAG_NONE, od, thres_complex_cnt) \
+    ENTRY(prefix, s32, rk_s32,      thres_sad,          ELEM_FLAG_NONE, od, thres_sad) \
+    STRUCT_END(od) \
+    CFG_DEF_END()
 
 #define KMPP_OBJ_NAME               kmpp_vsp_pp_rt_cfg
 #define KMPP_OBJ_INTF_TYPE          KmppVspRtCfg
 #define KMPP_OBJ_ENTRY_TABLE        KMPP_VSP_PP_CFG_ENTRY_TABLE
-#define KMPP_OBJ_ENTRY_TABLE2       KMPP_VSP_PP_CFG_ENTRY_TABLE2
 #include "kmpp_obj_func.h"
 
 /* vsp pp md / od output data */
-#define KMPP_VSP_PP_OUT_ENTRY_TABLE2(ENTRY, prefix) \
-    ENTRY(prefix, s32, rk_s32,      od, flag) \
-    ENTRY(prefix, s32, rk_s32,      od, pix_sum)
+#define KMPP_VSP_PP_OUT_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    CFG_DEF_START() \
+    STRUCT_START(od) \
+    ENTRY(prefix, s32, rk_s32,      flag,               ELEM_FLAG_NONE, od, flag) \
+    ENTRY(prefix, s32, rk_s32,      pix_sum,            ELEM_FLAG_NONE, od, pix_sum) \
+    STRUCT_END(od) \
+    CFG_DEF_END()
 
 #define KMPP_OBJ_NAME               kmpp_vsp_pp_rt_out
 #define KMPP_OBJ_INTF_TYPE          KmppVspRtOut
-#define KMPP_OBJ_ENTRY_TABLE2       KMPP_VSP_PP_OUT_ENTRY_TABLE2
+#define KMPP_OBJ_ENTRY_TABLE        KMPP_VSP_PP_OUT_ENTRY_TABLE
 #include "kmpp_obj_func.h"
 
 #endif /*__KMPP_VSP_OBJS_H__*/

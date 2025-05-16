@@ -9,70 +9,28 @@
 #include "rk_defs.h"
 #include "kmpi_venc.h"
 
-#define KMPP_VENC_INIT_CFG_ENTRY_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, u32, MppCtxType, type) \
-    ENTRY(prefix, u32, MppCodingType, coding) \
-    ENTRY(prefix, s32, rk_s32, chan_id) \
-    ENTRY(prefix, s32, rk_s32, online) \
-    ENTRY(prefix, u32, rk_u32, buf_size) \
-    ENTRY(prefix, u32, rk_u32, max_strm_cnt) \
-    ENTRY(prefix, u32, rk_u32, shared_buf_en) \
-    ENTRY(prefix, u32, rk_u32, smart_en) \
-    ENTRY(prefix, u32, rk_u32, max_width) \
-    ENTRY(prefix, u32, rk_u32, max_height) \
-    ENTRY(prefix, u32, rk_u32, max_lt_cnt) \
-    ENTRY(prefix, u32, rk_u32, qpmap_en) \
-    ENTRY(prefix, u32, rk_u32, chan_dup) \
-    ENTRY(prefix, u32, rk_u32, tmvp_enable) \
-    ENTRY(prefix, u32, rk_u32, only_smartp)
-
-#if 0
-rk_s32 kmpp_venc_init_cfg_init(void);
-rk_s32 kmpp_venc_init_cfg_deinit(void);
-
-rk_s32 kmpp_venc_init_cfg_get(KmppVencInitCfg *cfg);
-rk_s32 kmpp_venc_init_cfg_get_share(KmppVencInitCfg *cfg, KmppShmGrp grp);
-rk_s32 kmpp_venc_init_cfg_assign(KmppVencInitCfg *cfg, void *buf, rk_s32 size);
-rk_s32 kmpp_venc_init_cfg_put(KmppVencInitCfg cfg);
-
-rk_s32 kmpp_venc_init_cfg_get_coding(KmppVencInitCfg cfg, MppCodingType *coding);
-rk_s32 kmpp_venc_init_cfg_set_width(KmppVencInitCfg cfg, MppCodingType coding);
-rk_s32 kmpp_venc_init_cfg_get_chan_id(KmppVencInitCfg cfg, rk_s32 *chan_id);
-rk_s32 kmpp_venc_init_cfg_set_chan_id(KmppVencInitCfg cfg, rk_s32 chan_id);
-rk_s32 kmpp_venc_init_cfg_get_online(KmppVencInitCfg cfg, rk_s32 *online);
-rk_s32 kmpp_venc_init_cfg_set_online(KmppVencInitCfg cfg, rk_s32 online);
-rk_s32 kmpp_venc_init_cfg_get_buf_size(KmppVencInitCfg cfg, rk_u32 *buf_size);
-rk_s32 kmpp_venc_init_cfg_set_buf_size(KmppVencInitCfg cfg, rk_u32 buf_size);
-rk_s32 kmpp_venc_init_cfg_get_max_strm_cnt(KmppVencInitCfg cfg, rk_u32 *max_strm_cnt);
-rk_s32 kmpp_venc_init_cfg_set_max_strm_cnt(KmppVencInitCfg cfg, rk_u32 max_strm_cnt);
-rk_s32 kmpp_venc_init_cfg_get_shared_buf_en(KmppVencInitCfg cfg, rk_u32 *shared_buf_en);
-rk_s32 kmpp_venc_init_cfg_set_shared_buf_en(KmppVencInitCfg cfg, rk_u32 shared_buf_en);
-rk_s32 kmpp_venc_init_cfg_get_smart_en(KmppVencInitCfg cfg, rk_u32 *smart_en);
-rk_s32 kmpp_venc_init_cfg_set_smart_en(KmppVencInitCfg cfg, rk_u32 smart_en);
-rk_s32 kmpp_venc_init_cfg_get_max_width(KmppVencInitCfg cfg, rk_u32 *max_width);
-rk_s32 kmpp_venc_init_cfg_set_max_width(KmppVencInitCfg cfg, rk_u32 max_width);
-rk_s32 kmpp_venc_init_cfg_get_max_height(KmppVencInitCfg cfg, rk_s32 *max_height);
-rk_s32 kmpp_venc_init_cfg_set_max_height(KmppVencInitCfg cfg, rk_s32 max_height);
-rk_s32 kmpp_venc_init_cfg_get_max_lt_cnt(KmppVencInitCfg cfg, rk_u32 *max_lt_cnt);
-rk_s32 kmpp_venc_init_cfg_set_max_lt_cnt(KmppVencInitCfg cfg, rk_u32 max_lt_cnt);
-rk_s32 kmpp_venc_init_cfg_get_qpmap_en(KmppVencInitCfg cfg, rk_u32 *qpmap_en);
-rk_s32 kmpp_venc_init_cfg_set_qpmap_en(KmppVencInitCfg cfg, rk_u32 qpmap_en);
-rk_s32 kmpp_venc_init_cfg_get_chan_dup(KmppVencInitCfg cfg, rk_u32 *chan_dup);
-rk_s32 kmpp_venc_init_cfg_set_chan_dup(KmppVencInitCfg cfg, rk_u32 chan_dup);
-rk_s32 kmpp_venc_init_cfg_get_tmvp_enable(KmppVencInitCfg cfg, rk_u32 *tmvp_enable);
-rk_s32 kmpp_venc_init_cfg_set_tmvp_enable(KmppVencInitCfg cfg, rk_u32 tmvp_enable);
-rk_s32 kmpp_venc_init_cfg_get_only_smartp(KmppVencInitCfg cfg, rk_u32 *only_smartp);
-rk_s32 kmpp_venc_init_cfg_set_only_smartp(KmppVencInitCfg cfg, rk_u32 only_smartp);
-
-#else
+#define KMPP_VENC_INIT_CFG_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    ENTRY(prefix, u32, MppCtxType,      type,           ELEM_FLAG_NONE, type) \
+    ENTRY(prefix, u32, MppCodingType,   coding,         ELEM_FLAG_NONE, coding) \
+    ENTRY(prefix, s32, rk_s32,          chan_id,        ELEM_FLAG_NONE, chan_id) \
+    ENTRY(prefix, s32, rk_s32,          online,         ELEM_FLAG_NONE, online) \
+    ENTRY(prefix, u32, rk_u32,          buf_size,       ELEM_FLAG_NONE, buf_size) \
+    ENTRY(prefix, u32, rk_u32,          max_strm_cnt,   ELEM_FLAG_NONE, max_strm_cnt) \
+    ENTRY(prefix, u32, rk_u32,          shared_buf_en,  ELEM_FLAG_NONE, shared_buf_en) \
+    ENTRY(prefix, u32, rk_u32,          smart_en,       ELEM_FLAG_NONE, smart_en) \
+    ENTRY(prefix, u32, rk_u32,          max_width,      ELEM_FLAG_NONE, max_width) \
+    ENTRY(prefix, u32, rk_u32,          max_height,     ELEM_FLAG_NONE, max_height) \
+    ENTRY(prefix, u32, rk_u32,          max_lt_cnt,     ELEM_FLAG_NONE, max_lt_cnt) \
+    ENTRY(prefix, u32, rk_u32,          qpmap_en,       ELEM_FLAG_NONE, qpmap_en) \
+    ENTRY(prefix, u32, rk_u32,          chan_dup,       ELEM_FLAG_NONE, chan_dup) \
+    ENTRY(prefix, u32, rk_u32,          tmvp_enable,    ELEM_FLAG_NONE, tmvp_enable) \
+    ENTRY(prefix, u32, rk_u32,          only_smartp,    ELEM_FLAG_NONE, only_smartp)
 
 #define KMPP_OBJ_NAME           kmpp_venc_init_cfg
 #define KMPP_OBJ_INTF_TYPE      KmppVencInitCfg
 #define KMPP_OBJ_ENTRY_TABLE    KMPP_VENC_INIT_CFG_ENTRY_TABLE
 
 #include "kmpp_obj_func.h"
-
-#endif
 
 #define kmpp_venc_init_cfg_dump_f(cfg) kmpp_venc_init_cfg_dump(cfg, __FUNCTION__)
 
@@ -107,22 +65,28 @@ typedef enum KmppVencDropFrmType_e {
     KMPP_VENC_DROP_ENC_FAILED,
 } KmppVencDropFrmType;
 
-#define KMPP_NOTIFY_CFG_ENTRY_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, s32,  rk_s32,                 chan_id) \
-    ENTRY(prefix, u32,  KmppNotifyCmd,          cmd) \
-    ENTRY(prefix, u32,  KmppVencDropFrmType,    drop_type) \
-    ENTRY(prefix, u32,  rk_u32,                 pipe_id) \
-    ENTRY(prefix, u32,  rk_u32,                 frame_id) \
-    ENTRY(prefix, kobj, KmppFrame,              frame) \
-    ENTRY(prefix, kobj, KmppPacket,             packet) \
-    ENTRY(prefix, u32,  rk_u32,                 luma_pix_sum_od) \
-    ENTRY(prefix, u32,  rk_u32,                 md_index) \
-    ENTRY(prefix, u32,  rk_u32,                 od_index) \
-    ENTRY(prefix, u32,  rk_u32,                 is_intra)
+#define KMPP_NOTIFY_CFG_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    ENTRY(prefix, s32,  rk_s32,                 chan_id,            ELEM_FLAG_NONE, chan_id) \
+    ENTRY(prefix, u32,  KmppNotifyCmd,          cmd,                ELEM_FLAG_NONE, cmd) \
+    ENTRY(prefix, u32,  KmppVencDropFrmType,    drop_type,          ELEM_FLAG_NONE, drop_type) \
+    ENTRY(prefix, u32,  rk_u32,                 pipe_id,            ELEM_FLAG_NONE, pipe_id) \
+    ENTRY(prefix, u32,  rk_u32,                 frame_id,           ELEM_FLAG_NONE, frame_id) \
+    ENTRY(prefix, kobj, KmppFrame,              frame,              ELEM_FLAG_NONE, frame) \
+    ENTRY(prefix, kobj, KmppPacket,             packet,             ELEM_FLAG_NONE, packet) \
+    ENTRY(prefix, u32,  rk_u32,                 luma_pix_sum_od,    ELEM_FLAG_NONE, luma_pix_sum_od) \
+    ENTRY(prefix, u32,  rk_u32,                 md_index,           ELEM_FLAG_NONE, md_index) \
+    ENTRY(prefix, u32,  rk_u32,                 od_index,           ELEM_FLAG_NONE, od_index) \
+    ENTRY(prefix, u32,  rk_u32,                 is_intra,           ELEM_FLAG_NONE, is_intra)
 
 #define KMPP_OBJ_NAME           kmpp_venc_ntfy
 #define KMPP_OBJ_INTF_TYPE      KmppVencNtfy
 #define KMPP_OBJ_ENTRY_TABLE    KMPP_NOTIFY_CFG_ENTRY_TABLE
+
+#include "kmpp_obj_func.h"
+
+/* ------------------------ kmpp static config ------------------------- */
+#define KMPP_OBJ_NAME           kmpp_venc_st_cfg
+#define KMPP_OBJ_INTF_TYPE      KmppVencStCfg
 
 #include "kmpp_obj_func.h"
 

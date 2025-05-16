@@ -168,12 +168,12 @@ rk_s32 kmpp_buf_grp_setup(KmppBufGrp group, const rk_u8 *caller);
 /* discard all old buffer and prepare for new config */
 rk_s32 kmpp_buf_grp_reset(KmppBufGrp group, const rk_u8 *caller);
 
-#define KMPP_BUF_GRP_STRUCT_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, shm,  KmppShmPtr,     cfg)
+#define KMPP_BUF_GRP_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    STRCT(prefix, shm,  KmppShmPtr,     cfg,        ELEM_FLAG_NONE, cfg)
 
 #define KMPP_OBJ_NAME                   kmpp_buf_grp
 #define KMPP_OBJ_INTF_TYPE              KmppBufGrp
-#define KMPP_OBJ_STRUCT_TABLE           KMPP_BUF_GRP_STRUCT_TABLE
+#define KMPP_OBJ_ENTRY_TABLE            KMPP_BUF_GRP_ENTRY_TABLE
 #include "kmpp_obj_func.h"
 
 /* helper functions */
@@ -194,30 +194,25 @@ rk_u64 kmpp_buf_grp_get_cfg_u(KmppBufGrp group);
  * used   - the buffer group used buffer count
  * unused - the buffer group unused buffer count
  * device - the dmabuf device when allocator is invalid
- */
-#define KMPP_BUF_GRP_CFG_ENTRY_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, u32,  rk_u32,         flag) \
-    ENTRY(prefix, u32,  rk_u32,         count) \
-    ENTRY(prefix, u32,  rk_u32,         size) \
-    ENTRY(prefix, u32,  KmppBufferMode, mode) \
-    ENTRY(prefix, s32,  rk_s32,         fd) \
-    ENTRY(prefix, s32,  rk_s32,         grp_id) \
-    ENTRY(prefix, s32,  rk_s32,         used) \
-    ENTRY(prefix, s32,  rk_s32,         unused) \
-    ENTRY(prefix, kptr, void *,         device)
-
-/*
+ * name   - the buffer group name
  * allocator - allocator name
- * name - the buffer group name
  */
-#define KMPP_BUF_GRP_CFG_STRUCT_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, shm,  KmppShmPtr,     allocator) \
-    ENTRY(prefix, shm,  KmppShmPtr,     name)
+#define KMPP_BUF_GRP_CFG_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    ENTRY(prefix, u32,  rk_u32,         flag,       ELEM_FLAG_NONE, flag) \
+    ENTRY(prefix, u32,  rk_u32,         count,      ELEM_FLAG_NONE, count) \
+    ENTRY(prefix, u32,  rk_u32,         size,       ELEM_FLAG_NONE, size) \
+    ENTRY(prefix, u32,  KmppBufferMode, mode,       ELEM_FLAG_NONE, mode) \
+    ENTRY(prefix, s32,  rk_s32,         fd,         ELEM_FLAG_NONE, fd) \
+    ENTRY(prefix, s32,  rk_s32,         grp_id,     ELEM_FLAG_NONE, grp_id) \
+    ENTRY(prefix, s32,  rk_s32,         used,       ELEM_FLAG_NONE, used) \
+    ENTRY(prefix, s32,  rk_s32,         unused,     ELEM_FLAG_NONE, unused) \
+    ENTRY(prefix, kptr, void *,         device,     ELEM_FLAG_NONE, device) \
+    STRCT(prefix, shm,  KmppShmPtr,     name,       ELEM_FLAG_NONE, name) \
+    STRCT(prefix, shm,  KmppShmPtr,     allocator,  ELEM_FLAG_NONE, allocator)
 
 #define KMPP_OBJ_NAME                   kmpp_buf_grp_cfg
 #define KMPP_OBJ_INTF_TYPE              KmppBufGrpCfg
 #define KMPP_OBJ_ENTRY_TABLE            KMPP_BUF_GRP_CFG_ENTRY_TABLE
-#define KMPP_OBJ_STRUCT_TABLE           KMPP_BUF_GRP_CFG_STRUCT_TABLE
 #include "kmpp_obj_func.h"
 
 
@@ -234,12 +229,12 @@ rk_u32 kmpp_buffer_get_size(KmppBuffer buffer);
 rk_s32 kmpp_buffer_get_fd(KmppBuffer buffer);
 KmppDmaBuf kmpp_buffer_get_dmabuf(KmppBuffer buffer);
 
-#define KMPP_BUFFER_STRUCT_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, shm,  KmppShmPtr,     cfg)
+#define KMPP_BUFFER_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    STRCT(prefix, shm,  KmppShmPtr,     cfg,        ELEM_FLAG_NONE, cfg)
 
 #define KMPP_OBJ_NAME                   kmpp_buffer
 #define KMPP_OBJ_INTF_TYPE              KmppBuffer
-#define KMPP_OBJ_STRUCT_TABLE           KMPP_BUFFER_STRUCT_TABLE
+#define KMPP_OBJ_ENTRY_TABLE            KMPP_BUFFER_ENTRY_TABLE
 #include "kmpp_obj_func.h"
 
 #define kmpp_buffer_setup_f(buf, file)  kmpp_buffer_setup(buf, file, __FUNCTION__)
@@ -257,32 +252,26 @@ KmppDmaBuf kmpp_buffer_get_dmabuf(KmppBuffer buffer);
  * kdmabuf  - the struct dma_buf * in kernel space
  * file     - the share buffer handle for sharing to userspace
  */
-#define KMPP_BUF_CFG_ENTRY_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, u32,  rk_u32,         size) \
-    ENTRY(prefix, u32,  rk_u32,         offset) \
-    ENTRY(prefix, u32,  rk_u32,         flag) \
-    ENTRY(prefix, s32,  rk_s32,         fd) \
-    ENTRY(prefix, s32,  rk_s32,         index) \
-    ENTRY(prefix, s32,  rk_s32,         grp_id) \
-    ENTRY(prefix, s32,  rk_s32,         buf_gid) \
-    ENTRY(prefix, s32,  rk_s32,         buf_uid) \
-    ENTRY(prefix, kptr, void *,         hnd) \
-    ENTRY(prefix, kptr, void *,         dmabuf)
-
-#define KMPP_BUF_CFG_STRUCT_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, shm,  KmppShmPtr,     sptr) \
-    ENTRY(prefix, shm,  KmppShmPtr,     group)
-
-/* entry table for userspace access */
-#define KMPP_BUF_CFG_ENTRY_USER_TABLE(ENTRY, prefix) \
-    ENTRY(prefix, uptr, rk_u64,         uptr) \
-    ENTRY(prefix, uptr, rk_u64,         upriv) \
-    ENTRY(prefix, ufp,  rk_u64,         ufp)
+#define KMPP_BUF_CFG_ENTRY_TABLE(prefix, ENTRY, STRCT, EHOOK, SHOOK, ALIAS) \
+    ENTRY(prefix, u32,  rk_u32,         size,       ELEM_FLAG_NONE, size) \
+    ENTRY(prefix, u32,  rk_u32,         offset,     ELEM_FLAG_NONE, offset) \
+    ENTRY(prefix, u32,  rk_u32,         flag,       ELEM_FLAG_NONE, flag) \
+    ENTRY(prefix, s32,  rk_s32,         fd,         ELEM_FLAG_NONE, fd) \
+    ENTRY(prefix, s32,  rk_s32,         index,      ELEM_FLAG_NONE, index) \
+    ENTRY(prefix, s32,  rk_s32,         grp_id,     ELEM_FLAG_NONE, grp_id) \
+    ENTRY(prefix, s32,  rk_s32,         buf_gid,    ELEM_FLAG_NONE, buf_gid) \
+    ENTRY(prefix, s32,  rk_s32,         buf_uid,    ELEM_FLAG_NONE, buf_uid) \
+    ENTRY(prefix, kptr, void *,         hnd,        ELEM_FLAG_NONE, hnd) \
+    ENTRY(prefix, kptr, void *,         dmabuf,     ELEM_FLAG_NONE, dmabuf) \
+    STRCT(prefix, shm,  KmppShmPtr,     sptr,       ELEM_FLAG_NONE, sptr) \
+    STRCT(prefix, shm,  KmppShmPtr,     group,      ELEM_FLAG_NONE, group) \
+    ALIAS(prefix, uptr, rk_u64,         uptr,       ELEM_FLAG_NONE, uptr) \
+    ALIAS(prefix, uptr, rk_u64,         upriv,      ELEM_FLAG_NONE, upriv) \
+    ALIAS(prefix, ufp,  rk_u64,         ufp,        ELEM_FLAG_NONE, ufp)
 
 #define KMPP_OBJ_NAME                   kmpp_buf_cfg
 #define KMPP_OBJ_INTF_TYPE              KmppBufCfg
 #define KMPP_OBJ_ENTRY_TABLE            KMPP_BUF_CFG_ENTRY_TABLE
-#define KMPP_OBJ_STRUCT_TABLE           KMPP_BUF_CFG_STRUCT_TABLE
 #include "kmpp_obj_func.h"
 
 
