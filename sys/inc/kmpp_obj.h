@@ -6,11 +6,9 @@
 #ifndef __KMPP_OBJ_H__
 #define __KMPP_OBJ_H__
 
-#include "kmpp_cls.h"
-
-#include "kmpp_sys_defs.h"
-#include "kmpp_ioctl.h"
 #include "kmpp_trie.h"
+#include "kmpp_ioctl.h"
+#include "kmpp_sys_defs.h"
 
 /*
  * kernel object definition and kernel object

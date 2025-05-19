@@ -6,8 +6,6 @@
 #ifndef __KMPP_SHM_H__
 #define __KMPP_SHM_H__
 
-#include "kmpp_cls.h"
-
 #include "kmpp_trie.h"
 #include "kmpp_sys_defs.h"
 

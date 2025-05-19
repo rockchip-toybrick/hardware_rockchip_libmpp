@@ -6,8 +6,8 @@
 #ifndef __KMPP_BUFFER_H__
 #define __KMPP_BUFFER_H__
 
+#include "kmpp_sys_defs.h"
 #include "kmpp_dmaheap.h"
-#include "kmpp_cls.h"
 
 /*
  * KmppBuffer module has several functions:

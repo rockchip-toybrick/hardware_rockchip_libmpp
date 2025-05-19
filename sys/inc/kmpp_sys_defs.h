@@ -204,5 +204,7 @@ typedef void* KmppObj;
 typedef void* KmppShmGrp;
 /* KmppShm - share memory for address access and read / write */
 typedef void* KmppShm;
+/* osal_fs_dev - system file struct definition */
+typedef struct osal_fs_dev_t osal_fs_dev;
 
 #endif /* __KMPP_SYS_DEFS_H__ */

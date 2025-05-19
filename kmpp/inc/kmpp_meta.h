@@ -6,8 +6,7 @@
 #ifndef __KMPP_META_H__
 #define __KMPP_META_H__
 
-#include "kmpi_defs.h"
-#include "kmpp_cls.h"
+#include "kmpp_sys_defs.h"
 
 #define FOURCC_META(a, b, c, d) ((RK_U32)(a) << 24  | \
                                 ((RK_U32)(b) << 16) | \
