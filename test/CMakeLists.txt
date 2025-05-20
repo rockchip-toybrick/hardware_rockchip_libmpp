@@ -10,3 +10,6 @@ option(BUILD_SYM_TEST "Build kernel mpp cross module symbol test" ON)
 IF(${BUILD_SYM_TEST})
     ADD_SUBDIRECTORY(sym_test)
 ENDIF(${BUILD_SYM_TEST})
+
+# test stub ko build for stub header
+ADD_SUBDIRECTORY(stub_test)
