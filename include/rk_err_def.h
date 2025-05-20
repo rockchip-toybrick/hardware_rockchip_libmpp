@@ -9,8 +9,8 @@
 #include "rk_type.h"
 
 typedef enum {
-    MPP_SUCCESS                 = RK_SUCCESS,
-    MPP_OK                      = RK_OK,
+    MPP_SUCCESS                 = rk_success,
+    MPP_OK                      = rk_ok,
 
     MPP_NOK                     = -1,
     MPP_ERR_UNKNOW              = -2,

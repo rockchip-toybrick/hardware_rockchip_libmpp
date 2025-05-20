@@ -323,8 +323,8 @@ typedef void* KmppPpInfo;
 #define kmpp_frame_dump_f(frame) kmpp_frame_dump(frame, __FUNCTION__)
 
 rk_s32 kmpp_frame_has_meta(const KmppFrame frame);
-MPP_RET kmpp_frame_copy(KmppFrame dst, KmppFrame src);
-MPP_RET kmpp_frame_info_cmp(KmppFrame frame0, KmppFrame frame1);
+rk_s32 kmpp_frame_copy(KmppFrame dst, KmppFrame src);
+rk_s32 kmpp_frame_info_cmp(KmppFrame frame0, KmppFrame frame1);
 rk_s32 kmpp_frame_get_fbc_offset(KmppFrame frame, rk_u32 *offset);
 rk_s32 kmpp_frame_get_fbc_stride(KmppFrame frame, rk_u32 *stride);
 
