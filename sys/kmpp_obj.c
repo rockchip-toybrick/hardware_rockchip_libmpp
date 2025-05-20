@@ -363,7 +363,7 @@ static KmppObjDefImpl *find_objdef(const rk_u8 *name)
     return NULL;
 }
 
-rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name)
+rk_s32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name)
 {
     KmppObjDefImpl *impl = find_objdef(name);
 

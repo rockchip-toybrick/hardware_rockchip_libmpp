@@ -56,7 +56,7 @@ typedef rk_s32 (*KmppObjHook)(void *entry, void *arg, const rk_u8 *caller);
 
 rk_s32 kmpp_objdef_get(KmppObjDef *def, rk_s32 size, const rk_u8 *name);
 rk_s32 kmpp_objdef_put(KmppObjDef def);
-rk_u32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name);
+rk_s32 kmpp_objdef_find(KmppObjDef *def, const rk_u8 *name);
 
 /*
  * object define info register function

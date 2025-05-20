@@ -24,7 +24,6 @@
 #warning "option macro:"
 #warning "KMPP_OBJ_EXTRA_SIZE           - object extra size in bytes"
 #warning "KMPP_OBJ_ENTRY_TABLE          - object element value / pointer entry table"
-#warning "KMPP_OBJ_HOOK_TABLE           - object element value hook function table"
 #warning "KMPP_OBJ_FUNC_IOCTL           - object element ioctl cmd and function table"
 #warning "KMPP_OBJ_FUNC_INIT            - add object init function"
 #warning "KMPP_OBJ_FUNC_DEINIT          - add object deinit function"
@@ -433,7 +432,6 @@ KMPP_OBJ_ENTRY_TABLE(KMPP_OBJ_NAME, KMPP_OBJ_EXPORT, KMPP_OBJ_EXPORT,
 #undef KMPP_OBJ_IMPL_TYPE
 #undef KMPP_OBJ_EXTRA_SIZE
 #undef KMPP_OBJ_ENTRY_TABLE
-#undef KMPP_OBJ_HOOK_TABLE
 #undef KMPP_OBJ_FUNC_INIT
 #undef KMPP_OBJ_FUNC_DEINIT
 #undef KMPP_OBJ_FUNC_IOCTL
