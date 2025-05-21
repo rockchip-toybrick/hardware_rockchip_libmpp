@@ -87,6 +87,11 @@ typedef struct __attribute__((packed)) KmppMetaVals_t {
     KmppMetaObj         pp_od_buf;
     /* pp output object */
     KmppMetaObj         pp_out;
+
+    KmppMetaVal         ae_exp_time; /* AE exposure time */
+    KmppMetaVal         ae_analog_gain;
+    KmppMetaVal         ae_digital_gain;
+    KmppMetaVal         ae_isp_dgain; /* ISP digital gain */
 } KmppMetaVals;
 
 typedef struct __attribute__((packed)) KmppMetaImpl_t {

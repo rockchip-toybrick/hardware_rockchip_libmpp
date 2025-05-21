@@ -200,7 +200,11 @@ static rk_s32 kmpp_meta_impl_dump(void *entry)
     ENTRY(KEY_CHANNEL_ID,           TYPE_VAL_32,    vals.chan_id) \
     ENTRY(KEY_PP_MD_BUF,            TYPE_SPTR,      vals.pp_md_buf) \
     ENTRY(KEY_PP_OD_BUF,            TYPE_SPTR,      vals.pp_od_buf) \
-    ENTRY(KEY_PP_OUT,               TYPE_SPTR,      vals.pp_out)
+    ENTRY(KEY_PP_OUT,               TYPE_SPTR,      vals.pp_out) \
+    ENTRY(KEY_EXP_TIME,             TYPE_VAL_32,    vals.ae_exp_time) \
+    ENTRY(KEY_ANALOG_GAIN,          TYPE_VAL_32,    vals.ae_analog_gain) \
+    ENTRY(KEY_DIGITAL_GAIN,         TYPE_VAL_32,    vals.ae_digital_gain) \
+    ENTRY(KEY_ISP_DGAIN,            TYPE_VAL_32,    vals.ae_isp_dgain)
 
 void kmpp_meta_init(void)
 {

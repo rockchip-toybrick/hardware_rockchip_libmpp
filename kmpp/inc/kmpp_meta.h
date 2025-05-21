@@ -128,6 +128,16 @@ typedef enum KmppMetaKey_e {
     KEY_PP_OD_BUF               = FOURCC_META('o', 'd', 'b', 'f'),
     /* pp output data */
     KEY_PP_OUT                  = FOURCC_META('o', 'p', 'p', ' '),
+
+    /* AE parameters from ISP module */
+    /* sensor exposure time */
+    KEY_EXP_TIME                = FOURCC_META('e', 'x', 'p', 't'),
+    /* sensor analog gain */
+    KEY_ANALOG_GAIN             = FOURCC_META('s', 'a', 'g', 'n'),
+    /* sensor digital gain */
+    KEY_DIGITAL_GAIN            = FOURCC_META('s', 'd', 'g', 'n'),
+    /* ISP digital gain */
+    KEY_ISP_DGAIN               = FOURCC_META('i', 'd', 'g', 'n')
 } KmppMetaKey;
 
 #define kmpp_meta_get_f(meta)               kmpp_meta_get(meta, __FUNCTION__)
