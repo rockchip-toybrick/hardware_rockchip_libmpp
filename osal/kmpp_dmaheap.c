@@ -135,6 +135,7 @@ typedef struct KmppDmaBufImpl_t {
     rk_s32              fd;
     rk_s32              size;
     rk_u32              flag;
+    struct mm_struct    *mm;
 } KmppDmaBufImpl;
 
 typedef struct KmppDmaHeapsSrv_t {
@@ -668,6 +669,7 @@ rk_s32 kmpp_dmabuf_alloc(KmppDmaBuf *buf, KmppDmaHeap heap, rk_s32 size, rk_u32 
     impl->size = size;
     impl->flag = flag;
     impl->fd = -1;
+    impl->mm = NULL;
 
     osal_spin_lock(heaps->lock);
     osal_list_add_tail(&impl->list, &impl_heap->list_used);
@@ -749,13 +751,19 @@ rk_s32 kmpp_dmabuf_free(KmppDmaBuf buf, const rk_u8 *caller)
      * If the current process killed, the current mm will be recycle first,
      * so it does not need to vm_mnunmap uaddr here
      */
-    if (impl->uptr && current->mm) {
-        rk_u32 size = impl->size;
+    if (impl->uptr) {
+        if (current->mm && current->mm == impl->mm) {
+            rk_u32 size = impl->size;
 
-        if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP)
-            size *= 2;
+            if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP)
+                size *= 2;
 
-        vm_munmap((rk_ul)impl->uptr, size);
+            vm_munmap((rk_ul)impl->uptr, size);
+            impl->uptr = 0;
+            impl->mm = NULL;
+        } else
+            kmpp_logw_f("invalid dmabuf vm_munmap, buf %px uptr %#llx mm %px current mm %px\n",
+                        buf, impl->uptr, impl->mm, current->mm);
     }
 
     if (impl->dma_buf) {
@@ -992,8 +1000,39 @@ rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf)
     dmabuf_dbg_buf("dmabuf %d get uptr %#lx\n", impl->buf_id, uptr);
 
     impl->uptr = (rk_u64)uptr;
+    if (uptr)
+        impl->mm = current->mm;
 
     return impl->uptr;
+}
+
+rk_s32 kmpp_dmabuf_put_uptr(KmppDmaBuf buf)
+{
+    KmppDmaBufImpl *impl = (KmppDmaBufImpl *)buf;
+    rk_s32 ret = rk_nok;
+
+    if (!impl) {
+        kmpp_loge_f("invalid NULL buf\n");
+        return ret;
+    }
+
+    if (impl->uptr) {
+        if (current->mm && current->mm == impl->mm) {
+            rk_u32 size = impl->size;
+
+            if (impl->flag & KMPP_DMABUF_FLAGS_DUP_MAP)
+                size *= 2;
+
+            vm_munmap((rk_ul)impl->uptr, size);
+            impl->uptr = 0;
+            impl->mm = NULL;
+            ret = rk_ok;
+        } else
+            kmpp_logw_f("invalid dmabuf vm_munmap, buf %px uptr %#llx mm %px current mm %px\n",
+                        buf, impl->uptr, impl->mm, current->mm);
+    }
+
+    return ret;
 }
 
 rk_s32 kmpp_dmabuf_get_size(KmppDmaBuf buf)
@@ -1223,6 +1262,7 @@ EXPORT_SYMBOL(kmpp_dmabuf_import_ctx);
 
 EXPORT_SYMBOL(kmpp_dmabuf_get_kptr);
 EXPORT_SYMBOL(kmpp_dmabuf_get_uptr);
+EXPORT_SYMBOL(kmpp_dmabuf_put_uptr);
 EXPORT_SYMBOL(kmpp_dmabuf_get_size);
 EXPORT_SYMBOL(kmpp_dmabuf_get_flag);
 EXPORT_SYMBOL(kmpp_dmabuf_get_iova);

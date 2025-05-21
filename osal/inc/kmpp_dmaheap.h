@@ -40,6 +40,7 @@ rk_s32 kmpp_dmabuf_import_ctx(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_
 
 void *kmpp_dmabuf_get_kptr(KmppDmaBuf buf);
 rk_u64 kmpp_dmabuf_get_uptr(KmppDmaBuf buf);
+rk_s32 kmpp_dmabuf_put_uptr(KmppDmaBuf buf);
 rk_s32 kmpp_dmabuf_get_size(KmppDmaBuf buf);
 rk_u32 kmpp_dmabuf_get_flag(KmppDmaBuf buf);
 /* attach dmabuf to device */
