@@ -6,11 +6,13 @@
 #define  MODULE_TAG "kmpp_obj"
 
 #include <linux/kernel.h>
+#include <linux/sched.h>
 #include "rk-mpp-kobj.h"
 
 #include "rk_list.h"
 #include "kmpp_atomic.h"
 #include "kmpp_bitops.h"
+#include "kmpp_cls.h"
 #include "kmpp_macro.h"
 #include "kmpp_mem.h"
 #include "kmpp_log.h"
@@ -1130,6 +1132,47 @@ rk_s32 kmpp_obj_get_share(KmppObj *obj, KmppObjDef def, osal_fs_dev *file, const
     return rk_ok;
 }
 EXPORT_SYMBOL(kmpp_obj_get_share);
+
+rk_s32 kmpp_obj_share(KmppObj obj, const rk_u8 *caller)
+{
+    KmppObjImpl *impl = (KmppObjImpl *)obj;
+    KmppObjDefImpl *def = impl ? impl->def : NULL;
+    osal_fs_dev *file = NULL;
+    KmppShm shm = NULL;
+    void *kptr;
+
+    if (!obj || !def) {
+        kmpp_loge_f("invalid obj %p def %p at %s\n", obj, def, caller);
+        return rk_nok;
+    }
+
+    if (impl->shm) {
+        kmpp_loge_f("can not share %s %p twice at %s\n", def->name, obj, caller);
+        return rk_nok;
+    }
+
+    file = kmpp_shm_get_objs_file();
+    if (!file) {
+        kmpp_loge_f("can not find valid objs file at pid %d mm %px at %s\n",
+                    osal_getpid(), current->mm, caller);
+        return rk_nok;
+    }
+
+    kmpp_shm_get(&shm, file, def->name);
+    if (!shm) {
+        kmpp_loge_f("kmpp_shm_get %s failed\n", def->name);
+        return rk_nok;
+    }
+
+    impl->shm = shm;
+    kmpp_shm_set_kpriv(shm, impl);
+    kptr = kmpp_shm_get_kaddr(shm);
+    osal_memcpy(kptr, impl->entry, def->entry_size);
+    impl->entry = kptr;
+
+    return rk_ok;
+}
+EXPORT_SYMBOL(kmpp_obj_share);
 
 rk_s32 kmpp_obj_put(KmppObj obj, const rk_u8 *caller)
 {

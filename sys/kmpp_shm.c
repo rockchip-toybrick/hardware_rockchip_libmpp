@@ -730,7 +730,7 @@ osal_fs_dev *kmpp_shm_get_objs_file(void)
         osal_list_for_each_entry_safe(root, n, &mgr->list_root, KmppShmGrpRoot, list_mgr) {
             if (root->pid == pid) {
                 file = root->file;
-                kmpp_logi_f("find root %px pid %d file %px\n", root, pid, file);
+                kmpp_logd_f("find root %px pid %d file %px\n", root, pid, file);
                 break;
             }
         }
