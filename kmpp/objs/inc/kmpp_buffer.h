@@ -225,6 +225,7 @@ KmppBufCfg kmpp_buffer_get_cfg_k(KmppBuffer buffer);
 rk_u64 kmpp_buffer_get_cfg_u(KmppBuffer buffer);
 void *kmpp_buffer_get_kptr(KmppBuffer buffer);
 rk_u64 kmpp_buffer_get_uptr(KmppBuffer buffer);
+rk_s32 kmpp_buffer_put_uptr(KmppBuffer buffer);
 rk_u32 kmpp_buffer_get_size(KmppBuffer buffer);
 rk_s32 kmpp_buffer_get_fd(KmppBuffer buffer);
 KmppDmaBuf kmpp_buffer_get_dmabuf(KmppBuffer buffer);

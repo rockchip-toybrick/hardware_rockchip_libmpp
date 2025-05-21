@@ -1033,6 +1033,24 @@ rk_u64 kmpp_buffer_get_uptr(KmppBuffer buffer)
     return impl->uaddr;
 }
 
+rk_s32 kmpp_buffer_put_uptr(KmppBuffer buffer)
+{
+    KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
+
+    if (!impl || !impl->buf) {
+        kmpp_loge_f("invalid param buffer %px dmabuf %px\n",
+                    impl, impl ? impl->buf : NULL);
+        return rk_nok;
+    }
+
+    if (!kmpp_dmabuf_put_uptr(impl->buf)) {
+        impl->uaddr = 0;
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+
 KmppDmaBuf kmpp_buffer_get_dmabuf(KmppBuffer buffer)
 {
     KmppBufferImpl *impl = (KmppBufferImpl *)kmpp_obj_to_entry(buffer);
@@ -1331,7 +1349,6 @@ rk_s32 kmpp_buffer_flush_for_device_partial(KmppBuffer buffer, void *device, rk_
     return kmpp_dmabuf_flush_for_dev_partial(impl->buf, NULL, offset, size);
 }
 
-
 #include <linux/export.h>
 
 EXPORT_SYMBOL(kmpp_buf_init);
@@ -1350,6 +1367,7 @@ EXPORT_SYMBOL(kmpp_buffer_get_cfg_k);
 EXPORT_SYMBOL(kmpp_buffer_get_cfg_u);
 EXPORT_SYMBOL(kmpp_buffer_get_kptr);
 EXPORT_SYMBOL(kmpp_buffer_get_uptr);
+EXPORT_SYMBOL(kmpp_buffer_put_uptr);
 EXPORT_SYMBOL(kmpp_buffer_get_dmabuf);
 
 EXPORT_SYMBOL(kmpp_buffer_read);

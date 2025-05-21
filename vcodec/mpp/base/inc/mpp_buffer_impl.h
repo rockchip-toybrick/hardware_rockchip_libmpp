@@ -26,7 +26,9 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffe, MppDev dev, const char *caller);
 MPP_RET mpp_buffer_pool_init(RK_U32 max_cnt);
 MPP_RET mpp_buffer_pool_deinit(void);
 void mpp_buf_pool_info_show(void *seq_file);
-RK_UL mpp_buffer_get_uaddr(MppBuffer buffer);
+RK_U64 mpp_buffer_get_uptr(MppBuffer buffer);
+RK_S32 mpp_buffer_put_uptr(MppBuffer buffer);
+RK_S32 mpp_buffer_to_shmptr(MppBuffer buffer, KmppShmPtr *sptr);
 
 #ifdef __cplusplus
 }

@@ -5,23 +5,26 @@
 
 #define MODULE_TAG "mpp_buffer"
 
-#include "mpp_buffer_impl.h"
-
 #include "kmpp_osal.h"
+
+#include "kmpp_obj.h"
+#include "kmpp_shm.h"
 #include "kmpp_mem_pool.h"
+
+#include "mpp_buffer_impl.h"
 #include "kmpp_buffer.h"
 
-static const char *module_name = MODULE_TAG;
 typedef struct MppBufferImpl_t {
     MppBufferInfo   info;
     osal_atomic     *ref_count;
     KmppBuffer      kmpp_buf;
     size_t          offset;
     RK_U32          cir_flag;
-    RK_UL           uaddr;
+    RK_U64          uaddr;
     RK_U64          iova;
 } MppBufferImpl;
 
+static const char *module_name = MODULE_TAG;
 static KmppMemPool mppbuf_pool = NULL;
 
 MPP_RET mpp_buffer_pool_init(RK_U32 max_cnt)
@@ -559,19 +562,36 @@ RK_U32 mpp_buffer_get_iova_f(MppBuffer buffer, MppDev dev, const char *caller)
     return (rk_u32)p->iova;
 }
 
-RK_UL mpp_buffer_get_uaddr(MppBuffer buffer)
+RK_U64 mpp_buffer_get_uptr(MppBuffer buffer)
 {
     MppBufferImpl *p = (MppBufferImpl *)buffer;
 
     if (!p) {
         kmpp_loge_f("invalid NULL input\n");
-        return -1;
+        return 0;
     }
 
     if (!p->uaddr)
         p->uaddr = kmpp_buffer_get_uptr(p->kmpp_buf);
 
     return p->uaddr;
+}
+
+RK_S32 mpp_buffer_put_uptr(MppBuffer buffer)
+{
+    MppBufferImpl *p = (MppBufferImpl *)buffer;
+
+    if (!p) {
+        kmpp_loge_f("invalid NULL input\n");
+        return MPP_NOK;
+    }
+
+    if (p->uaddr) {
+        kmpp_buffer_put_uptr(p->kmpp_buf);
+        p->uaddr = 0;
+    }
+
+    return MPP_OK;
 }
 
 KmppDmaBuf mpp_buffer_get_dmabuf(MppBuffer buffer)
@@ -584,6 +604,18 @@ KmppDmaBuf mpp_buffer_get_dmabuf(MppBuffer buffer)
     }
 
     return kmpp_buffer_get_dmabuf(p->kmpp_buf);
+}
+
+RK_S32 mpp_buffer_to_shmptr(MppBuffer buffer, KmppShmPtr *sptr)
+{
+    MppBufferImpl *p = (MppBufferImpl *)buffer;
+
+    if (!p) {
+        kmpp_loge_f("invalid NULL input\n");
+        return MPP_NOK;
+    }
+
+    return kmpp_obj_to_shmptr(p->kmpp_buf, sptr);
 }
 
 #include <linux/export.h>

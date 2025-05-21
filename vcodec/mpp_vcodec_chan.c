@@ -344,7 +344,7 @@ int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
 	enc_packet->data_num = 1;
 	enc_packet->u64packet_addr = (uintptr_t )packet;
 	if (packet->buf.buf) {
-		enc_packet->u64priv_data = mpp_buffer_get_uaddr(packet->buf.buf);
+		enc_packet->u64priv_data = mpp_buffer_get_uptr(packet->buf.buf);
 		enc_packet->offset = packet->buf.start_offset;
 		enc_packet->buf_size = mpp_buffer_get_size(packet->buf.buf);
 	}
