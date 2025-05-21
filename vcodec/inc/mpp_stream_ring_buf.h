@@ -18,16 +18,6 @@ extern RK_U32 ring_buf_debug;
 #define ring_buf_dbg_f(flag, fmt, ...) _mpp_dbg_f(ring_buf_debug, flag, fmt, ## __VA_ARGS__)
 #define ring_buf_dbg(fmt, ...)    ring_buf_dbg_f(RING_BUF_DBG, fmt, ## __VA_ARGS__)
 
-typedef struct ring_buf_t {
-	MppBuffer buf;
-	void   *buf_start;
-	RK_U32 start_offset;
-	RK_U32 r_pos;
-	RK_U32 use_len;
-	RK_U32 size;
-	RK_U32 cir_flag;
-} ring_buf;
-
 typedef struct ring_buf_pool_t {
 	RK_U32 r_pos;
 	RK_U32 w_pos;
@@ -41,6 +31,17 @@ typedef struct ring_buf_pool_t {
 	RK_U32 l_w_pos;
 	RK_U32 max_use_len;
 } ring_buf_pool;
+
+typedef struct ring_buf_t {
+	MppBuffer buf;
+	void   *buf_start;
+	ring_buf_pool *ring_pool;
+	RK_U32 start_offset;
+	RK_U32 r_pos;
+	RK_U32 use_len;
+	RK_U32 size;
+	RK_U32 cir_flag;
+} ring_buf;
 
 MPP_RET ring_buf_init(ring_buf_pool *ctx, MppBuffer buf, RK_U32 max_strm_cnt);
 RK_U32 ring_buf_get_use_size(ring_buf_pool *stream_buf);

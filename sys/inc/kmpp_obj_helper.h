@@ -210,7 +210,7 @@
         return ret; \
     }
 
-#define SHOOK_TO_FUNC(prefix, ftype, type, name, flag, ...) \ \
+#define SHOOK_TO_FUNC(prefix, ftype, type, name, flag, ...) \
     rk_s32 CONCAT_US(prefix, get, __VA_ARGS__)(KMPP_OBJ_INTF_TYPE s, type *v) \
     { \
         rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
@@ -224,7 +224,7 @@
         rk_s32 ret = kmpp_obj_check(s, __FUNCTION__); \
         if (ret) return ret; \
         if (CONCAT_US(hook, prefix, set, __VA_ARGS__) >= 0) \
-            ret = kmpp_obj_idx_run(s, CONCAT_US(prefix, set, __VA_ARGS__), (void *)v, __FUNCTION__); \
+            ret = kmpp_obj_idx_run(s, CONCAT_US(hook, prefix, set, __VA_ARGS__), (void *)v, __FUNCTION__); \
         return ret; \
     }
 
