@@ -28,6 +28,7 @@
 #include "rc_ctx.h"
 #include "rc_model_v2.h"
 #include "kmpp_frame.h"
+#include "kmpp_meta.h"
 
 #define LOW_QP 34
 #define LOW_LOW_QP 35
@@ -52,6 +53,11 @@ typedef struct RcModelV2SmtCtx_t {
 	MppDataV2       *stat_bits;
 	MppDataV2       *stat_luma_ave;
 	MppDataV2       *lgt_chg_flg; /* light change flag */
+	MppDataV2       *expt; /* exposure time */
+	MppDataV2       *sagn; /* sensor analog gain */
+	MppDataV2       *sdgn; /* sensor digital gain */
+	MppDataV2       *idgn; /* isp digital gain */
+	MppDataV2       *expt_mult_gain;
 	MppPIDCtx       pid_fps;
 	RK_S32          bits_target_lr;  //bits_target_low_rate
 	RK_S32          bits_target_hr;  //bits_target_high_rate
@@ -82,6 +88,7 @@ typedef struct RcModelV2SmtCtx_t {
 	RK_S32          ptz_keep_cnt;
 	RK_S32          qp_add;
 	RK_S32          cur_lgt_chg_flg;
+	RK_S32          ae_param_chg_flg;
 } RcModelV2SmtCtx;
 
 MPP_RET bits_model_smt_deinit(RcModelV2SmtCtx * ctx)
@@ -126,6 +133,31 @@ MPP_RET bits_model_smt_deinit(RcModelV2SmtCtx * ctx)
 	if (ctx->lgt_chg_flg) {
 		mpp_data_deinit_v2(ctx->lgt_chg_flg);
 		ctx->lgt_chg_flg = NULL;
+	}
+
+	if (ctx->expt) {
+		mpp_data_deinit_v2(ctx->expt);
+		ctx->expt = NULL;
+	}
+
+	if (ctx->sagn) {
+		mpp_data_deinit_v2(ctx->sagn);
+		ctx->sagn = NULL;
+	}
+
+	if (ctx->sdgn) {
+		mpp_data_deinit_v2(ctx->sdgn);
+		ctx->sdgn = NULL;
+	}
+
+	if (ctx->idgn) {
+		mpp_data_deinit_v2(ctx->idgn);
+		ctx->idgn = NULL;
+	}
+
+	if (ctx->expt_mult_gain) {
+		mpp_data_deinit_v2(ctx->expt_mult_gain);
+		ctx->expt_mult_gain = NULL;
 	}
 
 	rc_dbg_func("leave %p\n", ctx);
@@ -206,8 +238,38 @@ MPP_RET bits_model_smt_init(RcModelV2SmtCtx * ctx)
 	}
 
 	mpp_data_init_v2(&ctx->lgt_chg_flg, LIGHT_STAT_LEN, 0);
-	if  (!ctx->lgt_chg_flg) {
+	if (!ctx->lgt_chg_flg) {
 		mpp_err("lgt_chg_flg init fail");
+		return MPP_ERR_MALLOC;
+	}
+
+	mpp_data_init_v2(&ctx->expt, LIGHT_STAT_LEN, 0);
+	if (!ctx->expt) {
+		mpp_err("expt init fail");
+		return MPP_ERR_MALLOC;
+	}
+
+	mpp_data_init_v2(&ctx->sagn, LIGHT_STAT_LEN, 0);
+	if (!ctx->sagn) {
+		mpp_err("sagn init fail");
+		return MPP_ERR_MALLOC;
+	}
+
+	mpp_data_init_v2(&ctx->sdgn, LIGHT_STAT_LEN, 0);
+	if (!ctx->sdgn) {
+		mpp_err("sdgn init fail");
+		return MPP_ERR_MALLOC;
+	}
+
+	mpp_data_init_v2(&ctx->idgn, LIGHT_STAT_LEN, 0);
+	if (!ctx->idgn) {
+		mpp_err("idgn init fail");
+		return MPP_ERR_MALLOC;
+	}
+
+	mpp_data_init_v2(&ctx->expt_mult_gain, LIGHT_STAT_LEN, 0);
+	if (!ctx->expt_mult_gain) {
+		mpp_err("expt_mult_gain init fail");
 		return MPP_ERR_MALLOC;
 	}
 
@@ -971,6 +1033,20 @@ static RK_S32 revise_qp_by_complexity(RcModelV2SmtCtx *p, RK_S32 fm_min_iqp,
 	return qp_final;
 }
 
+static RK_S32 derive_ae_change_flag(RcModelV2SmtCtx *ctx)
+{
+	RK_S32 pre_val_0 = mpp_data_get_pre_val_v2(ctx->expt_mult_gain, 0);
+	RK_S32 pre_val_1 = mpp_data_get_pre_val_v2(ctx->expt_mult_gain, 1);
+	RK_S32 pre_val_2 = mpp_data_get_pre_val_v2(ctx->expt_mult_gain, 2);
+	RK_S32 ave = (pre_val_0 + pre_val_1 + pre_val_2) / 3;
+
+	if (pre_val_0 <= 1 || pre_val_1 <= 1 || pre_val_2 <= 1) {
+		return 0;
+	}
+
+	return abs(pre_val_0 - ave) + abs(pre_val_1 - ave) + abs(pre_val_2 - ave);
+}
+
 static RK_S32 revise_qp_by_light(RcModelV2SmtCtx *ctx)
 {
 	RK_S32 level = ctx->usr_cfg.lgt_chg_lvl;
@@ -981,11 +1057,16 @@ static RK_S32 revise_qp_by_light(RcModelV2SmtCtx *ctx)
 	RK_S32 qp_ave = qp_in;
 	RK_S32 chg_flag = 0, chg_num = 0;
 
+	ctx->ae_param_chg_flg = derive_ae_change_flag(ctx);
+
 	rc_dbg_rc("frame %lld luma_diff %d pre_val_0 %d pre_val_1 %d qp_in %d\n",
 		  ctx->frm_num, luma_diff, pre_val_0, pre_val_1, qp_in);
 
-	chg_flag = (luma_diff > 3 && level == 3) ||
-		   (luma_diff > 5 && level == 2) || (luma_diff > 8 && level == 1);
+	chg_flag = ((ctx->ae_param_chg_flg > 100 || luma_diff > 3) && level >= 5 && level <= 7) ||
+		   (ctx->ae_param_chg_flg > 100 && level == 4) ||
+		   (luma_diff > 3 && level == 3) ||
+		   ((ctx->ae_param_chg_flg > 400 || luma_diff > 5) && level == 2) ||
+		   ((ctx->ae_param_chg_flg > 800 || luma_diff > 8) && level == 1);
 
 	mpp_data_update_v2(ctx->lgt_chg_flg, chg_flag);
 	chg_num = (ctx->frame_type == INTRA_FRAME) ? 0 : mpp_data_sum_v2(ctx->lgt_chg_flg);
@@ -997,9 +1078,46 @@ static RK_S32 revise_qp_by_light(RcModelV2SmtCtx *ctx)
 			  ctx->frm_num, chg_num, qp_pre_ave, qp_in, qp_ave);
 	}
 
-	ctx->cur_lgt_chg_flg = chg_num;
+	ctx->cur_lgt_chg_flg = !!chg_num;
 
 	return qp_ave;
+}
+
+static MPP_RET get_current_ae_param(RcModelV2SmtCtx *p,  EncRcTask *task)
+{
+	KmppShmPtr sptr;
+	RK_S32 exp_time = 0;
+	RK_S32 analog_gain = 0;
+	RK_S32 digital_gain = 0;
+	RK_S32 isp_dgain = 0;
+	RK_S32 sys_gain = 0; /* system gain */
+	RK_S32 exp_mult_gain = 0;
+
+	if (!kmpp_frame_get_meta(task->frame, &sptr)) {
+		KmppMeta meta = sptr.kptr;
+
+		kmpp_meta_get_s32(meta, KEY_EXP_TIME, &exp_time);
+		kmpp_meta_get_s32(meta, KEY_ANALOG_GAIN, &analog_gain);
+		kmpp_meta_get_s32(meta, KEY_DIGITAL_GAIN, &digital_gain);
+		kmpp_meta_get_s32(meta, KEY_ISP_DGAIN, &isp_dgain);
+	}
+
+	exp_time = exp_time > 1 ? exp_time : 1;
+	analog_gain = analog_gain > 1 ? analog_gain : 1;
+	digital_gain = digital_gain > 1 ? digital_gain : 1;
+	isp_dgain = isp_dgain > 1 ? isp_dgain : 1;
+	mpp_data_update_v2(p->expt, exp_time);
+	mpp_data_update_v2(p->sagn, analog_gain);
+	mpp_data_update_v2(p->sdgn, digital_gain);
+	mpp_data_update_v2(p->idgn, isp_dgain);
+
+	sys_gain = ((RK_S64)analog_gain * (RK_S64)digital_gain * (RK_S64)isp_dgain) >> 20;
+	sys_gain = sys_gain > 1 ? sys_gain : 1;
+	exp_mult_gain = (exp_time * sys_gain) >> 10;
+	exp_mult_gain = exp_mult_gain > 1 ? exp_mult_gain : 1;
+	mpp_data_update_v2(p->expt_mult_gain, exp_mult_gain);
+
+	return MPP_OK;
 }
 
 MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
@@ -1017,6 +1135,8 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 
 	if (frm->reencode)
 		return MPP_OK;
+
+	get_current_ae_param(p, task);
 
 	smt_start_prepare(ctx, task, &fm_min_iqp, &fm_min_pqp, &fm_max_iqp, &fm_max_pqp);
 
@@ -1265,13 +1385,21 @@ MPP_RET rc_model_v2_smt_end(void *ctx, EncRcTask * task)
 
 	if (p->cur_lgt_chg_flg && !p->ptz_keep_cnt) {
 		RK_S32 chg_lvl = p->usr_cfg.lgt_chg_lvl;
-		bit_real = (chg_lvl == 3) ? bit_real * 1 / 3 :
+		bit_real = (chg_lvl >= 3) ? bit_real * 1 / 3 :
 			   (chg_lvl == 2) ? bit_real * 2 / 3 : bit_real;
 		p->cur_lgt_chg_flg = 0;
 	}
 
 	rc_dbg_rc("motion_level %u complex_level %u dsp_y %d\n",
 		  cfg->motion_level, cfg->complex_level, cfg->dsp_luma_ave);
+	rc_dbg_ae("frame %lld expt %d sagn %d sdgn %d idgn %d expt_mult_gain %d "
+		  "ae_chg_flg %d dsp_luma_ave %d\n",
+		  p->frm_num, mpp_data_get_pre_val_v2(p->expt, 0),
+		  mpp_data_get_pre_val_v2(p->sagn, 0),
+		  mpp_data_get_pre_val_v2(p->sdgn, 0),
+		  mpp_data_get_pre_val_v2(p->idgn, 0),
+		  mpp_data_get_pre_val_v2(p->expt_mult_gain, 0),
+		  p->ae_param_chg_flg, cfg->dsp_luma_ave);
 
 	mpp_data_update_v2(p->motion_level, cfg->motion_level);
 	mpp_data_update_v2(p->complex_level, cfg->complex_level);
@@ -1294,6 +1422,7 @@ MPP_RET rc_model_v2_smt_end(void *ctx, EncRcTask * task)
 	p->gop_frm_cnt++;
 	p->frm_num++;
 	p->gop_qp_sum += p->qp_out;
+	p->ae_param_chg_flg = 0;
 
 	rc_dbg_func("leave %p\n", ctx);
 	return MPP_OK;

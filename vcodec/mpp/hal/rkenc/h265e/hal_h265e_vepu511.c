@@ -1098,16 +1098,27 @@ static MPP_RET vepu511_h265_set_pp_regs(H265eV511HalContext *ctx, HalEncTask *ta
 	return MPP_OK;
 }
 
-static void vepu511_h265_set_vsp_filtering(H265eV511HalContext *ctx)
+static void vepu511_h265_set_vsp_filtering(H265eV511HalContext *ctx, HalEncTask *task)
 {
 	H265eV511RegSet *regs = ctx->regs;
 	HevcVepu511Frame *s = &regs->reg_frm;
 	MppEncCfgSet *cfg = ctx->cfg;
 	MppEncHwCfg *hw = &cfg->hw;
+	RK_S32 lgt_chg_lvl = ctx->cfg->tune.lgt_chg_lvl;
 	RK_U8 bit_chg_lvl = ctx->last_frame_fb.tgt_sub_real_lvl[5]; /* [0, 2] */
 	RK_U8 corner_str = 0, edge_str = 0, internal_str = 0; /* [0, 3] */
 
-	if (ctx->qpmap_en && (ctx->cfg->tune.deblur_str % 2 == 0) &&
+	if (task->rc_task->info.lgt_chg_enable) {
+		if (lgt_chg_lvl == 6) {
+			corner_str = 2;
+			edge_str = 2;
+			internal_str = 2;
+		} else if (lgt_chg_lvl == 7) {
+			corner_str = 3;
+			edge_str = 3;
+			internal_str = 3;
+		}
+	} else if (ctx->qpmap_en && (ctx->cfg->tune.deblur_str % 2 == 0) &&
 	    (hw->flt_str_i == 0) && (hw->flt_str_p == 0)) {
 		if (bit_chg_lvl == 2 && ctx->frame_type != INTRA_FRAME) {
 			corner_str = 3;
@@ -2855,7 +2866,7 @@ MPP_RET hal_h265e_v511_gen_regs(void *hal, HalEncTask *task)
 	vepu511_h265_set_split(regs, ctx->cfg);
 	vepu511_h265_set_hw_address(ctx, reg_frm, task);
 	vepu511_h265_set_pp_regs(ctx, task);
-	vepu511_h265_set_vsp_filtering(ctx);
+	vepu511_h265_set_vsp_filtering(ctx, task);
 	vepu511_h265_set_rc_regs(ctx, regs, task);
 	vepu511_h265_set_rdo_regs(ctx, regs);
 	vepu511_h265_set_quant_regs(ctx);

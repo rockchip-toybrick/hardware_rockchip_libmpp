@@ -832,7 +832,7 @@ static MPP_RET setup_vepu511_prep(HalVepu511RegSet *regs, MppEncPrepCfg *prep,
 	return ret;
 }
 
-static void setup_vepu511_vsp_filtering(HalH264eVepu511Ctx *ctx)
+static void setup_vepu511_vsp_filtering(HalH264eVepu511Ctx *ctx, HalEncTask *task)
 {
 	HalVepu511RegSet *regs = ctx->regs_set;
 	Vepu511FrameCfg *s = &regs->reg_frm;
@@ -840,10 +840,21 @@ static void setup_vepu511_vsp_filtering(HalH264eVepu511Ctx *ctx)
 	MppEncHwCfg *hw = &cfg->hw;
 	RK_U32 slice_type = ctx->slice->slice_type;
 	RK_S32 deblur_str = ctx->cfg->tune.deblur_str;
+	RK_S32 lgt_chg_lvl = ctx->cfg->tune.lgt_chg_lvl;
 	RK_U8 bit_chg_lvl = ctx->last_frame_fb.tgt_sub_real_lvl[5]; /* [0, 2] */
 	RK_U8 corner_str = 0, edge_str = 0, internal_str = 0; /* [0, 3] */
 
-	if (ctx->qpmap_en && (deblur_str % 2 == 0) &&
+	if (task->rc_task->info.lgt_chg_enable) {
+		if (lgt_chg_lvl == 6) {
+			corner_str = 2;
+			edge_str = 2;
+			internal_str = 2;
+		} else if (lgt_chg_lvl == 7) {
+			corner_str = 3;
+			edge_str = 3;
+			internal_str = 3;
+		}
+	} else if (ctx->qpmap_en && (deblur_str % 2 == 0) &&
 	    (hw->flt_str_i == 0) && (hw->flt_str_p == 0)) {
 		if (bit_chg_lvl == 2 && slice_type != H264_I_SLICE) {
 			corner_str = 3;
@@ -2515,7 +2526,7 @@ static MPP_RET hal_h264e_vepu511_gen_regs(void *hal, HalEncTask *task)
 	if (ret)
 		return ret;
 
-	setup_vepu511_vsp_filtering(ctx);
+	setup_vepu511_vsp_filtering(ctx, task);
 
 	if (ctx->online)
 		vepu511_h264e_set_dvbm(ctx, task);

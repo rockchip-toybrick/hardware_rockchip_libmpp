@@ -816,8 +816,8 @@ MPP_RET mpp_enc_proc_tune_cfg(MppEncFineTuneCfg *dst, MppEncFineTuneCfg *src)
 		if (change & MPP_ENC_TUNE_CFG_CHANGE_LGT_CHG_LVL)
 			dst->lgt_chg_lvl = src->lgt_chg_lvl;
 
-		if (dst->lgt_chg_lvl < 0 || dst->lgt_chg_lvl > 3) {
-			mpp_err("invalid lgt_chg_lvl %d not in range [0, 3]\n", dst->lgt_chg_lvl);
+		if (dst->lgt_chg_lvl < 0 || dst->lgt_chg_lvl > 7) {
+			mpp_err("invalid lgt_chg_lvl %d not in range [0, 7]\n", dst->lgt_chg_lvl);
 			ret = MPP_ERR_VALUE;
 		}
 

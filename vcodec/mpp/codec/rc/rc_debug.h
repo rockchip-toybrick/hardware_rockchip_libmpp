@@ -23,6 +23,7 @@
 #define RC_DBG_DROP                 (0x00000200)
 #define RC_DBG_RECORD               (0x00001000)
 #define RC_DBG_VBV                  (0x00002000)
+#define RC_DBG_AE                   (0x00004000)
 
 #define rc_dbg(flag, fmt, ...)      _mpp_dbg(rc_debug, flag, fmt, ## __VA_ARGS__)
 #define rc_dbg_f(flag, fmt, ...)    _mpp_dbg_f(rc_debug, flag, fmt, ## __VA_ARGS__)
@@ -37,6 +38,7 @@
 #define rc_dbg_cfg(fmt, ...)        rc_dbg(RC_DBG_CFG, fmt, ## __VA_ARGS__)
 #define rc_dbg_drop(fmt, ...)       rc_dbg(RC_DBG_DROP, fmt, ## __VA_ARGS__)
 #define rc_dbg_vbv(fmt, ...)        rc_dbg(RC_DBG_VBV, fmt, ## __VA_ARGS__)
+#define rc_dbg_ae(fmt, ...)         rc_dbg(RC_DBG_AE, fmt, ## __VA_ARGS__)
 
 extern RK_U32 rc_debug;
 
