@@ -57,21 +57,6 @@ static void mpp_attach_workqueue(struct mpp_dev *mpp,
 				 struct mpp_taskqueue *queue);
 #endif
 
-static int
-mpp_taskqueue_pop_pending(struct mpp_taskqueue *queue,
-			  struct mpp_task *task)
-{
-	if (!task->session || !task->session->mpp)
-		return -EINVAL;
-
-	mutex_lock(&queue->pending_lock);
-	list_del_init(&task->queue_link);
-	mutex_unlock(&queue->pending_lock);
-	kref_put(&task->ref, mpp_free_task);
-
-	return 0;
-}
-
 static struct mpp_task *
 mpp_session_get_idle_task(struct mpp_session *session)
 {
