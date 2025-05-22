@@ -21,7 +21,7 @@
 #include "hal_jpege_vepu511.h"
 #include "hal_jpege_vepu511_reg.h"
 #include "hal_jpege_hdr.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 #include "rk-dvbm.h"
 #include "kmpp_meta.h"
 
@@ -366,7 +366,7 @@ MPP_RET hal_jpege_v511_gen_regs(void *hal, HalEncTask * task)
 	Vepu511JpegFrame *jpeg_frm = &regs->reg_frm.jpeg_frame;
 	JpegeBits bits = ctx->bits;
 	const RK_U8 *qtable[2] = { NULL };
-	size_t length = mpp_packet_get_length(task->packet);
+	RK_S32 length;
 	RK_U8 *buf = mpp_buffer_get_ptr(task->output->buf) + task->output->start_offset;
 	size_t size = task->output->size;
 	JpegeSyntax *syntax = &ctx->syntax;
@@ -375,6 +375,7 @@ MPP_RET hal_jpege_v511_gen_regs(void *hal, HalEncTask * task)
 	RK_S32 bitpos;
 
 	hal_jpege_enter();
+	kmpp_packet_get_length(task->packet, &length);
 	cfg->enc_task = task;
 	cfg->jpeg_reg_base = jpeg_frm;
 	cfg->dev = ctx->dev;
@@ -399,7 +400,7 @@ MPP_RET hal_jpege_v511_gen_regs(void *hal, HalEncTask * task)
 
 	bitpos = jpege_bits_get_bitpos(bits);
 	task->length = (bitpos + 7) >> 3;
-	mpp_packet_set_length(task->packet, task->length);
+	kmpp_packet_set_length(task->packet, task->length);
 
 	if (task->output->buf) {
 		task->output->use_len = task->length;

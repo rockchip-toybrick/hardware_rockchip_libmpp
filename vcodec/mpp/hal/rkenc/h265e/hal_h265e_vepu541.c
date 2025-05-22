@@ -14,7 +14,7 @@
 #include "mpp_mem.h"
 //#include "mpp_soc.h"
 #include "mpp_maths.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 
 #include "h265e_syntax_new.h"
 #include "hal_h265e_debug.h"
@@ -1383,6 +1383,7 @@ void vepu54x_h265_set_hw_address(H265eV541HalContext * ctx,
 	H265eSyntax_new *syn = (H265eSyntax_new *) enc_task->syntax.data;
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
 	RK_U32 offset_x, offset_y;
+	RK_S32 pkt_len;
 
 	hal_h265e_enter();
 	regs->adr_srcy_hevc =
@@ -1450,8 +1451,9 @@ void vepu54x_h265_set_hw_address(H265eV541HalContext * ctx,
 	regs->bsbt_addr_hevc =
 		regs->bsbb_addr_hevc + task->output->size - 1;
 	regs->bsbr_addr_hevc = regs->bsbb_addr_hevc;
+	kmpp_packet_get_length(task->packet, &pkt_len);
 	regs->bsbw_addr_hevc =
-		regs->bsbb_addr_hevc + mpp_packet_get_length(task->packet);
+		regs->bsbb_addr_hevc + pkt_len;
 
 	kmpp_frame_get_offset_x(task->frame, &offset_x);
 	kmpp_frame_get_offset_y(task->frame, &offset_y);
@@ -1678,8 +1680,9 @@ MPP_RET hal_h265e_v540_start(void *hal, HalEncTask * enc_task)
 			hal_h265e_v540_set_uniform_tile(hw_regs, syn, k);
 
 		if (k > 0) {
-			RK_U32 offset = mpp_packet_get_length(enc_task->packet);
+			RK_U32 offset;
 
+			kmpp_packet_get_length(enc_task->packet, &offset);
 			offset += stream_len;
 			hw_regs->bsbb_addr_hevc =
 				mpp_dev_get_iova_address(ctx->dev, enc_task->output->buf,

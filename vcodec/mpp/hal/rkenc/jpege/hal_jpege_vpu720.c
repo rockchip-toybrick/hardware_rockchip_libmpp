@@ -12,7 +12,7 @@
 #include "mpp_buffer_impl.h"
 #include "mpp_enc_hal.h"
 #include "kmpp_frame.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 #include "mpp_device.h"
 
 #include "jpege_syntax.h"
@@ -365,7 +365,7 @@ MPP_RET hal_jpege_vpu720_gen_regs(void *hal, HalEncTask *task)
     JpegeVpu720BaseReg *reg_base = &regs->reg_base;
     JpegeBits bits = ctx->bits;
     const RK_U8 *qtable[2] = {NULL};
-    size_t length = mpp_packet_get_length(task->packet);
+    RK_S32 length;
     RK_U8 *buf = mpp_buffer_get_ptr(task->output->buf) + task->output->start_offset;
     size_t size = mpp_buffer_get_size(task->output->buf);
     JpegeSyntax *syntax = &ctx->syntax;
@@ -377,6 +377,7 @@ MPP_RET hal_jpege_vpu720_gen_regs(void *hal, HalEncTask *task)
 
     hal_jpege_enter();
 
+    kmpp_packet_get_length(task->packet, &length);
     jpege_vpu720_setup_format(hal, task);
 
     memset(regs, 0, sizeof(JpegeVpu720Reg));
@@ -390,7 +391,7 @@ MPP_RET hal_jpege_vpu720_gen_regs(void *hal, HalEncTask *task)
     bitpos = jpege_bits_get_bitpos(bits);
     task->length = (bitpos + 7) >> 3;
 
-    mpp_packet_set_length(task->packet, task->length);
+    kmpp_packet_set_length(task->packet, task->length);
 	if (task->output->buf) {
 		task->output->use_len = task->length;
 		mpp_ring_buf_flush(task->output, 0);
@@ -494,7 +495,8 @@ MPP_RET hal_jpege_vpu720_gen_regs(void *hal, HalEncTask *task)
     reg_base->reg017_adr_bsbt = iova + size;
     reg_base->reg018_adr_bsbb = iova;
     reg_base->reg019_adr_bsbr = iova + task->output->r_pos;
-    reg_base->reg020_adr_bsbs = iova + (task->output->start_offset + mpp_packet_get_length(task->packet)) % size;
+    kmpp_packet_get_length(task->packet, &length);
+    reg_base->reg020_adr_bsbs = iova + (task->output->start_offset + length) % size;
 
     reg_base->reg016_adr_qtbl = mpp_buffer_get_iova(ctx->qtbl_buffer, ctx->dev);
     memcpy(qtbl_base, ctx->qtbl_sw_buf, JPEGE_VPU720_QTABLE_SIZE * sizeof(RK_U16));

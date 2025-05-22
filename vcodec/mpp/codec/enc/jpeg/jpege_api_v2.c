@@ -19,7 +19,7 @@
 #include "mpp_maths.h"
 #include "mpp_mem.h"
 //#include "mpp_2str.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 #include "jpege_debug.h"
 #include "jpege_api_v2.h"
 #include "jpege_syntax.h"
@@ -395,12 +395,17 @@ static MPP_RET jpege_start(void *ctx, HalEncTask *task)
 {
 	JpegeCtx *p = (JpegeCtx *)ctx;
 	JpegeSyntax syntax = p->syntax;
-	MppPacket pkt = task->packet;
-	RK_U8 *ptr = mpp_packet_get_pos(pkt);
-	size_t buf_size = mpp_packet_get_size(pkt);
+	KmppPacket pkt = task->packet;
+	KmppShmPtr pos;
+	RK_U8 *ptr = NULL;
+	RK_S32 buf_size;
 	RK_S32 size = 0;
 	MppWriteCtx bit_ctx;
 	MppWriteCtx *bits = &bit_ctx;
+
+	kmpp_packet_get_pos(pkt, &pos);
+	ptr = pos.kptr;
+	kmpp_packet_get_size(pkt, &buf_size);
 
 	mpp_writer_init(bits, ptr, buf_size);
 
@@ -443,7 +448,7 @@ static MPP_RET jpege_start(void *ctx, HalEncTask *task)
 	mpp_writer_put_raw_bits(bits, 0x00, 8);
 	/* Do NOT write thumbnail */
 	size = mpp_writer_bytes(bits);
-	mpp_packet_set_length(pkt, size);
+	kmpp_packet_set_length(pkt, size);
 	task->length += size;
 
 	return MPP_OK;
@@ -518,16 +523,22 @@ static MPP_RET jpege_proc_hal(void *ctx, HalEncTask *task)
 	return MPP_OK;
 }
 
-static MPP_RET jpege_add_Prefix(MppPacket pkt, RK_S32 *len, RK_U8 uuid[16],
+static MPP_RET jpege_add_Prefix(KmppPacket pkt, RK_S32 *len, RK_U8 uuid[16],
 				const void *data, RK_S32 size)
 {
-	RK_U8 *ptr = mpp_packet_get_pos(pkt);
-	size_t length = mpp_packet_get_length(pkt);
-	size_t buf_size = mpp_packet_get_size(pkt);
+	KmppShmPtr pos;
+	RK_U8 *ptr = NULL;
+	RK_S32 length;
+	RK_S32 buf_size;
 	MppWriteCtx bit_ctx;
 	MppWriteCtx *bits = &bit_ctx;
 	const RK_U8 *user_data = data;
 	RK_S32 i = 0, app_size = 0;
+
+	kmpp_packet_get_pos(pkt, &pos);
+	ptr = pos.kptr;
+	kmpp_packet_get_size(pkt, &buf_size);
+	kmpp_packet_get_length(pkt, &length);
 
 	mpp_writer_init(bits, ptr + length, buf_size - length);
 
@@ -555,7 +566,7 @@ static MPP_RET jpege_add_Prefix(MppPacket pkt, RK_S32 *len, RK_U8 uuid[16],
 	app_size = mpp_writer_bytes(bits);
 	*len = app_size;
 	length += app_size;
-	mpp_packet_set_length(pkt, length);
+	kmpp_packet_set_length(pkt, length);
 	(void)uuid;
 	return MPP_OK;
 }

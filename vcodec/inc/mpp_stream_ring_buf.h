@@ -34,7 +34,6 @@ typedef struct ring_buf_pool_t {
 
 typedef struct ring_buf_t {
 	MppBuffer buf;
-	void   *buf_start;
 	ring_buf_pool *ring_pool;
 	RK_U32 start_offset;
 	RK_U32 r_pos;
@@ -45,7 +44,7 @@ typedef struct ring_buf_t {
 
 MPP_RET ring_buf_init(ring_buf_pool *ctx, MppBuffer buf, RK_U32 max_strm_cnt);
 RK_U32 ring_buf_get_use_size(ring_buf_pool *stream_buf);
-MPP_RET ring_buf_put_use(ring_buf_pool *ctx,  ring_buf *buf);
+MPP_RET mpp_ring_buf_packet_put_used(KmppPacket packet);
 MPP_RET ring_buf_put_free(ring_buf_pool *ctx, ring_buf *buf);
 MPP_RET ring_buf_get_free(ring_buf_pool *ctx, ring_buf *buf, RK_U32 align,
 			  RK_U32 min_size, RK_U32 stream_num);

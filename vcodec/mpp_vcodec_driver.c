@@ -215,6 +215,29 @@ static int vcodec_process_cmd(void *private, struct vcodec_request *req)
 			goto fail;
 	} break;
 	case VCODEC_CHAN_OUT_STRM_BUF_RDY: {
+		static rk_s32 once = 1;
+
+		if (once) {
+			mpp_log("VCODEC_CHAN_OUT_STRM_BUF_RDY is deprected use VCODEC_CHAN_OUT_PKT_RDY instead\n");
+			once = 0;
+		}
+		if (!req->data) {
+			ret = -EFAULT;
+			goto fail;
+		}
+		ret = mpp_vcodec_chan_get_stream_legacy(chan_id, type, param);
+		if (ret) {
+			ret = -EINVAL;
+			goto fail;
+		}
+
+		if (copy_to_user(req->data, param, req->size)) {
+			mpp_err("copy_to_user failed.\n");
+			ret = -EINVAL;
+			goto fail;
+		}
+	} break;
+	case VCODEC_CHAN_OUT_PKT_RDY: {
 		if (!req->data) {
 			ret = -EFAULT;
 			goto fail;
@@ -240,7 +263,7 @@ static int vcodec_process_cmd(void *private, struct vcodec_request *req)
 			ret = -EFAULT;
 			goto fail;
 		}
-		ret = mpp_vcodec_chan_put_stream(chan_id, type, param);
+		ret = mpp_vcodec_chan_put_stream_legacy(chan_id, type, param);
 	} break;
 	default: {
 		mpp_err("unknown vcode req cmd %x\n", req->cmd);
@@ -303,7 +326,7 @@ static unsigned int vcodec_poll(struct file *filp, poll_table * wait)
 	unsigned int mask = 0;
 	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, type);
 
-	if (!list_empty(&chan_entry->stream_done)) {
+	if (!kfifo_is_empty_spinlocked(&chan_entry->packet_fifo, &chan_entry->packet_fifo_lock)) {
 		mask |= POLLIN | POLLRDNORM;
 		return mask;
 	}
@@ -314,7 +337,7 @@ static unsigned int vcodec_poll(struct file *filp, poll_table * wait)
 	}
 
 	poll_wait(filp, &chan_entry->wait, wait);
-	if (!list_empty(&chan_entry->stream_done))
+	if (!kfifo_is_empty_spinlocked(&chan_entry->packet_fifo, &chan_entry->packet_fifo_lock))
 		mask |= POLLIN | POLLRDNORM;
 	else {
 		if (chan_entry->state == CHAN_STATE_SUSPEND)
@@ -416,7 +439,6 @@ static int venc_proc_debug(struct seq_file *seq, void *offset)
 		}
 		mutex_unlock(&chan->chan_mutex);
 	}
-	mpp_packet_pool_info_show(seq);
 	mpp_buf_pool_info_show(seq);
 	return 0;
 }

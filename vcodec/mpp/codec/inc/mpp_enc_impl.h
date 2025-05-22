@@ -68,7 +68,7 @@ typedef struct MppEncImpl_t {
 	 * thread input / output context
 	 */
 	KmppFrame frame;
-	MppPacket packet;
+	KmppPacket packet;
 	RK_U32 low_delay_part_mode;
 
 	/* base task information */
@@ -80,7 +80,7 @@ typedef struct MppEncImpl_t {
 	RK_U32 reset_flag;
 
 	// legacy support for MPP_ENC_GET_EXTRA_INFO
-	MppPacket hdr_pkt;
+	KmppPacket hdr_pkt;
 	void *hdr_buf;
 	RK_U32 hdr_len;
 	MppEncHeaderStatus hdr_status;
@@ -154,14 +154,15 @@ MPP_RET mpp_enc_proc_cfg(MppEncImpl * enc, MpiCmd cmd, void *param);
 MPP_RET mpp_enc_impl_alloc_task(MppEncImpl * enc);
 MPP_RET mpp_enc_impl_free_task(MppEncImpl * enc);
 MPP_RET mpp_enc_proc_rc_update(MppEncImpl * enc);
-MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet, MppPacket * jpeg_packet);
-void mpp_enc_impl_slice_info(MppEnc ctx, void *param, MppPacket *packet);
+MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, KmppPacket *packet, KmppPacket *jpeg_packet);
+void mpp_enc_impl_slice_info(MppEnc ctx, void *param, KmppPacket *packet);
 MPP_RET mpp_enc_impl_hw_start(MppEnc ctx, MppEnc jpeg_ctx);
 void    mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id);
 MPP_RET mpp_enc_unref_osd_buf(MppEncOSDData3 *osd);
 void mpp_enc_impl_pkt_full_inc(MppEnc ctx);
-MPP_RET mpp_enc_impl_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet);
+MPP_RET mpp_enc_impl_force_pskip(MppEnc ctx, KmppFrame frame, KmppPacket *packet);
 extern int mpp_show_session_info(struct seq_file *seq, u32 chan_id);
+MPP_RET mpp_enc_packet_ring_buf_put_used(KmppPacket packet);
 #ifdef __cplusplus
 }
 #endif

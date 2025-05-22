@@ -71,7 +71,6 @@ typedef enum MppCodingType_e {
  * MppParam         - rk_mpi.h
  *
  * MppFrame         - mpp_frame.h
- * MppPacket        - mpp_packet.h
  *
  * MppBuffer        - mpp_buffer.h
  * MppBufferGroup   - mpp_buffer.h
@@ -84,7 +83,6 @@ typedef void* MppCtx;
 typedef void* MppParam;
 
 typedef void* MppFrame;
-typedef void* MppPacket;
 
 typedef void* MppBuffer;
 typedef void* MppBufferGroup;

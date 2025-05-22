@@ -10,8 +10,7 @@
 #include "mpp_enc.h"
 #include "mpp_log.h"
 #include "mpp_enc_cfg_impl.h"
-#include "mpp_packet_impl.h"
-
+#include "kmpp_packet_impl.h"
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
 #include "kmpp_atomic.h"
@@ -260,9 +259,9 @@ rk_s32 kmpp_venc_chan_put_frm(KmppChanId id, KmppFrame frm)
 rk_s32 kmpp_venc_chan_get_pkt(KmppChanId id, KmppPacket *pkt)
 {
     struct mpp_chan *chan = NULL;
-    MppPacketImpl *packet = NULL;
-    RK_UL flags;
+    KmppPacketImpl *packet = NULL;
     KmppChanId chan_id = id;
+    rk_u32 ret;
 
     chan = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
     if (!chan || !chan->handle) {
@@ -273,22 +272,18 @@ rk_s32 kmpp_venc_chan_get_pkt(KmppChanId id, KmppPacket *pkt)
     if (!atomic_read(&chan->stream_count))
         wait_event_timeout(chan->wait, atomic_read(&chan->stream_count), 500);
 
-    spin_lock_irqsave(&chan->stream_list_lock, flags);
-    packet = list_first_entry_or_null(&chan->stream_done, MppPacketImpl, list);
-    if (packet)
-        list_del_init(&packet->list);
-    spin_unlock_irqrestore(&chan->stream_list_lock, flags);
-
-    if (!packet) {
-        mpp_err_f("no packet in stream_done list\n");
+    ret = kfifo_out_spinlocked(&chan->packet_fifo, pkt, 1, &chan->packet_fifo_lock);
+    if (ret != 1) {
+        mpp_err_f("no packet in packet fifo \n");
         return MPP_NOK;
     }
+
+    packet = kmpp_obj_to_entry(*pkt);
     /* flush cache before get packet*/
     if (packet->buf.buf)
         mpp_ring_buf_flush(&packet->buf, 1);
     atomic_dec(&chan->stream_count);
-    chan->seq_user_get = mpp_packet_get_dts(packet);
-    *pkt = (KmppPacket)packet;
+    chan->seq_user_get = packet->dts;
 
     return 0;
 }

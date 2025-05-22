@@ -9,7 +9,7 @@
 #ifndef __H264E_PPS_H__
 #define __H264E_PPS_H__
 
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 #include "mpp_enc_cfg.h"
 
 #include "h264_syntax.h"
@@ -53,7 +53,7 @@ extern "C" {
 #endif
 
 MPP_RET h264e_pps_update(H264ePps *pps, MppEncCfgSet *cfg);
-MPP_RET h264e_pps_to_packet(H264ePps *pps, MppPacket packet, RK_S32 *len);
+MPP_RET h264e_pps_to_packet(H264ePps *pps, KmppPacket packet, RK_S32 *len);
 MPP_RET h264e_pps_dump(H264ePps *pps);
 
 #ifdef __cplusplus

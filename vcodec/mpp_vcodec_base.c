@@ -23,12 +23,11 @@
 #include "mpp_log.h"
 #include "mpp_vcodec_thread.h"
 #include "mpp_buffer_impl.h"
-#include "mpp_packet_impl.h"
+#include "kmpp_packet_impl.h"
 #include "kmpp_frame.h"
 #include "hal_bufs.h"
 #include "mpp_maths.h"
 
-#include "kmpp_frame.h"
 #include "kmpp_meta_impl.h"
 #include "kmpp_buffer_impl.h"
 #include "kmpp_venc_objs.h"
@@ -67,7 +66,6 @@ static int mpp_enc_module_init(void)
 
 	vcodec_thread_set_count(thds, 1);
 	vcodec_thread_set_callback(thds, mpp_vcodec_enc_routine, (void*)venc);
-	mpp_packet_pool_init(max_stream_cnt);
 	mpp_buffer_pool_init(max_stream_cnt);
 	vcodec_thread_start(thds);
 
@@ -369,6 +367,7 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 			       MppCodingType coding, void *handle)
 {
 	unsigned long lock_flag;
+	int ret;
 
 	spin_lock_irqsave(&entry->chan_lock, lock_flag);
 	entry->handle = handle;
@@ -385,13 +384,13 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 
 	atomic_set(&entry->runing, 0);
 	atomic_set(&entry->cfg.comb_runing, 0);
-	INIT_LIST_HEAD(&entry->stream_done);
-	INIT_LIST_HEAD(&entry->stream_remove);
-	spin_lock_init(&entry->stream_list_lock);
 	init_waitqueue_head(&entry->wait);
 	init_waitqueue_head(&entry->stop_wait);
 	INIT_KFIFO(entry->frame_fifo);
-
+	ret = kfifo_alloc(&entry->packet_fifo, INIT_PACKET_STORAGE_NUM, GFP_KERNEL);
+	if (ret)
+		mpp_err("kfifo_alloc failed, ret %d", ret);
+	spin_lock_init(&entry->packet_fifo_lock);
 	entry->state = CHAN_STATE_SUSPEND_PENDING;
 	spin_unlock_irqrestore(&entry->chan_lock, lock_flag);
 
@@ -412,6 +411,7 @@ int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 	entry->reenc = 0;
 	entry->binder_chan_id = -1;
 	entry->master_chan_id = -1;
+	kfifo_free(&entry->packet_fifo);
 	spin_unlock_irqrestore(&entry->chan_lock, lock_flag);
 
 	atomic_set(&entry->runing, 0);
@@ -422,37 +422,16 @@ int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry)
 	return 0;
 }
 
-void stream_packet_free(struct kref *ref)
-{
-	MppPacketImpl *packet = container_of(ref, MppPacketImpl, ref);
-
-	if (!packet) {
-		mpp_log_f("packet is null\n");
-		return;
-	}
-
-	mpp_packet_deinit((MppPacket)&packet);
-
-	return;
-}
-
 void mpp_vcodec_stream_clear(struct mpp_chan *entry)
 {
-	MppPacketImpl *packet = NULL, *n;
+	KmppPacket packet = NULL;
 	unsigned long flags;
 
-	spin_lock_irqsave(&entry->stream_list_lock, flags);
-	list_for_each_entry_safe(packet, n, &entry->stream_done, list) {
-		list_del_init(&packet->list);
-		kref_put(&packet->ref, stream_packet_free);
-		atomic_dec(&entry->stream_count);
+	spin_lock_irqsave(&entry->packet_fifo_lock, flags);
+	while (kfifo_out(&entry->packet_fifo, &packet, 1) == 1) {
+		kmpp_packet_put(packet);
 	}
-	list_for_each_entry_safe(packet, n, &entry->stream_remove, list) {
-		list_del_init(&packet->list);
-		kref_put(&packet->ref, stream_packet_free);
-		atomic_dec(&entry->str_out_cnt);
-	}
-	spin_unlock_irqrestore(&entry->stream_list_lock, flags);
+	spin_unlock_irqrestore(&entry->packet_fifo_lock, flags);
 
 	return;
 }
@@ -559,6 +538,7 @@ int mpp_vcodec_init(void)
     kmpp_buf_init();
     kmpp_meta_init();
     kmpp_frame_init();
+    kmpp_packet_init();
     kmpp_venc_init_cfg_init();
     kmpp_venc_st_cfg_init();
     kmpp_venc_ntfy_init();
@@ -586,13 +566,13 @@ int mpp_vcodec_deinit(void)
 	}
 
 	kfree(venc->name);
-	mpp_packet_pool_deinit();
 	mpp_buffer_pool_deinit();
 
 	kmpp_venc_ntfy_deinit();
 	kmpp_venc_st_cfg_deinit();
 	kmpp_venc_init_cfg_deinit();
 	kmpp_frame_deinit();
+	kmpp_packet_deinit();
 	kmpp_meta_deinit();
 	kmpp_buf_deinit();
 

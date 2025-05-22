@@ -19,12 +19,11 @@
 #include "mpp_buffer_impl.h"
 
 #include "kmpp_frame.h"
-#include "mpp_packet_impl.h"
+#include "kmpp_packet_impl.h"
 #include "mpp_enc_refs_setup.h"
 #include "mpp_enc_debug.h"
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_enc_impl.h"
-#include "mpp_packet.h"
 #include "mpp_2str.h"
 
 #include "kmpp_obj.h"
@@ -166,8 +165,9 @@ static RK_S32 mpp_enc_get_real_fps(MppEncImpl *enc)
 static void check_hal_task_pkt_len(HalEncTask *task, const char *reason)
 {
 	RK_U32 task_length = task->length;
-	RK_U32 packet_length = mpp_packet_get_length(task->packet);
+	RK_U32 packet_length;
 
+	kmpp_packet_get_length(task->packet, &packet_length);
 	if (task_length != packet_length) {
 		mpp_err_f("%s check failed: task length is not match to packet length %d vs %d\n",
 			  reason, task_length, packet_length);
@@ -634,10 +634,10 @@ static MPP_RET mpp_enc_proc_ref_cfg(MppEncImpl *enc, void *param)
 	MppEncRefParam *ref_p = (MppEncRefParam *)param;
 	MPP_RET ret = MPP_OK;
 
-	if (ref_p->cfg_mode && NULL == src)
+	if (ref_p->cfg_mode && !src)
 		mpp_enc_ref_cfg_init(&src);
 
-	if (NULL == dst) {
+	if (!dst) {
 		mpp_enc_ref_cfg_init(&dst);
 		enc->cfg.ref_cfg = dst;
 	}
@@ -921,25 +921,25 @@ MPP_RET mpp_enc_proc_cfg(MppEncImpl *enc, MpiCmd cmd, void *param)
 	case MPP_ENC_GET_HDR_SYNC:
 	case MPP_ENC_GET_EXTRA_INFO: {
 		/*
-			 * NOTE: get stream header should use user's MppPacket
-			 * If we provide internal MppPacket to external user
+			 * NOTE: get stream header should use user's KmppPacket
+			 * If we provide internal KmppPacket to external user
 			 * we do not known when the buffer usage is finished.
 			 * So encoder always write its header to external buffer
 			 * which is provided by user.
 			 */
 		if (!enc->hdr_status.ready) {
 			enc_impl_gen_hdr(enc->impl, enc->hdr_pkt);
-			enc->hdr_len = mpp_packet_get_length(enc->hdr_pkt);
+			kmpp_packet_get_length(enc->hdr_pkt, &enc->hdr_len);
 			enc->hdr_status.ready = 1;
 		}
 
 		if (cmd == MPP_ENC_GET_EXTRA_INFO) {
 			mpp_err("Please use MPP_ENC_GET_HDR_SYNC instead of unsafe MPP_ENC_GET_EXTRA_INFO\n");
-			mpp_err("NOTE: MPP_ENC_GET_HDR_SYNC needs MppPacket input\n");
+			mpp_err("NOTE: MPP_ENC_GET_HDR_SYNC needs KmppPacket input\n");
 
-			*(MppPacket *)param = enc->hdr_pkt;
+			*(KmppPacket *)param = enc->hdr_pkt;
 		} else
-			mpp_packet_copy((MppPacket)param, enc->hdr_pkt);
+			kmpp_packet_copy((KmppPacket)param, enc->hdr_pkt);
 
 		enc->hdr_status.added_by_ctrl = 1;
 	} break;
@@ -1038,7 +1038,7 @@ static void update_rc_cfg_log(MppEncImpl *impl, const char *fmt, ...)
 	va_end(args);
 }
 
-static void update_user_datas(MppEncImpl *enc, MppPacket packet,
+static void update_user_datas(MppEncImpl *enc, KmppPacket packet,
 			      HalEncTask *hal_task)
 {
 	if (enc->rb_userdata.free_cnt >= MAX_USRDATA_CNT)
@@ -1257,12 +1257,12 @@ MPP_RET mpp_enc_proc_rc_update(MppEncImpl *enc)
 static MPP_RET mpp_enc_check_frm_pkt(MppEncImpl *enc)
 {
 	MPP_RET ret = MPP_OK;
+
 	enc->frm_buf = NULL;
-	if (NULL == enc->packet) {
-		ret = mpp_packet_new(&enc->packet);
+	if (!enc->packet) {
+		ret = kmpp_packet_get(&enc->packet);
 		if (ret)
 			return ret;
-
 	}
 
 	if (enc->frame) {
@@ -1283,29 +1283,31 @@ static MPP_RET mpp_enc_check_frm_pkt(MppEncImpl *enc)
 		enc->task_pts = pts;
 		enc->frm_buf = frm_buf;
 
-		mpp_packet_set_pts(enc->packet, pts);
-		mpp_packet_set_dts(enc->packet, dts);
+		kmpp_packet_set_pts(enc->packet, pts);
+		kmpp_packet_set_dts(enc->packet, dts);
 
 		kmpp_frame_get_eos(enc->frame, &eos);
 		if (eos)
-			mpp_packet_set_eos(enc->packet);
+			kmpp_packet_set_eos(enc->packet);
 		else
-			mpp_packet_clr_eos(enc->packet);
+			kmpp_packet_clr_eos(enc->packet);
 	}
 
 	if (enc->online)
 		return enc->frame ? MPP_OK : MPP_NOK;
 
-	return (NULL == enc->frame || NULL == enc->frm_buf) ? MPP_NOK : MPP_OK;
+	return (!enc->frame || !enc->frm_buf) ? MPP_NOK : MPP_OK;
 }
 
 MPP_RET mpp_enc_alloc_output_from_bufpool(MppEncImpl *enc)
 {
 	MPP_RET ret = mpp_enc_check_frm_pkt(enc);
+
 	if (ret)
 		return ret;
-	mpp_packet_set_length(enc->packet, 0);
-	if (NULL == enc->pkt_buf) {
+
+	kmpp_packet_set_length(enc->packet, 0);
+	if (!enc->pkt_buf) {
 		/* NOTE: set buffer w * h * 1.5 to avoid buffer overflow */
 		MppEncPrepCfg *prep = &enc->cfg.prep;
 		RK_U32 width = MPP_ALIGN(prep->width, 16);
@@ -1313,8 +1315,9 @@ MPP_RET mpp_enc_alloc_output_from_bufpool(MppEncImpl *enc)
 		RK_U32 size = (enc->coding == MPP_VIDEO_CodingMJPEG) ?
 			      (width * height * 3 / 2) :
 			      (width * height);
-		MppPacketImpl *pkt = (MppPacketImpl *)enc->packet;
+		KmppPacketImpl *pkt = (KmppPacketImpl *)kmpp_obj_to_entry(enc->packet);
 		MppBuffer buffer = NULL;
+		KmppShmPtr sptr;
 
 		mpp_assert(size);
 		mpp_buffer_get(NULL, &buffer, size);
@@ -1324,34 +1327,63 @@ MPP_RET mpp_enc_alloc_output_from_bufpool(MppEncImpl *enc)
 		pkt->buf.buf = buffer;
 		pkt->buf.start_offset = 0;
 		pkt->buf.size = mpp_buffer_get_size(buffer);
-		pkt->data = mpp_buffer_get_ptr(buffer);
-		pkt->pos = pkt->data;
+		pkt->data.kptr = mpp_buffer_get_ptr(buffer);
+		pkt->pos.kptr = pkt->data.kptr;
 		pkt->size = mpp_buffer_get_size(buffer);
 		pkt->length = 0;
-		pkt->buffer = buffer;
+		mpp_buffer_to_shmptr(buffer, &sptr);
+		kmpp_packet_set_buffer(enc->packet, &sptr);
 
 		enc_dbg_detail("create output pkt %p buf %p\n", enc->packet,
 			       buffer);
 	} else {
+		KmppShmPtr pos;
+		RK_S32 length;
+
+		kmpp_packet_get_pos(enc->packet, &pos);
+		kmpp_packet_get_length(enc->packet, &length);
 		enc_dbg_detail("output to pkt %p buf %p pos %p length %d\n",
-			       enc->packet, enc->pkt_buf,
-			       mpp_packet_get_pos(enc->packet),
-			       (RK_U32)mpp_packet_get_length(enc->packet));
+			       enc->packet, enc->pkt_buf, pos.kptr, length);
 	}
 	return MPP_OK;
 }
 
-static RK_U32 mpp_enc_check_next_frm_type(MppEncImpl *enc)
+ static MPP_RET mpp_enc_alloc_packet_with_ring_buf(KmppPacket *packet, ring_buf_pool *pool,
+                                                   rk_u32 align, size_t min_size)
 {
-	EncTask *task = (EncTask *)enc->enc_task;
-	RK_U32 is_intra = 0;
+	MPP_RET ret = MPP_OK;
+	KmppPacketImpl *impl = NULL;
 
-	if (mpp_enc_refs_next_frm_is_intra(enc->refs) || (task->seq_idx == 1) ||
-	    mpp_enc_refs_next_frm_is_kpfrm(enc->refs))
-		is_intra =  1;
-	return is_intra;
+	if (!packet) {
+		mpp_err("invalid NULL input\n");
+		return MPP_ERR_NULL_PTR;
+	}
+
+	ret = kmpp_packet_get(packet);
+	if (ret) {
+		mpp_err("kmpp_packet_get failed ret %d\n", ret);
+		return MPP_ERR_MALLOC;
+	}
+
+	impl = (KmppPacketImpl *)kmpp_obj_to_entry(*packet);
+	if (min_size)
+		min_size = (min_size + SZ_1K) & (SZ_1K - 1);
+
+	if (pool) {
+		if (ring_buf_get_free(pool, &impl->buf, align, min_size, 1)) {
+			kmpp_packet_put(*packet);
+			return MPP_ERR_MALLOC;
+		}
+	}
+
+	if (pool->buf_base)
+		impl->data.kptr = impl->pos.kptr = pool->buf_base + impl->buf.start_offset;
+
+	impl->size = impl->buf.size;
+	impl->buf.ring_pool = pool;
+
+	return ret;
 }
-
 
 MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 {
@@ -1363,7 +1395,6 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 	RK_U32 size = (enc->coding == MPP_VIDEO_CodingMJPEG) ?
 		      (width * height) :
 		      (width * height / 2);
-	RK_U32 is_intra = mpp_enc_check_next_frm_type(enc);
 
 	if (enc->ring_pool && !enc->ring_pool->init_done) {
 		if (!enc->ring_buf_size)
@@ -1386,7 +1417,7 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 			return MPP_NOK;
 		}
 	}
-	ret = mpp_packet_new_ring_buf(&enc->packet, enc->ring_pool, 128, 0, is_intra, enc->chan_id);
+	ret = mpp_enc_alloc_packet_with_ring_buf(&enc->packet, enc->ring_pool, 128, 0);
 	if (ret) {
 		if (ret == MPP_ERR_NULL_PTR)
 			enc->pkt_fail_cnt++ ;
@@ -1395,10 +1426,11 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 		return ret;
 	}
 	{
-		MppPacketImpl *pkt = (MppPacketImpl *)enc->packet;
+		KmppPacketImpl *pkt = (KmppPacketImpl *)kmpp_obj_to_entry(enc->packet);
 		enc->pkt_buf = &pkt->buf;
 	}
 	ret = mpp_enc_check_frm_pkt(enc);
+
 	return ret;
 }
 
@@ -1427,11 +1459,12 @@ static MPP_RET mpp_enc_proc_two_pass(MppEncImpl *enc, EncTask *task)
 		HalEncTask *hal_task = &task->info.enc;
 		EncImpl impl = enc->impl;
 		MppEncHal hal = enc->enc_hal;
-		MppPacket packet = hal_task->packet;
+		KmppPacket packet = hal_task->packet;
 		RK_S32 task_len = hal_task->length;
 		RK_S32 hw_len = hal_task->hw_length;
-		RK_S32 pkt_len = mpp_packet_get_length(packet);
+		RK_S32 pkt_len;
 
+		kmpp_packet_get_length(packet, &pkt_len);
 		enc_dbg_detail("task %d two pass mode enter\n", frm->seq_idx);
 		rc_task->info = enc->rc_info_prev;
 
@@ -1462,7 +1495,7 @@ static MPP_RET mpp_enc_proc_two_pass(MppEncImpl *enc, EncTask *task)
 			      ret);
 
 		//recover status & packet
-		mpp_packet_set_length(packet, pkt_len);
+		kmpp_packet_set_length(packet, pkt_len);
 		hal_task->hw_length = hw_len;
 		hal_task->length = task_len;
 
@@ -1492,7 +1525,7 @@ static MPP_RET mpp_enc_normal_cfg(MppEncImpl *enc, EncTask *task)
 	EncCpbStatus *cpb = &rc_task->cpb;
 	EncFrmStatus *frm = &rc_task->frm;
 	HalEncTask *hal_task = &task->info.enc;
-	MppPacket packet = hal_task->packet;
+	KmppPacket packet = hal_task->packet;
 	MppEncRefFrmUsrCfg *frm_cfg = &enc->frm_cfg;
 	MPP_RET ret = MPP_OK;
 	rc_task->info.scene_mode = (RK_S32)enc->cfg.tune.scene_mode;
@@ -1542,7 +1575,7 @@ static MPP_RET mpp_enc_normal_cfg(MppEncImpl *enc, EncTask *task)
 		enc_dbg_detail("task %d IDR header length %d\n", frm->seq_idx,
 			       enc->hdr_len);
 
-		mpp_packet_append(packet, enc->hdr_pkt);
+		kmpp_packet_append(packet, enc->hdr_pkt);
 
 		hal_task->header_length = enc->hdr_len;
 		hal_task->length += enc->hdr_len;
@@ -1740,9 +1773,9 @@ static void mpp_enc_terminate_task(MppEncImpl *enc, EncTask *task)
 	enc->frame = NULL;
 
 	if (enc->packet) {
-		mpp_packet_set_length(enc->packet, 0);
-		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
-		mpp_packet_deinit(&enc->packet);
+		kmpp_packet_set_length(enc->packet, 0);
+		mpp_ring_buf_packet_put_used(enc->packet);
+		kmpp_packet_put(enc->packet);
 	}
 
 	reset_enc_task(enc);
@@ -1828,7 +1861,7 @@ static MPP_RET mpp_enc_check_frm_valid(MppEncImpl *enc)
 	return  MPP_OK;
 }
 
-MPP_RET mpp_enc_impl_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet)
+MPP_RET mpp_enc_impl_force_pskip(MppEnc ctx, KmppFrame frame, KmppPacket *packet)
 {
 	MppEncImpl *enc = (MppEncImpl *)ctx;
 	MPP_RET ret = MPP_OK;
@@ -1907,13 +1940,13 @@ TASK_DONE:
 	}
 	enc->frame_count++;
 	/* setup output packet and meta data */
-	mpp_packet_set_length(enc->packet, hal_task->length);
+	kmpp_packet_set_length(enc->packet, hal_task->length);
 	kmpp_frame_get_eos(enc->frame, &eos);
 	if (enc->frame && eos)
-		mpp_packet_set_flag(enc->packet, MPP_PACKET_FLAG_EOS);
-	mpp_packet_set_temporal_id(enc->packet, frm->temporal_id);
-	if (mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev))
-		mpp_err_f("ring_buf_put_used fail \n");
+		kmpp_packet_set_flag(enc->packet, KMPP_PACKET_FLAG_EOS);
+	kmpp_packet_set_temporal_id(enc->packet, frm->temporal_id);
+	if (mpp_ring_buf_packet_put_used(enc->packet))
+		mpp_err_f("mpp_ring_buf_packet_put_used fail \n");
 	*packet = enc->packet;
 	enc->packet = NULL;
 
@@ -2007,13 +2040,13 @@ MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, KmppFrame frame)
 	/* generate header before hardware stream */
 	if (!hdr_status->ready) {
 		enc_impl_gen_hdr(enc->impl, enc->hdr_pkt);
-		enc->hdr_len = mpp_packet_get_length(enc->hdr_pkt);
+		kmpp_packet_get_length(enc->hdr_pkt, &enc->hdr_len);
 		hdr_status->ready = 1;
 
 		enc_dbg_detail("task %d update header length %d\n",
 			       frm->seq_idx, enc->hdr_len);
 
-		mpp_packet_append(enc->packet, enc->hdr_pkt);
+		kmpp_packet_append(enc->packet, enc->hdr_pkt);
 		hal_task->header_length = enc->hdr_len;
 		hal_task->length += enc->hdr_len;
 		hdr_status->added_by_change = 1;
@@ -2073,7 +2106,7 @@ TASK_DONE:
 
 	return ret;
 }
-static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, MppPacket *packet)
+static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, KmppPacket *packet)
 {
 	MppEncImpl *enc = (MppEncImpl *)ctx;
 	MPP_RET ret = MPP_OK;
@@ -2122,23 +2155,23 @@ TASK_DONE:
 		if (ret == MPP_ERR_INT_BS_OVFL && enc->ring_pool)
 			ring_buf_update_min_size(enc->ring_pool, enc->pkt_buf->size);
 		enc->frame_force_drop++;
-		mpp_packet_set_length(enc->packet, 0);
-		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
-		mpp_packet_deinit(&enc->packet);
+		kmpp_packet_set_length(enc->packet, 0);
+		mpp_ring_buf_packet_put_used(enc->packet);
+		kmpp_packet_put(enc->packet);
 	} else {
 		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
 		ntfy_impl->is_intra = 1;
 		kmpp_venc_notify(ntfy);
 
-		mpp_packet_set_length(enc->packet, hal_task->length);
+		kmpp_packet_set_length(enc->packet, hal_task->length);
 		if (frm->is_intra)
-			mpp_packet_set_flag(enc->packet, MPP_PACKET_FLAG_INTRA); //set as key frame
+			kmpp_packet_set_flag(enc->packet, KMPP_PACKET_FLAG_INTRA); //set as key frame
 		kmpp_frame_get_eos(enc->frame, &eos);
 		if (eos)
-			mpp_packet_set_flag(enc->packet, MPP_PACKET_FLAG_EOS);
-		mpp_packet_set_temporal_id(enc->packet, frm->temporal_id);
-		if (mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev))
-			mpp_err_f("ring_buf_put_used fail \n");
+			kmpp_packet_set_flag(enc->packet, KMPP_PACKET_FLAG_EOS);
+		kmpp_packet_set_temporal_id(enc->packet, frm->temporal_id);
+		if (mpp_ring_buf_packet_put_used(enc->packet))
+			mpp_err_f("mpp_ring_buf_packet_put_used fail \n");
 	}
 
 	*packet = enc->packet;
@@ -2161,8 +2194,8 @@ TASK_DONE:
 	return ret;
 }
 
-MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, MppPacket *packet,
-			 MppPacket *jpeg_packet)
+MPP_RET mpp_enc_impl_int(MppEnc ctx, MppEnc jpeg_ctx, KmppPacket *packet,
+			 KmppPacket *jpeg_packet)
 {
 	MppEncImpl *enc = (MppEncImpl *)ctx;
 	MppEncHal hal = enc->enc_hal;
@@ -2254,21 +2287,24 @@ TASK_DONE:
 			enc->frm_cfg.force_flag |= ENC_FORCE_IDR;
 			enc->hdr_status.val = 0;
 		}
-		mpp_packet_set_length(enc->packet, 0);
-		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
-		mpp_packet_deinit(&enc->packet);
+		kmpp_packet_set_length(enc->packet, 0);
+		mpp_ring_buf_packet_put_used(enc->packet);
+		kmpp_packet_put(enc->packet);
 	} else {
+		RK_U32 flag;
+
+		kmpp_packet_get_flag(enc->packet, &flag);
 		/* setup output packet and meta data */
-		if (!(mpp_packet_get_flag(enc->packet) & MPP_PACKET_FLAG_PARTITION))
-			mpp_packet_set_length(enc->packet, hal_task->length);
+		if (!(flag & KMPP_PACKET_FLAG_PARTITION))
+			kmpp_packet_set_length(enc->packet, hal_task->length);
 		if (frm->is_intra)
-			mpp_packet_set_flag(enc->packet, MPP_PACKET_FLAG_INTRA); //set as key frame
+			kmpp_packet_set_flag(enc->packet, KMPP_PACKET_FLAG_INTRA); //set as key frame
 		kmpp_frame_get_eos(enc->frame, &eos);
 		if (eos)
-			mpp_packet_set_flag(enc->packet, MPP_PACKET_FLAG_EOS);
-		mpp_packet_set_temporal_id(enc->packet, frm->temporal_id);
-		if (mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev))
-			mpp_err_f("ring_buf_put_used fail \n");
+			kmpp_packet_set_flag(enc->packet, KMPP_PACKET_FLAG_EOS);
+		kmpp_packet_set_temporal_id(enc->packet, frm->temporal_id);
+		if (mpp_ring_buf_packet_put_used(enc->packet))
+			mpp_err_f("mpp_ring_buf_packet_put_used fail \n");
 	}
 	*packet = enc->packet;
 	enc->packet = NULL;
@@ -2322,42 +2358,46 @@ TASK_DONE:
 	return ret;
 }
 
-void mpp_enc_impl_slice_info(MppEnc ctx, void *param, MppPacket *packet)
+void mpp_enc_impl_slice_info(MppEnc ctx, void *param, KmppPacket *out_packet)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	EncTask *task = (EncTask *)enc->enc_task;
 	HalEncTask *hal_task = &task->info.enc;
 	MppEncSliceInfo slice_info = *(MppEncSliceInfo *)param;
-	MppPacketImpl *impl = (MppPacketImpl *)hal_task->packet;
-	MppPacket new_packet = NULL;
+	KmppPacket packet = hal_task->packet;
+	KmppPacket new_packet = NULL;
 	EncRcTask *rc_task = &enc->rc_task;
 	EncFrmStatus *frm = &rc_task->frm;
+	RK_S32 packet_length;
 	RK_S32 slice_length;
+	RK_S64 pts;
+	RK_S64 dts;
 
+	kmpp_packet_get_length(packet, &packet_length);
 	enc_dbg_detail("slice_info len %d %s, packet %p len %d\n",
 		       slice_info.length, slice_info.last ? "last" : "continue",
-		       impl, impl->length);
+		       packet, packet_length);
 
 	/* first slice include header packet */
-	slice_length = slice_info.length + impl->length;
+	slice_length = slice_info.length + packet_length;
+	kmpp_packet_set_length(packet, slice_length);
+	kmpp_packet_set_flag(packet, KMPP_PACKET_FLAG_PARTITION);
 	if (slice_info.last) {
-		impl->length = slice_length;
-		impl->flag |= MPP_PACKET_FLAG_PARTITION;
-		impl->flag |= MPP_PACKET_FLAG_EOI;
-		enc->packet = impl;
+		kmpp_packet_set_flag(packet, KMPP_PACKET_FLAG_EOI);
+		enc->packet = packet;
 	} else {
-		impl->length = slice_length;
-		impl->flag |= MPP_PACKET_FLAG_PARTITION;
 		if (frm->is_intra)
-			impl->flag |= MPP_PACKET_FLAG_INTRA;
-		impl->temporal_id = frm->temporal_id;
-		if (mpp_packet_ring_buf_put_used((MppPacket *)impl, enc->chan_id, enc->dev))
-			mpp_err_f("ring_buf_put_used fail.\n");
-		*packet = impl;
-		mpp_packet_new_ring_buf(&new_packet, enc->ring_pool, 1, 1, 0, enc->chan_id);
+			kmpp_packet_set_flag(packet, KMPP_PACKET_FLAG_INTRA);
+		kmpp_packet_set_temporal_id(packet, frm->temporal_id);
+		if (mpp_ring_buf_packet_put_used(packet))
+			mpp_err_f("mpp_ring_buf_packet_put_used fail.\n");
+		*out_packet = packet;
+		mpp_enc_alloc_packet_with_ring_buf(&new_packet, enc->ring_pool, 1, 1);
 		mpp_assert(new_packet);
-		mpp_packet_set_pts(new_packet, impl->pts);
-		mpp_packet_set_dts(new_packet, impl->dts);
+		kmpp_packet_get_pts(packet, &pts);
+		kmpp_packet_get_dts(packet, &dts);
+		kmpp_packet_set_pts(new_packet, pts);
+		kmpp_packet_set_dts(new_packet, dts);
 		hal_task->packet = new_packet;
 		enc->packet = hal_task->packet;
 	}

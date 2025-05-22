@@ -65,7 +65,6 @@ SET(VCODEC_SRC
     mpp/base/mpp_enc_refs.c
     mpp/base/mpp_trie.c
     mpp/base/mpp_enc_cfg.c
-    mpp/base/mpp_packet.c
     mpp/base/mpp_bitwrite.c
     mpp/base/mpp_enc_ref.c
     mpp/base/mpp_enc_refs_setup.c

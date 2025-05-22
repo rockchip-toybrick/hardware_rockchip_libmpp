@@ -18,16 +18,16 @@
 #include "h264_syntax.h"
 #include "h264e_sei.h"
 
-MPP_RET h264e_sei_to_packet(MppPacket packet, RK_S32 *len, RK_S32 type,
+MPP_RET h264e_sei_to_packet(KmppPacket packet, RK_S32 *len, RK_S32 type,
 			    RK_U8 uuid[16], const void *data, RK_S32 size)
 {
-	void *pos = mpp_packet_get_pos(packet);
-	void *pkt_base = mpp_packet_get_data(packet);
-	size_t pkt_size = mpp_packet_get_size(packet);
-	size_t length = mpp_packet_get_length(packet);
+	KmppShmPtr pos;
+	KmppShmPtr pkt_base;
+	RK_S32 pkt_size;
+	RK_S32 length;
 	const RK_U8 *src = (RK_U8 *)data;
-	void *dst = pos + length;
-	RK_S32 buf_size = (pkt_base + pkt_size) - (pos + length);
+	void *dst = NULL;
+	RK_S32 buf_size;
 	MppWriteCtx bit_ctx;
 	MppWriteCtx *bit = &bit_ctx;
 	RK_S32 uuid_size = 16;
@@ -35,8 +35,15 @@ MPP_RET h264e_sei_to_packet(MppPacket packet, RK_S32 *len, RK_S32 type,
 	RK_S32 sei_size = 0;
 	RK_S32 i;
 
-	h264e_dbg_sei("write sei to pkt [%p:%zu] [%p:%zu]\n", pkt_base, pkt_size,
-		      pos, length);
+	kmpp_packet_get_pos(packet, &pos);
+	kmpp_packet_get_data(packet, &pkt_base);
+	kmpp_packet_get_size(packet, &pkt_size);
+	kmpp_packet_get_length(packet, &length);
+	dst = pos.kptr + length;
+	buf_size = (pkt_base.kptr + pkt_size) - (pos.kptr + length);
+
+	h264e_dbg_sei("write sei to pkt [%p:%d] [%p:%d]\n", pkt_base.kptr, pkt_size,
+		      pos.kptr, length);
 
 	mpp_writer_init(bit, dst, buf_size);
 
@@ -78,9 +85,9 @@ MPP_RET h264e_sei_to_packet(MppPacket packet, RK_S32 *len, RK_S32 type,
 	if (len)
 		*len = sei_size;
 
-	mpp_packet_set_length(packet, length + sei_size);
+	kmpp_packet_set_length(packet, length + sei_size);
 
-	h264e_dbg_sei("sei data length %u pkt len %zu -> %zu\n", sei_size,
+	h264e_dbg_sei("sei data length %u pkt len %d -> %d\n", sei_size,
 		      length, length + sei_size);
 
 	return MPP_OK;

@@ -15,7 +15,7 @@
 #include "vepu511_common.h"
 #include "hal_enc_task.h"
 #include "kmpp_frame.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 #include "mpp_buffer_impl.h"
 
 MPP_RET vepu511_set_roi(Vepu511RoiCfg *roi_reg_base, MppEncROICfg * roi, RK_S32 w, RK_S32 h)
@@ -259,7 +259,7 @@ MPP_RET vepu511_set_jpeg_reg(Vepu511JpegCfg * cfg)
 		/* if not first marker, do not write header */
 		if (cfg->rst_marker) {
 			task->length = 0;
-			mpp_packet_set_length(task->packet, 0);
+			kmpp_packet_set_length(task->packet, 0);
 		}
 	}
 
@@ -270,7 +270,7 @@ MPP_RET vepu511_set_jpeg_reg(Vepu511JpegCfg * cfg)
 		vepu511_jpeg_set_uv_offset(regs, syn, (VepuFmt)fmt->format, task);
 	}
 
-	pkt_len = mpp_packet_get_length(task->packet);
+	kmpp_packet_get_length(task->packet, &pkt_len);
 	if (!task->output->cir_flag) {
 		if (task->output->buf) {
 			RK_U32 out_addr = mpp_buffer_get_iova(task->output->buf, cfg->dev);

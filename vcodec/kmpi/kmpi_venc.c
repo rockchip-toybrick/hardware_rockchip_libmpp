@@ -5,15 +5,17 @@
 #include <linux/dma-buf.h>
 #include <linux/list.h>
 
+#include "rk_type.h"
+#include "rk_err_def.h"
+
 #include "mpp_mem.h"
 #include "mpp_enc.h"
 #include "mpp_log.h"
-#include "rk_type.h"
-#include "rk_err_def.h"
-#include "mpp_enc_cfg_impl.h"
-#include "mpp_packet_impl.h"
 
 #include "kmpi_venc.h"
+#include "kmpp_obj.h"
+#include "mpp_enc_cfg_impl.h"
+#include "kmpp_packet_impl.h"
 
 #include "mpp_vcodec_base.h"
 #include "mpp_vcodec_thread.h"
@@ -294,8 +296,8 @@ rk_s32 kmpp_venc_get_pkt(KmppCtx ctx, KmppPacket *pkt)
 {
     KmppVencCtx *p = NULL;
     struct mpp_chan *chan = NULL;
-    MppPacketImpl *packet = NULL;
-    RK_UL flags;
+    KmppPacketImpl *pkt_impl = NULL;
+    rk_u32 ret;
 
     if (!ctx) {
         mpp_err_f("ctx is null\n");
@@ -311,18 +313,18 @@ rk_s32 kmpp_venc_get_pkt(KmppCtx ctx, KmppPacket *pkt)
     if (!atomic_read(&chan->stream_count))
         wait_event_timeout(chan->wait, atomic_read(&chan->stream_count), 500);
 
-    spin_lock_irqsave(&chan->stream_list_lock, flags);
-    packet = list_first_entry_or_null(&chan->stream_done, MppPacketImpl, list);
-    // list_move_tail(&packet->list, &chan->stream_remove);
-    list_del_init(&packet->list);
-    spin_unlock_irqrestore(&chan->stream_list_lock, flags);
+    ret = kfifo_out_spinlocked(&chan->packet_fifo, pkt, 1, &chan->packet_fifo_lock);
+    if (ret != 1) {
+        mpp_err("kfifo_out_spinlocked failed ret %d\n", ret);
+        return MPP_NOK;
+    }
+    pkt_impl = (KmppPacketImpl *)kmpp_obj_to_entry(*pkt);
 
     /* flush cache before get packet*/
-    if (packet->buf.buf)
-        mpp_ring_buf_flush(&packet->buf, 1);
+    if (pkt_impl->buf.buf)
+        mpp_ring_buf_flush(&pkt_impl->buf, 1);
     atomic_dec(&chan->stream_count);
-    chan->seq_user_get = mpp_packet_get_dts(packet);
-    *pkt = (KmppPacket)packet;
+    chan->seq_user_get = pkt_impl->dts;
     // atomic_inc(&chan->str_out_cnt);
     // atomic_inc(&chan->pkt_user_get);
 

@@ -21,7 +21,7 @@
 #include "vepu540c_common.h"
 #include "hal_enc_task.h"
 #include "kmpp_frame.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 #include "rk-dvbm.h"
 #include "mpp_buffer_impl.h"
 
@@ -662,6 +662,7 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 	RK_U32 slice_en = 0;
 	RK_U32 frame_height = 0;
 	RK_U32 offset_x, offset_y;
+	RK_S32 pkt_len;
 
 	kmpp_frame_get_height(frame, &frame_height);
 	slice_en = (frame_height < height) && syn->restart_ri;
@@ -672,7 +673,7 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 		/* if not first marker, do not write header */
 		if (cfg->rst_marker) {
 			task->length = 0;
-			mpp_packet_set_length(task->packet, 0);
+			kmpp_packet_set_length(task->packet, 0);
 		}
 	}
 
@@ -683,6 +684,7 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 		vepu540c_jpeg_set_uv_offset(regs, syn, (VepuFmt) fmt->format, task);
 	}
 
+	kmpp_packet_get_length(task->packet, &pkt_len);
 	if (!task->output->cir_flag) {
 		if (task->output->buf) {
 			regs->reg0257_adr_bsbb = mpp_dev_get_iova_address(cfg->dev, task->output->buf,
@@ -691,12 +693,12 @@ MPP_RET vepu540c_set_jpeg_reg(Vepu540cJpegCfg * cfg)
 
 		regs->reg0256_adr_bsbt = regs->reg0257_adr_bsbb + task->output->size - 1;
 		regs->reg0258_adr_bsbr = regs->reg0257_adr_bsbb;
-		regs->reg0259_adr_bsbs = regs->reg0257_adr_bsbb + mpp_packet_get_length(task->packet);
+		regs->reg0259_adr_bsbs = regs->reg0257_adr_bsbb + pkt_len;
 	} else {
 		RK_U32 size = mpp_buffer_get_size(task->output->buf);
 		regs->reg0257_adr_bsbb = mpp_dev_get_iova_address(cfg->dev, task->output->buf, 257);
 		regs->reg0259_adr_bsbs = regs->reg0257_adr_bsbb + ((task->output->start_offset +
-								    mpp_packet_get_length(task->packet)) % size);
+								    pkt_len) % size);
 		regs->reg0258_adr_bsbr = regs->reg0257_adr_bsbb + task->output->r_pos;
 		regs->reg0256_adr_bsbt = regs->reg0257_adr_bsbb + size;
 	}

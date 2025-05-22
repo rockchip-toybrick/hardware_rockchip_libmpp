@@ -179,18 +179,18 @@ MPP_RET mpp_enc_control(MppEnc ctx, MpiCmd cmd, void *param);
 MPP_RET mpp_enc_notify(MppEnc ctx, RK_U32 flag);
 MPP_RET mpp_enc_reset(MppEnc ctx);
 MPP_RET mpp_enc_oneframe(MppEnc ctx, KmppFrame frame,
-			 MppPacket * packet);
+			 KmppPacket *packet);
 MPP_RET mpp_enc_cfg_reg(MppEnc ctx, KmppFrame frame);	//no block
 MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx);	//no block
 
-MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
-			    MppPacket * jpeg_packet);
-void mpp_enc_slice_info(MppEnc ctx, void *param, MppPacket *packet);
+MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, KmppPacket *packet,
+			    KmppPacket *jpeg_packet);
+void mpp_enc_slice_info(MppEnc ctx, void *param, KmppPacket *packet);
 MPP_RET mpp_enc_register_chl(MppEnc ctx, void *func, RK_S32 chan_id);
 void    mpp_enc_proc_debug(void *seq_file, MppEnc ctx, RK_U32 chl_id);
 void mpp_enc_deinit_frame(MppEnc ctx);
 void mpp_enc_pkt_full_inc(MppEnc ctx);
-MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet);
+MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, KmppPacket *packet);
 RK_S32 mpp_enc_get_fps_out(MppEnc ctx);
 KmppVencNtfy mpp_enc_get_notify(MppEnc ctx);
 

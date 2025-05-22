@@ -15,7 +15,7 @@
 #include "mpp_mem.h"
 #include "h265e_ps.h"
 #include "h265e_header_gen.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 
 static RK_S32 scan4[16] = {0, 4, 1, 8, 5, 2, 12, 9, 6, 3, 13, 10, 7, 14, 11, 15};
 static RK_S32 scan8[64] = {
@@ -1024,7 +1024,7 @@ RK_U32 h265e_data_to_sei(void *dst, RK_U8 uuid[16], const void *payload,
 	return sei_nal.i_payload;
 }
 
-MPP_RET h265e_get_extra_info(H265eCtx * ctx, MppPacket pkt_out)
+MPP_RET h265e_get_extra_info(H265eCtx * ctx, KmppPacket pkt_out)
 {
 	RK_S32 k = 0;
 	size_t offset = 0;
@@ -1041,11 +1041,11 @@ MPP_RET h265e_get_extra_info(H265eCtx * ctx, MppPacket pkt_out)
 		h265e_dbg(H265E_DBG_HEADER,
 			  "get extra info nal type %d, size %d bytes",
 			  src->nal[k].i_type, src->nal[k].i_payload);
-		mpp_packet_write(pkt_out, offset, src->nal[k].p_payload,
+		kmpp_packet_write(pkt_out, offset, src->nal[k].p_payload,
 				 src->nal[k].i_payload);
 		offset += src->nal[k].i_payload;
 	}
-	mpp_packet_set_length(pkt_out, offset);
+	kmpp_packet_set_length(pkt_out, offset);
 
 	h265e_dbg_func("leave\n");
 	return MPP_OK;

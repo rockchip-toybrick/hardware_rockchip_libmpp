@@ -9,7 +9,7 @@
 
 #include "mpp_mem.h"
 #include "kmpp_frame.h"
-#include "mpp_packet_impl.h"
+#include "kmpp_packet.h"
 #include "mpp_maths.h"
 #include "mpp_buffer_impl.h"
 
@@ -1275,7 +1275,7 @@ static void setup_vepu510_io_buf(HalVepu510RegSet *regs, HalH264eVepu510Ctx *ctx
 				 HalEncTask *task)
 {
 	KmppFrame frm = task->frame;
-	MppPacket pkt = task->packet;
+	KmppPacket pkt = task->packet;
 	MppBuffer buf_in = NULL;
 	ring_buf *buf_out = task->output;
 	MppFrameFormat fmt;
@@ -1283,12 +1283,13 @@ static void setup_vepu510_io_buf(HalVepu510RegSet *regs, HalH264eVepu510Ctx *ctx
 	RK_S32 hor_stride, ver_stride;
 	RK_S32 iova_in;
 	RK_U32 off_in[2] = {0};
-	RK_U32 off_out = mpp_packet_get_length(pkt);
+	RK_U32 off_out;
 	size_t size_out = mpp_buffer_get_size(buf_out->buf);
 	RK_S32 fd_out = mpp_buffer_get_iova(buf_out->buf, ctx->dev);
 
 	hal_h264e_dbg_func("enter\n");
 
+	kmpp_packet_get_length(pkt, &off_out);
 	kmpp_frame_get_fmt(frm, &fmt);
 	kmpp_frame_get_hor_stride(frm, &hor_stride);
 	kmpp_frame_get_ver_stride(frm, &ver_stride);
@@ -2376,7 +2377,7 @@ static MPP_RET hal_h264e_vepu510_wait(void *hal, HalEncTask *task)
 	HalH264eVepu510Ctx *ctx = (HalH264eVepu510Ctx *)hal;
 	HalVepu510RegSet *regs = &ctx->regs_sets[0];
 	RK_U32 split_out = ctx->cfg->split.split_out;
-	// MppPacket pkt = task->packet;
+	// KmppPacket pkt = task->packet;
 	// RK_S32 offset = mpp_packet_get_length(pkt);
 	// H264NaluType type = task->rc_task->frm.is_idr ?  H264_NALU_TYPE_IDR : H264_NALU_TYPE_SLICE;
 	// MppEncH264HwCfg *hw_cfg = &ctx->cfg->codec.h264.hw_cfg;

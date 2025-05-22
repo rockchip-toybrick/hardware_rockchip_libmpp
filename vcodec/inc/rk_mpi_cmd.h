@@ -114,10 +114,10 @@ typedef enum {
 	MPP_ENC_SET_OSD_LEGACY_0,           /* deprecated */
 	MPP_ENC_SET_OSD_LEGACY_1,           /* deprecated */
 	MPP_ENC_SET_OSD_LEGACY_2,           /* deprecated */
-	MPP_ENC_GET_HDR_SYNC,               /* get vps / sps / pps which has better sync behavior parameter is MppPacket */
+	MPP_ENC_GET_HDR_SYNC,               /* get vps / sps / pps which has better sync behavior parameter is KmppPacket */
 	MPP_ENC_GET_EXTRA_INFO,             /* deprecated */
 	MPP_ENC_SET_SEI_CFG,                /* SEI: Supplement Enhancemant Information, parameter is MppSeiMode */
-	MPP_ENC_GET_SEI_DATA,               /* SEI: Supplement Enhancemant Information, parameter is MppPacket */
+	MPP_ENC_GET_SEI_DATA,               /* SEI: Supplement Enhancemant Information, parameter is KmppPacket */
 	MPP_ENC_PRE_ALLOC_BUFF,             /* deprecated */
 	MPP_ENC_SET_QP_RANGE,               /* used for adjusting qp range, the parameter can be 1 or 2 */
 	MPP_ENC_SET_ROI_CFG,                /* set MppEncROICfg structure */

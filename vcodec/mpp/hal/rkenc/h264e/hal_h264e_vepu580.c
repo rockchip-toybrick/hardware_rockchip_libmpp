@@ -15,7 +15,7 @@
 #include "mpp_mem.h"
 //#include "mpp_soc.h"
 //#include "mpp_common.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 #include "kmpp_frame.h"
 #include "mpp_maths.h"
 
@@ -1184,18 +1184,19 @@ static void setup_vepu580_io_buf(HalVepu580RegSet * regs, MppDev dev,
 				 HalEncTask * task)
 {
 	KmppFrame frm = task->frame;
-	MppPacket pkt = task->packet;
+	KmppPacket pkt = task->packet;
 	MppBuffer buf_in;
 	ring_buf *buf_out = task->output;
 	MppFrameFormat fmt;
 	RK_S32 hor_stride;
 	RK_S32 ver_stride;
 	RK_U32 off_in[2] = { 0 };
-	RK_U32 off_out = mpp_packet_get_length(pkt);
+	RK_U32 off_out;
 	size_t siz_out = buf_out->size;
 
 	hal_h264e_dbg_func("enter\n");
 
+	kmpp_packet_get_length(pkt, &off_out);
 	kmpp_frame_get_hor_stride(frm, &hor_stride);
 	kmpp_frame_get_ver_stride(frm, &ver_stride);
 	kmpp_frame_get_fmt(frm, &fmt);

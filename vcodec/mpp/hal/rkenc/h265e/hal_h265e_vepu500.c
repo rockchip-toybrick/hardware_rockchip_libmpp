@@ -12,7 +12,7 @@
 
 #include "mpp_mem.h"
 #include "kmpp_frame.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 
 #include "hal_h265e_debug.h"
 #include "h265e_syntax_new.h"
@@ -1402,11 +1402,12 @@ void vepu500_h265_set_hw_address(H265eV500HalContext *ctx, HevcVepu500Frame *reg
 	HalBuf *recon_buf, *ref_buf;
 	H265eSyntax_new *syn = (H265eSyntax_new *)enc_task->syntax.data;
 	VepuFmtCfg *fmt = (VepuFmtCfg *) ctx->input_fmt;
-	RK_U32 len = mpp_packet_get_length(task->packet);
+	RK_U32 len;
 	RK_U32 offset_x, offset_y;
 
 	hal_h265e_enter();
 
+	kmpp_packet_get_length(task->packet, &len);
 	if (!ctx->online) {
 		regs->reg0160_adr_src0 = mpp_dev_get_iova_address(ctx->dev, enc_task->input, 160);
 		regs->reg0161_adr_src1 = regs->reg0160_adr_src0;

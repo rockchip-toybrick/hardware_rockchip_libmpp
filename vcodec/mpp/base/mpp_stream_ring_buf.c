@@ -7,7 +7,7 @@
  *
  */
 
-#define MODULE_TAG "mpp_packet"
+#define MODULE_TAG "kmpp_packet"
 
 #include <linux/string.h>
 #include <linux/module.h>
@@ -18,7 +18,9 @@
 #include "mpp_mem.h"
 #include "mpp_maths.h"
 #include "mpp_buffer_impl.h"
-#include "mpp_stream_ring_buf.h"
+
+#include "kmpp_obj.h"
+#include "kmpp_packet_impl.h"
 
 RK_U32 ring_buf_debug = 0;
 #define DEFALUT_STRM_CNT_IN_POOL 4
@@ -63,7 +65,7 @@ RK_U32 ring_buf_get_use_size(ring_buf_pool *ctx)
 	return ctx->w_pos - ctx->r_pos;
 }
 
-MPP_RET ring_buf_put_use(ring_buf_pool *ctx, ring_buf *buf)
+static MPP_RET ring_buf_put_use(ring_buf_pool *ctx, ring_buf *buf)
 {
 	RK_U32 w_pos = 0, r_pos = 0;
 	RK_U32 start_pos = 0, end_pos = 0;
@@ -173,7 +175,6 @@ MPP_RET ring_buf_get_free(ring_buf_pool *ctx, ring_buf *buf, RK_U32 align,
 			return MPP_NOK;
 		align_w_pos = w_pos + align_offset;
 		buf->start_offset = align_w_pos;
-		buf->buf_start = ctx->buf_base + buf->start_offset;
 		buf->r_pos = align_r_pos;
 		buf->buf = ctx->buf;
 		buf->size = r_pos - w_pos - align_offset;
@@ -185,7 +186,6 @@ MPP_RET ring_buf_get_free(ring_buf_pool *ctx, ring_buf *buf, RK_U32 align,
 	if (ctx->len - (w_pos + align_offset - r_pos) > min_size) {
 		align_w_pos = w_pos + align_offset;
 		buf->start_offset = align_w_pos;
-		buf->buf_start = ctx->buf_base + buf->start_offset;
 		buf->size = ctx->len - align_w_pos + r_pos;
 		buf->r_pos = align_r_pos;
 		buf->buf = ctx->buf;
@@ -236,4 +236,20 @@ MPP_RET mpp_ring_buf_flush(ring_buf *buf, RK_U8 for_cpu)
 	}
 
 	return ret;
+}
+
+MPP_RET mpp_ring_buf_packet_put_used(KmppPacket packet)
+{
+	KmppPacketImpl *impl = (KmppPacketImpl *)kmpp_obj_to_entry(packet);
+
+	impl->buf.use_len = impl->length;
+	if (impl->buf.ring_pool) {
+		if (impl->length > impl->buf.size) {
+			mpp_err("ring_buf used may be error");
+			return MPP_NOK;
+		}
+		ring_buf_put_use(impl->buf.ring_pool, &impl->buf);
+	}
+
+	return MPP_OK;
 }

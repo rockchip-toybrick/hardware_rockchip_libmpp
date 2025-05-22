@@ -101,7 +101,6 @@ SET(KMPP_SRC
     ../vcodec/mpp/base/mpp_enc_refs.c
     ../vcodec/mpp/base/mpp_trie.c
     ../vcodec/mpp/base/mpp_enc_cfg.c
-    ../vcodec/mpp/base/mpp_packet.c
     ../vcodec/mpp/base/mpp_bitwrite.c
     ../vcodec/mpp/base/mpp_enc_ref.c
     ../vcodec/mpp/base/mpp_enc_refs_setup.c
@@ -175,6 +174,7 @@ SET(KMPP_SRC
     hack/mpp_rkvdec2_link_hack_rk3568.c
     ../kmpp/objs/kmpp_buffer.c
     ../kmpp/objs/kmpp_frame.c
+    ../kmpp/objs/kmpp_packet.c
     ../kmpp/objs/kmpp_meta.c
     ../kmpp/objs/kmpp_venc_objs.c
     ../kmpp/objs/kmpp_vsp_objs.c

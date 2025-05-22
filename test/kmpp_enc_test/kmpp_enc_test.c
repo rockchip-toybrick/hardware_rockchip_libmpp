@@ -11,6 +11,10 @@
 #include "mpp_buffer.h"
 
 #include "kmpp_osal.h"
+#include "kmpp_obj.h"
+
+#include "kmpp_packet.h"
+
 #define TEST_CHANNEL_NUM 1
 
 int mpp_enc_cfg_setup(int chan_id)
@@ -227,13 +231,16 @@ void enc_test(void)
     RK_U32 i = 0;
 
     mpp_enc_cfg_api_init();
+
     pr_info("mpp_enc_cfg_api_init ok");
 
     for (i = 0; i < chnl_num; i++) {
         struct mpp_frame_infos info;
         MppBuffer buffer;
         RK_U32 size = 1280 * 720 * 3 / 2;
-        struct venc_packet packet;
+        KmppShmPtr packet_sptr;
+        KmppPacket packet;
+        RK_S32 packet_len;
         RK_U32 frame_num = 10;
 
         memset(&attr, 0, sizeof(attr));
@@ -270,15 +277,17 @@ void enc_test(void)
 
             osal_msleep(10);
             while(1) {
-                ret = mpp_vcodec_chan_get_stream(i, MPP_CTX_ENC, &packet);
+                ret = mpp_vcodec_chan_get_stream(i, MPP_CTX_ENC, &packet_sptr);
                 if (ret) {
                     if (cout++ > 50)
                         break;
                     osal_msleep(1);
                     continue;
                 }
-                kmpp_loge_f("get stream size %d\n", packet.len);
-                mpp_vcodec_chan_put_stream(i, MPP_CTX_ENC, &packet);
+                packet = kmpp_obj_from_shmptr(&packet_sptr);
+                kmpp_packet_get_length(packet, &packet_len);
+                kmpp_loge_f("get stream size %d\n", packet_len);
+                kmpp_packet_put(packet);
                 break;
             }
             mpp_buffer_put(buffer);

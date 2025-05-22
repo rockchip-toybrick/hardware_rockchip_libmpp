@@ -58,7 +58,7 @@ typedef struct HalEncTask_t {
 	 * 3. length in task and length in packet should be updated at the same
 	 *    time. Encoder flow need to check these two length between stages.
 	 */
-	MppPacket packet;
+	KmppPacket packet;
 	ring_buf  *output;
 	RK_S32 header_length;
 	RK_S32 sei_length;

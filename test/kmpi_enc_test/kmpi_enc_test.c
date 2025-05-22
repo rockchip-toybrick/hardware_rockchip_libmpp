@@ -11,9 +11,11 @@
 #include "mpp_buffer.h"
 #include "mpp_enc.h"
 
-#include "kmpp_frame.h"
 #include "kmpp_osal.h"
 #include "kmpi_venc.h"
+
+#include "kmpp_frame.h"
+#include "kmpp_packet.h"
 
 static RK_U32 frame_num = 10;
 module_param(frame_num, uint, 0644);
@@ -252,7 +254,7 @@ void enc_test(void)
     kmpp_venc_start(ctx, &cfg);
 
     while (frame_count++ < frame_num) {
-        MppPacket packet;
+        KmppPacket packet;
         RK_U32 size = 1280 * 720 * 3 / 2;
         RK_U32 width = 1280;
         RK_U32 height = 720;
@@ -274,10 +276,11 @@ void enc_test(void)
 
         kmpp_venc_get_pkt(ctx, &packet);
         if (packet) {
-            RK_U32 len = mpp_packet_get_length(packet);
+            RK_U32 len;
 
+            kmpp_packet_get_length(packet, &len);
             kmpp_err_f("get stream size %d\n", len);
-            mpp_packet_deinit(&packet);
+            kmpp_packet_put(packet);
         }
     }
 

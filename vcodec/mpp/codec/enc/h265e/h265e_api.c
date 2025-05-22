@@ -21,7 +21,7 @@
 #include "h265e_syntax_new.h"
 #include "h265e_ps.h"
 #include "h265e_header_gen.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 
 RK_U32 h265e_debug = 0;
 
@@ -51,7 +51,7 @@ static MPP_RET h265e_init(void *ctx, EncImplCfg * ctrlCfg)
 
 	p->param_buf = mpp_calloc_size(void, H265E_EXTRA_INFO_BUF_SIZE);
 
-	ret = mpp_packet_init(&p->packeted_param, p->param_buf,
+	ret = kmpp_packet_init_with_data(&p->packeted_param, p->param_buf,
 			      H265E_EXTRA_INFO_BUF_SIZE);
 	if (ret)
 		return ret;
@@ -183,7 +183,7 @@ static MPP_RET h265e_deinit(void *ctx)
 	MPP_FREE(p->extra_info);
 	MPP_FREE(p->param_buf);
 	if (p->packeted_param)
-		mpp_packet_deinit(&p->packeted_param);
+		kmpp_packet_put(p->packeted_param);
 
 	h265e_dpb_deinit(p->dpb);
 
@@ -193,7 +193,7 @@ static MPP_RET h265e_deinit(void *ctx)
 	return MPP_OK;
 }
 
-static MPP_RET h265e_gen_hdr(void *ctx, MppPacket pkt)
+static MPP_RET h265e_gen_hdr(void *ctx, KmppPacket pkt)
 {
 	H265eCtx *p = (H265eCtx *) ctx;
 
@@ -258,7 +258,7 @@ static MPP_RET h265e_proc_hal(void *ctx, HalEncTask * task)
 	H265eCtx *p = (H265eCtx *) ctx;
 	H265eSyntax_new *syntax = NULL;
 //   EncFrmStatus *frm = &task->rc_task->frm;
-//   MppPacket packet = task->packet;
+//   KmppPacket packet = task->packet;
 //    MppMeta meta = mpp_packet_get_meta(packet);
 
 	if (ctx == NULL) {
@@ -279,13 +279,22 @@ static MPP_RET h265e_proc_hal(void *ctx, HalEncTask * task)
 static MPP_RET h265e_proc_enc_skip(void *ctx, HalEncTask * task)
 {
 	H265eCtx *p = (H265eCtx *) ctx;
-	MppPacket pkt = task->packet;
-	RK_U8 *ptr = mpp_packet_get_pos(pkt);
-	RK_U32 offset = mpp_packet_get_length(pkt);
-	RK_U32 len = mpp_packet_get_size(pkt) - offset;
+	KmppPacket pkt = task->packet;
+	RK_U8 *ptr = NULL;
+	KmppShmPtr pos;
+	RK_U32 offset;
+	RK_S32 size;
+	RK_U32 len;
 	RK_U32 new_length = 0;
 
 	h265e_dbg_func("enter\n");
+
+	kmpp_packet_get_pos(pkt, &pos);
+	ptr = pos.kptr;
+	kmpp_packet_get_length(pkt, &offset);
+	kmpp_packet_get_size(pkt, &size);
+	len = size - offset;
+
 	ptr += offset;
 	p->slice->slice_qp = task->rc_task->info.quality_target;
 	new_length = h265e_code_slice_skip_frame(ctx, p->slice, ptr, len);
@@ -297,18 +306,23 @@ static MPP_RET h265e_proc_enc_skip(void *ctx, HalEncTask * task)
 	return MPP_OK;
 }
 
-static MPP_RET h265e_add_sei(MppPacket pkt, RK_S32 * length, RK_U8 uuid[16],
+static MPP_RET h265e_add_sei(KmppPacket pkt, RK_S32 * length, RK_U8 uuid[16],
 			     const void *data, RK_S32 size)
 {
-	RK_U8 *ptr = mpp_packet_get_pos(pkt);
-	RK_U32 offset = mpp_packet_get_length(pkt);
+	KmppShmPtr pos;
+	RK_U8 *ptr = NULL;
+	RK_U32 offset;
 	RK_U32 new_length = 0;
+
+	kmpp_packet_get_pos(pkt, &pos);
+	ptr = pos.kptr;
+	kmpp_packet_get_length(pkt, &offset);
 
 	ptr += offset;
 	new_length = h265e_data_to_sei(ptr, uuid, data, size);
 	*length = new_length;
 
-	mpp_packet_set_length(pkt, offset + new_length);
+	kmpp_packet_set_length(pkt, offset + new_length);
 
 	return MPP_OK;
 }
@@ -578,7 +592,7 @@ static MPP_RET h265e_proc_cfg(void *ctx, MpiCmd cmd, void *param)
 	}
 	break;
 	case MPP_ENC_GET_EXTRA_INFO: {
-		MppPacket pkt_out = (MppPacket) param;
+		KmppPacket pkt_out = (KmppPacket)param;
 		h265e_set_extra_info(p);
 		h265e_get_extra_info(p, pkt_out);
 	}

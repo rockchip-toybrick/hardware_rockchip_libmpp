@@ -6,7 +6,7 @@
 #include <linux/module.h>
 
 #include "rk_mpi_cmd.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 
 #include "kmpp_osal.h"
 #include "kmpp_venc_objs.h"
@@ -217,7 +217,7 @@ void enc_test(void)
     kmpp_venc_chan_start(id, &cfg);
 
     while (frame_count++ < frame_num) {
-        MppPacket packet;
+        KmppPacket packet;
 
         mpp_buffer_get(NULL, &buffer, size);
 
@@ -234,10 +234,11 @@ void enc_test(void)
 
         kmpp_venc_chan_get_pkt(id, &packet);
         if (packet) {
-            RK_U32 len = mpp_packet_get_length(packet);
+            RK_U32 len;
 
+            kmpp_packet_get_length(packet, &len);
             kmpp_err_f("get stream size %d\n", len);
-            mpp_packet_deinit(&packet);
+            kmpp_packet_put(packet);
         }
     }
 

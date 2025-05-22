@@ -22,16 +22,15 @@
 #include "mpp_enc.h"
 #include "mpp_log.h"
 #include "mpp_buffer_impl.h"
-#include "mpp_packet.h"
 #include "mpp_vcodec_debug.h"
-#include "mpp_packet_impl.h"
+#include "kmpp_packet_impl.h"
 #include "mpp_time.h"
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
 #include "kmpp_meta.h"
 #include "kmpp_atomic.h"
 
-void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry, MppPacket packet);
+void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry, KmppPacket packet);
 
 static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 {
@@ -160,7 +159,7 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 	if (meta)
 		kmpp_meta_get_s32(meta, KEY_INPUT_PSKIP, &pskip);
 	if (pskip) {
-		MppPacket packet = NULL;
+		KmppPacket packet = NULL;
 		KmppVencNtfy ntfy;
 		KmppVencNtfyImpl* ntfy_impl;
 
@@ -287,18 +286,57 @@ __RETURN:
 	return MPP_OK;
 }
 
-void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry,
-				    MppPacket packet)
+static MPP_RET mpp_resize_packet_fifo(struct mpp_chan *chan_entry)
 {
-	MppPacketImpl *p = (MppPacketImpl *) packet;
+	DECLARE_KFIFO_PTR(new_packet_fifo, KmppPacket);
+	DECLARE_KFIFO_PTR(tmp, KmppPacket);
+	rk_s32 old_size, new_size;
+	int ret;
+
+	old_size = kfifo_size(&chan_entry->packet_fifo);
+	new_size = roundup_pow_of_two(old_size * 2);
+
+	ret = kfifo_alloc(&new_packet_fifo, new_size, GFP_KERNEL);
+	if (ret)
+		mpp_err("resize packet fifo failed.\n");
+
+	mpp_log("chan %d packet fifo is full, resize %d -> %d\n",
+		chan_entry->chan_id, old_size, new_size);
+
+	while (!kfifo_is_empty(&chan_entry->packet_fifo)) {
+		KmppPacket packet;
+
+		ret = kfifo_out(&chan_entry->packet_fifo, &packet, 1);
+		ret = kfifo_in(&new_packet_fifo, &packet, 1);
+	}
+
+	WRITE_ONCE(tmp.kfifo.data, chan_entry->packet_fifo.kfifo.data);
+
+	WRITE_ONCE(chan_entry->packet_fifo.kfifo.data, new_packet_fifo.kfifo.data);
+	WRITE_ONCE(chan_entry->packet_fifo.kfifo.in, new_packet_fifo.kfifo.in);
+	WRITE_ONCE(chan_entry->packet_fifo.kfifo.out, new_packet_fifo.kfifo.out);
+	WRITE_ONCE(chan_entry->packet_fifo.kfifo.esize, new_packet_fifo.kfifo.esize);
+	WRITE_ONCE(chan_entry->packet_fifo.kfifo.mask, new_packet_fifo.kfifo.mask);
+
+	kfifo_free(&tmp);
+
+	return 0;
+}
+
+void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry,
+				    KmppPacket packet)
+{
 	unsigned long flags;
 
-	spin_lock_irqsave(&chan_entry->stream_list_lock, flags);
-	list_add_tail(&p->list, &chan_entry->stream_done);
+	spin_lock_irqsave(&chan_entry->packet_fifo_lock, flags);
+	if (kfifo_is_full(&chan_entry->packet_fifo)) {
+		mpp_resize_packet_fifo(chan_entry);
+	}
+	kfifo_in(&chan_entry->packet_fifo, &packet, 1);
+	spin_unlock_irqrestore(&chan_entry->packet_fifo_lock, flags);
 	atomic_inc(&chan_entry->stream_count);
 	atomic_inc(&chan_entry->pkt_total_num);
-	chan_entry->seq_encoded = mpp_packet_get_dts(packet);
-	spin_unlock_irqrestore(&chan_entry->stream_list_lock, flags);
+	kmpp_packet_get_dts(packet, &chan_entry->seq_encoded);
 	wake_up(&chan_entry->wait);
 
 	chan_entry->reenc = 0;
@@ -306,8 +344,8 @@ void mpp_vcodec_enc_add_packet_list(struct mpp_chan *chan_entry,
 
 static void mpp_vcodec_event_frame(int chan_id)
 {
-	MppPacket packet = NULL;
-	MppPacket jpeg_packet = NULL;
+	KmppPacket packet = NULL;
+	KmppPacket jpeg_packet = NULL;
 	MPP_RET ret = MPP_OK;
 	struct venc_module *venc = NULL;
 	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
@@ -384,7 +422,7 @@ static void mpp_vcodec_event_frame(int chan_id)
 static void mpp_vcodec_event_slice(int chan_id, void *param)
 {
 	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, MPP_CTX_ENC);
-	MppPacket packet = NULL;
+	KmppPacket packet = NULL;
 
 	if (atomic_read(&chan_entry->cfg.comb_runing)) {
 		mpp_err("combo running fail because slice fifo.");

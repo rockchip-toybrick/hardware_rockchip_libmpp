@@ -16,7 +16,7 @@
 #include "mpp_mem.h"
 #include "mpp_maths.h"
 
-#include "mpp_packet_impl.h"
+#include "kmpp_packet.h"
 #include "mpp_enc_refs.h"
 
 #include "h264e_debug.h"
@@ -58,7 +58,7 @@ typedef struct {
 	/* H.264 frame status syntax */
 	H264eFrmInfo        frms;
 	/* header generation */
-	MppPacket           hdr_pkt;
+	KmppPacket          hdr_pkt;
 	void                *hdr_buf;
 	size_t              hdr_size;
 	size_t              hdr_len;
@@ -197,7 +197,7 @@ static MPP_RET h264e_init(void *ctx, EncImplCfg *ctrl_cfg)
 	p->hdr_size = SZ_1K;
 	p->hdr_buf = mpp_malloc_size(void, p->hdr_size);
 	mpp_assert(p->hdr_buf);
-	ret = mpp_packet_init(&p->hdr_pkt, p->hdr_buf, p->hdr_size);
+	ret = kmpp_packet_init_with_data(&p->hdr_pkt, p->hdr_buf, p->hdr_size);
 	if (ret)
 		return ret;
 	mpp_assert(p->hdr_pkt);
@@ -227,7 +227,7 @@ static MPP_RET h264e_deinit(void *ctx)
 	h264e_dbg_func("enter\n");
 
 	if (p->hdr_pkt)
-		mpp_packet_deinit(&p->hdr_pkt);
+		kmpp_packet_put(p->hdr_pkt);
 
 	MPP_FREE(p->hdr_buf);
 
@@ -614,7 +614,7 @@ static MPP_RET h264e_proc_cfg(void *ctx, MpiCmd cmd, void *param)
 	return ret;
 }
 
-static MPP_RET h264e_gen_hdr(void *ctx, MppPacket pkt)
+static MPP_RET h264e_gen_hdr(void *ctx, KmppPacket pkt)
 {
 	H264eCtx *p = (H264eCtx *)ctx;
 
@@ -628,15 +628,15 @@ static MPP_RET h264e_gen_hdr(void *ctx, MppPacket pkt)
 	 */
 	h264e_dpb_setup(&p->dpb, p->cfg, &p->sps);
 
-	mpp_packet_reset(p->hdr_pkt);
+	kmpp_packet_reset(p->hdr_pkt);
 
 	h264e_sps_to_packet(&p->sps, p->hdr_pkt, &p->sps_len);
 	h264e_pps_to_packet(&p->pps, p->hdr_pkt, &p->pps_len);
-	p->hdr_len = mpp_packet_get_length(p->hdr_pkt);
+	kmpp_packet_get_length(p->hdr_pkt, (RK_S32 *)&p->hdr_len);
 
 	if (pkt) {
-		mpp_packet_write(pkt, 0, p->hdr_buf, p->hdr_len);
-		mpp_packet_set_length(pkt, p->hdr_len);
+		kmpp_packet_write(pkt, 0, p->hdr_buf, p->hdr_len);
+		kmpp_packet_set_length(pkt, p->hdr_len);
 	}
 
 	h264e_dbg_func("leave\n");
@@ -769,7 +769,7 @@ static MPP_RET h264e_proc_hal(void *ctx, HalEncTask *task)
 		H264ePrefixNal *prefix = &p->prefix;
 		H264eSlice *slice = &p->slice;
 		EncFrmStatus *frm = &task->rc_task->frm;
-		//  MppPacket packet = task->packet;
+		//  KmppPacket packet = task->packet;
 		//  MppMeta meta = mpp_packet_get_meta(packet);
 
 		prefix->idr_flag = slice->idr_flag;
@@ -805,15 +805,22 @@ static MPP_RET h264e_sw_enc(void *ctx, HalEncTask *task)
 	H264eCtx *p = (H264eCtx *)ctx;
 	MppEncH264Cfg *h264 = &p->cfg->codec.h264;
 	EncRcTaskInfo *rc_info = &task->rc_task->info;
-	MppPacket packet = task->packet;
-	void *pos = mpp_packet_get_pos(packet);
-	void *data = mpp_packet_get_data(packet);
-	size_t size = mpp_packet_get_size(packet);
-	size_t length = mpp_packet_get_length(packet);
-	void *base = pos + length;
-	RK_S32 buf_size = (data + size) - (pos + length);
+	KmppPacket packet = task->packet;
+	KmppShmPtr pos;
+	KmppShmPtr data;
+	RK_S32 size;
+	RK_S32 length;
+	void *base = NULL;
+	RK_S32 buf_size;
 	RK_S32 slice_len = 0;
 	RK_S32 final_len = 0;
+
+	kmpp_packet_get_pos(packet, &pos);
+	kmpp_packet_get_data(packet, &data);
+	kmpp_packet_get_size(packet, &size);
+	kmpp_packet_get_length(packet, &length);
+	base = pos.kptr + length;
+	buf_size = (data.kptr + size) - (pos.kptr + length);
 
 	if (h264->prefix_mode || h264->max_tid) {
 		/* add prefix first */
@@ -839,7 +846,7 @@ static MPP_RET h264e_sw_enc(void *ctx, HalEncTask *task)
 	return MPP_OK;
 }
 
-MPP_RET h264e_add_sei(MppPacket pkt, RK_S32 *length, RK_U8 uuid[16],
+MPP_RET h264e_add_sei(KmppPacket pkt, RK_S32 *length, RK_U8 uuid[16],
 		      const void *data, RK_S32 size)
 {
 	return h264e_sei_to_packet(pkt, length, H264_SEI_USER_DATA_UNREGISTERED,

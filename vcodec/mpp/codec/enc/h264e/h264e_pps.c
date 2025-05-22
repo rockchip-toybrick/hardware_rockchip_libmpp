@@ -119,17 +119,24 @@ MPP_RET h264e_pps_update(H264ePps *pps, MppEncCfgSet *cfg)
 	return MPP_OK;
 }
 
-RK_S32 h264e_pps_to_packet(H264ePps *pps, MppPacket packet, RK_S32 *len)
+RK_S32 h264e_pps_to_packet(H264ePps *pps, KmppPacket packet, RK_S32 *len)
 {
-	void *pos = mpp_packet_get_pos(packet);
-	void *data = mpp_packet_get_data(packet);
-	size_t size = mpp_packet_get_size(packet);
-	size_t length = mpp_packet_get_length(packet);
-	void *p = pos + length;
-	RK_S32 buf_size = (data + size) - (pos + length);
+	KmppShmPtr pos;
+	KmppShmPtr data;
+	RK_S32 size;
+	RK_S32 length;
+	void *p = NULL;
+	RK_S32 buf_size;
 	MppWriteCtx bit_ctx;
 	MppWriteCtx *bit = &bit_ctx;
 	RK_S32 pps_size = 0;
+
+	kmpp_packet_get_pos(packet, &pos);
+	kmpp_packet_get_data(packet, &data);
+	kmpp_packet_get_size(packet, &size);
+	kmpp_packet_get_length(packet, &length);
+	p = pos.kptr + length;
+	buf_size = (data.kptr + size) - (pos.kptr + length);
 
 	mpp_writer_init(bit, p, buf_size);
 
@@ -234,7 +241,7 @@ RK_S32 h264e_pps_to_packet(H264ePps *pps, MppPacket packet, RK_S32 *len)
 	if (len)
 		*len = pps_size;
 
-	mpp_packet_set_length(packet, length + pps_size);
+	kmpp_packet_set_length(packet, length + pps_size);
 
 	return pps_size;
 }

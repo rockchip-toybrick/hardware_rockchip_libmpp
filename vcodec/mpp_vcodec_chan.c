@@ -21,7 +21,7 @@
 #include "mpp_enc.h"
 #include "mpp_vcodec_thread.h"
 #include "rk_venc_cfg.h"
-#include "mpp_packet_impl.h"
+#include "kmpp_packet_impl.h"
 #include "mpp_time.h"
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_mem.h"
@@ -311,87 +311,114 @@ int mpp_vcodec_chan_resume(int chan_id, MppCtxType type)
 	return 0;
 }
 
-int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
-			       struct venc_packet *enc_packet)
+static void mpp_vcodec_packet_buffer_share(KmppPacket packet)
+{
+	KmppPacketImpl *pkt_impl = (KmppPacketImpl *)kmpp_obj_to_entry(packet);
+	KmppShmPtr pos_sptr;
+	KmppShmPtr data_sptr;
+
+	pos_sptr = pkt_impl->pos;
+	data_sptr = pkt_impl->data;
+
+	if (pkt_impl->buf.buf) {
+		data_sptr.uaddr = mpp_buffer_get_uptr(pkt_impl->buf.buf);
+		if (data_sptr.uaddr)
+			pos_sptr.uaddr = data_sptr.uaddr + pkt_impl->buf.start_offset;
+		else
+			pos_sptr.uaddr = 0;
+
+		kmpp_packet_set_data(packet, &data_sptr);
+		kmpp_packet_set_pos(packet, &pos_sptr);
+	}
+}
+
+static int mpp_vcodec_chan_get_packet(int chan_id, MppCtxType type, KmppPacket *packet)
 {
 	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, type);
 	RK_U32 count = atomic_read(&chan_entry->stream_count);
-	MppPacketImpl *packet = NULL;
-	unsigned long flags;
+	KmppPacketImpl *pkt_impl = NULL;
+	RK_U32 ret;
 
 	if (!count) {
 		mpp_err("no stream count found in list \n");
-		memset(enc_packet, 0, sizeof(struct venc_packet));
-
 		return MPP_NOK;
 	}
 
-	spin_lock_irqsave(&chan_entry->stream_list_lock, flags);
-	packet = list_first_entry_or_null(&chan_entry->stream_done, MppPacketImpl, list);
-	list_move_tail(&packet->list, &chan_entry->stream_remove);
-	spin_unlock_irqrestore(&chan_entry->stream_list_lock, flags);
-
-	/* flush cache before get packet*/
-	if (packet->buf.buf)
-		mpp_ring_buf_flush(&packet->buf, 1);
-	atomic_dec(&chan_entry->stream_count);
-
-	enc_packet->flag = mpp_packet_get_flag(packet);
-	enc_packet->len = mpp_packet_get_length(packet);
-	enc_packet->temporal_id = mpp_packet_get_temporal_id(packet);
-	enc_packet->u64pts = mpp_packet_get_pts(packet);
-	enc_packet->u64dts = mpp_packet_get_dts(packet);
-	enc_packet->data_num = 1;
-	enc_packet->u64packet_addr = (uintptr_t )packet;
-	if (packet->buf.buf) {
-		enc_packet->u64priv_data = mpp_buffer_get_uptr(packet->buf.buf);
-		enc_packet->offset = packet->buf.start_offset;
-		enc_packet->buf_size = mpp_buffer_get_size(packet->buf.buf);
+	ret = kfifo_out_spinlocked(&chan_entry->packet_fifo, packet, 1, &chan_entry->packet_fifo_lock);
+	if (ret != 1) {
+		mpp_err("kfifo_out_spinlocked failed ret %d\n", ret);
+		return MPP_NOK;
 	}
-
-	chan_entry->seq_user_get = mpp_packet_get_dts(packet);
+	pkt_impl = (KmppPacketImpl *)kmpp_obj_to_entry(*packet);
+	/* flush cache before get packet*/
+	if (pkt_impl->buf.buf)
+		mpp_ring_buf_flush(&pkt_impl->buf, 1);
+	atomic_dec(&chan_entry->stream_count);
+	chan_entry->seq_user_get = pkt_impl->dts;
 	atomic_inc(&chan_entry->str_out_cnt);
 	atomic_inc(&chan_entry->pkt_user_get);
 
 	return MPP_OK;
 }
 
-int mpp_vcodec_chan_put_stream(int chan_id, MppCtxType type,
+int mpp_vcodec_chan_get_stream_legacy(int chan_id, MppCtxType type,
 			       struct venc_packet *enc_packet)
 {
-	struct mpp_chan *chan_entry = mpp_vcodec_get_chan_entry(chan_id, type);
-	MppPacketImpl *packet = NULL, *n;
-	struct venc_module *venc =  NULL;
-	RK_U32 found = 0;
-	unsigned long flags;
+	KmppPacket packet = NULL;
+	KmppPacketImpl *pkt_impl = NULL;
+	int ret;
 
-	spin_lock_irqsave(&chan_entry->stream_list_lock, flags);
-	list_for_each_entry_safe(packet, n, &chan_entry->stream_remove, list) {
-		if ((uintptr_t)packet == enc_packet->u64packet_addr) {
-			chan_entry->seq_user_put = mpp_packet_get_dts(packet);
-			list_del_init(&packet->list);
-			kref_put(&packet->ref, stream_packet_free);
-			atomic_dec(&chan_entry->str_out_cnt);
-			atomic_inc(&chan_entry->pkt_user_put);
-			venc = mpp_vcodec_get_enc_module_entry();
-			vcodec_thread_trigger(venc->thd);
-			found = 1;
-			break;
-		}
+	ret = mpp_vcodec_chan_get_packet(chan_id, type, &packet);
+	if (ret)
+	{
+		memset(enc_packet, 0, sizeof(struct venc_packet));
+		return ret;
 	}
 
-	if (!found) {
-		mpp_err("release packet fail %llx \n", enc_packet->u64packet_addr);
-		list_for_each_entry_safe(packet, n, &chan_entry->stream_remove, list) {
-			RK_U64 p_address = (uintptr_t )packet;
+	kmpp_packet_get_flag(packet, &enc_packet->flag);
+	kmpp_packet_get_length(packet, &enc_packet->len);
+	kmpp_packet_get_temporal_id(packet, &enc_packet->temporal_id);
+	kmpp_packet_get_pts(packet, &enc_packet->u64pts);
+	kmpp_packet_get_dts(packet, &enc_packet->u64dts);
+	enc_packet->data_num = 1;
+	enc_packet->u64packet_addr = (uintptr_t )packet;
 
-			mpp_err("dump packet out list %llx \n", p_address);
-		}
-		mpp_assert(found);
+	pkt_impl = (KmppPacketImpl *)kmpp_obj_to_entry(packet);
+	if (pkt_impl->buf.buf) {
+		enc_packet->u64priv_data = mpp_buffer_get_uptr(pkt_impl->buf.buf);
+		enc_packet->offset = pkt_impl->buf.start_offset;
+		enc_packet->buf_size = mpp_buffer_get_size(pkt_impl->buf.buf);
 	}
-	spin_unlock_irqrestore(&chan_entry->stream_list_lock, flags);
 
-	return 0;
+	return MPP_OK;
+}
+
+int mpp_vcodec_chan_put_stream_legacy(int chan_id, MppCtxType type,
+			       struct venc_packet *enc_packet)
+{
+	KmppPacket packet = (KmppPacket)(uintptr_t )enc_packet->u64packet_addr;
+
+	return kmpp_packet_put(packet);
+}
+
+int mpp_vcodec_chan_get_stream(int chan_id, MppCtxType type,
+				   KmppShmPtr *packet_sptr)
+{
+	KmppPacket packet = NULL;
+	RK_U32 ret;
+
+	memset(packet_sptr, 0, sizeof(KmppShmPtr));
+
+	ret = mpp_vcodec_chan_get_packet(chan_id, type, &packet);
+	if (ret)
+		return ret;
+
+	/* kmppPacket and MppBuffer need to bind userspace share memory */
+	kmpp_obj_share_f(packet);
+	kmpp_obj_to_shmptr(packet, packet_sptr);
+	mpp_vcodec_packet_buffer_share(packet);
+
+	return MPP_OK;
 }
 
 int mpp_vcodec_chan_push_frm(int chan_id, void *param)
@@ -422,12 +449,12 @@ int mpp_vcodec_chan_push_frm(int chan_id, void *param)
 		mpp_buffer_import(&buffer, &buf_info);
 	}
 	if (info->eos && info->fd > 0) {
-		MppPacket packet = NULL;
+		KmppPacket packet = NULL;
 
-		mpp_packet_new(&packet);
-		mpp_packet_set_eos(packet);
-		mpp_packet_set_pts(packet, info->pts);
-		mpp_packet_set_dts(packet, info->dts);
+		kmpp_packet_get(&packet);
+		kmpp_packet_set_eos(packet);
+		kmpp_packet_set_pts(packet, info->pts);
+		kmpp_packet_set_dts(packet, info->dts);
 		mpp_vcodec_enc_add_packet_list(chan_entry, packet);
 		return 0;
 	}
@@ -602,6 +629,7 @@ EXPORT_SYMBOL(mpp_vcodec_chan_pause);
 EXPORT_SYMBOL(mpp_vcodec_chan_resume);
 EXPORT_SYMBOL(mpp_vcodec_chan_control);
 EXPORT_SYMBOL(mpp_vcodec_chan_push_frm);
+EXPORT_SYMBOL(mpp_vcodec_chan_get_stream_legacy);
+EXPORT_SYMBOL(mpp_vcodec_chan_put_stream_legacy);
 EXPORT_SYMBOL(mpp_vcodec_chan_get_stream);
-EXPORT_SYMBOL(mpp_vcodec_chan_put_stream);
 EXPORT_SYMBOL(mpp_vcodec_schedule);

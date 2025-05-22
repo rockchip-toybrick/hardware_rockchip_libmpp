@@ -16,7 +16,7 @@
 #include "version.h"
 #include "mpp_mem.h"
 #include "mpp_maths.h"
-#include "mpp_packet.h"
+#include "kmpp_packet.h"
 #include "mpp_enc_debug.h"
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_enc_impl.h"
@@ -116,10 +116,10 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 		size_t size = SZ_1K;
 
 		p->hdr_buf = mpp_calloc_size(void, size);
-		ret = mpp_packet_init(&p->hdr_pkt, p->hdr_buf, size);
+		ret = kmpp_packet_init_with_data(&p->hdr_pkt, p->hdr_buf, size);
 		if (ret)
 			goto ERR_RET;
-		mpp_packet_set_length(p->hdr_pkt, 0);
+		kmpp_packet_set_length(p->hdr_pkt, 0);
 	}
 
 	/* NOTE: setup configure coding for check */
@@ -167,8 +167,8 @@ void mpp_enc_deinit_frame(MppEnc ctx)
 	atomic_set(&enc->hw_run, 0);
 
 	if (enc->packet) {
-		mpp_packet_ring_buf_put_used(enc->packet, enc->chan_id, enc->dev);
-		mpp_packet_deinit(&enc->packet);
+		mpp_ring_buf_packet_put_used(enc->packet);
+		kmpp_packet_put(enc->packet);
 		enc->packet = NULL;
 	}
 
@@ -209,7 +209,7 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 	}
 
 	if (enc->hdr_pkt)
-		mpp_packet_deinit(&enc->hdr_pkt);
+		kmpp_packet_put(enc->hdr_pkt);
 
 	MPP_FREE(enc->hdr_buf);
 
@@ -294,7 +294,7 @@ MPP_RET mpp_enc_reset(MppEnc ctx)
 	return MPP_OK;
 }
 
-MPP_RET mpp_enc_oneframe(MppEnc ctx, KmppFrame frame, MppPacket * packet)
+MPP_RET mpp_enc_oneframe(MppEnc ctx, KmppFrame frame, KmppPacket *packet)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
@@ -328,7 +328,7 @@ MPP_RET mpp_enc_online_task_failed(MppEnc ctx)
 	return ret;
 }
 
-MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, MppPacket *packet)
+MPP_RET mpp_enc_force_pskip(MppEnc ctx, KmppFrame frame, KmppPacket *packet)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MPP_RET ret = MPP_OK;
@@ -457,8 +457,8 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 	 * So, re-update the pts/dts here.
 	 */
 	if (enc->packet) {
-		mpp_packet_set_pts(enc->packet, pts);
-		mpp_packet_set_dts(enc->packet, dts);
+		kmpp_packet_set_pts(enc->packet, pts);
+		kmpp_packet_set_dts(enc->packet, dts);
 	}
 	if (enc->frame) {
 		kmpp_frame_set_pts(enc->frame, pts);
@@ -557,8 +557,8 @@ bool mpp_enc_check_is_int_process(MppEnc ctx)
 	return ret;
 }
 
-MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
-			    MppPacket * jpeg_packet)
+MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, KmppPacket *packet,
+			    KmppPacket *jpeg_packet)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 	MppEncImpl *jpeg_enc = (MppEncImpl *)jpeg_ctx;
@@ -583,7 +583,7 @@ MPP_RET mpp_enc_int_process(MppEnc ctx, MppEnc jpeg_ctx, MppPacket * packet,
 	return ret;
 }
 
-void mpp_enc_slice_info(MppEnc ctx, void *param, MppPacket *packet)
+void mpp_enc_slice_info(MppEnc ctx, void *param, KmppPacket *packet)
 {
 	MppEncImpl *enc = (MppEncImpl *) ctx;
 

@@ -16,10 +16,11 @@
 #include <linux/wait.h>
 #include <linux/workqueue.h>
 #include <linux/kfifo.h>
-
-#include "mpp_packet.h"
+#include "legacy_rockit.h"
+#include "kmpp_packet.h"
 
 #define MAX_ENC_NUM 16
+#define INIT_PACKET_STORAGE_NUM 1024
 
 typedef enum {
 	CHAN_STATE_NULL = 0,
@@ -56,9 +57,6 @@ struct mpp_chan {
 	void *handle;
 	wait_queue_head_t wait;
 	wait_queue_head_t stop_wait;
-	spinlock_t stream_list_lock;
-	struct list_head stream_done;
-	struct list_head stream_remove;
 	/* debug info */
 	atomic_t stream_count;
 	atomic_t str_out_cnt;
@@ -84,12 +82,8 @@ struct mpp_chan {
 	RK_S64 pts_diff;
 	KmppFrame pskip_frame;
 	DECLARE_KFIFO(frame_fifo, KmppFrame, 2);
-};
-
-struct stream_packet {
-	struct list_head list;
-	MppPacket *src;
-	struct kref ref;
+	spinlock_t packet_fifo_lock;
+	DECLARE_KFIFO_PTR(packet_fifo, KmppPacket);
 };
 
 struct venc_module {
@@ -122,8 +116,6 @@ int mpp_vcodec_deinit(void);
 int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 			       MppCodingType coding, void *handle);
 int mpp_vcodec_chan_entry_deinit(struct mpp_chan *entry);
-struct stream_packet *stream_packet_alloc(void);
-void stream_packet_free(struct kref *ref);
 void mpp_vcodec_stream_clear(struct mpp_chan *entry);
 int mpp_vcodec_get_free_chan(MppCtxType type);
 void enc_test(void);

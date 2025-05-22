@@ -9,10 +9,9 @@
 
 #include "mpp_mem.h"
 #include "kmpp_frame.h"
-#include "mpp_packet_impl.h"
+#include "kmpp_packet.h"
 #include "mpp_maths.h"
 #include "mpp_buffer_impl.h"
-#include "mpp_packet.h"
 
 #include "h265e_syntax_new.h"
 #include "hal_h265e_debug.h"
@@ -1684,9 +1683,10 @@ void vepu510_h265_set_hw_address(H265eV510HalContext *ctx, H265eVepu510Frame *re
 
 	{
 		RK_U32 size = mpp_buffer_get_size(enc_task->output->buf);
-		RK_U32 len = mpp_packet_get_length(task->packet);
+		RK_U32 len;
 		RK_U32 iova = mpp_buffer_get_iova(enc_task->output->buf, ctx->dev);
 
+		kmpp_packet_get_length(task->packet, &len);
 		regs->common.bsbt_addr = iova + size;
 		regs->common.bsbb_addr = iova;
 		regs->common.bsbr_addr = iova + enc_task->output->r_pos;
@@ -2362,7 +2362,7 @@ MPP_RET hal_h265e_v510_wait(void *hal, HalEncTask *task)
 	MPP_RET ret = MPP_OK;
 	H265eV510HalContext *ctx = (H265eV510HalContext *)hal;
 	HalEncTask *enc_task = task;
-	// MppPacket pkt = enc_task->packet;
+	// KmppPacket pkt = enc_task->packet;
 	RK_U32 split_out = ctx->cfg->split.split_out;
 	RK_S32 task_idx = 0;//task->flags.reg_idx;
 	Vepu510H265eFrmCfg *frm = ctx->frms[task_idx];
