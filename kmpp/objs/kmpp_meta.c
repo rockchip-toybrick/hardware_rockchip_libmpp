@@ -237,6 +237,7 @@ void kmpp_meta_init(void)
             kmpp_objdef_add_deinit(def, kmpp_meta_impl_deinit);
             kmpp_objdef_add_dump(def, kmpp_meta_impl_dump);
             kmpp_objdef_share(def);
+            kmpp_objdef_set_prop(def, "disable_mismatch_log", "true");
 
             srv->def = def;
             kmpp_meta_srv = srv;

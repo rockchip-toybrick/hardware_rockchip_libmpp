@@ -110,7 +110,12 @@ typedef struct KmppObjDefImpl_t {
     KmppObjDeinit deinit;
     KmppObjIoctls *ioctls;
     KmppObjDump dump;
-    const rk_u8 *name_check;            /* for object name address check */
+
+    /* objdef properities */
+    rk_s32 disalbe_mismatch_log;
+
+    /* for object name address check */
+    const rk_u8 *name_check;
     rk_u8 *name;
 } KmppObjDefImpl;
 
@@ -545,6 +550,24 @@ rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump)
 }
 EXPORT_SYMBOL(kmpp_objdef_add_dump);
 
+rk_s32 kmpp_objdef_set_prop(KmppObjDef def, const rk_u8 *name, const rk_u8 *prop)
+{
+    if (def && name) {
+        KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
+
+        if (!osal_strcasecmp(name, "disable_mismatch_log")) {
+            rk_s32 val = (prop && !osal_strcasecmp(prop, "true")) ? 1 : 0;
+
+            impl->disalbe_mismatch_log = val;
+        }
+
+        return rk_ok;
+    }
+
+    return rk_nok;
+}
+EXPORT_SYMBOL(kmpp_objdef_set_prop);
+
 rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppEntry **tbl)
 {
     KmppObjDefImpl *impl = (KmppObjDefImpl *)def;
@@ -559,7 +582,7 @@ rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppEntry **tbl)
         }
     }
 
-    if (ret)
+    if (ret && !impl->disalbe_mismatch_log)
         kmpp_loge_f("class %s get entry %s failed ret %d\n",
                     impl ? impl->name : NULL, name, ret);
 

@@ -78,6 +78,9 @@ rk_s32 kmpp_objdef_add_ioctl(KmppObjDef def, KmppObjIoctls *ioctls);
 /* object dump function register */
 rk_s32 kmpp_objdef_add_dump(KmppObjDef def, KmppObjDump dump);
 
+/* object definition extra properties */
+rk_s32 kmpp_objdef_set_prop(KmppObjDef def, const rk_u8 *name, const rk_u8 *prop);
+
 /* NOTE: get entry / index / offset by name can only used for non __xxxx elements */
 rk_s32 kmpp_objdef_get_entry(KmppObjDef def, const rk_u8 *name, KmppEntry **tbl);
 rk_s32 kmpp_objdef_get_index(KmppObjDef def, const rk_u8 *name);
