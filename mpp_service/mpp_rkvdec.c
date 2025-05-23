@@ -1104,8 +1104,9 @@ static int rkvdec_procfs_remove(struct mpp_dev *mpp)
 static int rkvdec_procfs_init(struct mpp_dev *mpp)
 {
 	struct rkvdec_dev *dec = to_rkvdec_dev(mpp);
+	struct device_node *np = mpp_dev_of_node(mpp->dev);
 
-	dec->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	dec->procfs = proc_mkdir(np->name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(dec->procfs)) {
 		mpp_err("failed on open procfs\n");
 		dec->procfs = NULL;
@@ -1171,7 +1172,7 @@ static int rkvdec_init(struct mpp_dev *mpp)
 	mpp_set_clk_info_rate_hz(&dec->hevc_cabac_clk_info, CLK_MODE_DEFAULT, 300 * MHZ);
 
 	/* Get normal max workload from dtsi */
-	of_property_read_u32(mpp->dev->of_node,
+	of_property_read_u32(mpp_dev_of_node(mpp->dev),
 			     "rockchip,default-max-load", &dec->default_max_load);
 	/* Get reset control from dtsi */
 	dec->rst_a = mpp_reset_control_get(mpp, RST_TYPE_A, "video_a");

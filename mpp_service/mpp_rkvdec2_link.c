@@ -1538,7 +1538,7 @@ int rkvdec2_attach_ccu(struct device *dev, struct rkvdec2_dev *dec)
 
 	mpp_debug_enter();
 
-	np = of_parse_phandle(dev->of_node, "rockchip,ccu", 0);
+	np = of_parse_phandle(mpp_dev_of_node(dev), "rockchip,ccu", 0);
 	if (!np || !of_device_is_available(np))
 		return -ENODEV;
 
@@ -1551,7 +1551,7 @@ int rkvdec2_attach_ccu(struct device *dev, struct rkvdec2_dev *dec)
 	if (!ccu)
 		return -ENOMEM;
 
-	ret = of_property_read_u32(dev->of_node, "rockchip,core-mask", &dec->core_mask);
+	ret = of_property_read_u32(mpp_dev_of_node(dev), "rockchip,core-mask", &dec->core_mask);
 	if (ret)
 		return ret;
 	dev_info(dev, "core_mask=%08x\n", dec->core_mask);

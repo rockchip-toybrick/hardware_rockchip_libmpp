@@ -105,7 +105,7 @@ static int mpp_add_driver(struct mpp_service *srv,
 {
 	int ret;
 
-	mpp_init_grf(srv->dev->of_node,
+	mpp_init_grf(mpp_dev_of_node(srv->dev),
 		     &srv->grf_infos[type],
 		     grf_name);
 
@@ -396,7 +396,7 @@ static int mpp_service_probe(struct platform_device *pdev)
 	struct mpp_service *srv = NULL;
 	struct mpp_taskqueue *queue;
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = mpp_dev_of_node(dev);
 	const char *soc_name = NULL;
 	struct sched_attr attr = {
 		.sched_policy   = SCHED_FIFO,

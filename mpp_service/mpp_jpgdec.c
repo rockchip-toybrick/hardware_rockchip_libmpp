@@ -380,7 +380,7 @@ static int jpgdec_procfs_init(struct mpp_dev *mpp)
 {
 	struct jpgdec_dev *dec = to_jpgdec_dev(mpp);
 
-	dec->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	dec->procfs = proc_mkdir(mpp_dev_of_node(mpp->dev)->name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(dec->procfs)) {
 		mpp_err("failed on open procfs\n");
 		dec->procfs = NULL;
@@ -583,6 +583,7 @@ static int jpgdec_probe(struct platform_device *pdev)
 	struct mpp_dev *mpp = NULL;
 	const struct of_device_id *match = NULL;
 	int ret = 0;
+	struct device_node *np = mpp_dev_of_node(dev);
 
 	dev_info(dev, "probe device\n");
 	dec = devm_kzalloc(dev, sizeof(struct jpgdec_dev), GFP_KERNEL);
@@ -591,8 +592,8 @@ static int jpgdec_probe(struct platform_device *pdev)
 	mpp = &dec->mpp;
 	platform_set_drvdata(pdev, mpp);
 
-	if (pdev->dev.of_node) {
-		match = of_match_node(mpp_jpgdec_dt_match, pdev->dev.of_node);
+	if (np) {
+		match = of_match_node(mpp_jpgdec_dt_match, np);
 		if (match)
 			mpp->var = (struct mpp_dev_var *)match->data;
 	}

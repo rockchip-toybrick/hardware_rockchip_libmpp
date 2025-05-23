@@ -470,8 +470,9 @@ static int vdpu_procfs_remove(struct mpp_dev *mpp)
 static int vdpu_procfs_init(struct mpp_dev *mpp)
 {
 	struct vdpu_dev *dec = to_vdpu_dev(mpp);
+	struct device_node *np = mpp_dev_of_node(mpp->dev);
 
-	dec->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	dec->procfs = proc_mkdir(np->name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(dec->procfs)) {
 		mpp_err("failed on open procfs\n");
 		dec->procfs = NULL;

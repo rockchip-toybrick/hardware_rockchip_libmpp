@@ -825,8 +825,9 @@ static int iep2_procfs_remove(struct mpp_dev *mpp)
 static int iep2_procfs_init(struct mpp_dev *mpp)
 {
 	struct iep2_dev *iep = to_iep2_dev(mpp);
+	struct device_node *np = mpp_dev_of_node(mpp->dev);
 
-	iep->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	iep->procfs = proc_mkdir(np->name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(iep->procfs)) {
 		mpp_err("failed on mkdir\n");
 		iep->procfs = NULL;

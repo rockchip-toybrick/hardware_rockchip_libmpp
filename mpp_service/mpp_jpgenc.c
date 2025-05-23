@@ -385,10 +385,11 @@ static int jpgenc_show_session_info(struct seq_file *seq, void *offset)
 static int jpgenc_procfs_init(struct mpp_dev *mpp)
 {
 	struct jpgenc_dev *enc = to_jpgenc_dev(mpp);
+	struct device_node *np = mpp_dev_of_node(mpp->dev);
 
 	mpp_debug_enter();
 
-	enc->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	enc->procfs = proc_mkdir(np->name, mpp->srv->procfs);
 
 	if (IS_ERR_OR_NULL(enc->procfs)) {
 		mpp_err("failed on open procfs\n");

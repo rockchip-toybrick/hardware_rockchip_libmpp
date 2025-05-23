@@ -677,16 +677,19 @@ static int vepu_procfs_init(struct mpp_dev *mpp)
 {
 	struct vepu_dev *enc = to_vepu_dev(mpp);
 	char name[32];
+	struct device_node *np;
 
-	if (!mpp->dev || !mpp->dev->of_node || !mpp->dev->of_node->name ||
-	    !mpp->srv || !mpp->srv->procfs)
+	if (!mpp->dev || !mpp->srv || !mpp->srv->procfs)
 		return -EINVAL;
+
+	np = mpp_dev_of_node(mpp->dev);
+	if (!np || !np->name)
+		return -EINVAL;
+
 	if (enc->ccu)
-		snprintf(name, sizeof(name) - 1, "%s%d",
-			mpp->dev->of_node->name, mpp->core_id);
+		snprintf(name, sizeof(name) - 1, "%s%d", np->name, mpp->core_id);
 	else
-		snprintf(name, sizeof(name) - 1, "%s",
-			mpp->dev->of_node->name);
+		snprintf(name, sizeof(name) - 1, "%s", np->name);
 
 	enc->procfs = proc_mkdir(name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(enc->procfs)) {
@@ -756,7 +759,7 @@ static int vepu_init(struct mpp_dev *mpp)
 	if (ret)
 		mpp_err("failed on clk_get hclk_vcodec\n");
 	/* Get normal max workload from dtsi */
-	of_property_read_u32(mpp->dev->of_node,
+	of_property_read_u32(mpp_dev_of_node(mpp->dev),
 			     "rockchip,default-max-load", &enc->default_max_load);
 	/* Set default rates */
 	mpp_set_clk_info_rate_hz(&enc->aclk_info, CLK_MODE_DEFAULT, 300 * MHZ);
@@ -1057,7 +1060,7 @@ static int vepu_attach_ccu(struct device *dev, struct vepu_dev *enc)
 	struct vepu_ccu *ccu;
 	unsigned long flags;
 
-	np = of_parse_phandle(dev->of_node, "rockchip,ccu", 0);
+	np = of_parse_phandle(mpp_dev_of_node(dev), "rockchip,ccu", 0);
 	if (!np || !of_device_is_available(np))
 		return -ENODEV;
 
@@ -1206,7 +1209,7 @@ static int vepu_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = mpp_dev_of_node(dev);
 
 	dev_info(dev, "probing start\n");
 
@@ -1225,7 +1228,7 @@ static int vepu_probe(struct platform_device *pdev)
 static int vepu_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = mpp_dev_of_node(dev);
 
 	if (strstr(np->name, "ccu")) {
 		dev_info(dev, "remove ccu device\n");

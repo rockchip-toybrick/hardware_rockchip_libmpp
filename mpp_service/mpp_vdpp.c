@@ -494,8 +494,9 @@ static int vdpp_procfs_remove(struct mpp_dev *mpp)
 static int vdpp_procfs_init(struct mpp_dev *mpp)
 {
 	struct vdpp_dev *vdpp = to_vdpp_dev(mpp);
+	struct device_node *np = mpp_dev_of_node(mpp->dev);
 
-	vdpp->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	vdpp->procfs = proc_mkdir(np->name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(vdpp->procfs)) {
 		mpp_err("failed on open procfs\n");
 		vdpp->procfs = NULL;

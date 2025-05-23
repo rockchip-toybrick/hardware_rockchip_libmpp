@@ -28,6 +28,7 @@
 
 #include "mpp_debug.h"
 #include "kmpp_uaccess.h"
+#include "mpp_osal.h"
 
 #ifndef CONFIG_ROCKCHIP_MPP_PROC_FS
 #define CONFIG_ROCKCHIP_MPP_PROC_FS

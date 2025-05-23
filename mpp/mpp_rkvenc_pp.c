@@ -477,8 +477,9 @@ static int vepu_pp_procfs_remove(struct mpp_dev *mpp)
 static int vepu_pp_procfs_init(struct mpp_dev *mpp)
 {
 	struct vepu_pp_dev *pp = to_vepu_pp_dev(mpp);
+	struct device_node *np = mpp_dev_of_node(mpp->dev);
 
-	pp->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	pp->procfs = proc_mkdir(np->name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(pp->procfs)) {
 		mpp_err("failed on mkdir\n");
 		pp->procfs = NULL;

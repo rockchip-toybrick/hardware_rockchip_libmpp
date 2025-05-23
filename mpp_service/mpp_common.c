@@ -1039,7 +1039,7 @@ static int mpp_attach_service(struct mpp_dev *mpp, struct device *dev)
 	struct mpp_taskqueue *queue = NULL;
 	int ret = 0;
 
-	np = of_parse_phandle(dev->of_node, "rockchip,srv", 0);
+	np = of_parse_phandle(mpp_dev_of_node(dev), "rockchip,srv", 0);
 	if (!np || !of_device_is_available(np)) {
 		dev_err(dev, "failed to get the mpp service node\n");
 		return -ENODEV;
@@ -1059,7 +1059,7 @@ static int mpp_attach_service(struct mpp_dev *mpp, struct device *dev)
 		return -EINVAL;
 	}
 
-	ret = of_property_read_u32(dev->of_node,
+	ret = of_property_read_u32(mpp_dev_of_node(dev),
 				   "rockchip,taskqueue-node", &taskqueue_node);
 	if (ret) {
 		dev_err(dev, "failed to get taskqueue-node\n");
@@ -1078,7 +1078,7 @@ static int mpp_attach_service(struct mpp_dev *mpp, struct device *dev)
 	}
 	mpp_attach_workqueue(mpp, queue);
 
-	ret = of_property_read_u32(dev->of_node,
+	ret = of_property_read_u32(mpp_dev_of_node(dev),
 				   "rockchip,resetgroup-node", &reset_group_node);
 	if (!ret) {
 		/* set resetgroup according dtsi */
@@ -2195,7 +2195,7 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 	int ret;
 	struct resource *res = NULL;
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = mpp_dev_of_node(&pdev->dev);
 	struct mpp_hw_info *hw_info = mpp->var->hw_info;
 
 	/* Get disable auto frequent flag from dtsi */
@@ -2546,18 +2546,18 @@ int mpp_get_clk_info(struct mpp_dev *mpp,
 		     struct mpp_clk_info *clk_info,
 		     const char *name)
 {
-	int index = of_property_match_string(mpp->dev->of_node,
+	int index = of_property_match_string(mpp_dev_of_node(mpp->dev),
 					     "clock-names", name);
 
 	if (index < 0)
 		return -EINVAL;
 
 	clk_info->clk = devm_clk_get(mpp->dev, name);
-	of_property_read_u32_index(mpp->dev->of_node,
+	of_property_read_u32_index(mpp_dev_of_node(mpp->dev),
 				   "rockchip,normal-rates",
 				   index,
 				   &clk_info->normal_rate_hz);
-	of_property_read_u32_index(mpp->dev->of_node,
+	of_property_read_u32_index(mpp_dev_of_node(mpp->dev),
 				   "rockchip,advanced-rates",
 				   index,
 				   &clk_info->advanced_rate_hz);
@@ -2673,7 +2673,7 @@ static int __maybe_unused mpp_common_runtime_resume(struct device *dev)
 
 const struct dev_pm_ops mpp_common_pm_ops = {
 	SET_RUNTIME_PM_OPS(mpp_common_runtime_suspend, mpp_common_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
+	MPP_SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
 };
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))

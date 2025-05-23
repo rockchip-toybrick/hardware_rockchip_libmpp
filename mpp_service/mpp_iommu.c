@@ -582,7 +582,7 @@ mpp_iommu_probe(struct device *dev)
 	struct dma_iommu_mapping *mapping;
 #endif
 
-	np = of_parse_phandle(dev->of_node, "iommus", 0);
+	np = of_parse_phandle(mpp_dev_of_node(dev), "iommus", 0);
 	if (!np || !of_device_is_available(np)) {
 		mpp_err("failed to get device node\n");
 		return ERR_PTR(-ENODEV);
@@ -608,7 +608,7 @@ mpp_iommu_probe(struct device *dev)
 	 */
 #ifdef CONFIG_ARM_DMA_USE_IOMMU
 	if (!iommu_group_default_domain(group)) {
-		mapping = to_dma_iommu_mapping(dev);
+		mapping = mpp_arm_iommu_get_mapping(dev);
 		WARN_ON(!mapping);
 		domain = mapping->domain;
 	}
@@ -646,7 +646,7 @@ mpp_iommu_probe(struct device *dev)
 			}
 		}
 	}
-
+	mpp_err("\n");
 	info->iommu_num = num_res;
 	init_rwsem(&info->rw_sem_self);
 	info->rw_sem = &info->rw_sem_self;

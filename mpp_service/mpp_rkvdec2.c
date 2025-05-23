@@ -923,13 +923,14 @@ static int rkvdec2_procfs_init(struct mpp_dev *mpp)
 {
 	struct rkvdec2_dev *dec = to_rkvdec2_dev(mpp);
 	char name[32];
+	struct device_node *of_node = mpp_dev_of_node(mpp->dev);
 
-	if (!mpp->dev || !mpp->dev->of_node || !mpp->dev->of_node->name ||
+	if (!mpp->dev || !of_node || !of_node->name ||
 	    !mpp->srv || !mpp->srv->procfs)
 		return -EINVAL;
 
 	snprintf(name, sizeof(name) - 1, "%s%d",
-		 mpp->dev->of_node->name, mpp->core_id);
+		 of_node->name, mpp->core_id);
 	dec->procfs = proc_mkdir(name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(dec->procfs)) {
 		mpp_err("failed on open procfs\n");
@@ -1232,7 +1233,7 @@ static int rkvdec2_init(struct mpp_dev *mpp)
 
 	dec->cycle_clk = &dec->aclk_info;
 	/* Get normal max workload from dtsi */
-	of_property_read_u32(mpp->dev->of_node,
+	of_property_read_u32(mpp_dev_of_node(mpp->dev),
 			     "rockchip,default-max-load", &dec->default_max_load);
 	/* Get reset control from dtsi */
 	dec->rst_a = mpp_reset_control_get(mpp, RST_TYPE_A, "video_a");
@@ -1719,7 +1720,7 @@ static int rkvdec2_ccu_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&ccu->used_list);
 	platform_set_drvdata(pdev, ccu);
 
-	if (!of_property_read_u32(dev->of_node, "rockchip,ccu-mode", &ccu_mode)) {
+	if (!of_property_read_u32(mpp_dev_of_node(dev), "rockchip,ccu-mode", &ccu_mode)) {
 		if (ccu_mode <= RKVDEC2_CCU_MODE_NULL || ccu_mode >= RKVDEC2_CCU_MODE_BUTT)
 			ccu_mode = RKVDEC2_CCU_TASK_SOFT;
 		ccu->ccu_mode = (enum RKVDEC2_CCU_MODE)ccu_mode;
@@ -1788,7 +1789,7 @@ static int rkvdec2_alloc_rcbbuf(struct platform_device *pdev, struct rkvdec2_dev
 		return ret;
 	}
 	/* get sram device node */
-	sram_np = of_parse_phandle(dev->of_node, "rockchip,sram", 0);
+	sram_np = of_parse_phandle(mpp_dev_of_node(dev), "rockchip,sram", 0);
 	if (!sram_np) {
 		dev_err(dev, "could not find phandle sram\n");
 		return -ENODEV;
@@ -1846,7 +1847,7 @@ static int rkvdec2_alloc_rcbbuf(struct platform_device *pdev, struct rkvdec2_dev
 	dev_info(dev, "sram_size %u\n", dec->sram_size);
 	dev_info(dev, "rcb_size %u\n", dec->rcb_size);
 
-	ret = of_property_read_u32(dev->of_node, "rockchip,rcb-min-width", &dec->rcb_min_width);
+	ret = of_property_read_u32(mpp_dev_of_node(dev), "rockchip,rcb-min-width", &dec->rcb_min_width);
 	if (!ret && dec->rcb_min_width)
 		dev_info(dev, "min_width %u\n", dec->rcb_min_width);
 
@@ -1889,11 +1890,11 @@ static int rkvdec2_core_probe(struct platform_device *pdev)
 	mpp = &dec->mpp;
 	platform_set_drvdata(pdev, mpp);
 	mpp->is_irq_startup = false;
-	if (dev->of_node) {
+	if (mpp_dev_of_node(dev)) {
 		struct device_node *np = pdev->dev.of_node;
 		const struct of_device_id *match;
 
-		match = of_match_node(mpp_rkvdec2_dt_match, dev->of_node);
+		match = of_match_node(mpp_rkvdec2_dt_match, mpp_dev_of_node(dev));
 		if (match)
 			mpp->var = (struct mpp_dev_var *)match->data;
 		mpp->core_id = of_alias_get_id(np, "rkvdec");
@@ -1969,6 +1970,7 @@ static int rkvdec2_probe_default(struct platform_device *pdev)
 	const struct of_device_id *match = NULL;
 	irq_handler_t irq_proc = NULL;
 	int ret = 0;
+	struct device_node *np = mpp_dev_of_node(dev);
 
 	dec = devm_kzalloc(dev, sizeof(*dec), GFP_KERNEL);
 	if (!dec)
@@ -1977,8 +1979,8 @@ static int rkvdec2_probe_default(struct platform_device *pdev)
 	mpp = &dec->mpp;
 	platform_set_drvdata(pdev, mpp);
 
-	if (pdev->dev.of_node) {
-		match = of_match_node(mpp_rkvdec2_dt_match, pdev->dev.of_node);
+	if (np) {
+		match = of_match_node(mpp_rkvdec2_dt_match, np);
 		if (match)
 			mpp->var = (struct mpp_dev_var *)match->data;
 	}
@@ -2031,7 +2033,7 @@ static int rkvdec2_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = mpp_dev_of_node(dev);
 
 	dev_info(dev, "%s, probing start\n", np->name);
 
@@ -2161,7 +2163,7 @@ static int __maybe_unused rkvdec2_runtime_resume(struct device *dev)
 
 static const struct dev_pm_ops rkvdec2_pm_ops = {
 	SET_RUNTIME_PM_OPS(rkvdec2_runtime_suspend, rkvdec2_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
+	MPP_SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
 };
 
 struct platform_driver rockchip_rkvdec2_driver = {

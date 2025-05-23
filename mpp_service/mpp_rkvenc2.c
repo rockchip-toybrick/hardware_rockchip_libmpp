@@ -2575,13 +2575,15 @@ static int rkvenc_procfs_init(struct mpp_dev *mpp)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
 	char name[32];
+	struct device_node *of_node = mpp_dev_of_node(mpp->dev);
 
-	if (!mpp->dev || !mpp->dev->of_node || !mpp->dev->of_node->name ||
+	if (!mpp->dev || !of_node || !of_node->name ||
 	    !mpp->srv || !mpp->srv->procfs)
 		return -EINVAL;
 
+
 	snprintf(name, sizeof(name) - 1, "%s%d",
-		 mpp->dev->of_node->name, mpp->core_id);
+		 of_node->name, mpp->core_id);
 
 	enc->procfs = proc_mkdir(name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(enc->procfs)) {
@@ -2735,7 +2737,7 @@ static int rkvenc_init(struct mpp_dev *mpp)
 	if (ret)
 		mpp_err("failed on clk_get clk_core\n");
 	/* Get normal max workload from dtsi */
-	of_property_read_u32(mpp->dev->of_node,
+	of_property_read_u32(mpp_dev_of_node(mpp->dev),
 			     "rockchip,default-max-load",
 			     &enc->default_max_load);
 	/* Set default rates */
@@ -3253,7 +3255,7 @@ static int rkvenc_attach_ccu(struct device *dev, struct rkvenc_dev *enc)
 
 	mpp_debug_enter();
 
-	np = of_parse_phandle(dev->of_node, "rockchip,ccu", 0);
+	np = of_parse_phandle(mpp_dev_of_node(dev), "rockchip,ccu", 0);
 	if (!np || !of_device_is_available(np))
 		return -ENODEV;
 
@@ -3334,7 +3336,7 @@ static int rkvenc2_alloc_rcbbuf(struct platform_device *pdev, struct rkvenc_dev 
 		return ret;
 	}
 	/* get sram device node */
-	sram_np = of_parse_phandle(dev->of_node, "rockchip,sram", 0);
+	sram_np = of_parse_phandle(mpp_dev_of_node(dev), "rockchip,sram", 0);
 	if (!sram_np) {
 		dev_err(dev, "could not find phandle sram\n");
 		return -ENODEV;
@@ -3505,6 +3507,7 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	struct rkvenc_dev *enc = NULL;
 	struct mpp_dev *mpp = NULL;
 	const struct of_device_id *match = NULL;
+	struct device_node *np = mpp_dev_of_node(dev);
 
 	enc = devm_kzalloc(dev, sizeof(*enc), GFP_KERNEL);
 	if (!enc)
@@ -3513,8 +3516,8 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 	mpp = &enc->mpp;
 	platform_set_drvdata(pdev, mpp);
 
-	if (pdev->dev.of_node) {
-		match = of_match_node(mpp_rkvenc_dt_match, pdev->dev.of_node);
+	if (np) {
+		match = of_match_node(mpp_rkvenc_dt_match, np);
 		if (match)
 			mpp->var = (struct mpp_dev_var *)match->data;
 	}
@@ -3552,7 +3555,7 @@ static int rkvenc_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = mpp_dev_of_node(dev);
 
 	dev_info(dev, "probing start\n");
 
@@ -3589,7 +3592,7 @@ static int rkvenc2_free_rcbbuf(struct platform_device *pdev, struct rkvenc_dev *
 static int rkvenc_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = mpp_dev_of_node(dev);
 
 	if (strstr(np->name, "ccu")) {
 		dev_info(dev, "remove ccu\n");

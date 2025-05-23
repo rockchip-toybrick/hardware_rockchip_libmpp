@@ -556,8 +556,9 @@ static int vepu_show_session_info(struct seq_file *seq, void *offset)
 static int vepu_procfs_init(struct mpp_dev *mpp)
 {
 	struct vepu_dev *enc = to_vepu_dev(mpp);
+	struct device_node *np = mpp_dev_of_node(mpp->dev);
 
-	enc->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	enc->procfs = proc_mkdir(np->name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(enc->procfs)) {
 		mpp_err("failed on open procfs\n");
 		enc->procfs = NULL;

@@ -30,4 +30,10 @@ int mpp_device_init_wakeup(struct device *dev, bool enable)
 }
 EXPORT_SYMBOL(mpp_device_init_wakeup);
 
+struct dma_iommu_mapping *mpp_arm_iommu_get_mapping(struct device *dev)
+{
+	return to_dma_iommu_mapping(dev);
+}
+EXPORT_SYMBOL(mpp_arm_iommu_get_mapping);
+
 #endif

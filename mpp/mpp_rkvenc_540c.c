@@ -2404,7 +2404,7 @@ static int __maybe_unused rkvenc_runtime_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops rkvenc_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(rkvenc_runtime_suspend, rkvenc_runtime_resume)
+	MPP_SET_SYSTEM_SLEEP_PM_OPS(rkvenc_runtime_suspend, rkvenc_runtime_resume)
 };
 
 struct platform_driver rockchip_rkvenc540c_driver = {

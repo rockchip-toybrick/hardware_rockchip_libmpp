@@ -796,8 +796,9 @@ static int av1dec_procfs_remove(struct mpp_dev *mpp)
 static int av1dec_procfs_init(struct mpp_dev *mpp)
 {
 	struct av1dec_dev *dec = to_av1dec_dev(mpp);
+	struct device_node *np = mpp_dev_of_node(mpp->dev);
 
-	dec->procfs = proc_mkdir(mpp->dev->of_node->name, mpp->srv->procfs);
+	dec->procfs = proc_mkdir(np->name, mpp->srv->procfs);
 	if (IS_ERR_OR_NULL(dec->procfs)) {
 		mpp_err("failed on open procfs\n");
 		dec->procfs = NULL;
@@ -841,7 +842,7 @@ static int av1dec_init(struct mpp_dev *mpp)
 		mpp_err("failed on clk_get hclk_vcodec\n");
 
 	/* Get normal max workload from dtsi */
-	of_property_read_u32(mpp->dev->of_node,
+	of_property_read_u32(mpp_dev_of_node(mpp->dev),
 			     "rockchip,default-max-load",
 			     &dec->default_max_load);
 	/* Set default rates */
