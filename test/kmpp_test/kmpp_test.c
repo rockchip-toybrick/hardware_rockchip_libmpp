@@ -136,6 +136,7 @@ static rk_s32 kmpp_obj_test_impl_init(void *entry, KmppObj obj, osal_fs_dev *fil
 #define KMPP_OBJ_ENTRY_TABLE    ENTRY_TABLE
 #define KMPP_OBJ_FUNC_INIT      kmpp_obj_test_impl_init
 #define KMPP_OBJ_FUNC_DUMP      kmpp_obj_test_impl_dump
+#define KMPP_OBJ_FUNC_EXPORT_DISABLE
 #include "kmpp_obj_helper.h"
 
 rk_u32 kmpp_obj_macro_flag;

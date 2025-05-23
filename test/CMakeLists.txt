@@ -12,4 +12,7 @@ IF(${BUILD_SYM_TEST})
 ENDIF(${BUILD_SYM_TEST})
 
 # test stub ko build for stub header
-ADD_SUBDIRECTORY(stub_test)
+option(BUILD_STUB "Build kernel mpp stub test" OFF)
+IF(${BUILD_STUB})
+    ADD_SUBDIRECTORY(stub_test)
+ENDIF(${BUILD_STUB})
