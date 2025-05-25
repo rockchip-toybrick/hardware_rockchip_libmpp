@@ -313,6 +313,7 @@ typedef void* KmppPpInfo;
     ENTRY(prefix, u32,  rk_u32,             is_gray,            ELEM_FLAG_NONE, is_gray) \
     STRCT(prefix, shm,  KmppShmPtr,         meta,               ELEM_FLAG_NONE, meta) \
     STRCT(prefix, st,   MppFrameRational,   sar,                ELEM_FLAG_NONE, sar) \
+    STRCT(prefix, shm,  KmppShmPtr,         sbuffer,            ELEM_FLAG_NONE, sbuffer) \
     EHOOK(prefix, kptr, KmppBuffer,         buffer,             ELEM_FLAG_NONE, buffer)
 
 #define KMPP_OBJ_NAME           kmpp_frame

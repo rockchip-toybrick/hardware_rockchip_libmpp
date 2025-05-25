@@ -61,6 +61,7 @@ typedef struct KmppFrameImpl_t {
      * buffer information
      * NOTE: buf_size only access internally
      */
+    KmppShmPtr sbuffer;
     KmppBuffer buffer;
     size_t buf_size;
     /*
