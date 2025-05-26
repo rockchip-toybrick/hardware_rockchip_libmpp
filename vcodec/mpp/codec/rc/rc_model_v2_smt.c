@@ -31,6 +31,7 @@
 
 #define LOW_QP 34
 #define LOW_LOW_QP 35
+#define LIGHT_STAT_LEN     (8)
 
 typedef struct RcModelV2SmtCtx_t {
 	RcCfg           usr_cfg;
@@ -50,6 +51,7 @@ typedef struct RcModelV2SmtCtx_t {
 	MppDataV2       *complex_level;
 	MppDataV2       *stat_bits;
 	MppDataV2       *stat_luma_ave;
+	MppDataV2       *lgt_chg_flg; /* light change flag */
 	MppPIDCtx       pid_fps;
 	RK_S32          bits_target_lr;  //bits_target_low_rate
 	RK_S32          bits_target_hr;  //bits_target_high_rate
@@ -79,6 +81,7 @@ typedef struct RcModelV2SmtCtx_t {
 	RK_S32          on_pskip;
 	RK_S32          ptz_keep_cnt;
 	RK_S32          qp_add;
+	RK_S32          cur_lgt_chg_flg;
 } RcModelV2SmtCtx;
 
 MPP_RET bits_model_smt_deinit(RcModelV2SmtCtx * ctx)
@@ -118,6 +121,11 @@ MPP_RET bits_model_smt_deinit(RcModelV2SmtCtx * ctx)
 	if (ctx->stat_luma_ave != NULL) {
 		mpp_data_deinit_v2(ctx->stat_luma_ave);
 		ctx->stat_luma_ave = NULL;
+	}
+
+	if (ctx->lgt_chg_flg) {
+		mpp_data_deinit_v2(ctx->lgt_chg_flg);
+		ctx->lgt_chg_flg = NULL;
 	}
 
 	rc_dbg_func("leave %p\n", ctx);
@@ -194,6 +202,12 @@ MPP_RET bits_model_smt_init(RcModelV2SmtCtx * ctx)
 	mpp_data_init_v2(&ctx->stat_luma_ave, 3, 0);
 	if (ctx->stat_luma_ave == NULL) {
 		mpp_err("stat_luma_ave init fail");
+		return MPP_ERR_MALLOC;
+	}
+
+	mpp_data_init_v2(&ctx->lgt_chg_flg, LIGHT_STAT_LEN, 0);
+	if  (!ctx->lgt_chg_flg) {
+		mpp_err("lgt_chg_flg init fail");
 		return MPP_ERR_MALLOC;
 	}
 
@@ -957,6 +971,37 @@ static RK_S32 revise_qp_by_complexity(RcModelV2SmtCtx *p, RK_S32 fm_min_iqp,
 	return qp_final;
 }
 
+static RK_S32 revise_qp_by_light(RcModelV2SmtCtx *ctx)
+{
+	RK_S32 level = ctx->usr_cfg.lgt_chg_lvl;
+	RK_S32 pre_val_0 = mpp_data_get_pre_val_v2(ctx->stat_luma_ave, 0);
+	RK_S32 pre_val_1 = mpp_data_get_pre_val_v2(ctx->stat_luma_ave, 1);
+	RK_S32 luma_diff = abs(pre_val_0 - pre_val_1);
+	RK_S32 qp_in = ctx->qp_out;
+	RK_S32 qp_ave = qp_in;
+	RK_S32 chg_flag = 0, chg_num = 0;
+
+	rc_dbg_rc("frame %lld luma_diff %d pre_val_0 %d pre_val_1 %d qp_in %d\n",
+		  ctx->frm_num, luma_diff, pre_val_0, pre_val_1, qp_in);
+
+	chg_flag = (luma_diff > 3 && level == 3) ||
+		   (luma_diff > 5 && level == 2) || (luma_diff > 8 && level == 1);
+
+	mpp_data_update_v2(ctx->lgt_chg_flg, chg_flag);
+	chg_num = (ctx->frame_type == INTRA_FRAME) ? 0 : mpp_data_sum_v2(ctx->lgt_chg_flg);
+
+	if (chg_num) {
+		RK_S32 qp_pre_ave = mpp_data_avg(ctx->qp_p, chg_num, 1, 1);
+		qp_ave = (qp_pre_ave * chg_num + qp_in * (LIGHT_STAT_LEN - chg_num)) / LIGHT_STAT_LEN;
+		rc_dbg_rc("frame %lld chg_num %d qp_pre_ave %d qp_in %d qp_ave %d\n",
+			  ctx->frm_num, chg_num, qp_pre_ave, qp_in, qp_ave);
+	}
+
+	ctx->cur_lgt_chg_flg = chg_num;
+
+	return qp_ave;
+}
+
 MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 {
 	RcModelV2SmtCtx *p = (RcModelV2SmtCtx *) ctx;
@@ -1017,6 +1062,11 @@ MPP_RET rc_model_v2_smt_start(void *ctx, EncRcTask *task)
 		else
 			info->complex_scene &= (fm_max_pqp != fm_min_pqp);
 	}
+
+	if (p->frm_num >= 2 && p->usr_cfg.lgt_chg_lvl)
+		p->qp_out = revise_qp_by_light(p);
+
+	info->lgt_chg_enable = p->cur_lgt_chg_flg;
 	info->quality_target = p->qp_out;
 	info->quality_max = p->usr_cfg.max_quality;
 	info->quality_min = p->usr_cfg.min_quality;
@@ -1213,9 +1263,19 @@ MPP_RET rc_model_v2_smt_end(void *ctx, EncRcTask * task)
 			p->ptz_keep_cnt = 0;
 	}
 
+	if (p->cur_lgt_chg_flg && !p->ptz_keep_cnt) {
+		RK_S32 chg_lvl = p->usr_cfg.lgt_chg_lvl;
+		bit_real = (chg_lvl == 3) ? bit_real * 1 / 3 :
+			   (chg_lvl == 2) ? bit_real * 2 / 3 : bit_real;
+		p->cur_lgt_chg_flg = 0;
+	}
+
+	rc_dbg_rc("motion_level %u complex_level %u dsp_y %d\n",
+		  cfg->motion_level, cfg->complex_level, cfg->dsp_luma_ave);
+
 	mpp_data_update_v2(p->motion_level, cfg->motion_level);
 	mpp_data_update_v2(p->complex_level, cfg->complex_level);
-	// mpp_data_update_v2(p->stat_luma_ave, cfg->dsp_luma_ave);
+	mpp_data_update_v2(p->stat_luma_ave, cfg->dsp_luma_ave);
 	p->first_frm_flg = 0;
 
 	if (p->frame_type == INTER_P_FRAME || p->gop_mode == MPP_GOP_ALL_INTRA)
