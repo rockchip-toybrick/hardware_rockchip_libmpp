@@ -1122,6 +1122,7 @@ static void set_rc_cfg(RcCfg *cfg, MppEncCfgSet *cfg_set)
 	cfg->lambda_idx_p = cfg_set->tune.lambda_idx_p;
 	cfg->lambda_idx_i = cfg_set->tune.lambda_idx_i;
 	cfg->atf_str = cfg_set->tune.atf_str;
+	cfg->lgt_chg_lvl = cfg_set->tune.lgt_chg_lvl;
 
 	cfg->hier_qp_cfg.hier_qp_en = rc->hier_qp_en;
 	memcpy(cfg->hier_qp_cfg.hier_frame_num, rc->hier_frame_num,

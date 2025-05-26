@@ -2744,6 +2744,10 @@ static MPP_RET hal_h264e_vepu511_ret_task(void * hal, HalEncTask * task)
 	task->hw_length = regs->reg_st.bs_lgth_l32;
 	rc_info->bit_real = task->hw_length * 8;
 	rc_info->quality_real = regs->reg_st.qp_sum / mbs;
+	rc_info->dsp_luma_ave = reg_st->dsp_y_sum / (mbs * 16);
+	hal_h264e_dbg_regs("frame %d dsp_luma_ave %d qp_real %d motion_level %d complex_level %d\n",
+			   ctx->frame_cnt - 1, rc_info->dsp_luma_ave, rc_info->quality_real,
+			   rc_info->motion_level, rc_info->complex_level);
 
 	rc_info->madi = madi_th_cnt[0] * regs->reg_rc_roi.madi_st_thd.madi_th0 +
 			madi_th_cnt[1] * (regs->reg_rc_roi.madi_st_thd.madi_th0 +

@@ -102,6 +102,7 @@ static void init_h264e_cfg_set(MppEncCfgSet *cfg, MppClientType type)
 	cfg->tune.lambda_idx_i = 6;
 	cfg->tune.atf_str = 2;
 	cfg->tune.speed = 1;
+	cfg->tune.lgt_chg_lvl = 0;
 
 	switch (type) {
 	// case VPU_CLIENT_VEPU1 :

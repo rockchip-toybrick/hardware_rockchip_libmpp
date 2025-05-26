@@ -164,6 +164,7 @@ typedef struct EncRcCommonInfo_t {
 	RK_S32          quality_target;
 	RK_S32          quality_max;
 	RK_S32          quality_min;
+	RK_U32          lgt_chg_enable;
 
 	/* rc from hardware */
 	RK_S32          bit_real;
@@ -177,7 +178,8 @@ typedef struct EncRcCommonInfo_t {
 	RK_S32          complex_scene;
 	RK_S32          scene_mode;
 	RK_S32          last_scene_mode;
-	RK_S32          reserve[10];
+	RK_U32          dsp_luma_ave; /* average of down scaled pixels of luma */
+	RK_S32          reserve[9];
 } EncRcTaskInfo;
 
 typedef struct EncRcTask_s {

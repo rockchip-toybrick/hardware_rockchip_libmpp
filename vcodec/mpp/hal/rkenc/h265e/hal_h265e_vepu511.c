@@ -3026,6 +3026,10 @@ static MPP_RET vepu511_h265_set_feedback(H265eV511HalContext *ctx, HalEncTask *e
 		hal_rc_ret->quality_real = fb->qp_sum / mb8_num;
 	}
 
+	hal_rc_ret->dsp_luma_ave = status->dsp_y_sum / mb4_num;
+	hal_h265e_dbg_regs("frame %d dsp_luma_ave %d qp_real %d\n",
+			   ctx->frame_num - 1, hal_rc_ret->dsp_luma_ave, hal_rc_ret->quality_real);
+
 	hal_h265e_leave();
 
 	return MPP_OK;

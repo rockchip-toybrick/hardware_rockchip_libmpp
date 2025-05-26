@@ -189,6 +189,7 @@ typedef struct RcCfg_s {
 	RK_S32          lambda_idx_p;
 	RK_S32          lambda_idx_i;
 	RK_S32          atf_str;
+	RK_U32          lgt_chg_lvl; /* light change level, [0, 3] */
 } RcCfg;
 
 /*
