@@ -956,6 +956,19 @@ static void vepu511_h265_set_quant_regs(H265eV511HalContext *ctx)
 			bias_i0 = bias_i1 = bias_i3 = 171;
 			bias_i2 = (frm_type == INTRA_FRAME) ? 171 : 220;
 		}
+
+		/* used for venc_info log */
+		hw->qbias_arr[IFRAME_THD0] = hw->qbias_arr[PFRAME_THD0] = th0;
+		hw->qbias_arr[IFRAME_THD1] = hw->qbias_arr[PFRAME_THD1] = th1;
+		hw->qbias_arr[IFRAME_THD2] = hw->qbias_arr[PFRAME_THD2] = th2;
+		hw->qbias_arr[IFRAME_BIAS0] = hw->qbias_arr[PFRAME_IBLK_BIAS0] = bias_i0;
+		hw->qbias_arr[IFRAME_BIAS1] = hw->qbias_arr[PFRAME_IBLK_BIAS1] = bias_i1;
+		hw->qbias_arr[IFRAME_BIAS2] = hw->qbias_arr[PFRAME_IBLK_BIAS2] = bias_i2;
+		hw->qbias_arr[IFRAME_BIAS3] = hw->qbias_arr[PFRAME_IBLK_BIAS3] = bias_i3;
+		hw->qbias_arr[PFRAME_PBLK_BIAS0] = bias_p0;
+		hw->qbias_arr[PFRAME_PBLK_BIAS1] = bias_p1;
+		hw->qbias_arr[PFRAME_PBLK_BIAS2] = bias_p2;
+		hw->qbias_arr[PFRAME_PBLK_BIAS3] = bias_p3;
 	} else {
 		if (frm_type == INTRA_FRAME) {
 			th0 = hw->qbias_arr[IFRAME_THD0];

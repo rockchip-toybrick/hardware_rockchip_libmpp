@@ -2508,7 +2508,7 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 			   hw->aq_step_p[8], hw->aq_step_p[9], hw->aq_step_p[10], hw->aq_step_p[11],
 			   hw->aq_step_p[12], hw->aq_step_p[13], hw->aq_step_p[14], hw->aq_step_p[15]);
 
-#ifdef RKVEPU500_SUPPORT
+#if defined(RKVEPU500_SUPPORT) || defined(RKVEPU511_SUPPORT)
 		seq_printf(seq, "%8s|%24s\n", "ID", "qbias_arr[0] ~ qbias_arr[17]");
 		seq_printf(seq, "%8u|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d|%4d\n",
 			   chl_id, hw->qbias_arr[0], hw->qbias_arr[1], hw->qbias_arr[2], hw->qbias_arr[3],
@@ -2533,7 +2533,7 @@ void mpp_enc_impl_poc_debug_info(void *seq_file, MppEnc ctx, RK_U32 chl_id)
 			   tune->atr_str_i, tune->atr_str_p, tune->atl_str, tune->lambda_idx_p,
 			   tune->lambda_idx_i, tune->atf_str);
 
-#ifdef RKVEPU500_SUPPORT
+#if defined(RKVEPU500_SUPPORT) || defined(RKVEPU511_SUPPORT)
 		seq_printf(seq, "%8s|%14s|%12s|%12s|%12s|%12s\n", "ID",
 			   "static_frm_num", "madp16_th", "skip16_wgt", "skip32_wgt", "lgt_chg_lvl");
 		seq_printf(seq, "%8u|%14d|%12d|%12d|%12d|%12d\n", chl_id,
