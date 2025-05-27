@@ -12,8 +12,8 @@
 #include "kmpp_sym.h"
 #include "kmpp_shm.h"
 
-rk_s32 sys_init(void);
-void sys_exit(void);
+rk_s32 kmpp_sys_init(void);
+void kmpp_sys_exit(void);
 KmppEnvGrp sys_get_env(void);
 
 #endif /* __KMPP_SYS_H__ */

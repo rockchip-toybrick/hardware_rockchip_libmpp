@@ -615,8 +615,8 @@ int kmpp_init(void)
 	kmpp_vsp_drv_register_all();
 	return vcodec_init();
 #else
-	osal_init();
-	sys_init();
+	kmpp_osal_init();
+	kmpp_sys_init();
 	kmpp_vsp_drv_register_all();
 	return vcodec_init();
 #endif
@@ -630,8 +630,8 @@ void kmpp_exit(void)
 #else
 	kmpp_vsp_drv_unregister_all();
 	vcodec_exit();
-	sys_exit();
-	osal_exit();
+	kmpp_sys_exit();
+	kmpp_osal_exit();
 #endif
 }
 

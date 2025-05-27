@@ -88,7 +88,7 @@ static rk_s32 sys_func_sample(void *arg, const rk_u8 *caller)
     return rk_ok;
 }
 
-int sys_init(void)
+int kmpp_sys_init(void)
 {
     kmpp_logi("sys init\n");
 
@@ -111,7 +111,7 @@ int sys_init(void)
     return 0;
 }
 
-void sys_exit(void)
+void kmpp_sys_exit(void)
 {
     kmpp_logi("sys exit\n");
 
@@ -138,8 +138,8 @@ KmppEnvGrp sys_get_env(void)
 #ifdef BUILD_MULTI_KO
 #include <linux/module.h>
 
-module_init(sys_init);
-module_exit(sys_exit);
+module_init(kmpp_sys_init);
+module_exit(kmpp_sys_exit);
 
 MODULE_AUTHOR("rockchip");
 MODULE_LICENSE("GPL");

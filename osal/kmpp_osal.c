@@ -59,7 +59,7 @@ static void osal_env_version_init(void)
     kmpp_env_add(kmpp_env_osal, NULL, &info);
 }
 
-int osal_init(void)
+int kmpp_osal_init(void)
 {
     kmpp_logi("osal init\n");
 
@@ -73,7 +73,7 @@ int osal_init(void)
     return 0;
 }
 
-void osal_exit(void)
+void kmpp_osal_exit(void)
 {
     kmpp_dmaheap_deinit();
     osal_dev_deinit();
@@ -86,8 +86,8 @@ void osal_exit(void)
 #ifdef BUILD_MULTI_KO
 #include <linux/module.h>
 
-module_init(osal_init);
-module_exit(osal_exit);
+module_init(kmpp_osal_init);
+module_exit(kmpp_osal_exit);
 
 MODULE_AUTHOR("rockchip");
 MODULE_LICENSE("GPL");
