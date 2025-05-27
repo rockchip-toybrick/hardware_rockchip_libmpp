@@ -1372,6 +1372,7 @@ MPP_RET mpp_enc_alloc_output_from_bufpool(MppEncImpl *enc)
 	if (pool) {
 		if (ring_buf_get_free(pool, &impl->buf, align, min_size, 1)) {
 			kmpp_packet_put(*packet);
+			*packet = NULL;
 			return MPP_ERR_MALLOC;
 		}
 	}
@@ -1776,6 +1777,7 @@ static void mpp_enc_terminate_task(MppEncImpl *enc, EncTask *task)
 		kmpp_packet_set_length(enc->packet, 0);
 		mpp_ring_buf_packet_put_used(enc->packet);
 		kmpp_packet_put(enc->packet);
+		enc->packet = NULL;
 	}
 
 	reset_enc_task(enc);
@@ -2158,6 +2160,7 @@ TASK_DONE:
 		kmpp_packet_set_length(enc->packet, 0);
 		mpp_ring_buf_packet_put_used(enc->packet);
 		kmpp_packet_put(enc->packet);
+		enc->packet = NULL;
 	} else {
 		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
 		ntfy_impl->is_intra = 1;
@@ -2290,6 +2293,7 @@ TASK_DONE:
 		kmpp_packet_set_length(enc->packet, 0);
 		mpp_ring_buf_packet_put_used(enc->packet);
 		kmpp_packet_put(enc->packet);
+		enc->packet = NULL;
 	} else {
 		RK_U32 flag;
 

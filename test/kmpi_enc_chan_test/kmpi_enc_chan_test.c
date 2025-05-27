@@ -217,7 +217,7 @@ void enc_test(void)
     kmpp_venc_chan_start(id, &cfg);
 
     while (frame_count++ < frame_num) {
-        KmppPacket packet;
+        KmppPacket packet = NULL;
 
         mpp_buffer_get(NULL, &buffer, size);
 

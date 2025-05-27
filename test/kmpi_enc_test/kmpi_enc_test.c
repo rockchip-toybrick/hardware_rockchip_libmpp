@@ -254,7 +254,7 @@ void enc_test(void)
     kmpp_venc_start(ctx, &cfg);
 
     while (frame_count++ < frame_num) {
-        KmppPacket packet;
+        KmppPacket packet = NULL;
         RK_U32 size = 1280 * 720 * 3 / 2;
         RK_U32 width = 1280;
         RK_U32 height = 720;

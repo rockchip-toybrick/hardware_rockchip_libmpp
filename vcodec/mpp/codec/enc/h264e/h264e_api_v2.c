@@ -226,8 +226,10 @@ static MPP_RET h264e_deinit(void *ctx)
 
 	h264e_dbg_func("enter\n");
 
-	if (p->hdr_pkt)
+	if (p->hdr_pkt) {
 		kmpp_packet_put(p->hdr_pkt);
+		p->hdr_pkt = NULL;
+	}
 
 	MPP_FREE(p->hdr_buf);
 

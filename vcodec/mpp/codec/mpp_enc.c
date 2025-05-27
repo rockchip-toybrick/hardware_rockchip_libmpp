@@ -208,8 +208,10 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 		enc->enc_hal = NULL;
 	}
 
-	if (enc->hdr_pkt)
+	if (enc->hdr_pkt) {
 		kmpp_packet_put(enc->hdr_pkt);
+		enc->hdr_pkt = NULL;
+	}
 
 	MPP_FREE(enc->hdr_buf);
 

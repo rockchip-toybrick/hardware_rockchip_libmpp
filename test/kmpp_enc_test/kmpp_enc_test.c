@@ -288,6 +288,7 @@ void enc_test(void)
                 kmpp_packet_get_length(packet, &packet_len);
                 kmpp_loge_f("get stream size %d\n", packet_len);
                 kmpp_packet_put(packet);
+                packet = NULL;
                 break;
             }
             mpp_buffer_put(buffer);

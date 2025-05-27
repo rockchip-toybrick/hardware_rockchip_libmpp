@@ -182,8 +182,10 @@ static MPP_RET h265e_deinit(void *ctx)
 
 	MPP_FREE(p->extra_info);
 	MPP_FREE(p->param_buf);
-	if (p->packeted_param)
+	if (p->packeted_param) {
 		kmpp_packet_put(p->packeted_param);
+		p->packeted_param = NULL;
+	}
 
 	h265e_dpb_deinit(p->dpb);
 
