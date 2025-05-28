@@ -1225,6 +1225,16 @@ rk_s32 kmpp_dmabuf_flush_for_cpu_partial(KmppDmaBuf buf, rk_u32 offset, rk_u32 s
         return rk_nok;
     }
 
+    if (!impl->dma_buf->ops->begin_cpu_access_partial) {
+        static rk_s32 once = 1;
+
+        if (once && IS_ENABLED(CONFIG_DMABUF_PARTIAL)) {
+            kmpp_logw("kernel not support cache partial sync, please enable the CONFIG_DMABUF_PARTIAL\n");
+            once = 0;
+        }
+        return dma_buf_begin_cpu_access(impl->dma_buf, DMA_FROM_DEVICE);
+    }
+
     _offset = KMPP_ALIGN_DOWN(offset, CACHE_LINE_SIZE);
     _size = KMPP_ALIGN(size + offset - _offset, CACHE_LINE_SIZE);
 
@@ -1241,6 +1251,16 @@ rk_s32 kmpp_dmabuf_flush_for_dev_partial(KmppDmaBuf buf, osal_dev *dev, rk_u32 o
     if (!impl) {
         kmpp_loge_f("invalid NULL buf\n");
         return rk_nok;
+    }
+
+    if (!impl->dma_buf->ops->end_cpu_access_partial) {
+        static rk_s32 once = 1;
+
+        if (once && IS_ENABLED(CONFIG_DMABUF_PARTIAL)) {
+            kmpp_logw("kernel not support cache partial sync, please enable the CONFIG_DMABUF_PARTIAL\n");
+            once = 0;
+        }
+        return dma_buf_end_cpu_access(impl->dma_buf, DMA_TO_DEVICE);
     }
 
     _offset = KMPP_ALIGN_DOWN(offset, CACHE_LINE_SIZE);
