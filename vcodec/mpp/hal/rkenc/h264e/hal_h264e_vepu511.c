@@ -1183,7 +1183,7 @@ static void setup_vepu511_rdo_pred(HalH264eVepu511Ctx *ctx, H264eSps *sps,
 		regs->reg_frm.rdo_mark_mode.iframe_i16_rdo_num = 1;
 	}
 
-	if (sm == MPP_ENC_SCENE_MODE_IPC)
+	if (sm == MPP_ENC_SCENE_MODE_IPC || sm == MPP_ENC_SCENE_MODE_IPC_PTZ)
 		memcpy(regs->reg_param.rdo_wgta_qp_grpa_0_51, &h264e_lambda_default[lambda_idx],
 		       H264E_LAMBDA_TAB_SIZE);
 	else
