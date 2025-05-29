@@ -17,6 +17,7 @@
 
 #include "rc.h"
 #define  MAX_USRDATA_CNT 4
+#define  MAX_USRDATA_LEN 1024
 
 #include "kmpp_venc_objs.h"
 
@@ -41,8 +42,8 @@ typedef struct MppUserDataRb_t {
 	RK_U8 read_pos;
 	RK_U8 write_pos;
 	RK_U8 free_cnt;
-	RK_U8 len[MAX_USRDATA_CNT];
-	RK_U8 data[MAX_USRDATA_CNT][1024];
+	RK_U32 len[MAX_USRDATA_CNT];
+	RK_U8 data[MAX_USRDATA_CNT][MAX_USRDATA_LEN];
 } MppUserDataRb;
 
 

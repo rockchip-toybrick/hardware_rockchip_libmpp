@@ -613,8 +613,8 @@ static MPP_RET mpp_enc_proc_user_data(MppEncImpl *enc, void *param)
 
 	i = enc->rb_userdata.write_pos % MAX_USRDATA_CNT;
 
-	if (user_data->len > 1024) {
-		mpp_err("usr data is big then 1k byte len %d", user_data->len);
+	if (user_data->len > MAX_USRDATA_LEN) {
+		mpp_err("usr data is bigger than %d byte len %d", MAX_USRDATA_LEN, user_data->len);
 		return MPP_NOK;
 	}
 
