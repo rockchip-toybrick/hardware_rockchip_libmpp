@@ -43,6 +43,7 @@ typedef enum MppDevIoctlCmd_e {
     MPP_DEV_RCB_INFO,
     MPP_DEV_SET_INFO,
     MPP_DEV_SET_ERR_REF_HACK,
+    MPP_DEV_HW_STATS_RD,
     MPP_DEV_LOCK_MAP,
     MPP_DEV_UNLOCK_MAP,
     MPP_DEV_ATTACH_FD,
@@ -67,6 +68,12 @@ typedef struct MppDevRegRdCfg_t {
     RK_U32  size;
     RK_U32  offset;
 } MppDevRegRdCfg;
+
+/* for MPP_HW_STATS_RD */
+typedef struct MppDevHwStatsRdCfg_t {
+    void    *data;
+    RK_U32  size;
+} MppDevHwStatsRdCfg;
 
 /* for MPP_DEV_REG_OFFSET */
 typedef struct MppDevRegOffsetCfg_t {
@@ -147,6 +154,7 @@ typedef struct MppDevApi_t {
     MPP_RET     (*rcb_info)(void *ctx, MppDevRcbInfoCfg *cfg);
     MPP_RET     (*set_info)(void *ctx, MppDevInfoCfg *cfg);
     MPP_RET     (*set_err_ref_hack)(void *ctx, RK_U32 *enable);
+    MPP_RET     (*hw_stats_rd)(void *ctx, MppDevHwStatsRdCfg *cfg);
 
     /* buffer attach / detach */
     MPP_RET     (*lock_map)(void *ctx);

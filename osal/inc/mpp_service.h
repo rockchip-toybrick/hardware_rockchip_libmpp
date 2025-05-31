@@ -76,6 +76,7 @@ typedef enum MppServiceCmdType_e {
     MPP_CMD_SET_RCB_INFO            = MPP_CMD_SEND_BASE + 3,
     /* for batch process start a task of one session */
     MPP_CMD_SET_SESSION_FD          = MPP_CMD_SEND_BASE + 4,
+    MPP_CMD_SET_HW_STATS_READ       = MPP_CMD_SEND_BASE + 7,
     MPP_CMD_SEND_BUTT,
 
     MPP_CMD_POLL_BASE               = 0x300,

@@ -422,6 +422,8 @@ size_t  mpp_frame_get_buf_size(const MppFrame frame);
 void    mpp_frame_set_buf_size(MppFrame frame, size_t buf_size);
 void    mpp_frame_set_thumbnail_en(MppFrame frame, RK_U32 thumbnail_en);
 RK_U32  mpp_frame_get_thumbnail_en(const MppFrame frame);
+void    mpp_frame_set_hw_timing(MppFrame frame, RK_U32 size);
+RK_U32  mpp_frame_get_hw_timing(const MppFrame frame);
 
 /*
  * flow control parmeter

@@ -166,6 +166,10 @@ MPP_RET mpp_dev_ioctl(MppDev ctx, RK_S32 cmd, void *param)
         if (api->set_err_ref_hack)
             ret = api->set_err_ref_hack(impl_ctx, param);
     } break;
+    case MPP_DEV_HW_STATS_RD : {
+        if (api->hw_stats_rd)
+            ret = api->hw_stats_rd(impl_ctx, param);
+    } break;
     case MPP_DEV_LOCK_MAP : {
         if (api->lock_map)
             ret = api->lock_map(impl_ctx);

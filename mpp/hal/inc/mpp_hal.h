@@ -74,6 +74,11 @@ typedef struct MppHalApi_t {
     MPP_RET (*control)(void *ctx, MpiCmd cmd, void *param);
 } MppHalApi;
 
+typedef struct MppHalHwStats_t {
+    RK_U32  hw_cycles;
+    RK_U32  hw_time;
+} MppHalHwStats;
+
 typedef void* MppHal;
 
 #ifdef __cplusplus

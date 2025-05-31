@@ -193,6 +193,8 @@ struct MppFrameImpl_t {
      * frame status info for internal flow
      */
     MppFrameStatus  status;
+
+    RK_U32          hw_timing;  /* us */
 };
 
 #ifdef __cplusplus

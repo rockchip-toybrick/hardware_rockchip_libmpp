@@ -840,6 +840,20 @@ MPP_RET mpp_service_cmd_poll(void *ctx, MppDevPollCfg *cfg)
     return ret;
 }
 
+MPP_RET mpp_service_hw_stats_rd(void *ctx, MppDevHwStatsRdCfg *cfg)
+{
+    MppDevMppService *p = (MppDevMppService *)ctx;
+    MppReqV1 *mpp_req = mpp_service_next_req(p);
+
+    mpp_req->cmd = MPP_CMD_SET_HW_STATS_READ;
+    mpp_req->flag = 0;
+    mpp_req->size = cfg->size;
+    mpp_req->offset = 0;
+    mpp_req->data_ptr = REQ_DATA_PTR(cfg->data);
+
+    return MPP_OK;
+}
+
 const MppDevApi mpp_service_api = {
     "mpp_service",
     sizeof(MppDevMppService),
@@ -856,6 +870,7 @@ const MppDevApi mpp_service_api = {
     mpp_service_rcb_info,
     mpp_service_set_info,
     mpp_service_set_err_ref_hack,
+    mpp_service_hw_stats_rd,
     mpp_service_lock_map,
     mpp_service_unlock_map,
     mpp_service_attach_fd,
