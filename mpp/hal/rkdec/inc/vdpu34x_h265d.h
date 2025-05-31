@@ -183,6 +183,7 @@ typedef struct Vdpu34xH265dRegSet_t {
     Vdpu34xH2645HighPoc_t   highpoc;
     Vdpu34xRegIrqStatus     irq_status;
     Vdpu34xRegStatistic     statistic;
+    MppHalHwStats           hw_stats;
 } Vdpu34xH265dRegSet;
 
 #endif /* __VDPU34X_H265D_H__ */

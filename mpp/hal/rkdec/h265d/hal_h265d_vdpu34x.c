@@ -1188,6 +1188,7 @@ static MPP_RET hal_h265d_vdpu34x_start(void *hal, HalTaskInfo *task)
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;
+        MppDevHwStatsRdCfg hw_cfg;
 
         wr_cfg.reg = &hw_regs->common;
         wr_cfg.size = sizeof(hw_regs->common);
@@ -1256,6 +1257,15 @@ static MPP_RET hal_h265d_vdpu34x_start(void *hal, HalTaskInfo *task)
         rd_cfg.offset = OFFSET_INTERRUPT_REGS;
 
         ret = mpp_dev_ioctl(reg_ctx->dev, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        hw_cfg.data = &hw_regs->hw_stats;
+        hw_cfg.size = sizeof(hw_regs->hw_stats);
+
+        ret = mpp_dev_ioctl(reg_ctx->dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
         if (ret) {
             mpp_err_f("set register read failed %d\n", ret);
             break;
@@ -1354,6 +1364,14 @@ ERR_PROC:
                       i, *((RK_U32*)p));
         }
         p += 4;
+    }
+
+    {
+        MppFrame frame = NULL;
+        mpp_buf_slot_get_prop(reg_ctx->slots, task->dec.output,
+                              SLOT_FRAME_PTR, &frame);
+        if (frame)
+            mpp_frame_set_hw_timing(frame, hw_regs->hw_stats.hw_time);
     }
 
     if (reg_ctx->fast_mode) {

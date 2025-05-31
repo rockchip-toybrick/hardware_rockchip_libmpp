@@ -31,6 +31,8 @@ typedef struct h263d_reg_context {
     RK_S32              fd_curr;
     RK_S32              fd_ref0;
 
+    MppHalHwStats       hw_stats;
+
     void*   regs;
 } hal_h263_ctx;
 

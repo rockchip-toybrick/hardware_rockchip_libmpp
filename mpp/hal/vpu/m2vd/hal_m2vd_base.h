@@ -74,6 +74,7 @@ typedef struct M2vdHalCtx_t {
     FILE            *fp_reg_in;
     FILE            *fp_reg_out;
     RK_U32          reg_len;
+    MppHalHwStats   hw_stats;
 } M2vdHalCtx;
 
 #endif // __HAL_M2VD_BASE_H__

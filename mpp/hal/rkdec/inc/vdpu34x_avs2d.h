@@ -147,6 +147,7 @@ typedef struct Vdpu34xAvs2dRegSet_t {
     Vdpu34xRegAvs2dAddr avs2d_addr;
     Vdpu34xRegIrqStatus irq_status;
     Vdpu34xRegStatistic statistic;
+    MppHalHwStats hw_stats;
 } Vdpu34xAvs2dRegSet;
 
 #endif /*__VDPU34X_AVS2D_H__*/

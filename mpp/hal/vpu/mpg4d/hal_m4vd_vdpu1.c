@@ -415,6 +415,7 @@ MPP_RET vdpu1_mpg4d_start(void *hal, HalTaskInfo *task)
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;
+        MppDevHwStatsRdCfg hw_cfg;
         RK_U32 reg_size = sizeof(M4vdVdpu1Regs_t);
 
         wr_cfg.reg = regs;
@@ -437,6 +438,15 @@ MPP_RET vdpu1_mpg4d_start(void *hal, HalTaskInfo *task)
             break;
         }
 
+        hw_cfg.data = &ctx->hw_stats;
+        hw_cfg.size = sizeof(ctx->hw_stats);
+
+        ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
         ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_CMD_SEND, NULL);
         if (ret) {
             mpp_err_f("send cmd failed %d\n", ret);
@@ -453,6 +463,7 @@ MPP_RET vdpu1_mpg4d_wait(void *hal, HalTaskInfo *task)
     MPP_RET ret = MPP_OK;
     hal_mpg4_ctx *ctx = (hal_mpg4_ctx *)hal;
     M4vdVdpu1Regs_t *regs = (M4vdVdpu1Regs_t *)ctx->regs;
+    HalDecTask *dec_task = &task->dec;
 
     ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_CMD_POLL, NULL);
     if (ret)
@@ -474,6 +485,14 @@ MPP_RET vdpu1_mpg4d_wait(void *hal, HalTaskInfo *task)
         param.hard_err = !regs->SwReg01.sw_dec_rdy_int;
 
         mpp_callback(ctx->dec_cb, &param);
+    }
+
+    {
+        MppFrame frame = NULL;
+        mpp_buf_slot_get_prop(ctx->frm_slots, dec_task->output,
+                              SLOT_FRAME_PTR, &frame);
+        if (frame)
+            mpp_frame_set_hw_timing(frame, ctx->hw_stats.hw_time);
     }
 
     memset(&regs->SwReg01, 0, sizeof(RK_U32));

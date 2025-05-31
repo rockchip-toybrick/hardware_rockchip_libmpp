@@ -18,6 +18,7 @@
 #define __HAL_AV1D_VDPU_REG_H__
 
 #include "mpp_device.h"
+#include "mpp_hal.h"
 
 /* swreg64 - swreg183 */
 typedef struct VdpuAv1dBase_t {
@@ -2437,6 +2438,7 @@ typedef struct VdpuAv1dRegSet_t {
 
     VdpuAv1dPPCfg vdpu_av1d_pp_cfg;
 
+    MppHalHwStats hw_stats;
 } VdpuAv1dRegSet;
 
 #endif

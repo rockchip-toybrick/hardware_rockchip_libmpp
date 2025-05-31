@@ -337,6 +337,7 @@ MPP_RET hal_m2vd_vdpu2_start(void *hal, HalTaskInfo *task)
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;
+        MppDevHwStatsRdCfg hw_cfg;
         RK_U32 *regs = (RK_U32 *)ctx->regs;
         RK_U32 reg_size = sizeof(M2vdVdpu2Reg);
 
@@ -360,6 +361,15 @@ MPP_RET hal_m2vd_vdpu2_start(void *hal, HalTaskInfo *task)
             break;
         }
 
+        hw_cfg.data = &ctx->hw_stats;
+        hw_cfg.size = sizeof(ctx->hw_stats);
+
+        ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
         ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_CMD_SEND, NULL);
         if (ret) {
             mpp_err_f("send cmd failed %d\n", ret);
@@ -377,6 +387,7 @@ MPP_RET hal_m2vd_vdpu2_wait(void *hal, HalTaskInfo *task)
     MPP_RET ret = MPP_OK;
     M2vdHalCtx *ctx = (M2vdHalCtx *)hal;
     M2vdVdpu2Reg* reg_out = (M2vdVdpu2Reg * )ctx->regs;
+    M2VDDxvaParam *dx = (M2VDDxvaParam *)task->dec.syntax.data;
 
     m2vh_dbg_func("enter\n");
 
@@ -399,6 +410,14 @@ MPP_RET hal_m2vd_vdpu2_wait(void *hal, HalTaskInfo *task)
 
     if (M2VH_DBG_IRQ & m2vh_debug)
         mpp_log("mpp_device_wait_reg return interrupt:%08x", reg_out->sw55);
+
+    {
+        MppFrame frame = NULL;
+        mpp_buf_slot_get_prop(ctx->frame_slots, dx->CurrPic.Index7Bits,
+                              SLOT_FRAME_PTR, &frame);
+        if (frame)
+            mpp_frame_set_hw_timing(frame, ctx->hw_stats.hw_time);
+    }
 
     (void)task;
     m2vh_dbg_func("leave\n");

@@ -306,6 +306,7 @@ typedef struct {
         RK_U32                                  : 12;
     } reg41_dbg_work_sta;
 
+    MppHalHwStats           hw_stats;
 } JpegRegSet;
 
 #endif /* __HAL_JPEGD_RKV_REG_H__ */

@@ -1021,6 +1021,7 @@ MPP_RET vdpu34x_h264d_start(void *hal, HalTaskInfo *task)
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;
+        MppDevHwStatsRdCfg hw_cfg;
 
         wr_cfg.reg = &regs->common;
         wr_cfg.size = sizeof(regs->common);
@@ -1093,6 +1094,15 @@ MPP_RET vdpu34x_h264d_start(void *hal, HalTaskInfo *task)
             break;
         }
 
+        hw_cfg.data = &regs->hw_stats;
+        hw_cfg.size = sizeof(regs->hw_stats);
+
+        ret = mpp_dev_ioctl(dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
         /* rcb info for sram */
         vdpu34x_set_rcbinfo(dev, reg_ctx->rcb_info);
 
@@ -1150,6 +1160,14 @@ __SKIP_HARD:
     memset(&p_regs->irq_status.reg224, 0, sizeof(RK_U32));
     if (p_hal->fast_mode) {
         reg_ctx->reg_buf[task->dec.reg_index].valid = 0;
+    }
+
+    {
+        MppFrame frame = NULL;
+        mpp_buf_slot_get_prop(p_hal->frame_slots, task->dec.output,
+                              SLOT_FRAME_PTR, &frame);
+        if (frame)
+            mpp_frame_set_hw_timing(frame, p_regs->hw_stats.hw_time);
     }
 
     (void)task;

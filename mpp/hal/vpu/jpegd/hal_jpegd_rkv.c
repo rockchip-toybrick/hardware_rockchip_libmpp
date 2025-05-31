@@ -668,7 +668,7 @@ MPP_RET hal_jpegd_rkv_start(void *hal, HalTaskInfo *task)
 {
     MPP_RET ret = MPP_OK;
     JpegdHalCtx * ctx = (JpegdHalCtx *)hal;
-    RK_U32 *regs = (RK_U32 *)ctx->regs;
+    JpegRegSet *regs = (JpegRegSet *)ctx->regs;
 
     jpegd_dbg_func("enter\n");
     if (task->dec.flags.parse_err)
@@ -676,6 +676,7 @@ MPP_RET hal_jpegd_rkv_start(void *hal, HalTaskInfo *task)
 
     MppDevRegWrCfg wr_cfg;
     MppDevRegRdCfg rd_cfg;
+    MppDevHwStatsRdCfg hw_cfg;
     RK_U32 reg_size = JPEGD_REG_NUM * sizeof(RK_U32);
     RK_U8 i = 0;
 
@@ -701,6 +702,16 @@ MPP_RET hal_jpegd_rkv_start(void *hal, HalTaskInfo *task)
     rd_cfg.offset = 0;
 
     ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_RD, &rd_cfg);
+
+    if (ret) {
+        mpp_err_f("set register read failed %d\n", ret);
+        goto __RETURN;
+    }
+
+    hw_cfg.data = &regs->hw_stats;
+    hw_cfg.size = sizeof(regs->hw_stats);
+
+    ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
 
     if (ret) {
         mpp_err_f("set register read failed %d\n", ret);
@@ -786,6 +797,14 @@ __SKIP_HARD:
             fclose(jpg_file);
             ctx->output_yuv_count++;
         }
+    }
+
+    {
+        MppFrame frm = NULL;
+
+        mpp_buf_slot_get_prop(ctx->frame_slots, task->dec.output, SLOT_FRAME_PTR, &frm);
+        if (frm)
+            mpp_frame_set_hw_timing(frm, reg_out->hw_stats.hw_time);
     }
 
     memset(&reg_out->reg1_int, 0, sizeof(RK_U32));

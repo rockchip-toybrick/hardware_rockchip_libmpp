@@ -2268,6 +2268,7 @@ MPP_RET vdpu_av1d_start(void *hal, HalTaskInfo *task)
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;
+        MppDevHwStatsRdCfg hw_cfg;
 
         wr_cfg.reg = regs;
         wr_cfg.size = sizeof(*regs);
@@ -2283,6 +2284,13 @@ MPP_RET vdpu_av1d_start(void *hal, HalTaskInfo *task)
         rd_cfg.offset   = 0;
 
         ret = mpp_dev_ioctl(dev, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+        hw_cfg.data = &regs->hw_stats;
+        hw_cfg.size = sizeof(regs->hw_stats);
+        ret = mpp_dev_ioctl(dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
         if (ret) {
             mpp_err_f("set register read failed %d\n", ret);
             break;
@@ -2350,6 +2358,13 @@ __SKIP_HARD:
             m_ctx.hard_err = 0;
 
         mpp_callback(p_hal->dec_cb, &m_ctx);
+    }
+    {
+        MppFrame frame = NULL;
+        mpp_buf_slot_get_prop(p_hal->slots, task->dec.output,
+                              SLOT_FRAME_PTR, &frame);
+        if (frame)
+            mpp_frame_set_hw_timing(frame, p_regs->hw_stats.hw_time);
     }
     if (p_hal->fast_mode)
         reg_ctx->reg_buf[task->dec.reg_index].valid = 0;

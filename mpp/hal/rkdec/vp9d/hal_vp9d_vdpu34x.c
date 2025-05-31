@@ -901,6 +901,7 @@ static MPP_RET hal_vp9d_vdpu34x_start(void *hal, HalTaskInfo *task)
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;
+        MppDevHwStatsRdCfg hw_cfg;
 
         wr_cfg.reg = &hw_regs->common;
         wr_cfg.size = sizeof(hw_regs->common);
@@ -962,6 +963,15 @@ static MPP_RET hal_vp9d_vdpu34x_start(void *hal, HalTaskInfo *task)
             break;
         }
 
+        hw_cfg.data = &hw_regs->hw_stats;
+        hw_cfg.size = sizeof(hw_regs->hw_stats);
+
+        ret = mpp_dev_ioctl(dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
         /* rcb info for sram */
         vdpu34x_set_rcbinfo(dev, hw_ctx->rcb_info);
 
@@ -1016,6 +1026,13 @@ static MPP_RET hal_vp9d_vdpu34x_wait(void *hal, HalTaskInfo *task)
         mpp_callback(p_hal->dec_cb, &pic_param->counts);
     }
 #endif
+    {
+        MppFrame frame = NULL;
+        mpp_buf_slot_get_prop(p_hal->slots, task->dec.output,
+                              SLOT_FRAME_PTR, &frame);
+        if (frame)
+            mpp_frame_set_hw_timing(frame, hw_regs->hw_stats.hw_time);
+    }
     if (p_hal->fast_mode) {
         hw_ctx->g_buf[task->dec.reg_index].use_flag = 0;
     }
