@@ -8,6 +8,7 @@ add_library(utils STATIC
     mpp_enc_roi_utils.c
     mpi_enc_utils.c
     mpi_dec_utils.c
+    mpi_dec_slt_utils.c
     mpp_opt.c
     utils.c
     iniparser.c

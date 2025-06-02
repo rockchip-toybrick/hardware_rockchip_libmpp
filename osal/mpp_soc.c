@@ -1156,6 +1156,35 @@ const MppSocInfo *mpp_get_soc_info(void)
     return info;
 }
 
+const MppSocInfo *mpp_get_soc_info_by_name(const char *soc_name)
+{
+    RK_S32 i;
+
+    for (i = MPP_ARRAY_ELEMS(mpp_soc_infos) - 1; i >= 0; i--) {
+        const char *compatible = mpp_soc_infos[i].compatible;
+
+        if (strstr(soc_name, compatible)) {
+            mpp_dbg_platform("match chip name: %s\n", compatible);
+            return &mpp_soc_infos[i];
+        }
+    }
+
+    return NULL;
+}
+
+const MppSocInfo *mpp_get_soc_info_by_soc_type(const RockchipSocType type)
+{
+    RK_S32 i;
+
+    for (i = MPP_ARRAY_ELEMS(mpp_soc_infos) - 1; i >= 0; i--) {
+        if (mpp_soc_infos[i].soc_type == type) {
+            return &mpp_soc_infos[i];
+        }
+    }
+
+    return NULL;
+}
+
 RockchipSocType mpp_get_soc_type(void)
 {
     MppSocSrv *srv = get_srv_soc();

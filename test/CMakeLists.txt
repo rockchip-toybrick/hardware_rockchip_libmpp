@@ -33,6 +33,9 @@ add_mpp_test(mpi_dec_mt c)
 # mpi decoder no-thread input / output unit test
 add_mpp_test(mpi_dec_nt c)
 
+# dec slt unit test
+add_mpp_test(mpi_dec_slt c)
+
 # mpi encoder unit test
 add_mpp_test(mpi_enc c)
 

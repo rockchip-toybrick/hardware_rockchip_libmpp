@@ -62,7 +62,7 @@ rk_s32 mpp_dec_cfg_set_default(void *entry, KmppObj obj, const char *caller)
     cfg->base.type = MPP_CTX_BUTT;
     cfg->base.coding = MPP_VIDEO_CodingUnused;
     cfg->base.hw_type = -1;
-    cfg->base.fast_parse = 1;
+    cfg->base.fast_parse = 0;
 #ifdef ENABLE_FASTPLAY_ONCE
     cfg->base.enable_fast_play = MPP_ENABLE_FAST_PLAY_ONCE;
 #else
