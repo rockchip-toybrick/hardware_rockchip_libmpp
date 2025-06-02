@@ -107,6 +107,7 @@ typedef struct MpiEncTestArgs_t {
     RK_U32              psnr_en;
     RK_U32              ssim_en;
     char                *file_slt;
+    char                *file_slt_gold;
     RK_U32              kmpp_en;
 } MpiEncTestArgs;
 

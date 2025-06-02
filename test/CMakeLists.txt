@@ -48,6 +48,8 @@ add_mpp_test(mpi_rc2 c)
 # new dec multi unit test
 add_mpp_test(mpi_dec_multi c)
 
+add_mpp_test(mpi_enc_slt c)
+
 macro(add_legacy_test module)
     set(test_name ${module}_test)
     string(TOUPPER ${test_name} test_tag)
