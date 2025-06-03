@@ -145,6 +145,10 @@ typedef enum MppMetaKey_e {
     KEY_DEC_TBN_EN              = FOURCC_META('t', 'b', 'e', 'n'),
     KEY_DEC_TBN_Y_OFFSET        = FOURCC_META('t', 'b', 'y', 'o'),
     KEY_DEC_TBN_UV_OFFSET       = FOURCC_META('t', 'b', 'c', 'o'),
+
+    /* Hw info from kernel */
+    KEY_ENC_HW_STATUS           = FOURCC_META('h', 's', 't', 'a'),
+    KEY_ENC_HW_TIME             = FOURCC_META('h', 't', 'i', 'm'),
 } MppMetaKey;
 
 #define mpp_meta_get(meta) mpp_meta_get_with_tag(meta, MODULE_TAG, __FUNCTION__)

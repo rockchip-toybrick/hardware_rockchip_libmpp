@@ -43,6 +43,7 @@ typedef struct hal_jpege_ctx_s {
     /* NOTE: regs should reserve space for extra_info */
     void                *regs;
     void                *regs_out;
+    void                *hw_stats;
     RK_U32              reg_size;
     RK_S32              task_cnt;
     RK_S32              task_idx;

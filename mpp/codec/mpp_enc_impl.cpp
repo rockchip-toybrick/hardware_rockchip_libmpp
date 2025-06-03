@@ -2519,6 +2519,10 @@ static MPP_RET set_enc_info_to_packet(MppEncImpl *enc, HalEncTask *hal_task)
     mpp_meta_set_s32(meta, KEY_ENC_START_QP,    rc_task->info.quality_target);
     mpp_meta_set_s32(meta, KEY_ENC_AVERAGE_QP,  rc_task->info.quality_real);
 
+    /* hw time && status */
+    mpp_meta_set_s32(meta, KEY_ENC_HW_TIME,     hal_task->hw_time);
+    mpp_meta_set_s32(meta, KEY_ENC_HW_STATUS,   hal_task->hw_stat);
+
     if (hal_task->md_info)
         mpp_meta_set_buffer(meta, KEY_MOTION_INFO, hal_task->md_info);
 

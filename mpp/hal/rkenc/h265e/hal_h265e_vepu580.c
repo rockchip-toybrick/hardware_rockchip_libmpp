@@ -54,6 +54,7 @@
 
 typedef struct vepu580_h265_fbk_t {
     RK_U32 hw_status; /* 0:corret, 1:error */
+    RK_U32 hw_time;
     RK_U32 qp_sum;
     RK_U32 out_strm_size;
     RK_U32 out_hw_strm_size;
@@ -2166,6 +2167,7 @@ static MPP_RET hal_h265e_v580_send_regs(MppDev dev, H265eV580RegSet *hw_regs, H2
     RK_U32 *regs = (RK_U32*)hw_regs;
     MppDevRegWrCfg cfg;
     MppDevRegRdCfg cfg1;
+    MppDevHwStatsRdCfg hw_cfg;
     MPP_RET ret = MPP_OK;
     RK_U32 i;
 
@@ -2264,9 +2266,17 @@ static MPP_RET hal_h265e_v580_send_regs(MppDev dev, H265eV580RegSet *hw_regs, H2
 
     cfg1.reg = &reg_out->hw_status;
     cfg1.size = sizeof(RK_U32);
-    cfg1.offset = VEPU580_REG_BASE_HW_STATUS;
+    cfg1.offset = VEPU580_REG_HW_STATUS;
 
     ret = mpp_dev_ioctl(dev, MPP_DEV_REG_RD, &cfg1);
+    if (ret) {
+        mpp_err_f("set register read failed %d\n", ret);
+        goto FAILE;
+    }
+
+    hw_cfg.data = &reg_out->hw_stat;
+    hw_cfg.size = sizeof(reg_out->hw_stat);
+    ret = mpp_dev_ioctl(dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
     if (ret) {
         mpp_err_f("set register read failed %d\n", ret);
         goto FAILE;
@@ -3023,7 +3033,9 @@ static MPP_RET vepu580_h265_set_feedback(H265eV580HalContext *ctx, HalEncTask *e
     fb->sse_sum += (RK_S64)(elem->st.sse_h32 << 16) +
                    (elem->st.st_sse_bsl.sse_l16 & 0xffff);
 
-    fb->hw_status = hw_status;
+    fb->hw_status |= hw_status;
+    fb->hw_time += elem->hw_stat.hw_time;
+
     hal_h265e_dbg_detail("hw_status: 0x%08x", hw_status);
     if (hw_status & RKV_ENC_INT_LINKTABLE_FINISH)
         hal_h265e_err("RKV_ENC_INT_LINKTABLE_FINISH");
@@ -3458,6 +3470,8 @@ MPP_RET hal_h265e_v580_ret_task(void *hal, HalEncTask *task)
 
     enc_task->hw_length = fb->out_strm_size;
     enc_task->length += fb->out_strm_size;
+    enc_task->hw_stat = fb->hw_status;
+    enc_task->hw_time = fb->hw_time;
 
     vepu580_h265e_tune_stat_update(ctx->tune, rc_info);
 

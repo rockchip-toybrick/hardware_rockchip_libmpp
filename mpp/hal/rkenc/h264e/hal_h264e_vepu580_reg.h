@@ -28,7 +28,8 @@
 #define VEPU580_OSD_OFFSET          (3072 * sizeof(RK_U32))
 #define VEPU580_STATUS_OFFSET       (4096 * sizeof(RK_U32))
 #define VEPU580_DBG_OFFSET          (5120 * sizeof(RK_U32))
-#define VEPU580_REG_BASE_HW_STATUS  0x2c
+#define VEPU580_REG_HW_STATUS       0x2c
+#define VEPU580_REG_DBG_FCYC        0x5200
 
 typedef struct {
     RK_U32 lt_pos_x : 10;
@@ -133,20 +134,23 @@ typedef struct Vepu580ControlCfg_t {
     } int_clr;
 
     /* 0x0000002c reg11 */
-    struct {
-        RK_U32 enc_done_sta         : 1;
-        RK_U32 lkt_node_done_sta    : 1;
-        RK_U32 sclr_done_sta        : 1;
-        RK_U32 slc_done_sta         : 1;
+    union int_sta_t {
+        RK_U32 val;
+        struct {
+            RK_U32 enc_done_sta         : 1;
+            RK_U32 lkt_node_done_sta    : 1;
+            RK_U32 sclr_done_sta        : 1;
+            RK_U32 slc_done_sta         : 1;
 
-        RK_U32 bsf_oflw_sta         : 1;
-        RK_U32 brsp_otsd_sta        : 1;
-        RK_U32 wbus_err_sta         : 1;
-        RK_U32 rbus_err_sta         : 1;
+            RK_U32 bsf_oflw_sta         : 1;
+            RK_U32 brsp_otsd_sta        : 1;
+            RK_U32 wbus_err_sta         : 1;
+            RK_U32 rbus_err_sta         : 1;
 
-        RK_U32 wdg_sta              : 1;
-        RK_U32 lkt_err_sta          : 1;
-        RK_U32 reserved             : 22;
+            RK_U32 wdg_sta              : 1;
+            RK_U32 lkt_err_sta          : 1;
+            RK_U32 reserved             : 22;
+        } stat;
     } int_sta;
 
     /* 0x00000030 reg12 */
@@ -2927,6 +2931,11 @@ typedef struct Vepu580Dbg_t {
     RK_U32 axip1_wrk_cyc;
 } Vepu580Dbg;
 
+typedef struct MppHalHwStats_t {
+    RK_U32  hw_cycles;
+    RK_U32  hw_time;
+} MppHalHwStats;
+
 /* class: mmu */
 /* 0x0000f000 reg15360 - 0x0000f064 reg15385 */
 
@@ -2940,6 +2949,7 @@ typedef struct HalVepu580Reg_t {
     Vepu580Osd          reg_osd;
     Vepu580Status       reg_st;
     Vepu580Dbg          reg_dbg;
+    MppHalHwStats       hw_stats;
 } HalVepu580RegSet;
 
 #endif

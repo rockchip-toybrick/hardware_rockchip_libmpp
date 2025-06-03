@@ -42,6 +42,11 @@ typedef struct jpege_vepu2_reg_set_t {
 
 #define MAX_CORE_NUM                4
 
+typedef struct MppHalHwStats_t {
+    RK_U32  hw_cycles;
+    RK_U32  hw_time;
+} MppHalHwStats;
+
 typedef struct JpegeMultiCoreCtx_t {
     RK_U32              multi_core_enabled;
     RK_U32              partion_num;
@@ -55,8 +60,10 @@ typedef struct JpegeMultiCoreCtx_t {
     RK_U32              ecs_cnt[MAX_CORE_NUM];
 
     void                *regs_base;
+    void                *hw_status_base;
     void                *regs[MAX_CORE_NUM];
     void                *regs_out[MAX_CORE_NUM];
+    void                *hw_status[MAX_CORE_NUM];
 } JpegeMultiCoreCtx;
 
 MPP_RET hal_jpege_vepu2_init(void *hal, MppEncHalCfg *cfg)
@@ -103,6 +110,12 @@ MPP_RET hal_jpege_vepu2_init(void *hal, MppEncHalCfg *cfg)
         return MPP_NOK;
     }
 
+    ctx->hw_stats = mpp_calloc_size(void, sizeof(MppHalHwStats) * ctx->task_cnt);
+    if (NULL == ctx->hw_stats) {
+        mpp_err_f("failed to malloc hw_stat\n");
+        return MPP_NOK;
+    }
+
     hal_jpege_dbg_func("leave hal %p\n", hal);
     return MPP_OK;
 }
@@ -144,11 +157,13 @@ MPP_RET hal_jpege_vepu2_deinit(void *hal)
         }
 
         MPP_FREE(ctx_ext->regs_base);
+        MPP_FREE(ctx_ext->hw_status_base);
         MPP_FREE(ctx->ctx_ext);
     }
 
     MPP_FREE(ctx->regs);
     MPP_FREE(ctx->regs_out);
+    MPP_FREE(ctx->hw_stats);
 
     hal_jpege_dbg_func("leave hal %p\n", hal);
     return MPP_OK;
@@ -260,6 +275,14 @@ MPP_RET hal_jpege_vepu2_get_task(void *hal, HalEncTask *task)
                 ctx_ext->regs_out[i] = regs_base;
                 regs_base += reg_size;
             }
+        }
+
+        if (!ctx_ext->hw_status_base) {
+            void *regs_base_hw = mpp_calloc_size(void, sizeof(MppHalHwStats) * MAX_CORE_NUM);
+            ctx_ext->hw_status_base = regs_base_hw;
+
+            for (i = 0; i < MAX_CORE_NUM; i++)
+                ctx_ext->hw_status[i] = (RK_U8*)regs_base_hw + i * sizeof(MppHalHwStats);
         }
 
         {
@@ -703,6 +726,7 @@ static MPP_RET multi_core_start(HalJpegeCtx *ctx, HalEncTask *task)
         do {
             MppDevRegWrCfg wr_cfg;
             MppDevRegRdCfg rd_cfg;
+            MppDevHwStatsRdCfg hw_cfg;
 
             wr_cfg.reg = regs;
             wr_cfg.size = reg_size;
@@ -719,6 +743,14 @@ static MPP_RET multi_core_start(HalJpegeCtx *ctx, HalEncTask *task)
             rd_cfg.offset = 0;
 
             ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_RD, &rd_cfg);
+            if (ret) {
+                mpp_err_f("set register read failed %d\n", ret);
+                break;
+            }
+
+            hw_cfg.data = ctx_ext->hw_status[i];
+            hw_cfg.size = sizeof(MppHalHwStats);
+            ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
             if (ret) {
                 mpp_err_f("set register read failed %d\n", ret);
                 break;
@@ -761,6 +793,7 @@ static MPP_RET multi_core_wait(HalJpegeCtx *ctx, HalEncTask *task)
 
     for (i = 0; i < ctx_ext->partion_num; i++) {
         RK_U32 *regs = ctx_ext->regs_out[i];
+        MppHalHwStats *hw_stat = ctx_ext->hw_status[i];
 
         hal_jpege_dbg_detail("poll reg %d %p", i, regs);
 
@@ -773,7 +806,10 @@ static MPP_RET multi_core_wait(HalJpegeCtx *ctx, HalEncTask *task)
 
             val = regs[109];
             hal_jpege_dbg_output("hw_status %08x\n", val);
+            task->hw_time = hw_stat->hw_time;
+            task->hw_stat = val;
             feedback->hw_status = val & 0x70;
+            feedback->hw_time = hw_stat->hw_time;
             val = regs[53];
             sw_bit = jpege_bits_get_bitpos(ctx->bits);
             hw_bit = val;
@@ -799,8 +835,12 @@ static MPP_RET multi_core_wait(HalJpegeCtx *ctx, HalEncTask *task)
 
             memcpy(stream_ptr + feedback->stream_length, partion_ptr, partion_len);
             feedback->stream_length += partion_len;
+            feedback->hw_time = MPP_MAX(feedback->hw_time, hw_stat->hw_time);
+
             task->length = feedback->stream_length;
             task->hw_length += partion_len;
+            task->hw_time += hw_stat->hw_time;
+            task->hw_stat |= val;
         }
     }
 

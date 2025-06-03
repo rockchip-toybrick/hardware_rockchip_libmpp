@@ -27,7 +27,8 @@
 #define VEPU580_OSD_OFFSET          (3072 * sizeof(RK_U32))
 #define VEPU580_STATUS_OFFSET       (4096 * sizeof(RK_U32))
 #define VEPU580_DEBUG_OFFSET        (5120 * sizeof(RK_U32))
-#define VEPU580_REG_BASE_HW_STATUS  0x2c
+#define VEPU580_REG_HW_STATUS       0x2c
+#define VEPU580_REG_DBG_FCYC        0x5200
 
 /* class: control/link */
 /* 0x00000000 reg0 - 0x00000120 reg72 */
@@ -3250,6 +3251,11 @@ typedef struct Vepu580Dbg_t {
     RK_U32 axip1_wrk_cyc;
 } Vepu580_dbg;
 
+typedef struct MppHalHwStats_t {
+    RK_U32  hw_cycles;
+    RK_U32  hw_time;
+} MppHalHwStats;
+
 typedef struct H265eV580RegSet_t {
     hevc_vepu580_control_cfg reg_ctl;
     hevc_vepu580_base reg_base;
@@ -3258,11 +3264,13 @@ typedef struct H265eV580RegSet_t {
     vepu580_rdo_cfg reg_rdo;
     vepu580_osd_cfg reg_osd_cfg;
     Vepu580_dbg reg_dbg;
+    MppHalHwStats           hw_stats;
 } H265eV580RegSet;
 
 typedef struct H265eV580StatusElem_t {
     RK_U32 hw_status;
     vepu580Status st;
+    MppHalHwStats hw_stat;
 } H265eV580StatusElem;
 
 #endif

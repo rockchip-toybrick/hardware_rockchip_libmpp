@@ -2193,6 +2193,7 @@ static MPP_RET hal_h264e_vepu580_start(void *hal, HalEncTask *task)
     MPP_RET ret = MPP_OK;
     HalH264eVepu580Ctx *ctx = (HalH264eVepu580Ctx *)hal;
     HalVepu580RegSet *regs = ctx->regs_set;
+    MppDevHwStatsRdCfg hw_cfg;
 
     (void) task;
 
@@ -2286,7 +2287,7 @@ static MPP_RET hal_h264e_vepu580_start(void *hal, HalEncTask *task)
 
         rd_cfg.reg = &regs->reg_ctl.int_sta;
         rd_cfg.size = sizeof(RK_U32);
-        rd_cfg.offset = VEPU580_REG_BASE_HW_STATUS;
+        rd_cfg.offset = VEPU580_REG_HW_STATUS;
 
         ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_RD, &rd_cfg);
         if (ret) {
@@ -2299,6 +2300,14 @@ static MPP_RET hal_h264e_vepu580_start(void *hal, HalEncTask *task)
         rd_cfg.offset = VEPU580_STATUS_OFFSET;
 
         ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        hw_cfg.data = &regs->hw_stats;
+        hw_cfg.size = sizeof(regs->hw_stats);
+        ret = mpp_dev_ioctl(ctx->dev, MPP_DEV_HW_STATS_RD, &hw_cfg);
         if (ret) {
             mpp_err_f("set register read failed %d\n", ret);
             break;
@@ -2321,39 +2330,39 @@ static MPP_RET hal_h264e_vepu580_status_check(HalVepu580RegSet *regs)
 {
     MPP_RET ret = MPP_OK;
 
-    if (regs->reg_ctl.int_sta.lkt_node_done_sta)
+    if (regs->reg_ctl.int_sta.stat.lkt_node_done_sta)
         hal_h264e_dbg_detail("lkt_done finish");
 
-    if (regs->reg_ctl.int_sta.enc_done_sta)
+    if (regs->reg_ctl.int_sta.stat.enc_done_sta)
         hal_h264e_dbg_detail("enc_done finish");
 
-    if (regs->reg_ctl.int_sta.slc_done_sta)
+    if (regs->reg_ctl.int_sta.stat.slc_done_sta)
         hal_h264e_dbg_detail("enc_slice finsh");
 
-    if (regs->reg_ctl.int_sta.sclr_done_sta)
+    if (regs->reg_ctl.int_sta.stat.sclr_done_sta)
         hal_h264e_dbg_detail("safe clear finsh");
 
-    if (regs->reg_ctl.int_sta.bsf_oflw_sta) {
+    if (regs->reg_ctl.int_sta.stat.bsf_oflw_sta) {
         mpp_err_f("bit stream overflow");
         ret = MPP_NOK;
     }
 
-    if (regs->reg_ctl.int_sta.brsp_otsd_sta) {
+    if (regs->reg_ctl.int_sta.stat.brsp_otsd_sta) {
         mpp_err_f("bus write full");
         ret = MPP_NOK;
     }
 
-    if (regs->reg_ctl.int_sta.wbus_err_sta) {
+    if (regs->reg_ctl.int_sta.stat.wbus_err_sta) {
         mpp_err_f("bus write error");
         ret = MPP_NOK;
     }
 
-    if (regs->reg_ctl.int_sta.rbus_err_sta) {
+    if (regs->reg_ctl.int_sta.stat.rbus_err_sta) {
         mpp_err_f("bus read error");
         ret = MPP_NOK;
     }
 
-    if (regs->reg_ctl.int_sta.wdg_sta) {
+    if (regs->reg_ctl.int_sta.stat.wdg_sta) {
         ret = MPP_NOK;
         mpp_err_f("wdg timeout");
     }
@@ -2469,6 +2478,8 @@ static MPP_RET hal_h264e_vepu580_ret_task(void * hal, HalEncTask * task)
 
     // update total hardware length
     task->length += task->hw_length;
+    task->hw_stat = regs->reg_ctl.int_sta.val;
+    task->hw_time = regs->hw_stats.hw_time;
 
     // setup bit length for rate control
     rc_info->bit_real = task->hw_length * 8;

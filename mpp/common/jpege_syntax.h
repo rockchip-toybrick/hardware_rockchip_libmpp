@@ -109,7 +109,8 @@ typedef struct JpegeSyntax_t {
 } JpegeSyntax;
 
 typedef struct JpegeFeedback_t {
-    RK_U32 hw_status;       /* zero -> correct; non-zero -> error */
+    RK_U32 hw_status;
+    RK_U32 hw_time;
     RK_U32 stream_length;
 } JpegeFeedback;
 

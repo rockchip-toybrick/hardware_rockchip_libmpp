@@ -80,6 +80,8 @@ typedef struct HalEncTask_t {
     RK_S32          sei_length;
     RK_S32          hw_length;
     RK_U32          length;
+    RK_U32          hw_stat;
+    RK_U32          hw_time;
     /* For reenc process and record segment number before hardware encoding */
     RK_U32          segment_nb;
 
