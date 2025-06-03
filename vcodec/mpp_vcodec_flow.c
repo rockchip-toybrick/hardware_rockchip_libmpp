@@ -132,13 +132,16 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 
 			if (drop) {
 				KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
-				KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
-				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
-				ntfy_impl->chan_id = comb_chan->chan_id;
-				ntfy_impl->frame = comb_frame;
-				kmpp_venc_notify(ntfy);
+				if (ntfy) {
+					KmppVencNtfyImpl* ntfy_impl = kmpp_obj_to_entry(ntfy);
+
+					ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+					ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+					ntfy_impl->chan_id = comb_chan->chan_id;
+					ntfy_impl->frame = comb_frame;
+					kmpp_venc_notify(ntfy);
+				}
 				kmpp_frame_put(comb_frame);
 				atomic_dec(&chan_entry->cfg.comb_runing);
 				atomic_dec(&comb_chan->runing);
@@ -161,21 +164,22 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 	if (pskip) {
 		KmppPacket packet = NULL;
 		KmppVencNtfy ntfy;
-		KmppVencNtfyImpl* ntfy_impl;
 
 		ret = mpp_enc_force_pskip(chan_entry->handle, frame, &packet);
 		if (packet)
 			mpp_vcodec_enc_add_packet_list(chan_entry, packet);
 
 		ntfy = mpp_enc_get_notify(chan_entry->handle);
-		ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+		if (ntfy) {
+			KmppVencNtfyImpl *ntfy_impl = kmpp_obj_to_entry(ntfy);
 
-		ntfy_impl->chan_id = chan_id;
-		ntfy_impl->frame = frame;
+			ntfy_impl->chan_id = chan_id;
+			ntfy_impl->frame = frame;
 
-		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
-		ntfy_impl->is_intra = 0;
-		kmpp_venc_notify(ntfy);
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
+			ntfy_impl->is_intra = 0;
+			kmpp_venc_notify(ntfy);
+		}
 
 		kmpp_frame_put(frame);
 		frame = NULL;
@@ -209,14 +213,17 @@ static MPP_RET enc_chan_process_single_chan(RK_U32 chan_id)
 		ret = mpp_enc_cfg_reg((MppEnc)comb_chan->handle, comb_frame);
 		if (ret) {
 			KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
-			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
+			if (ntfy) {
+				KmppVencNtfyImpl* ntfy_impl = kmpp_obj_to_entry(ntfy);
+
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+				ntfy_impl->chan_id = comb_chan->chan_id;
+				ntfy_impl->frame = comb_frame;
+				kmpp_venc_notify(ntfy);
+			}
 			mpp_err("combo cfg fail \n");
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-			ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
-			ntfy_impl->chan_id = comb_chan->chan_id;
-			ntfy_impl->frame = comb_frame;
-			kmpp_venc_notify(ntfy);
 			if (comb_frame) {
 				kmpp_frame_put(comb_frame);
 				comb_frame = NULL;
@@ -245,25 +252,31 @@ __RETURN:
 		venc = mpp_vcodec_get_enc_module_entry();
 		if (frame) {
 			KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
-			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-			ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
-			ntfy_impl->chan_id = chan_entry->chan_id;
-			ntfy_impl->frame = frame;
-			kmpp_venc_notify(ntfy);
+			if (ntfy) {
+				KmppVencNtfyImpl* ntfy_impl = kmpp_obj_to_entry(ntfy);
+
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+				ntfy_impl->chan_id = chan_entry->chan_id;
+				ntfy_impl->frame = frame;
+				kmpp_venc_notify(ntfy);
+			}
 			kmpp_frame_put(frame);
 			frame = NULL;
 		}
 		if (comb_frame) {
 			KmppVencNtfy ntfy = mpp_enc_get_notify(comb_chan->handle);
-			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-			ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
-			ntfy_impl->chan_id = comb_chan->chan_id;
-			ntfy_impl->frame = comb_frame;
-			kmpp_venc_notify(ntfy);
+			if (ntfy) {
+				KmppVencNtfyImpl* ntfy_impl = kmpp_obj_to_entry(ntfy);
+
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+				ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+				ntfy_impl->chan_id = comb_chan->chan_id;
+				ntfy_impl->frame = comb_frame;
+				kmpp_venc_notify(ntfy);
+			}
 			kmpp_frame_put(comb_frame);
 			comb_frame = NULL;
 			comb_chan->master_chan_id = -1;

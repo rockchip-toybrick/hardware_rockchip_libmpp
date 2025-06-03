@@ -87,7 +87,8 @@ int mpp_vcodec_chan_create(struct vcodec_attr *attr)
 			.qpmap_en       = attr->smart_en ? 1 : attr->qpmap_en,
 			.chan_id        = chan_id,
 			.only_smartp    = attr->only_smartp,
-			.tmvp_enable    = attr->tmvp_enable
+			.tmvp_enable    = attr->tmvp_enable,
+			.ntfy_mode      = attr->ntfy_mode,
 		};
 
 		ret = mpp_enc_init(&enc, &cfg);
@@ -193,7 +194,7 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 
 		while(kfifo_get(&chan_entry->frame_fifo, &frame)) {
 			KmppVencNtfy ntfy = mpp_enc_get_notify(chan_entry->handle);
-			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+			KmppVencNtfyImpl* ntfy_impl = ntfy ? kmpp_obj_to_entry(ntfy) : NULL;
 			KmppShmPtr sptr;
 			KmppFrame comb_frame = NULL;
 
@@ -201,23 +202,27 @@ int mpp_vcodec_chan_destory(int chan_id, MppCtxType type)
 				KmppMeta meta = sptr.kptr;
 				kmpp_meta_get_obj_d(meta, KEY_COMBO_FRAME, &comb_frame, NULL);
 				if (comb_frame) {
-					ntfy_impl->chan_id = chan_entry->binder_chan_id >= 0 ?
-							     chan_entry->binder_chan_id : chan_id;
-					ntfy_impl->frame = comb_frame;
+					if (ntfy_impl) {
+						ntfy_impl->chan_id = chan_entry->binder_chan_id >= 0 ?
+								     chan_entry->binder_chan_id : chan_id;
+						ntfy_impl->frame = comb_frame;
 
-					ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-					ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
-					kmpp_venc_notify(ntfy);
+						ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+						ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
+						kmpp_venc_notify(ntfy);
+					}
 					kmpp_frame_put(comb_frame);
 				}
 			}
 
-			ntfy_impl->chan_id = chan_id;
-			ntfy_impl->frame = frame;
+			if (ntfy_impl) {
+				ntfy_impl->chan_id = chan_id;
+				ntfy_impl->frame = frame;
 
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-			ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
-			kmpp_venc_notify(ntfy);
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+				ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
+				kmpp_venc_notify(ntfy);
+			}
 			kmpp_frame_put(frame);
 		}
 		if (chan_entry->cfg.online)

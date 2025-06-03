@@ -25,6 +25,7 @@
 #include "mpp_enc_cfg_impl.h"
 #include "mpp_enc_impl.h"
 #include "mpp_2str.h"
+#include "mpp_enc.h"
 
 #include "kmpp_obj.h"
 #include "kmpp_venc_objs_impl.h"
@@ -2141,8 +2142,8 @@ static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, KmppPacket *packet)
 	MppEncHal hal = enc->enc_hal;
 	RK_U64 dts = 0, pts = 0;
 	RK_U32 eos = 0;
-	KmppVencNtfy ntfy = enc->venc_notify;
-	KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+	KmppVencNtfy ntfy = mpp_enc_get_notify(ctx);
+	KmppVencNtfyImpl* ntfy_impl = ntfy ? kmpp_obj_to_entry(ntfy) : NULL;
 
 	hal_task->length -= hal_task->hw_length;
 	ret = mpp_enc_hal_ret_task(hal, hal_task, NULL);
@@ -2168,13 +2169,15 @@ static MPP_RET mpp_enc_comb_end_jpeg(MppEnc ctx, KmppPacket *packet)
 	frm->reencode_times = 0;
 TASK_DONE:
 
-	ntfy_impl->chan_id = enc->chan_id;
-	ntfy_impl->frame = enc->frame;
 	/* setup output packet and meta data */
 	if (ret) {
-		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-		ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
-		kmpp_venc_notify(ntfy);
+		if (ntfy_impl) {
+			ntfy_impl->chan_id = enc->chan_id;
+			ntfy_impl->frame = enc->frame;
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+			ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
+			kmpp_venc_notify(ntfy);
+		}
 
 		if (ret == MPP_ERR_INT_BS_OVFL && enc->ring_pool)
 			ring_buf_update_min_size(enc->ring_pool, enc->pkt_buf->size);
@@ -2184,9 +2187,13 @@ TASK_DONE:
 		kmpp_packet_put(enc->packet);
 		enc->packet = NULL;
 	} else {
-		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
-		ntfy_impl->is_intra = 1;
-		kmpp_venc_notify(ntfy);
+		if (ntfy_impl) {
+			ntfy_impl->chan_id = enc->chan_id;
+			ntfy_impl->frame = enc->frame;
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
+			ntfy_impl->is_intra = 1;
+			kmpp_venc_notify(ntfy);
+		}
 
 		kmpp_packet_set_length(enc->packet, hal_task->length);
 		if (frm->is_intra)
@@ -2346,27 +2353,27 @@ TASK_DONE:
 		MppEncCfgSet *cfg = &enc->cfg;
 		RK_U32 is_intra = (cfg->codec.coding == MPP_VIDEO_CodingMJPEG || frm->is_intra);
 		RK_U64 dts = 0, pts = 0;
-		KmppVencNtfy ntfy = enc->venc_notify;
-		KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+		KmppVencNtfy ntfy = mpp_enc_get_notify(ctx);
+		KmppVencNtfyImpl* ntfy_impl = ntfy ? kmpp_obj_to_entry(ntfy) : NULL;
 
 		kmpp_frame_get_dts(hal_task->frame, &dts);
 		kmpp_frame_get_pts(hal_task->frame, &pts);
 
-		ntfy_impl->chan_id = enc->chan_id;
-		ntfy_impl->frame = enc->frame;
+		if (ntfy) {
+			ntfy_impl->chan_id = enc->chan_id;
+			ntfy_impl->frame = enc->frame;
+			if (ret == MPP_ERR_INT_SOURCE_MIS) {
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_SOURCE_ID_MISMATCH;
+				kmpp_venc_notify(ntfy);
+			}
 
-		if (ret == MPP_ERR_INT_SOURCE_MIS) {
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_SOURCE_ID_MISMATCH;
-			kmpp_venc_notify(ntfy);
-		}
-
-		if (ret) {
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-			ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
-			kmpp_venc_notify(ntfy);
-		} else {
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
-			ntfy_impl->is_intra = is_intra;
+			if (ret) {
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+				ntfy_impl->drop_type = KMPP_VENC_DROP_ENC_FAILED;
+			} else {
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DONE;
+				ntfy_impl->is_intra = is_intra;
+			}
 			kmpp_venc_notify(ntfy);
 		}
 	}

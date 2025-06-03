@@ -199,6 +199,7 @@ void enc_test(void)
     kmpp_venc_init_cfg_set_chan_id(cfg, 0);
     kmpp_venc_init_cfg_set_max_width(cfg, width);
     kmpp_venc_init_cfg_set_max_height(cfg, height);
+    kmpp_venc_init_cfg_set_ntfy_mode(cfg, 0);
 
     mpp_enc_cfg_api_init();
     kmpp_err_f("mpp_enc_cfg_api_init ok");

@@ -30,6 +30,8 @@ static rk_s32 kmpp_venc_init_cfg_impl_init(void *entry, KmppObj obj, osal_fs_dev
         impl->chan_dup = 0;
         impl->tmvp_enable = 0;
         impl->only_smartp = 0;
+        /* ntfy_mode set 1 default, notify info to rockit */
+        impl->ntfy_mode = 1;
     }
 
     return rk_ok;

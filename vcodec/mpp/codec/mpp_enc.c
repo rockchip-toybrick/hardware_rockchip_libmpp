@@ -75,6 +75,7 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 	enc_hal_cfg.only_smartp = cfg->only_smartp;
 	p->ring_buf_size = cfg->buf_size;
 	p->max_strm_cnt = cfg->max_strm_cnt;
+	p->ntfy_mode = cfg->ntfy_mode;
 	ctrl_cfg.coding = coding;
 	ctrl_cfg.type = VPU_CLIENT_BUTT;
 	ctrl_cfg.cfg = &p->cfg;
@@ -145,7 +146,8 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 	p->shared_buf = cfg->shared_buf;
 	p->chan_id = cfg->chan_id;
 	p->ref_buf_shared = cfg->ref_buf_shared;
-	kmpp_venc_ntfy_get(&p->venc_notify);
+	if (p->ntfy_mode)
+		kmpp_venc_ntfy_get(&p->venc_notify);
 
 	*enc = p;
 
@@ -173,15 +175,17 @@ void mpp_enc_deinit_frame(MppEnc ctx)
 	}
 
 	if (enc->frame) {
-		ntfy = enc->venc_notify;
-		ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+		ntfy = mpp_enc_get_notify(enc);
+		if (ntfy) {
+			ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
 
-		ntfy_impl->chan_id = enc->chan_id;
-		ntfy_impl->frame = enc->frame;
+			ntfy_impl->chan_id = enc->chan_id;
+			ntfy_impl->frame = enc->frame;
 
-		ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
-		ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
-		kmpp_venc_notify(ntfy);
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_TASK_DROP;
+			ntfy_impl->drop_type = KMPP_VENC_DROP_CFG_FAILED;
+			kmpp_venc_notify(ntfy);
+		}
 		kmpp_frame_put(enc->frame);
 		enc->frame = NULL;
 	}
@@ -413,13 +417,16 @@ MPP_RET mpp_enc_hw_start(MppEnc ctx, MppEnc jpeg_ctx)
 
 	if (MPP_OK == ret) {
 		if (enc->online) {
-			KmppVencNtfy ntfy = enc->venc_notify;
-			KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+			KmppVencNtfy ntfy = mpp_enc_get_notify(enc);
 
-			ntfy_impl->cmd = KMPP_NOTIFY_VENC_WRAP_TASK_READY;
-			ntfy_impl->chan_id = enc->chan_id;
-			ntfy_impl->frame = enc->frame;
-			kmpp_venc_notify(ntfy);
+			if (ntfy) {
+				KmppVencNtfyImpl* ntfy_impl = kmpp_obj_to_entry(ntfy);
+
+				ntfy_impl->cmd = KMPP_NOTIFY_VENC_WRAP_TASK_READY;
+				ntfy_impl->chan_id = enc->chan_id;
+				ntfy_impl->frame = enc->frame;
+				kmpp_venc_notify(ntfy);
+			}
 		}
 		atomic_set(&enc->hw_run, 1);
 	}
@@ -468,16 +475,19 @@ RK_S32 mpp_enc_run_task(MppEnc ctx, RK_S64 pts, RK_S64 dts)
 	}
 
 	{
-		KmppVencNtfy ntfy = enc->venc_notify;
-		KmppVencNtfyImpl* ntfy_impl = (KmppVencNtfyImpl*)kmpp_obj_to_entry(ntfy);
+		KmppVencNtfy ntfy = mpp_enc_get_notify(enc);
 
-		ntfy_impl->cmd = KMPP_NOTIFY_VENC_GET_WRAP_TASK_ID;
-		ntfy_impl->chan_id = enc->chan_id;
-		ntfy_impl->frame = enc->frame;
-		kmpp_venc_notify(ntfy);
+		if (ntfy) {
+			KmppVencNtfyImpl* ntfy_impl = kmpp_obj_to_entry(ntfy);
 
-		kmpp_venc_ntfy_get_pipe_id(ntfy, &info.pipe_id);
-		kmpp_venc_ntfy_get_frame_id(ntfy, &info.frame_id);
+			ntfy_impl->cmd = KMPP_NOTIFY_VENC_GET_WRAP_TASK_ID;
+			ntfy_impl->chan_id = enc->chan_id;
+			ntfy_impl->frame = enc->frame;
+			kmpp_venc_notify(ntfy);
+
+			kmpp_venc_ntfy_get_pipe_id(ntfy, &info.pipe_id);
+			kmpp_venc_ntfy_get_frame_id(ntfy, &info.frame_id);
+		}
 	}
 
 	info.width = MPP_ALIGN(enc->cfg.prep.width, align);
@@ -764,6 +774,9 @@ KmppVencNtfy mpp_enc_get_notify(MppEnc ctx)
 		mpp_err_f("found NULL input enc\n");
 		return NULL;
 	}
+
+	if (!enc->ntfy_mode)
+		return NULL;
 
 	return enc->venc_notify;
 }

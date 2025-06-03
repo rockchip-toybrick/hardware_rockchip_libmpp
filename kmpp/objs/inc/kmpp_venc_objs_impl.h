@@ -25,6 +25,7 @@ typedef struct KmppVencInitCfgImpl_t {
     rk_u32          chan_dup;
     rk_u32          tmvp_enable;
     rk_u32          only_smartp;
+    rk_u32          ntfy_mode;
 } KmppVencInitCfgImpl;
 
 typedef struct KmppVencNotifyImpl_t {

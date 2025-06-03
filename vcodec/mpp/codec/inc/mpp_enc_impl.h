@@ -130,6 +130,7 @@ typedef struct MppEncImpl_t {
 	RK_U32 chan_id;
 	RK_S32 last_scene_mode;
 	KmppVencNtfy venc_notify;
+	RK_U32 ntfy_mode;
 } MppEncImpl;
 
 enum enc_status {

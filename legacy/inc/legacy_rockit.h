@@ -31,6 +31,7 @@ struct vcodec_attr {
 	RK_U32      	chan_dup;
 	RK_U32      	tmvp_enable;
 	RK_U32      	only_smartp;
+	RK_U32      	ntfy_mode;
 };
 
 struct hal_shared_buf {

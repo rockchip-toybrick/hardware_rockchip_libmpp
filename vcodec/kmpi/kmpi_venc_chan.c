@@ -51,6 +51,7 @@ rk_s32 kmpp_venc_chan_init(KmppChanId *id, KmppVencInitCfg cfg)
     init_cfg.qpmap_en = cfg_impl->qpmap_en;
     init_cfg.only_smartp = cfg_impl->only_smartp;
     init_cfg.tmvp_enable = cfg_impl->tmvp_enable;
+    init_cfg.ntfy_mode = cfg_impl->ntfy_mode;
 
     ret = mpp_enc_init(&enc, &init_cfg);
     if (ret) {

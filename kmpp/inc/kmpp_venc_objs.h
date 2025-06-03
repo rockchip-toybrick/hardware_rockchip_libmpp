@@ -24,7 +24,8 @@
     ENTRY(prefix, u32, rk_u32,          qpmap_en,       ELEM_FLAG_NONE, qpmap_en) \
     ENTRY(prefix, u32, rk_u32,          chan_dup,       ELEM_FLAG_NONE, chan_dup) \
     ENTRY(prefix, u32, rk_u32,          tmvp_enable,    ELEM_FLAG_NONE, tmvp_enable) \
-    ENTRY(prefix, u32, rk_u32,          only_smartp,    ELEM_FLAG_NONE, only_smartp)
+    ENTRY(prefix, u32, rk_u32,          only_smartp,    ELEM_FLAG_NONE, only_smartp) \
+    ENTRY(prefix, u32, rk_u32,          ntfy_mode,      ELEM_FLAG_NONE, ntfy_mode)
 
 #define KMPP_OBJ_NAME           kmpp_venc_init_cfg
 #define KMPP_OBJ_INTF_TYPE      KmppVencInitCfg

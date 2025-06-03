@@ -157,6 +157,7 @@ typedef struct MppEncInitCfg_t {
 	RK_S32		chan_id;
 	RK_U32      	only_smartp;
 	RK_U32		tmvp_enable;
+	RK_U32		ntfy_mode;
 } MppEncInitCfg;
 
 #ifdef __cplusplus
