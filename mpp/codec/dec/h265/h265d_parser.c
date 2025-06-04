@@ -1064,6 +1064,13 @@ static RK_S32 hls_slice_header(HEVCContext *s)
                 return  MPP_ERR_STREAM;
             }
         }
+        if (sh->num_entry_point_offsets) {
+            RK_U32 offset_len_minus1 = 0;
+
+            READ_UE(gb, &offset_len_minus1);
+            for (i = 0; i < sh->num_entry_point_offsets; i++)
+                SKIP_BITS(gb, offset_len_minus1 + 1);
+        }
     }
     if (s->pps->slice_header_extension_present_flag) {
         //if slice_header_extension_present_flag is 1, we should cut the extension data.
