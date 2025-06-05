@@ -52,7 +52,6 @@ static rk_s32 kmpp_packet_impl_deinit(void *entry, const rk_u8 *caller)
 
         /* release buffer reference */
         if (buffer) {
-            mpp_buffer_put_uptr(impl->buf.buf);
             mpp_buffer_put(impl->buf.buf);
         }
 
@@ -60,7 +59,6 @@ static rk_s32 kmpp_packet_impl_deinit(void *entry, const rk_u8 *caller)
             kmpp_free(impl->data.kptr);
 
         if (impl->buf.ring_pool) {
-            mpp_buffer_put_uptr(impl->buf.buf);
             ring_buf_put_free(impl->buf.ring_pool, &impl->buf);
             impl->buf.ring_pool = NULL;
         }
