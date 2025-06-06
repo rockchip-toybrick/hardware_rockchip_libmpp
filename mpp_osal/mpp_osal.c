@@ -32,7 +32,11 @@ EXPORT_SYMBOL(mpp_device_init_wakeup);
 
 struct dma_iommu_mapping *mpp_arm_iommu_get_mapping(struct device *dev)
 {
+#ifdef CONFIG_ARM_DMA_USE_IOMMU
 	return to_dma_iommu_mapping(dev);
+#else
+	return NULL;
+#endif
 }
 EXPORT_SYMBOL(mpp_arm_iommu_get_mapping);
 
