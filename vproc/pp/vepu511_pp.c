@@ -513,8 +513,6 @@ rk_s32 vepu511_pp_proc(void *ctx, KmppFrame in, KmppFrame *out)
 
     /* setup input address registers */
     info->in_buf = mpp_buffer_get_dmabuf(impl->buffer);
-    info->md_buf = mpp_buffer_get_dmabuf(md);
-    info->od_buf = mpp_buffer_get_dmabuf(od);
 
     pp_set_src_addr(info, impl->fmt);
 
@@ -523,12 +521,14 @@ rk_s32 vepu511_pp_proc(void *ctx, KmppFrame in, KmppFrame *out)
 
         if (info->md_en) {
             iova = 0;
+            info->md_buf = mpp_buffer_get_dmabuf(md);
             kmpp_dmabuf_get_iova_by_device(info->md_buf, &iova, info->device);
             p->adr_md_vpp = iova;
         }
 
         if (info->od_en) {
             iova = 0;
+            info->od_buf = mpp_buffer_get_dmabuf(od);
             kmpp_dmabuf_get_iova_by_device(info->od_buf, &iova, info->device);
             p->adr_od_vpp = iova;
         }
