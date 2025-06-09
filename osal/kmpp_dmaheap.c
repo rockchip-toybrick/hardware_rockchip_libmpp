@@ -861,7 +861,7 @@ rk_s32 kmpp_dmabuf_import_ctx(KmppDmaBuf *buf, void *ctx, rk_u32 flag, const rk_
 
     *buf = NULL;
     lock_size = osal_spinlock_size();
-    impl = kmpp_calloc(sizeof(KmppDmaBufImpl) + lock_size);
+    impl = kmpp_calloc_atomic(sizeof(KmppDmaBufImpl) + lock_size);
     if (!impl) {
         kmpp_loge_f("failed to create KmppDmaBufImpl\n");
         return rk_nok;
