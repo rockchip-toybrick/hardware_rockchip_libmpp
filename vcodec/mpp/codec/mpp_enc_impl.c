@@ -1387,26 +1387,25 @@ MPP_RET mpp_enc_alloc_output_from_bufpool(MppEncImpl *enc)
 	return ret;
 }
 
-MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
+MPP_RET mpp_enc_ringbuf_pool_init(MppEncImpl *enc, RK_U32 size)
 {
 	MPP_RET ret = MPP_OK;
-	MppBuffer buffer = NULL;
-	MppEncPrepCfg *prep = &enc->cfg.prep;
-	RK_U32 width = MPP_ALIGN(prep->width, 16);
-	RK_U32 height = MPP_ALIGN(prep->height, 16);
-	RK_U32 size = (enc->coding == MPP_VIDEO_CodingMJPEG) ?
-		      (width * height) :
-		      (width * height / 2);
+
+	if (!enc->ring_pool)
+		enc->ring_pool = mpp_calloc(ring_buf_pool, 1);
+
+	if (!size)
+		return ret;
 
 	if (enc->ring_pool && !enc->ring_pool->init_done) {
-		if (!enc->ring_buf_size)
-			enc->ring_buf_size = size;
-		enc->ring_buf_size = MPP_MAX(enc->ring_buf_size, SZ_16K);
-		enc->ring_buf_size = MPP_ALIGN(enc->ring_buf_size, SZ_4K);
-		if (enc->shared_buf && enc->shared_buf->stream_buf)
+		MppBuffer buffer = NULL;
+
+		size = MPP_MAX(size, SZ_16K);
+		size = MPP_ALIGN(size, SZ_4K);
+		if (enc->shared_buf && enc->shared_buf->stream_buf) {
 			buffer = enc->shared_buf->stream_buf;
-		else {
-			mpp_ring_buffer_get(NULL, &buffer, enc->ring_buf_size);
+		} else {
+			mpp_ring_buffer_get(NULL, &buffer, size);
 			if (!buffer) {
 				mpp_err("ring buf get mpp_buf fail \n");
 				return MPP_NOK;
@@ -1414,10 +1413,32 @@ MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
 		}
 		ret = ring_buf_init(enc->ring_pool, buffer, enc->max_strm_cnt);
 		if (ret) {
-			mpp_err_f("ring buffer %d init failed\n", enc->ring_buf_size);
+			mpp_err_f("ring buffer %d init failed\n", size);
 			mpp_buffer_put(buffer);
-			return MPP_NOK;
+			return ret;
 		}
+		enc->ring_buf_size = size;
+	}
+
+	return ret;
+}
+
+MPP_RET mpp_enc_alloc_output_from_ringbuf(MppEncImpl *enc)
+{
+	MPP_RET ret = MPP_NOK;
+
+	if (enc->ring_pool && !enc->ring_pool->init_done) {
+		MppEncPrepCfg *prep = &enc->cfg.prep;
+		RK_U32 width = MPP_ALIGN(prep->width, 16);
+		RK_U32 height = MPP_ALIGN(prep->height, 16);
+		RK_U32 size = (enc->coding == MPP_VIDEO_CodingMJPEG) ?
+			      (width * height) :
+			      (width * height / 2);
+
+		if (!enc->ring_buf_size)
+			enc->ring_buf_size = size;
+
+		ret = mpp_enc_ringbuf_pool_init(enc, enc->ring_buf_size);
 	}
 	ret = mpp_enc_alloc_packet_with_ring_buf(&enc->packet, enc->ring_pool, 128, 0);
 	if (ret) {

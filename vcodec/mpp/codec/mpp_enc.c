@@ -140,7 +140,7 @@ MPP_RET mpp_enc_init(MppEnc * enc, MppEncInitCfg * cfg)
 	atomic_set(&p->hw_run, 0);
 	p->rb_userdata.free_cnt = MAX_USRDATA_CNT;
 
-	p->ring_pool = mpp_calloc(ring_buf_pool, 1);
+	mpp_enc_ringbuf_pool_init(p, p->ring_buf_size);
 	p->online = cfg->online;
 	p->shared_buf = cfg->shared_buf;
 	p->chan_id = cfg->chan_id;

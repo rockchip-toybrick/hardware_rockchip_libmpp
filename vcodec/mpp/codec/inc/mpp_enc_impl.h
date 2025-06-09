@@ -150,6 +150,7 @@ enum enc_status {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 MPP_RET mpp_enc_impl_reg_cfg(MppEnc ctx, KmppFrame frame);
 MPP_RET mpp_enc_proc_cfg(MppEncImpl * enc, MpiCmd cmd, void *param);
 MPP_RET mpp_enc_impl_alloc_task(MppEncImpl * enc);
@@ -164,7 +165,10 @@ void mpp_enc_impl_pkt_full_inc(MppEnc ctx);
 MPP_RET mpp_enc_impl_force_pskip(MppEnc ctx, KmppFrame frame, KmppPacket *packet);
 extern int mpp_show_session_info(struct seq_file *seq, u32 chan_id);
 MPP_RET mpp_enc_packet_ring_buf_put_used(KmppPacket packet);
+MPP_RET mpp_enc_ringbuf_pool_init(MppEncImpl *enc, RK_U32 size);
+
 #ifdef __cplusplus
 }
 #endif
+
 #endif /*__MPP_ENC_IMPL_H__*/
