@@ -1746,24 +1746,26 @@ void rc_model_v2_proc_show(void *seq_file, void *ctx, RK_S32 chl_id)
 		target_bps = usr_cfg->bps_target;
 	seq_puts(seq,
 		 "\n---------RC base param 1--------------------------------------------------------------------------\n");
-	seq_printf(seq, "%7s|%7s|%8s|%6s|%6s|%8s|%10s|%5s|%5s \n",
+	seq_printf(seq, "%7s|%7s|%8s|%6s|%6s|%8s|%10s|%13s|%13s|%5s|%5s \n",
 		   "ChnId", "Gop", "StatTm",
 		   "ViFr",
 		   "TrgFr",
-		   "RcMode", "Br(kbps)", "IQp", "PQp");
+		   "RcMode", "Br(kbps)", "MinBr(kbps)", "MaxBr(kbps)", "IQp", "PQp");
 
 	if (usr_cfg->mode == RC_FIXQP) {
-		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%10s|%5u|%5u \n",
+		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%10s|%13s|%13s|%5u|%5u \n",
 			   chl_id, usr_cfg->igop, usr_cfg->stats_time,
 			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denom,
 			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denom,
-			   strof_rc_mode((MppEncRcMode)usr_cfg->mode), "N/A", usr_cfg->init_quality, usr_cfg->init_quality);
+			   strof_rc_mode((MppEncRcMode)usr_cfg->mode), "N/A", "N/A", "N/A",
+			   usr_cfg->init_quality, usr_cfg->init_quality);
 	} else {
-		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%10u|%5u|%5u \n",
+		seq_printf(seq, "%7d|%7u|%8u|%6u|%6u|%8s|%10u|%13u|%13u|%5u|%5u \n",
 			   chl_id, usr_cfg->igop, usr_cfg->stats_time,
 			   usr_cfg->fps.fps_in_num / usr_cfg->fps.fps_in_denom,
 			   usr_cfg->fps.fps_out_num / usr_cfg->fps.fps_out_denom,
 			   strof_rc_mode((MppEncRcMode)usr_cfg->mode), target_bps / 1000,
+			   usr_cfg->bps_min / 1000, usr_cfg->bps_max / 1000,
 			   usr_cfg->init_quality, usr_cfg->init_quality);
 	}
 
