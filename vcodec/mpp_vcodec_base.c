@@ -387,7 +387,7 @@ int mpp_vcodec_chan_entry_init(struct mpp_chan *entry, MppCtxType type,
 	init_waitqueue_head(&entry->wait);
 	init_waitqueue_head(&entry->stop_wait);
 	INIT_KFIFO(entry->frame_fifo);
-	ret = kfifo_alloc(&entry->packet_fifo, INIT_PACKET_STORAGE_NUM, GFP_KERNEL);
+	ret = kfifo_alloc(&entry->packet_fifo, INIT_PACKET_STORAGE_NUM, GFP_ATOMIC);
 	if (ret)
 		mpp_err("kfifo_alloc failed, ret %d", ret);
 	spin_lock_init(&entry->packet_fifo_lock);
