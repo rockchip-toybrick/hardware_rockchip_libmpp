@@ -583,7 +583,6 @@ int mpp_chnl_run_task(struct mpp_session *session, void *param)
 	struct mpp_task_info *info = (struct mpp_task_info *)param;
 	unsigned long flags, flags1;
 
-	disable_irq(mpp->irq);
 	spin_lock_irqsave(&queue->dev_lock, flags);
 	mpp_debug_func(DEBUG_TASK_INFO, "chan_id %d ++\n", session->chn_id);
 
@@ -663,7 +662,6 @@ again:
 done:
 	mpp_debug_func(DEBUG_TASK_INFO, "chan_id %d --\n", session->chn_id);
 	spin_unlock_irqrestore(&queue->dev_lock, flags);
-	enable_irq(mpp->irq);
 	mpp_taskqueue_trigger_work(mpp);
 
 	return ret;
