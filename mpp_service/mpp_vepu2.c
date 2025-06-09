@@ -817,7 +817,7 @@ static int vepu_get_freq(struct mpp_dev *mpp,
 	task_cnt = 1;
 	workload = task->pixels;
 	/* calc workload in pending list */
-	mutex_lock(&mpp->queue->pending_lock);
+	spin_lock(&mpp->queue->pending_lock);
 	list_for_each_entry_safe(loop, n,
 				 &mpp->queue->pending_list,
 				 queue_link) {
@@ -826,7 +826,7 @@ static int vepu_get_freq(struct mpp_dev *mpp,
 		task_cnt++;
 		workload += loop_task->pixels;
 	}
-	mutex_unlock(&mpp->queue->pending_lock);
+	spin_unlock(&mpp->queue->pending_lock);
 
 	if (workload > enc->default_max_load)
 		task->clk_mode = CLK_MODE_ADVANCED;

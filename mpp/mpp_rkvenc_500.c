@@ -1780,9 +1780,7 @@ static void mpp_rkvenc_worker(struct kthread_work *work_s)
 	if (atomic_read(&mpp->suspend_en))
 		goto done;
 	down(&mpp->work_sem);
-	mutex_lock(&queue->pending_lock);
-	list_move_tail(&mpp_task->queue_link, &queue->running_list);
-	mutex_unlock(&queue->pending_lock);
+	mpp_taskqueue_pending_to_run(queue, mpp_task);
 
 	mpp_time_record(mpp_task);
 	set_bit(TASK_STATE_START, &mpp_task->state);

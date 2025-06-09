@@ -1376,9 +1376,9 @@ int rkvdec2_link_process_task(struct mpp_session *session,
 	spin_unlock_irqrestore(&session->pending_lock, flags);
 
 	kref_get(&task->ref);
-	mutex_lock(&mpp->queue->pending_lock);
+	spin_lock(&mpp->queue->pending_lock);
 	list_add_tail(&task->queue_link, &mpp->queue->pending_list);
-	mutex_unlock(&mpp->queue->pending_lock);
+	spin_unlock(&mpp->queue->pending_lock);
 	atomic_inc(&link_dec->task_pending);
 
 	/* push current task to queue */
@@ -1441,22 +1441,19 @@ void rkvdec2_link_worker(struct kthread_work *work_s)
 
 again:
 	/* get pending task to process */
-	mutex_lock(&queue->pending_lock);
-	task = list_first_entry_or_null(&queue->pending_list, struct mpp_task,
-					queue_link);
-	mutex_unlock(&queue->pending_lock);
+	task = mpp_taskqueue_get_pending_task(queue);
 	if (!task)
 		goto done;
 
 	/* check abort task */
 	if (atomic_read(&task->abort_request)) {
-		mutex_lock(&queue->pending_lock);
+		spin_lock(&queue->pending_lock);
 		list_del_init(&task->queue_link);
 
 		set_bit(TASK_STATE_ABORT_READY, &task->state);
 		set_bit(TASK_STATE_PROC_DONE, &task->state);
 
-		mutex_unlock(&queue->pending_lock);
+		spin_unlock(&queue->pending_lock);
 		wake_up(&task->wait);
 		kref_put(&task->ref, rkvdec2_link_free_task);
 		goto again;
@@ -1469,9 +1466,9 @@ again:
 done:
 
 	/* if no task in pending and running list, power off device */
-	mutex_lock(&queue->pending_lock);
+	spin_lock(&queue->pending_lock);
 	all_done = list_empty(&queue->pending_list) && list_empty(&queue->running_list);
-	mutex_unlock(&queue->pending_lock);
+	spin_unlock(&queue->pending_lock);
 
 	if (all_done)
 		rkvdec2_link_power_off(mpp);
@@ -2126,21 +2123,18 @@ void rkvdec2_soft_ccu_worker(struct kthread_work *work_s)
 		if (atomic_read(&queue->reset_request))
 			break;
 		/* get one task form pending list */
-		mutex_lock(&queue->pending_lock);
-		mpp_task = list_first_entry_or_null(&queue->pending_list,
-						struct mpp_task, queue_link);
-		mutex_unlock(&queue->pending_lock);
+		mpp_task = mpp_taskqueue_get_pending_task(queue);
 		if (!mpp_task)
 			break;
 
 		if (test_bit(TASK_STATE_ABORT, &mpp_task->state)) {
-			mutex_lock(&queue->pending_lock);
+			spin_lock(&queue->pending_lock);
 			list_del_init(&mpp_task->queue_link);
 
 			set_bit(TASK_STATE_ABORT_READY, &mpp_task->state);
 			set_bit(TASK_STATE_PROC_DONE, &mpp_task->state);
 
-			mutex_unlock(&queue->pending_lock);
+			spin_unlock(&queue->pending_lock);
 			wake_up(&mpp_task->wait);
 			kref_put(&mpp_task->ref, rkvdec2_link_free_task);
 			continue;
@@ -2677,6 +2671,7 @@ void rkvdec2_hard_ccu_worker(struct kthread_work *work_s)
 	struct mpp_dev *mpp = container_of(work_s, struct mpp_dev, work);
 	struct mpp_taskqueue *queue = mpp->queue;
 	struct rkvdec2_dev *dec = to_rkvdec2_dev(mpp);
+	u32 all_done;
 
 	mpp_debug_enter();
 
@@ -2710,17 +2705,14 @@ void rkvdec2_hard_ccu_worker(struct kthread_work *work_s)
 			break;
 
 		/* get one task form pending list */
-		mutex_lock(&queue->pending_lock);
-		mpp_task = list_first_entry_or_null(&queue->pending_list,
-						struct mpp_task, queue_link);
-		mutex_unlock(&queue->pending_lock);
+		mpp_task = mpp_taskqueue_get_pending_task(queue);
 
 		if (!mpp_task)
 			break;
 		if (test_bit(TASK_STATE_ABORT, &mpp_task->state)) {
-			mutex_lock(&queue->pending_lock);
+			spin_lock(&queue->pending_lock);
 			list_del_init(&mpp_task->queue_link);
-			mutex_unlock(&queue->pending_lock);
+			spin_unlock(&queue->pending_lock);
 			kref_put(&mpp_task->ref, mpp_free_task);
 			continue;
 		}
@@ -2737,11 +2729,11 @@ void rkvdec2_hard_ccu_worker(struct kthread_work *work_s)
 		mpp_taskqueue_pending_to_run(queue, mpp_task);
 	}
 	/* 4. poweroff when running and pending list are empty */
-	mutex_lock(&queue->pending_lock);
-	if (list_empty(&queue->running_list) &&
-	    list_empty(&queue->pending_list))
+	spin_lock(&queue->pending_lock);
+	all_done = list_empty(&queue->running_list) && list_empty(&queue->pending_list);
+	spin_unlock(&queue->pending_lock);
+	if (all_done)
 		rkvdec2_ccu_power_off(queue, dec->ccu);
-	mutex_unlock(&queue->pending_lock);
 
 	/* 5. check session detach out of queue */
 	mpp_session_cleanup_detach(queue, work_s);

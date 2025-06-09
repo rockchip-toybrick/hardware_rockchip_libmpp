@@ -161,10 +161,7 @@ void mpp_session_clear_online_task(struct mpp_dev *mpp, struct mpp_session *sess
 		if (!mpp_task)
 			break;
 		atomic_inc(&mpp_task->abort_request);
-		mutex_lock(&queue->pending_lock);
-		list_del_init(&mpp_task->queue_link);
-		mutex_unlock(&queue->pending_lock);
-		kref_put(&mpp_task->ref, mpp_free_task);
+		mpp_taskqueue_pop_pending(queue, mpp_task);
 		mpp_session_pop_pending(session, mpp_task);
 	}
 }
@@ -556,10 +553,10 @@ int mpp_chnl_is_running(struct mpp_session *session)
 	struct mpp_taskqueue *queue = mpp->queue;
 	struct mpp_task *task, *n;
 	int running = 0;
-	unsigned long flags;
+	unsigned long flags, flags1;
 
 	spin_lock_irqsave(&queue->dev_lock, flags);
-	mutex_lock(&queue->pending_lock);
+	spin_lock_irqsave(&session->pending_lock, flags1);
 
 	list_for_each_entry_safe(task, n, &session->pending_list, pending_link) {
 		if (test_bit(TASK_STATE_RUNNING, &task->state)) {
@@ -568,7 +565,7 @@ int mpp_chnl_is_running(struct mpp_session *session)
 		}
 	}
 
-	mutex_unlock(&queue->pending_lock);
+	spin_unlock_irqrestore(&session->pending_lock, flags1);
 	spin_unlock_irqrestore(&queue->dev_lock, flags);
 
 	return running;
@@ -1925,9 +1922,9 @@ static int mpp_chnl_add_req(struct mpp_session *session,  void *reqs)
 
 				/* online task trigger by user */
 				if (!session->online) {
-					mutex_lock(&queue->pending_lock);
+					spin_lock(&queue->pending_lock);
 					list_add_tail(&task->queue_link, &queue->pending_list);
-					mutex_unlock(&queue->pending_lock);
+					spin_unlock(&queue->pending_lock);
 					mpp_taskqueue_trigger_work(mpp);
 				}
 			}

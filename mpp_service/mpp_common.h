@@ -554,7 +554,7 @@ struct mpp_taskqueue {
 
 	atomic_t task_id;
 	/* lock for pending list */
-	struct mutex pending_lock;
+	spinlock_t pending_lock;
 	struct list_head pending_list;
 	/* lock for running list */
 	spinlock_t running_lock;
@@ -742,6 +742,7 @@ void mpp_free_task(struct kref *ref);
 void mpp_taskqueue_trigger_work(struct mpp_dev *mpp);
 struct mpp_task *mpp_taskqueue_get_pending_task(struct mpp_taskqueue *queue);
 struct mpp_task *mpp_taskqueue_get_running_task(struct mpp_taskqueue *queue);
+int mpp_taskqueue_pop_pending(struct mpp_taskqueue *queue, struct mpp_task *task);
 int mpp_taskqueue_pop_running(struct mpp_taskqueue *queue, struct mpp_task *task);
 struct mpp_task *mpp_session_get_pending_task(struct mpp_session *session);
 int mpp_session_pop_pending(struct mpp_session *session, struct mpp_task *task);

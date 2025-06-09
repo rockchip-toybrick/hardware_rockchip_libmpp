@@ -89,31 +89,28 @@ const char *enc_info_item_name[ENC_INFO_BUTT] = {
 static void mpp_attach_workqueue(struct mpp_dev *mpp,
 				 struct mpp_taskqueue *queue);
 
-static int
-mpp_taskqueue_pop_pending(struct mpp_taskqueue *queue,
-			  struct mpp_task *task)
+int mpp_taskqueue_pop_pending(struct mpp_taskqueue *queue, struct mpp_task *task)
 {
 	if (!task->session || !task->session->mpp)
 		return -EINVAL;
 
-	mutex_lock(&queue->pending_lock);
+	spin_lock(&queue->pending_lock);
 	list_del_init(&task->queue_link);
-	mutex_unlock(&queue->pending_lock);
+	spin_unlock(&queue->pending_lock);
 	kref_put(&task->ref, mpp_free_task);
 
 	return 0;
 }
 
-struct mpp_task *
-mpp_taskqueue_get_pending_task(struct mpp_taskqueue *queue)
+struct mpp_task *mpp_taskqueue_get_pending_task(struct mpp_taskqueue *queue)
 {
 	struct mpp_task *task = NULL;
 
-	mutex_lock(&queue->pending_lock);
+	spin_lock(&queue->pending_lock);
 	task = list_first_entry_or_null(&queue->pending_list,
 					struct mpp_task,
 					queue_link);
-	mutex_unlock(&queue->pending_lock);
+	spin_unlock(&queue->pending_lock);
 
 	return task;
 }
@@ -135,12 +132,12 @@ int mpp_taskqueue_pending_to_run(struct mpp_taskqueue *queue, struct mpp_task *t
 {
 	unsigned long flags;
 
-	mutex_lock(&queue->pending_lock);
+	spin_lock(&queue->pending_lock);
 	spin_lock_irqsave(&queue->running_lock, flags);
 	list_move_tail(&task->queue_link, &queue->running_list);
 	spin_unlock_irqrestore(&queue->running_lock, flags);
+	spin_unlock(&queue->pending_lock);
 
-	mutex_unlock(&queue->pending_lock);
 
 	return 0;
 }
@@ -1110,7 +1107,7 @@ struct mpp_taskqueue *mpp_taskqueue_init(struct device *dev)
 		return NULL;
 
 	mutex_init(&queue->session_lock);
-	mutex_init(&queue->pending_lock);
+	spin_lock_init(&queue->pending_lock);
 	spin_lock_init(&queue->running_lock);
 	mutex_init(&queue->mmu_lock);
 	spin_lock_init(&queue->dev_lock);
@@ -1680,12 +1677,12 @@ static void mpp_msgs_trigger(struct list_head *msgs_list)
 
 		if (queue_prev != queue) {
 			if (queue_prev && mpp_prev) {
-				mutex_unlock(&queue_prev->pending_lock);
+				spin_unlock(&queue_prev->pending_lock);
 				mpp_taskqueue_trigger_work(mpp_prev);
 			}
 
 			if (queue)
-				mutex_lock(&queue->pending_lock);
+				spin_lock(&queue->pending_lock);
 
 			mpp_prev = mpp;
 			queue_prev = queue;
@@ -1699,7 +1696,7 @@ static void mpp_msgs_trigger(struct list_head *msgs_list)
 	}
 
 	if (mpp_prev && queue_prev) {
-		mutex_unlock(&queue_prev->pending_lock);
+		spin_unlock(&queue_prev->pending_lock);
 		mpp_taskqueue_trigger_work(mpp_prev);
 	}
 }
