@@ -309,7 +309,7 @@ static MPP_RET mpp_resize_packet_fifo(struct mpp_chan *chan_entry)
 	old_size = kfifo_size(&chan_entry->packet_fifo);
 	new_size = roundup_pow_of_two(old_size * 2);
 
-	ret = kfifo_alloc(&new_packet_fifo, new_size, GFP_KERNEL);
+	ret = kfifo_alloc(&new_packet_fifo, new_size, GFP_ATOMIC);
 	if (ret)
 		mpp_err("resize packet fifo failed.\n");
 
