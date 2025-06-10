@@ -2175,6 +2175,8 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 	static RK_U8 thre_madp_mov_dep0[H265E_SMEAR_STR_NUM] = {16, 16, 48, 48, 16, 16, 48, 48};
 	static RK_U8 thre_madp_mov_dep1[H265E_SMEAR_STR_NUM] = {18, 18, 50, 50, 18, 18, 50, 50};
 	static RK_U8 thre_madp_mov_dep2[H265E_SMEAR_STR_NUM] = {20, 20, 52, 52, 20, 20, 52, 52};
+	static RK_U8 thre_madp_stc_cover0[H265E_SMEAR_STR_NUM] = { 20, 22, 22, 22, 20, 22, 22, 30 };
+	static RK_U8 thre_madp_stc_cover1[H265E_SMEAR_STR_NUM] = { 20, 22, 22, 22, 20, 22, 22, 30 };
 
 	static RK_S8 flag_cover_wgt[3] = { 1, 0, -3 };
 	static RK_S8 flag_bndry_wgt[3] = { 0, 0, 0 };
@@ -2243,8 +2245,8 @@ static void vepu511_h265_set_smear_regs(H265eV511HalContext *ctx)
 	s->smear_min_bndry_gmv.madi_thre_dep0                               = 22;
 	s->smear_min_bndry_gmv.madi_thre_dep1                               = 18;
 
-	s->smear_madp_cov_thd.thre_madp_stc_cover0    = 16;
-	s->smear_madp_cov_thd.thre_madp_stc_cover1    = 16;
+	s->smear_madp_cov_thd.thre_madp_stc_cover0    = thre_madp_stc_cover0[str];
+	s->smear_madp_cov_thd.thre_madp_stc_cover1    = thre_madp_stc_cover1[str];
 	s->smear_madp_cov_thd.thre_madp_mov_cover0    = 12;
 	s->smear_madp_cov_thd.thre_madp_mov_cover1    = 12;
 	s->smear_madp_cov_thd.smear_qp_strength       = qp_strength[str] +
