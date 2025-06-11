@@ -21,6 +21,7 @@
 
 #include "kmpp_obj.h"
 #include "kmpp_packet_impl.h"
+#include "kmpp_atomic.h"
 
 RK_U32 ring_buf_debug = 0;
 #define DEFALUT_STRM_CNT_IN_POOL 4
@@ -50,6 +51,18 @@ MPP_RET ring_buf_init(ring_buf_pool *ctx, MppBuffer buf, RK_U32 max_strm_cnt)
 		return MPP_NOK;
 
 	ctx->init_done = 1;
+	KMPP_ADD_FETCH(&ctx->ref, 1);
+
+	return MPP_OK;
+}
+
+MPP_RET ring_buf_deinit(ring_buf_pool *ctx)
+{
+	if (!ctx || !ctx->init_done)
+		return MPP_NOK;
+
+	if (!KMPP_SUB_FETCH(&ctx->ref, 1))
+		mpp_free(ctx);
 
 	return MPP_OK;
 }
@@ -106,6 +119,7 @@ static MPP_RET ring_buf_put_use(ring_buf_pool *ctx, ring_buf *buf)
 
 	ring_buf_dbg(" pool %p use update ctx->r_pos %d ctx->w_pos %d ctx->use_len %d\n", ctx,
 		     ctx->r_pos, ctx->w_pos, ctx->use_len);
+	KMPP_ADD_FETCH(&ctx->ref, 1);
 
 	return MPP_OK;
 }
@@ -115,7 +129,7 @@ MPP_RET ring_buf_put_free(ring_buf_pool *ctx, ring_buf *buf)
 	RK_U32 w_pos = 0, r_pos = 0;
 	RK_U32 start_pos = 0, end_pos = 0;
 
-	if (!ctx || !buf || (ctx->buf != buf->buf) || !buf->use_len)
+	if (!ctx || !buf || !buf->use_len)
 		return MPP_NOK;
 	w_pos = ctx->w_pos;
 	r_pos = ctx->r_pos;
@@ -145,6 +159,9 @@ MPP_RET ring_buf_put_free(ring_buf_pool *ctx, ring_buf *buf)
 
 	ring_buf_dbg(" pool %p free update ctx->r_pos %d ctx->w_pos %d ctx->use_len %d \n", ctx,
 		     ctx->r_pos, ctx->w_pos, ctx->use_len);
+
+	if (!KMPP_SUB_FETCH(&ctx->ref, 1))
+		mpp_free(ctx);
 
 	return MPP_OK;
 }

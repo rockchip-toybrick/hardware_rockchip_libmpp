@@ -239,7 +239,8 @@ MPP_RET mpp_enc_deinit(MppEnc ctx)
 			if (enc->ring_pool->buf)
 				mpp_buffer_put(enc->ring_pool->buf);
 		}
-		MPP_FREE(enc->ring_pool);
+		ring_buf_deinit(enc->ring_pool);
+		enc->ring_pool = NULL;
 	}
 	if (enc->venc_notify) {
 		kmpp_venc_ntfy_put(enc->venc_notify);
