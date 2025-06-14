@@ -97,6 +97,7 @@ endif
 ifeq ($(RK_ENABLE_FASTBOOT), y)
 obj-y += ${KMPP_SRC}.o
 lib-m += $(${KMPP_SRC}-objs:%.o=%.s)
+lib-m += $(${KMPP_SRC}-y:%.o=%.s)
 else
 obj-m += ${KMPP_SRC}.o
 endif
