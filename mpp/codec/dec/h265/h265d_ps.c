@@ -1042,7 +1042,7 @@ int mpp_hevc_decode_nal_vps(HEVCContext *s)
     BitReadCtx_t *gb = &s->HEVClc->gb;
     RK_U32 vps_id = 0;
     HEVCVPS *vps = NULL;
-    RK_U8 *vps_buf = mpp_mem_pool_get(s->vps_pool);
+    RK_U8 *vps_buf = mpp_mem_pool_get_f(s->vps_pool);
     RK_S32 value = 0;
 
     if (!vps_buf)
@@ -1158,10 +1158,10 @@ int mpp_hevc_decode_nal_vps(HEVCContext *s)
 
     if (s->vps_list[vps_id] &&
         !memcmp(s->vps_list[vps_id], vps_buf, sizeof(HEVCVPS))) {
-        mpp_mem_pool_put(s->vps_pool, vps_buf);
+        mpp_mem_pool_put_f(s->vps_pool, vps_buf);
     } else {
         if (s->vps_list[vps_id] != NULL) {
-            mpp_mem_pool_put(s->vps_pool, s->vps_list[vps_id]);
+            mpp_mem_pool_put_f(s->vps_pool, s->vps_list[vps_id]);
         }
         s->vps_list[vps_id] = vps_buf;
         s->ps_need_upate = 1;
@@ -1170,7 +1170,7 @@ int mpp_hevc_decode_nal_vps(HEVCContext *s)
     return 0;
 __BITREAD_ERR:
 err:
-    mpp_mem_pool_put(s->vps_pool, vps_buf);
+    mpp_mem_pool_put_f(s->vps_pool, vps_buf);
     return  MPP_ERR_STREAM;
 }
 
@@ -1421,7 +1421,7 @@ RK_S32 mpp_hevc_decode_nal_sps(HEVCContext *s)
     RK_S32 value = 0;
 
     HEVCSPS *sps;
-    RK_U8 *sps_buf = mpp_mem_pool_get(s->sps_pool);
+    RK_U8 *sps_buf = mpp_mem_pool_get_f(s->sps_pool);
 
     if (!sps_buf)
         return MPP_ERR_NOMEM;
@@ -1886,7 +1886,7 @@ RK_S32 mpp_hevc_decode_nal_sps(HEVCContext *s)
      */
     if (s->sps_list[sps_id] &&
         !memcmp(s->sps_list[sps_id], sps_buf, sizeof(HEVCSPS))) {
-        mpp_mem_pool_put(s->sps_pool, sps_buf);
+        mpp_mem_pool_put_f(s->sps_pool, sps_buf);
     } else {
         for (i = 0; (RK_U32)i < MPP_ARRAY_ELEMS(s->pps_list); i++) {
             if (s->pps_list[i] && ((HEVCPPS*)s->pps_list[i])->sps_id == sps_id) {
@@ -1895,7 +1895,7 @@ RK_S32 mpp_hevc_decode_nal_sps(HEVCContext *s)
             }
         }
         if (s->sps_list[sps_id] != NULL)
-            mpp_mem_pool_put(s->sps_pool, s->sps_list[sps_id]);
+            mpp_mem_pool_put_f(s->sps_pool, s->sps_list[sps_id]);
         s->sps_list[sps_id] = sps_buf;
         s->sps_need_upate = 1;
     }
@@ -1907,7 +1907,7 @@ RK_S32 mpp_hevc_decode_nal_sps(HEVCContext *s)
 __BITREAD_ERR:
     ret = MPP_ERR_STREAM;
 err:
-    mpp_mem_pool_put(s->sps_pool, sps_buf);
+    mpp_mem_pool_put_f(s->sps_pool, sps_buf);
     return ret;
 }
 

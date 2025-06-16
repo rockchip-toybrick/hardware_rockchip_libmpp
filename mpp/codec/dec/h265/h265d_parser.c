@@ -2080,11 +2080,11 @@ MPP_RET h265d_deinit(void *ctx)
 
     for (i = 0; i < MAX_VPS_COUNT; i++) {
         if (s->vps_list[i])
-            mpp_mem_pool_put(s->vps_pool, s->vps_list[i]);
+            mpp_mem_pool_put_f(s->vps_pool, s->vps_list[i]);
     }
     for (i = 0; i < MAX_SPS_COUNT; i++) {
         if (s->sps_list[i])
-            mpp_mem_pool_put(s->sps_pool, s->sps_list[i]);
+            mpp_mem_pool_put_f(s->sps_pool, s->sps_list[i]);
     }
     for (i = 0; i < MAX_PPS_COUNT; i++)
         mpp_hevc_pps_free(s->pps_list[i]);
@@ -2117,9 +2117,9 @@ MPP_RET h265d_deinit(void *ctx)
     }
 
     if (s->vps_pool)
-        mpp_mem_pool_deinit(s->vps_pool);
+        mpp_mem_pool_deinit_f(s->vps_pool);
     if (s->sps_pool)
-        mpp_mem_pool_deinit(s->sps_pool);
+        mpp_mem_pool_deinit_f(s->sps_pool);
 
     MPP_FREE((s->hdr_dynamic_meta));
 
@@ -2251,8 +2251,8 @@ MPP_RET h265d_init(void *ctx, ParserCfg *parser_cfg)
 
     s->pre_pps_id = -1;
 
-    s->vps_pool = mpp_mem_pool_init(sizeof(HEVCVPS));
-    s->sps_pool = mpp_mem_pool_init(sizeof(HEVCSPS));
+    s->vps_pool = mpp_mem_pool_init_f("h264d_vps", sizeof(HEVCVPS));
+    s->sps_pool = mpp_mem_pool_init_f("h265d_sps", sizeof(HEVCSPS));
 
     mpp_slots_set_prop(s->slots, SLOTS_WIDTH_ALIGN, rkv_ctu_64_align);
 
