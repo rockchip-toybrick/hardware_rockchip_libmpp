@@ -1990,6 +1990,7 @@ MPP_RET h265d_prepare(void *ctx, MppPacket pkt, HalDecTask *task)
             s->checksum_buf_size = split_size;
             h265d_dbg(H265D_DBG_TIME, "split frame get pts %lld", sc->pts);
             s->pts = sc->pts;
+            s->dts = sc->dts;
             s->eos = (s->eos && (mpp_packet_get_length(pkt) < 4)) ? 1 : 0;
         } else {
             return MPP_FAIL_SPLIT_FRAME;
@@ -1997,6 +1998,7 @@ MPP_RET h265d_prepare(void *ctx, MppPacket pkt, HalDecTask *task)
     } else {
         pos = buf + length;
         s->pts = pts;
+        s->dts = dts;
         mpp_packet_set_pos(pkt, pos);
         if (s->eos && !length) {
             task->valid = 0;
