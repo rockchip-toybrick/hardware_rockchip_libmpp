@@ -139,7 +139,6 @@ static void pp_set_src_addr(struct pp_chn_info_t *info)
 
     kmpp_dmabuf_get_iova_by_device(info->in_buf, &iova, info->device);
     adr_src0 = iova;
-    kmpp_dmabuf_put_iova_by_device(info->in_buf, iova, info->device);
 
     switch (fmt) {
     case MPP_FMT_YUV420P: {
@@ -848,6 +847,10 @@ rk_s32 vepu500_pp_proc(void *ctx, KmppFrame in, KmppFrame *out)
             vepu_pp_flycatkin_filter(info);
     }
 
+    if (p->adr_src0) {
+        kmpp_dmabuf_put_iova_by_device(info->in_buf, p->adr_src0, info->device);
+        p->adr_src0 = 0;
+    }
     if (p->adr_md_vpp) {
         kmpp_dmabuf_put_iova_by_device(info->md_buf, p->adr_md_vpp, info->device);
         p->adr_md_vpp = 0;
