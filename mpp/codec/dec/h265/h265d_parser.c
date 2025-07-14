@@ -902,9 +902,14 @@ static RK_S32 hls_slice_header(HEVCContext *s)
 
         if (s->sps->sao_enabled) {
             READ_ONEBIT(gb, &sh->slice_sample_adaptive_offset_flag[0]);
-            READ_ONEBIT(gb, &sh->slice_sample_adaptive_offset_flag[1]);
-            sh->slice_sample_adaptive_offset_flag[2] =
-                sh->slice_sample_adaptive_offset_flag[1];
+            if (s->sps->chroma_format_idc) {
+                READ_ONEBIT(gb, &sh->slice_sample_adaptive_offset_flag[1]);
+                sh->slice_sample_adaptive_offset_flag[2] =
+                    sh->slice_sample_adaptive_offset_flag[1];
+            } else {
+                sh->slice_sample_adaptive_offset_flag[1] = 0;
+                sh->slice_sample_adaptive_offset_flag[2] = 0;
+            }
         } else {
             sh->slice_sample_adaptive_offset_flag[0] = 0;
             sh->slice_sample_adaptive_offset_flag[1] = 0;
@@ -1276,12 +1281,25 @@ static RK_S32 hevc_frame_start(HEVCContext *s)
     if (ret < 0)
         goto fail;
 
+    if (!s->h265dctx->cfg->base.disable_error && s->recovery.valid_flag &&
+        s->recovery.first_frm_valid && s->recovery.first_frm_ref_missing &&
+        s->poc < s->recovery.recovery_pic_id && s->poc >= s->recovery.first_frm_id) {
+        mpp_frame_set_discard(s->frame, 1);
+        h265d_dbg(H265D_DBG_REF, "mark recovery frame discard, poc %d\n", mpp_frame_get_poc(s->frame));
+    }
+
     if (!s->h265dctx->cfg->base.disable_error && s->miss_ref_flag) {
-        if (!IS_IRAP(s) && (!s->recovery.valid_flag ||
-                            (s->recovery.valid_flag && s->recovery.first_frm_valid &&
-                             s->recovery.first_frm_id != s->poc))) {
-            mpp_frame_set_errinfo(s->frame, MPP_FRAME_ERR_UNKNOW);
-            s->ref->error_flag = 1;
+        if (!IS_IRAP(s)) {
+            if (s->recovery.valid_flag && s->recovery.first_frm_valid && s->recovery.first_frm_id == s->poc) {
+                s->recovery.first_frm_ref_missing = 1;
+                mpp_frame_set_discard(s->frame, 1);
+                h265d_dbg(H265D_DBG_REF, "recovery frame missing ref mark discard, poc %d\n",
+                          mpp_frame_get_poc(s->frame));
+            } else {
+                mpp_frame_set_errinfo(s->frame, MPP_FRAME_ERR_UNKNOW);
+                s->ref->error_flag = 1;
+                h265d_dbg(H265D_DBG_REF, "missing ref mark error, poc %d\n", mpp_frame_get_poc(s->frame));
+            }
         } else {
             /*when found current I frame have miss refer
               may be stream have error so first set current frame
@@ -2080,11 +2098,11 @@ MPP_RET h265d_deinit(void *ctx)
 
     for (i = 0; i < MAX_VPS_COUNT; i++) {
         if (s->vps_list[i])
-            mpp_mem_pool_put(s->vps_pool, s->vps_list[i]);
+            mpp_mem_pool_put_f(s->vps_pool, s->vps_list[i]);
     }
     for (i = 0; i < MAX_SPS_COUNT; i++) {
         if (s->sps_list[i])
-            mpp_mem_pool_put(s->sps_pool, s->sps_list[i]);
+            mpp_mem_pool_put_f(s->sps_pool, s->sps_list[i]);
     }
     for (i = 0; i < MAX_PPS_COUNT; i++)
         mpp_hevc_pps_free(s->pps_list[i]);
@@ -2117,9 +2135,9 @@ MPP_RET h265d_deinit(void *ctx)
     }
 
     if (s->vps_pool)
-        mpp_mem_pool_deinit(s->vps_pool);
+        mpp_mem_pool_deinit_f(s->vps_pool);
     if (s->sps_pool)
-        mpp_mem_pool_deinit(s->sps_pool);
+        mpp_mem_pool_deinit_f(s->sps_pool);
 
     MPP_FREE((s->hdr_dynamic_meta));
 
@@ -2251,8 +2269,8 @@ MPP_RET h265d_init(void *ctx, ParserCfg *parser_cfg)
 
     s->pre_pps_id = -1;
 
-    s->vps_pool = mpp_mem_pool_init(sizeof(HEVCVPS));
-    s->sps_pool = mpp_mem_pool_init(sizeof(HEVCSPS));
+    s->vps_pool = mpp_mem_pool_init_f("h264d_vps", sizeof(HEVCVPS));
+    s->sps_pool = mpp_mem_pool_init_f("h265d_sps", sizeof(HEVCSPS));
 
     mpp_slots_set_prop(s->slots, SLOTS_WIDTH_ALIGN, rkv_ctu_64_align);
 
@@ -2312,9 +2330,15 @@ MPP_RET h265d_callback(void *ctx, void *err_info)
         // s->miss_ref_flag = 1;
         mpp_buf_slot_get_prop(s->slots, task_dec->output, SLOT_FRAME_PTR, &frame);
         mpp_frame_set_errinfo(frame, MPP_FRAME_ERR_UNKNOW);
+        h265d_dbg(H265D_DBG_REF, "set decoded frame error, poc %d, slot %d\n",
+                  mpp_frame_get_poc(frame), task_dec->output);
+
         for (i = 0; i < MPP_ARRAY_ELEMS(s->DPB); i++) {
             if (s->DPB[i].slot_index == task_dec->output) {
                 s->DPB[i].error_flag = 1;
+                h265d_dbg(H265D_DBG_REF, "Mark dpb[%d] poc %d, slot_idx %d, err %d, frame: err %d, dis %d\n",
+                          i, mpp_frame_get_poc(s->DPB[i].frame), s->DPB[i].slot_index, s->DPB[i].error_flag,
+                          mpp_frame_get_errinfo(s->DPB[i].frame), mpp_frame_get_discard(s->DPB[i].frame));
             }
         }
     }

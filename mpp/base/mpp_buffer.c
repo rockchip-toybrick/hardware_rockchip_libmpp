@@ -1,17 +1,6 @@
+/* SPDX-License-Identifier: Apache-2.0 OR MIT */
 /*
- * Copyright 2015 Rockchip Electronics Co. LTD
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (c) 2015 Rockchip Electronics Co., Ltd.
  */
 
 #define MODULE_TAG "mpp_buffer"
@@ -114,6 +103,16 @@ MPP_RET mpp_buffer_inc_ref_with_caller(MppBuffer buffer, const char *caller)
     }
 
     return mpp_buffer_ref_inc((MppBufferImpl*)buffer, caller);
+}
+
+MPP_RET mpp_buffer_discard_with_caller(MppBuffer buffer, const char *caller)
+{
+    if (NULL == buffer) {
+        mpp_err("mpp_buffer_discard invalid input: buffer NULL from %s\n", caller);
+        return MPP_ERR_UNKNOW;
+    }
+
+    return mpp_buffer_discard((MppBufferImpl*)buffer, caller);
 }
 
 MPP_RET mpp_buffer_read_with_caller(MppBuffer buffer, size_t offset, void *data, size_t size, const char *caller)

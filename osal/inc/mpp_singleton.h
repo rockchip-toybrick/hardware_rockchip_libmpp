@@ -19,15 +19,21 @@ typedef enum MppSingletonId_e {
     /* hardware platform */
     MPP_SGLN_SOC,
     MPP_SGLN_PLATFORM,
+    MPP_SGLN_SERVER,
     /* software platform */
     MPP_SGLN_RUNTIME,
-    /* base module */
+    /* kernel module (MUST before userspace module) */
+    MPP_SGLN_KOBJ,
+    MPP_SGLN_KMPP_BUFFER,
+    MPP_SGLN_KMPP_META,
+    MPP_SGLN_KMPP_FRAME,
+    MPP_SGLN_KMPP_PACKET,
+    /* userspace base module */
     MPP_SGLN_BUFFER,
     MPP_SGLN_META,
     MPP_SGLN_FRAME,
     MPP_SGLN_PACKET,
-    /* system module */
-    MPP_SGLN_KOBJ,
+    /* userspace system module */
     MPP_SGLN_ENC_CFG,
     MPP_SGLN_DEC_CFG,
     MPP_SGLN_DEC_RC_API,
