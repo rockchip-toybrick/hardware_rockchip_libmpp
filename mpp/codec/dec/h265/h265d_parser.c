@@ -1752,7 +1752,7 @@ void mpp_hevc_fill_dynamic_meta(HEVCContext *s, const RK_U8 *data, RK_U32 size, 
     }
     if (size && data) {
         switch (hdr_fmt) {
-        case DOLBY: {
+        case DLBY: {
             RK_U8 start_code[4] = {0, 0, 0, 1};
 
             memcpy((RK_U8*)hdr_dynamic_meta->data, start_code, 4);
@@ -1797,13 +1797,13 @@ static RK_S32 check_rpus(HEVCContext *s)
         /*
         * Check for RPU delimiter.
         *
-        * Dolby Vision RPUs masquerade as unregistered NALs of type 62.
+        * Dlby Vision RPUs masquerade as unregistered NALs of type 62.
         *
         * We have to do this check here an create the rpu buffer, since RPUs are appended
         * to the end of an AU; they are the last non-EOB/EOS NAL in the AU.
         */
         if (nal_unit_type == NAL_UNSPEC62)
-            mpp_hevc_fill_dynamic_meta(s, nal->data + 2, gb.bytes_left_ + 4, DOLBY);
+            mpp_hevc_fill_dynamic_meta(s, nal->data + 2, gb.bytes_left_ + 4, DLBY);
     }
     return 0;
 __BITREAD_ERR:

@@ -2418,7 +2418,7 @@ static RK_S32 mpp_av1_get_dlby_rpu(AV1Context *ctx, BitReadCtx_t *gb)
     }
 
     hdr_dynamic_meta->size = mpp_writer_bytes(&bit_ctx);
-    hdr_dynamic_meta->hdr_fmt = DOLBY;
+    hdr_dynamic_meta->hdr_fmt = DLBY;
     av1d_dbg(AV1D_DBG_STRMIN, "dlby rpu size %d -> %d\n",
              emdf_payload_size, hdr_dynamic_meta->size);
 
