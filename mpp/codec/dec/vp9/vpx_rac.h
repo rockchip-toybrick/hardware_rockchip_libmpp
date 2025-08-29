@@ -16,7 +16,6 @@
 */
 
 /**
- * @file
  * VPX RangeCoder dec (common features)
  */
 
@@ -32,16 +31,16 @@
 
 typedef struct Vpxmv {
     DECLARE_ALIGNED(4, int16_t, x);
-    int16_t y;
+    rk_s16 y;
 } Vpxmv;
 
 typedef struct VpxRangeCoder {
-    int high;
-    int bits; /* stored negated (i.e. negative "bits" is a positive number of
+    rk_s32 high;
+    rk_s32 bits; /* stored negated (i.e. negative "bits" is a positive number of
                  bits left) in order to eliminate a negate in cache refilling */
-    const uint8_t *buffer;
-    const uint8_t *end;
-    unsigned int code_word;
+    const rk_u8 *buffer;
+    const rk_u8 *end;
+    rk_u32 code_word;
 } VpxRangeCoder;
 
 /**
@@ -50,11 +49,11 @@ typedef struct VpxRangeCoder {
 
 extern const uint8_t vpx_norm_shift[256];
 void vpx_init_range_decoder(VpxRangeCoder *c, const uint8_t *buf, int buf_size);
-unsigned int vpx_rac_renorm(VpxRangeCoder *c);
-int vpx_rac_get_prob(VpxRangeCoder *c, uint8_t prob);
-int vpx_rac_get_prob_branchy(VpxRangeCoder *c, int prob);
+rk_u32 vpx_rac_renorm(VpxRangeCoder *c);
+rk_s32 vpx_rac_get_prob(VpxRangeCoder *c, uint8_t prob);
+rk_s32 vpx_rac_get_prob_branchy(VpxRangeCoder *c, int prob);
 // rounding is different than vpx_rac_get, is vpx_rac_get wrong?
-int vpx_rac_get(VpxRangeCoder *c);
-int vpx_rac_get_uint(VpxRangeCoder *c, int bits);
+rk_s32 vpx_rac_get(VpxRangeCoder *c);
+rk_s32 vpx_rac_get_uint(VpxRangeCoder *c, int bits);
 
 #endif /* VPX_RAC_H */

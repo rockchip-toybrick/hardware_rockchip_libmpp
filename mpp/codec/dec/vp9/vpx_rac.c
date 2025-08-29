@@ -52,7 +52,7 @@ void vpx_init_range_decoder(VpxRangeCoder *c, const uint8_t *buf, int buf_size)
     c->code_word = bytestream_get_be24(&c->buffer);
 }
 
-unsigned int vpx_rac_renorm(VpxRangeCoder *c)
+rk_u32 vpx_rac_renorm(VpxRangeCoder *c)
 {
     int shift = vpx_norm_shift[c->high];
     int bits = c->bits;
@@ -69,7 +69,7 @@ unsigned int vpx_rac_renorm(VpxRangeCoder *c)
     return code_word;
 }
 
-int vpx_rac_get_prob(VpxRangeCoder *c, uint8_t prob)
+rk_s32 vpx_rac_get_prob(VpxRangeCoder *c, uint8_t prob)
 {
     unsigned int code_word = vpx_rac_renorm(c);
     unsigned int low = 1 + (((c->high - 1) * prob) >> 8);
@@ -83,7 +83,7 @@ int vpx_rac_get_prob(VpxRangeCoder *c, uint8_t prob)
 }
 
 // branchy variant, to be used where there's a branch based on the bit decoded
-int vpx_rac_get_prob_branchy(VpxRangeCoder *c, int prob)
+rk_s32 vpx_rac_get_prob_branchy(VpxRangeCoder *c, int prob)
 {
     unsigned long code_word = vpx_rac_renorm(c);
     unsigned low = 1 + (((c->high - 1) * prob) >> 8);
@@ -101,12 +101,12 @@ int vpx_rac_get_prob_branchy(VpxRangeCoder *c, int prob)
 }
 
 // rounding is different than vpx_rac_get, is vpx_rac_get wrong?
-int vpx_rac_get(VpxRangeCoder *c)
+rk_s32 vpx_rac_get(VpxRangeCoder *c)
 {
     return vpx_rac_get_prob(c, 128);
 }
 
-int vpx_rac_get_uint(VpxRangeCoder *c, int bits)
+rk_s32 vpx_rac_get_uint(VpxRangeCoder *c, int bits)
 {
     int value = 0;
 
