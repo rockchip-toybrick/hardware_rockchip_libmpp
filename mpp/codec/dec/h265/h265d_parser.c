@@ -866,6 +866,8 @@ static RK_S32 hls_slice_header(HEVCContext *s)
                 if (numbits > 0)
                     READ_BITS(gb, numbits, &rps_idx);
 
+                if (sh->short_term_rps != &s->sps->st_rps[rps_idx])
+                    s->rps_need_upate = 1;
                 sh->short_term_rps = &s->sps->st_rps[rps_idx];
             }
 
@@ -2071,6 +2073,7 @@ MPP_RET h265d_parse(void *ctx, HalDecTask *task)
         s->task->syntax.number = 1;
         s->task->valid = 1;
         s->ps_need_upate = 0;
+        s->rps_need_upate = 0;
     }
     if (s->eos) {
         h265d_flush(ctx);
@@ -2345,8 +2348,10 @@ MPP_RET h265d_callback(void *ctx, void *err_info)
         }
     }
 
-    if (!task_dec->flags.parse_err)
+    if (!task_dec->flags.parse_err) {
         s->ps_need_upate = 0;
+        s->rps_need_upate = 0;
+    }
 
     (void) err_info;
 

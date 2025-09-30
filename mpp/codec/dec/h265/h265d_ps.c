@@ -264,6 +264,7 @@ int mpp_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,
             }
         }
     }
+    s->rps_need_upate = 1;
     return 0;
 __BITREAD_ERR:
     return  MPP_ERR_STREAM;
