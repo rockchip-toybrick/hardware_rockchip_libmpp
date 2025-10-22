@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef __AV1D_CODEC_H__
-#define __AV1D_CODEC_H__
+#ifndef AV1D_CODEC_H
+#define AV1D_CODEC_H
 
 #include "mpp_frame.h"
 
@@ -127,4 +127,4 @@ typedef struct Av1CodecContext_t {
     MppFrameFormat usr_set_fmt;
 } Av1CodecContext;
 
-#endif /*__AV1D_CODEC_H__*/
+#endif /* AV1D_CODEC_H */

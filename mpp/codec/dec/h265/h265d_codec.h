@@ -25,8 +25,8 @@
  *   2015.7.15 : Create
  */
 
-#ifndef __H265D_CODEC_H__
-#define __H265D_CODEC_H__
+#ifndef H265D_CODEC_H
+#define H265D_CODEC_H
 
 #include "mpp_frame.h"
 #include "mpp_soc.h"
@@ -154,4 +154,4 @@ RK_S32 h265d_syntax_fill_slice(void *ctx, RK_S32 input_index);
 }
 #endif
 
-#endif /* __H265D_CODEC_H__ */
+#endif /* H265D_CODEC_H */

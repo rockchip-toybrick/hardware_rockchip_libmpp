@@ -14,8 +14,8 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-#ifndef __VP9D_CODEC_H__
-#define __VP9D_CODEC_H__
+#ifndef VP9D_CODEC_H
+#define VP9D_CODEC_H
 
 #include "mpp_frame.h"
 #include "hal_dec_task.h"
@@ -99,5 +99,5 @@ typedef struct Vp9CodecContext {
     RK_S32 eos;
 } Vp9CodecContext;
 
-#endif /*__VP9D_CODEC_H__*/
+#endif /* VP9D_CODEC_H */
 

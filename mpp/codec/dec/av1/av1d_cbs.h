@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef __AV1D_CBS_H__
-#define __AV1D_CBS_H__
+#ifndef AV1D_CBS_H
+#define AV1D_CBS_H
 
 #include "av1.h"
 
@@ -449,4 +449,4 @@ typedef struct Av1UnitFragment_t {
     Av1ObuUnit *units;
 } Av1UnitFragment;
 
-#endif //__AV1D_CBS_H__
+#endif // AV1D_CBS_H 
