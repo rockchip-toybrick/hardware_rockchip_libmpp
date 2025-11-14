@@ -1702,7 +1702,18 @@ static RK_S32 split_nal_units(HEVCContext *s, RK_U8 *buf, RK_U32 length)
         }
         nal = &s->nals[s->nb_nals];
 
-        consumed = mpp_hevc_extract_rbsp(s, buf, extract_length, nal);
+        /* parse nalu_type and first_slice_in_pic flag */
+        RK_U32 cur_nalu_type = buf[0] >> 1;
+        RK_U32 b_first_slice_in_pic = ((buf[2] & (1 << 7)) >> 7);
+
+        if (s->cap_hw_h265_rps && cur_nalu_type < NAL_VPS && b_first_slice_in_pic) {
+            //skip extract rbsp for cap_hw_h265_rps
+            nal->data = buf;
+            nal->size = length;
+            consumed = length;
+        } else {
+            consumed = mpp_hevc_extract_rbsp(s, buf, extract_length, nal);
+        }
 
         if (consumed < 0) {
             ret = MPP_ERR_STREAM;
@@ -2278,6 +2289,8 @@ MPP_RET h265d_init(void *ctx, ParserCfg *parser_cfg)
     s->sps_pool = mpp_mem_pool_init_f("h265d_sps", sizeof(HEVCSPS));
 
     mpp_slots_set_prop(s->slots, SLOTS_WIDTH_ALIGN, rkv_ctu_64_align);
+
+    s->cap_hw_h265_rps = s->h265dctx->hw_info->cap_hw_h265_rps;
 
 #ifdef dump
     fp = fopen("/data/dump1.bin", "wb+");
