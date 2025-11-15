@@ -1615,6 +1615,7 @@ RK_S32 mpp_hevc_extract_rbsp(HEVCContext *s, const RK_U8 *src, int length,
 static RK_S32 split_nal_units(HEVCContext *s, RK_U8 *buf, RK_U32 length)
 {
     RK_S32 i, consumed;
+    RK_U32 total_consumed = 0;
     MPP_RET ret = MPP_OK;
     s->nb_nals = 0;
     while (length >= 4) {
@@ -1626,6 +1627,7 @@ static RK_S32 split_nal_units(HEVCContext *s, RK_U8 *buf, RK_U32 length)
                 extract_length = (extract_length << 8) | buf[i];
             buf    += s->nal_length_size;
             length -= s->nal_length_size;
+            total_consumed += s->nal_length_size;
 
             if ((RK_U32)extract_length > length) {
                 mpp_err( "Invalid NAL unit size.\n");
@@ -1740,7 +1742,35 @@ static RK_S32 split_nal_units(HEVCContext *s, RK_U8 *buf, RK_U32 length)
 
         buf    += consumed;
         length -= consumed;
+        total_consumed += consumed;
+
+        if (s->is_nalff && s->nb_nals > 0 && length >= s->nal_length_size + 3) {
+            RK_S32 next_nal_length = 0;
+
+            for (i = 0; i < s->nal_length_size; i++)
+                next_nal_length = (next_nal_length << 8) | buf[i];
+
+            if (next_nal_length >= 3 && (RK_U32)(s->nal_length_size + next_nal_length) <= length) {
+                const RK_U8 *next_nal_header = buf + s->nal_length_size;
+                RK_U8 next_nal_unit_type = (next_nal_header[0] >> 1) & 0x3F;
+                RK_U8 next_first_slice_flag = next_nal_header[2] >> 7;
+
+                if (next_nal_unit_type <= NAL_RASL_R ||
+                    (next_nal_unit_type >= NAL_BLA_W_LP && next_nal_unit_type <= NAL_CRA_NUT)) {
+                    if (next_first_slice_flag) {
+                        h265d_dbg(H265D_DBG_FUNCTION,
+                                  "Detected NEXT frame: NAL type=%d, first_slice=1, "
+                                  "stopping at NAL #%d (already parsed %d NALs)\n",
+                                  next_nal_unit_type, s->nb_nals, s->nb_nals);
+                        break;
+                    }
+                }
+            }
+        }
     }
+
+    s->consumed_bytes = total_consumed;
+
 fail:
 
     return (s->nb_nals) ? MPP_OK : ret;
@@ -2028,6 +2058,11 @@ MPP_RET h265d_prepare(void *ctx, MppPacket pkt, HalDecTask *task)
     ret = (MPP_RET)split_nal_units(s, buf, length);
 
     if (MPP_OK == ret) {
+        if (s->is_nalff) {
+            pos = buf + s->consumed_bytes;
+            mpp_packet_set_pos(pkt, pos);
+        }
+
         if (MPP_OK == h265d_syntax_fill_slice(s->h265dctx, task->input)) {
             task->valid = 1;
             task->input_packet = s->input_packet;
