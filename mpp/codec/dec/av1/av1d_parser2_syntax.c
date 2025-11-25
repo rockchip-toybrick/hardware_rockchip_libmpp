@@ -47,7 +47,7 @@ static int av1d_fill_picparams(Av1CodecContext *ctx, DXVA_PicParams_AV1 *pp)
 
     pp->CurrPic.Index7Bits  = h->cur_frame.slot_index;
     pp->CurrPicTextureIndex = h->cur_frame.slot_index;
-    pp->superres_denom      = frame_header->use_superres ? frame_header->coded_denom : AV1_SUPERRES_NUM;
+    pp->superres_denom      = (frame_header->use_superres != 0) ? frame_header->coded_denom : AV1_SUPERRES_NUM;
     pp->use_superres        = frame_header->use_superres;
     pp->bitdepth            = h->bit_depth;
     pp->seq_profile         = seq->seq_profile;
@@ -114,7 +114,7 @@ static int av1d_fill_picparams(Av1CodecContext *ctx, DXVA_PicParams_AV1 *pp)
     pp->primary_ref_frame = frame_header->primary_ref_frame;
     pp->enable_order_hint = seq->enable_order_hint;
     pp->order_hint        = frame_header->order_hint;
-    pp->order_hint_bits   = seq->enable_order_hint ? seq->order_hint_bits_minus_1 + 1 : 0;
+    pp->order_hint_bits   = (seq->enable_order_hint != 0) ? seq->order_hint_bits_minus_1 + 1 : 0;
 
     pp->ref_frame_valued = frame_header->ref_frame_valued;
     for (i = 0; i < AV1_REFS_PER_FRAME; i++)
@@ -122,7 +122,7 @@ static int av1d_fill_picparams(Av1CodecContext *ctx, DXVA_PicParams_AV1 *pp)
 
     memset(pp->RefFrameMapTextureIndex, 0xFF, sizeof(pp->RefFrameMapTextureIndex));
     is_rk3588 = mpp_get_soc_type() == ROCKCHIP_SOC_RK3588;
-    loop_cnt = is_rk3588 ? AV1_REFS_PER_FRAME : AV1_NUM_REF_FRAMES;
+    loop_cnt = (is_rk3588 != 0) ? AV1_REFS_PER_FRAME : AV1_NUM_REF_FRAMES;
     for (i = 0; i < loop_cnt; i++) {
         int8_t ref_idx = frame_header->ref_frame_idx[i];
         AV1Frame *ref_frame;
@@ -209,9 +209,9 @@ static int av1d_fill_picparams(Av1CodecContext *ctx, DXVA_PicParams_AV1 *pp)
     pp->loop_filter.frame_restoration_type[1]     = remap_lr_type[frame_header->lr_type[1]];
     pp->loop_filter.frame_restoration_type[2]     = remap_lr_type[frame_header->lr_type[2]];
     uses_lr = frame_header->lr_type[0] || frame_header->lr_type[1] || frame_header->lr_type[2];
-    pp->loop_filter.log2_restoration_unit_size[0] = uses_lr ? (1 + frame_header->lr_unit_shift) : 3;
-    pp->loop_filter.log2_restoration_unit_size[1] = uses_lr ? (1 + frame_header->lr_unit_shift - frame_header->lr_uv_shift) : 3;
-    pp->loop_filter.log2_restoration_unit_size[2] = uses_lr ? (1 + frame_header->lr_unit_shift - frame_header->lr_uv_shift) : 3;
+    pp->loop_filter.log2_restoration_unit_size[0] = (uses_lr != 0) ? (1 + frame_header->lr_unit_shift) : 3;
+    pp->loop_filter.log2_restoration_unit_size[1] = (uses_lr != 0) ? (1 + frame_header->lr_unit_shift - frame_header->lr_uv_shift) : 3;
+    pp->loop_filter.log2_restoration_unit_size[2] = (uses_lr != 0) ? (1 + frame_header->lr_unit_shift - frame_header->lr_uv_shift) : 3;
 
     /* Quantization */
     pp->quantization.delta_q_present = frame_header->delta_q_present;
@@ -223,9 +223,9 @@ static int av1d_fill_picparams(Av1CodecContext *ctx, DXVA_PicParams_AV1 *pp)
     pp->quantization.u_ac_delta_q    = frame_header->delta_q_u_ac;
     pp->quantization.v_ac_delta_q    = frame_header->delta_q_v_ac;
     pp->quantization.using_qmatrix   = frame_header->using_qmatrix;
-    pp->quantization.qm_y            = frame_header->using_qmatrix ? frame_header->qm_y : 0xFF;
-    pp->quantization.qm_u            = frame_header->using_qmatrix ? frame_header->qm_u : 0xFF;
-    pp->quantization.qm_v            = frame_header->using_qmatrix ? frame_header->qm_v : 0xFF;
+    pp->quantization.qm_y            = (frame_header->using_qmatrix != 0) ? frame_header->qm_y : 0xFF;
+    pp->quantization.qm_u            = (frame_header->using_qmatrix != 0) ? frame_header->qm_u : 0xFF;
+    pp->quantization.qm_v            = (frame_header->using_qmatrix != 0) ? frame_header->qm_v : 0xFF;
 
     /* Cdef parameters */
     pp->cdef.damping = frame_header->cdef_damping_minus_3;

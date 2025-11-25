@@ -445,7 +445,7 @@ static RK_S32 get_sbits_inv(BitReadCtx_t *gb, RK_S32 n)
     RK_S32 v;
     READ_BITS(gb, n, &v);
     READ_ONEBIT(gb, &value);
-    return value ? -v : v;
+    return (value != 0) ? -v : v;
 __BITREAD_ERR:
     return MPP_ERR_STREAM;
 }
@@ -589,7 +589,7 @@ static RK_S32 read_colorspace_details(Vp9CodecContext *ctx)
                 { -1, -1 }
             }
         };
-        ctx->color_range = mpp_get_bit1(&s->gb) ? MPP_FRAME_RANGE_JPEG : MPP_FRAME_RANGE_MPEG;
+        ctx->color_range = (mpp_get_bit1(&s->gb) != 0) ? MPP_FRAME_RANGE_JPEG : MPP_FRAME_RANGE_MPEG;
         vp9d_dbg(VP9D_DBG_HEADER, "color_range %d", ctx->color_range);
         if (ctx->profile & 1) {
             s->ss_h = mpp_get_bit1(&s->gb);
@@ -682,7 +682,7 @@ static RK_S32 decode_parser_header(Vp9CodecContext *ctx,
     s->errorres       = mpp_get_bit1(&s->gb);
     vp9d_dbg(VP9D_DBG_HEADER, "error_resilient_mode %d", s->errorres);
     s->use_last_frame_mvs = !s->errorres && !last_invisible;
-    s->got_keyframes += s->keyframe ? 1 : 0;
+    s->got_keyframes += (s->keyframe != 0) ? 1 : 0;
     vp9d_dbg(VP9D_DBG_HEADER, "keyframe=%d, intraonly=%d, got_keyframes=%d\n",
              s->keyframe, s->intraonly, s->got_keyframes);
 
@@ -721,9 +721,9 @@ static RK_S32 decode_parser_header(Vp9CodecContext *ctx,
         } else
             vp9d_dbg(VP9D_DBG_HEADER, "display_info_flag %d", 0);
     } else {
-        s->intraonly  = s->invisible ? mpp_get_bit1(&s->gb) : 0;
+        s->intraonly  = (s->invisible != 0) ? mpp_get_bit1(&s->gb) : 0;
         vp9d_dbg(VP9D_DBG_HEADER, "intra_only %d", s->intraonly);
-        s->resetctx   = s->errorres ? 0 : mpp_get_bits(&s->gb, 2);
+        s->resetctx   = (s->errorres != 0) ? 0 : mpp_get_bits(&s->gb, 2);
         vp9d_dbg(VP9D_DBG_HEADER, "reset_frame_context_value %d", s->resetctx);
         if (s->intraonly) {
             if (mpp_get_bits(&s->gb, 24) != VP9_SYNCCODE) { // synccode
@@ -815,7 +815,7 @@ static RK_S32 decode_parser_header(Vp9CodecContext *ctx,
                 vp9d_dbg(VP9D_DBG_HEADER, "display_info_flag %d", 0);
             s->highprecisionmvs = mpp_get_bit1(&s->gb);
             vp9d_dbg(VP9D_DBG_HEADER, "allow_high_precision_mv %d", s->highprecisionmvs);
-            s->filtermode = mpp_get_bit1(&s->gb) ? FILTER_SWITCHABLE :
+            s->filtermode = (mpp_get_bit1(&s->gb) != 0) ? FILTER_SWITCHABLE :
                             mpp_get_bits(&s->gb, 2);
             vp9d_dbg(VP9D_DBG_HEADER, "filtermode %d", s->filtermode);
             s->allowcompinter = (s->signbias[0] != s->signbias[1] ||
@@ -865,9 +865,9 @@ static RK_S32 decode_parser_header(Vp9CodecContext *ctx,
         }
     }
 
-    s->refreshctx   = s->errorres ? 0 : mpp_get_bit1(&s->gb);
+    s->refreshctx   = (s->errorres != 0) ? 0 : mpp_get_bit1(&s->gb);
     vp9d_dbg(VP9D_DBG_HEADER, "refresh_frame_context_flag %d", s->refreshctx);
-    s->parallelmode = s->errorres ? 1 : mpp_get_bit1(&s->gb);
+    s->parallelmode = (s->errorres != 0) ? 1 : mpp_get_bit1(&s->gb);
     vp9d_dbg(VP9D_DBG_HEADER, "frame_parallel_decoding_mode %d", s->parallelmode);
     s->framectxid   = c = mpp_get_bits(&s->gb, 2);
     vp9d_dbg(VP9D_DBG_HEADER, "frame_context_idx %d", s->framectxid);
@@ -912,11 +912,11 @@ static RK_S32 decode_parser_header(Vp9CodecContext *ctx,
     /* quantization header data */
     s->yac_qi      = mpp_get_bits(&s->gb, 8);
     vp9d_dbg(VP9D_DBG_HEADER, "base_qindex %d", s->yac_qi);
-    s->ydc_qdelta  = mpp_get_bit1(&s->gb) ? get_sbits_inv(&s->gb, 4) : 0;
+    s->ydc_qdelta  = (mpp_get_bit1(&s->gb) != 0) ? get_sbits_inv(&s->gb, 4) : 0;
     vp9d_dbg(VP9D_DBG_HEADER, "ydc_qdelta %d", s->ydc_qdelta);
-    s->uvdc_qdelta = mpp_get_bit1(&s->gb) ? get_sbits_inv(&s->gb, 4) : 0;
+    s->uvdc_qdelta = (mpp_get_bit1(&s->gb) != 0) ? get_sbits_inv(&s->gb, 4) : 0;
     vp9d_dbg(VP9D_DBG_HEADER, "uvdc_qdelta %d", s->uvdc_qdelta);
-    s->uvac_qdelta = mpp_get_bit1(&s->gb) ? get_sbits_inv(&s->gb, 4) : 0;
+    s->uvac_qdelta = (mpp_get_bit1(&s->gb) != 0) ? get_sbits_inv(&s->gb, 4) : 0;
     vp9d_dbg(VP9D_DBG_HEADER, "uvac_qdelta %d", s->uvac_qdelta);
     s->lossless    = s->yac_qi == 0 && s->ydc_qdelta == 0 &&
                      s->uvdc_qdelta == 0 && s->uvac_qdelta == 0;
@@ -929,7 +929,7 @@ static RK_S32 decode_parser_header(Vp9CodecContext *ctx,
         if ((s->segmentation.update_map = mpp_get_bit1(&s->gb))) {
             vp9d_dbg(VP9D_DBG_HEADER, "update_map 1");
             for (i = 0; i < 7; i++) {
-                s->prob.seg[i] = mpp_get_bit1(&s->gb) ?
+                s->prob.seg[i] = (mpp_get_bit1(&s->gb) != 0) ?
                                  mpp_get_bits(&s->gb, 8) : 255;
                 vp9d_dbg(VP9D_DBG_HEADER, "tree_probs %d value 0x%x", i, s->prob.seg[i]);
             }
@@ -937,7 +937,7 @@ static RK_S32 decode_parser_header(Vp9CodecContext *ctx,
             if (s->segmentation.temporal) {
                 vp9d_dbg(VP9D_DBG_HEADER, "tempora_update 1");
                 for (i = 0; i < 3; i++) {
-                    s->prob.segpred[i] = mpp_get_bit1(&s->gb) ?
+                    s->prob.segpred[i] = (mpp_get_bit1(&s->gb) != 0) ?
                                          mpp_get_bits(&s->gb, 8) : 255;
                     vp9d_dbg(VP9D_DBG_HEADER, "pred_probs %d", i, s->prob.segpred[i]);
                 }
@@ -983,7 +983,7 @@ static RK_S32 decode_parser_header(Vp9CodecContext *ctx,
     }
 
     // set qmul[] based on Y/UV, AC/DC and segmentation Q idx deltas
-    for (i = 0; i < (s->segmentation.enabled ? 8 : 1); i++) {
+    for (i = 0; i < ((s->segmentation.enabled != 0) ? 8 : 1); i++) {
         RK_S32 qyac, qydc, quvac, quvdc, lflvl, sh;
 
         if (s->segmentation.feat[i].q_enabled) {

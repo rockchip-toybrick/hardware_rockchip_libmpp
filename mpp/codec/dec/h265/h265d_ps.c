@@ -1074,7 +1074,7 @@ int mpp_hevc_decode_nal_vps(HEVCContext *s)
 
     READ_ONEBIT(gb, &vps->vps_sub_layer_ordering_info_present_flag);
 
-    i = vps->vps_sub_layer_ordering_info_present_flag ? 0 : vps->vps_max_sub_layers - 1;
+    i = (vps->vps_sub_layer_ordering_info_present_flag != 0) ? 0 : vps->vps_max_sub_layers - 1;
     for (; i < vps->vps_max_sub_layers; i++) {
         READ_UE(gb, &vps->vps_max_dec_pic_buffering[i]);
         vps->vps_max_dec_pic_buffering[i] = vps->vps_max_dec_pic_buffering[i] + 1;
@@ -1546,7 +1546,7 @@ RK_S32 mpp_hevc_decode_nal_sps(HEVCContext *s)
 
     READ_ONEBIT(gb, &sublayer_ordering_info);
     h265d_dbg_sps("read bit left %d", gb->num_remaining_bits_in_curr_byte_ + gb->bytes_left_ * 8);
-    start = sublayer_ordering_info ? 0 : sps->max_sub_layers - 1;
+    start = (sublayer_ordering_info != 0) ? 0 : sps->max_sub_layers - 1;
     for (i = start; i < sps->max_sub_layers; i++) {
         READ_UE(gb, &sps->temporal_layer[i].max_dec_pic_buffering) ;
         sps->temporal_layer[i].max_dec_pic_buffering += 1;
@@ -2014,14 +2014,14 @@ int mpp_hevc_decode_nal_pps(HEVCContext *s)
 
         if (hw_info->cap_lmt_linebuf) {
             RK_S32 max_supt_width = PIXW_1080P;
-            RK_S32 max_supt_height = pps->tiles_enabled_flag ? PIXH_1080P : PIXW_1080P;
+            RK_S32 max_supt_height = (pps->tiles_enabled_flag != 0) ? PIXH_1080P : PIXW_1080P;
 
             if (hw_info && hw_info->cap_8k) {
                 max_supt_width = PIXW_8Kx4K;
-                max_supt_height = pps->tiles_enabled_flag ? PIXH_8Kx4K : PIXW_8Kx4K;
+                max_supt_height = (pps->tiles_enabled_flag != 0) ? PIXH_8Kx4K : PIXW_8Kx4K;
             } else if (hw_info && hw_info->cap_4k) {
                 max_supt_width = PIXW_4Kx2K;
-                max_supt_height = pps->tiles_enabled_flag ? PIXH_4Kx2K : PIXW_4Kx2K;
+                max_supt_height = (pps->tiles_enabled_flag != 0) ? PIXH_4Kx2K : PIXW_4Kx2K;
             }
 
             if (sps->width > max_supt_width || (sps->height > max_supt_height && pps->tiles_enabled_flag)

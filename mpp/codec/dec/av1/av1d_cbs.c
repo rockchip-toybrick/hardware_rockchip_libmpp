@@ -479,16 +479,16 @@ static RK_S32 mpp_av1_color_config(AV1Context *ctx, BitReadCtx_t *gb,
     if (seq_profile == PROFILE_AV1_PROFESSIONAL &&
         current->high_bitdepth) {
         av1d_flag(twelve_bit);
-        ctx->bit_depth = current->twelve_bit ? 12 : 10;
+        ctx->bit_depth = (current->twelve_bit != 0) ? 12 : 10;
     } else {
-        ctx->bit_depth = current->high_bitdepth ? 10 : 8;
+        ctx->bit_depth = (current->high_bitdepth != 0) ? 10 : 8;
     }
 
     if (seq_profile == PROFILE_AV1_HIGH)
         infer(mono_chrome, 0);
     else
         av1d_flag(mono_chrome);
-    ctx->num_planes = current->mono_chrome ? 1 : 3;
+    ctx->num_planes = (current->mono_chrome != 0) ? 1 : 3;
 
     av1d_flag(color_description_present_flag);
     if (current->color_description_present_flag) {
@@ -1019,12 +1019,12 @@ static RK_S32 mpp_av1_tile_info(AV1Context *ctx, BitReadCtx_t *gb,
     mi_cols = 2 * ((ctx->frame_width  + 7) >> 3);
     mi_rows = 2 * ((ctx->frame_height + 7) >> 3);
 
-    sb_cols = seq->use_128x128_superblock ? ((mi_cols + 31) >> 5)
+    sb_cols = (seq->use_128x128_superblock != 0) ? ((mi_cols + 31) >> 5)
               : ((mi_cols + 15) >> 4);
-    sb_rows = seq->use_128x128_superblock ? ((mi_rows + 31) >> 5)
+    sb_rows = (seq->use_128x128_superblock != 0) ? ((mi_rows + 31) >> 5)
               : ((mi_rows + 15) >> 4);
 
-    sb_shift = seq->use_128x128_superblock ? 5 : 4;
+    sb_shift = (seq->use_128x128_superblock != 0) ? 5 : 4;
     sb_size  = sb_shift + 2;
 
     max_tile_width_sb = AV1_MAX_TILE_WIDTH >> sb_size;
@@ -1457,7 +1457,7 @@ static RK_S32 mpp_av1_read_tx_mode(AV1Context *ctx, BitReadCtx_t *gb,
         infer(tx_mode, 0);
     else {
         av1d_flag(tx_mode);
-        current->tx_mode = current->tx_mode ? TX_MODE_SELECT : TX_MODE_LARGEST;
+        current->tx_mode = (current->tx_mode != 0) ? TX_MODE_SELECT : TX_MODE_LARGEST;
     }
 
     return 0;
@@ -1615,7 +1615,7 @@ static RK_S32 mpp_av1_global_motion_params(AV1Context *ctx, BitReadCtx_t *gb,
                 type = AV1_WARP_MODEL_ROTZOOM;
             } else {
                 av1d_flags(is_translation[ref], 1, ref);
-                type = current->is_translation[ref] ? AV1_WARP_MODEL_TRANSLATION
+                type = (current->is_translation[ref] != 0) ? AV1_WARP_MODEL_TRANSLATION
                        : AV1_WARP_MODEL_AFFINE;
             }
         } else {
@@ -1674,7 +1674,7 @@ static RK_S32 mpp_av1_film_grain_params(AV1Context *ctx, BitReadCtx_t *gb,
     fc(4, num_y_points, 0, 14);
     for (i = 0; i < current->num_y_points; i++) {
         fcs(8, point_y_value[i],
-            i ? current->point_y_value[i - 1] + 1 : 0,
+            (i != 0) ? current->point_y_value[i - 1] + 1 : 0,
             MAX_UINT_BITS(8) - (current->num_y_points - i - 1),
             1, i);
         fbs(8, point_y_scaling[i], 1, i);
@@ -1696,7 +1696,7 @@ static RK_S32 mpp_av1_film_grain_params(AV1Context *ctx, BitReadCtx_t *gb,
         fc(4, num_cb_points, 0, 10);
         for (i = 0; i < current->num_cb_points; i++) {
             fcs(8, point_cb_value[i],
-                i ? current->point_cb_value[i - 1] + 1 : 0,
+                (i != 0) ? current->point_cb_value[i - 1] + 1 : 0,
                 MAX_UINT_BITS(8) - (current->num_cb_points - i - 1),
                 1, i);
             fbs(8, point_cb_scaling[i], 1, i);
@@ -1704,7 +1704,7 @@ static RK_S32 mpp_av1_film_grain_params(AV1Context *ctx, BitReadCtx_t *gb,
         fc(4, num_cr_points, 0, 10);
         for (i = 0; i < current->num_cr_points; i++) {
             fcs(8, point_cr_value[i],
-                i ? current->point_cr_value[i - 1] + 1 : 0,
+                (i != 0) ? current->point_cr_value[i - 1] + 1 : 0,
                 MAX_UINT_BITS(8) - (current->num_cr_points - i - 1),
                 1, i);
             fbs(8, point_cr_scaling[i], 1, i);
@@ -1908,7 +1908,7 @@ static RK_S32 mpp_av1_uncompressed_header(AV1Context *ctx, BitReadCtx_t *gb,
         av1d_flag(frame_size_override_flag);
 
     order_hint_bits =
-        seq->enable_order_hint ? seq->order_hint_bits_minus_1 + 1 : 0;
+        (seq->enable_order_hint != 0) ? seq->order_hint_bits_minus_1 + 1 : 0;
     if (order_hint_bits > 0)
         fb(order_hint_bits, order_hint);
     else
@@ -3035,7 +3035,7 @@ int mpp_av1_set_context_with_sequence(Av1CodecContext *ctx,
     ctx->level = seq->seq_level_idx[0];
 
     ctx->color_range =
-        seq->color_config.color_range ? MPP_FRAME_RANGE_JPEG : MPP_FRAME_RANGE_MPEG;
+        (seq->color_config.color_range != 0) ? MPP_FRAME_RANGE_JPEG : MPP_FRAME_RANGE_MPEG;
     ctx->color_primaries = seq->color_config.color_primaries;
     ctx->colorspace = seq->color_config.matrix_coefficients;
     ctx->color_trc = seq->color_config.transfer_characteristics;
