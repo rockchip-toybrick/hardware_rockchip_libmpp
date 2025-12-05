@@ -34,6 +34,7 @@ static int av1d_fill_picparams(Av1CodecContext *ctx, DXVA_PicParams_AV1 *pp)
     pp->CurrPic.Index7Bits  = h->cur_frame.slot_index;
     pp->CurrPicTextureIndex = h->cur_frame.slot_index;
     pp->superres_denom      = frame_header->use_superres ? frame_header->coded_denom : AV1_SUPERRES_NUM;
+    pp->use_superres        = frame_header->use_superres;
     pp->bitdepth            = h->bit_depth;
     pp->seq_profile         = seq->seq_profile;
     pp->frame_header_size   = h->frame_header_size;
