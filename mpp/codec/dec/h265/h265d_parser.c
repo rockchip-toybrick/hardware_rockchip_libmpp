@@ -1554,6 +1554,27 @@ RK_S32 mpp_hevc_extract_rbsp(HEVCContext *s, const RK_U8 *src, int length,
                              HEVCNAL *nal)
 {
     RK_S32 i;
+    RK_S32 rbsp_buf_min_size = length + MPP_INPUT_BUFFER_PADDING_SIZE;
+    RK_U32 cur_nalu_type = src[0] >> 1;
+    RK_U32 b_first_slice_in_pic = ((src[2] & (1 << 7)) >> 7);
+
+    //skip extract rbsp for cap_hw_h265_rps
+    if (s->cap_hw_h265_rps && cur_nalu_type < NAL_VPS && b_first_slice_in_pic) {
+        if (rbsp_buf_min_size > nal->rbsp_buffer_size) {
+            mpp_free(nal->rbsp_buffer);
+            nal->rbsp_buffer = NULL;
+            nal->rbsp_buffer = mpp_malloc(RK_U8, rbsp_buf_min_size);
+            nal->rbsp_buffer_size = nal->rbsp_buffer == NULL ? 0 : rbsp_buf_min_size;
+        }
+        if (nal->rbsp_buffer) {
+            memcpy(nal->rbsp_buffer, src, length);
+            nal->data = nal->rbsp_buffer;
+            nal->size = length;
+        } else {
+            mpp_err_f("malloc nal rbsp buffer failed, size %d\n", rbsp_buf_min_size);
+        }
+        return length;
+    }
 
     s->skipped_bytes = 0;
 
@@ -1592,16 +1613,12 @@ RK_S32 mpp_hevc_extract_rbsp(HEVCContext *s, const RK_U8 *src, int length,
     }
 #endif
 
-    if (length + MPP_INPUT_BUFFER_PADDING_SIZE > nal->rbsp_buffer_size) {
-        RK_S32 min_size = length + MPP_INPUT_BUFFER_PADDING_SIZE;
+    if (rbsp_buf_min_size > nal->rbsp_buffer_size) {
+        rbsp_buf_min_size = MPP_MAX(17 * rbsp_buf_min_size / 16 + 32, rbsp_buf_min_size);
         mpp_free(nal->rbsp_buffer);
         nal->rbsp_buffer = NULL;
-        min_size = MPP_MAX(17 * min_size / 16 + 32, min_size);
-        nal->rbsp_buffer = mpp_malloc(RK_U8, min_size);
-        if (nal->rbsp_buffer == NULL) {
-            min_size = 0;
-        }
-        nal->rbsp_buffer_size = min_size;
+        nal->rbsp_buffer = mpp_malloc(RK_U8, rbsp_buf_min_size);
+        nal->rbsp_buffer_size = nal->rbsp_buffer == NULL ? 0 : rbsp_buf_min_size;
     }
 
     memcpy(nal->rbsp_buffer, src, length);
@@ -1704,18 +1721,7 @@ static RK_S32 split_nal_units(HEVCContext *s, RK_U8 *buf, RK_U32 length)
         }
         nal = &s->nals[s->nb_nals];
 
-        /* parse nalu_type and first_slice_in_pic flag */
-        RK_U32 cur_nalu_type = buf[0] >> 1;
-        RK_U32 b_first_slice_in_pic = ((buf[2] & (1 << 7)) >> 7);
-
-        if (s->cap_hw_h265_rps && cur_nalu_type < NAL_VPS && b_first_slice_in_pic) {
-            //skip extract rbsp for cap_hw_h265_rps
-            nal->data = buf;
-            nal->size = length;
-            consumed = length;
-        } else {
-            consumed = mpp_hevc_extract_rbsp(s, buf, extract_length, nal);
-        }
+        consumed = mpp_hevc_extract_rbsp(s, buf, extract_length, nal);
 
         if (consumed < 0) {
             ret = MPP_ERR_STREAM;
