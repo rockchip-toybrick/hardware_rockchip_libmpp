@@ -125,16 +125,6 @@ const RK_U8 mpp_hevc_diag_scan8x8_y[64] = {
     5, 7, 6, 7,
 };
 
-static RK_U32 rkv_len_align_422(RK_U32 val)
-{
-    return (2 * MPP_ALIGN(val, 16));
-}
-
-static RK_U32 rkv_len_align_444(RK_U32 val)
-{
-    return (3 * MPP_ALIGN(val, 16));
-}
-
 int mpp_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,
                                    const HEVCSPS *sps, RK_S32 is_slice_header)
 {
@@ -1533,7 +1523,7 @@ RK_S32 mpp_hevc_decode_nal_sps(HEVCContext *s)
             ret = MPP_ERR_PROTOL;
             goto err;
         }
-        mpp_slots_set_prop(s->slots, SLOTS_LEN_ALIGN, rkv_len_align_422);
+        mpp_slots_set_prop(s->slots, SLOTS_LEN_ALIGN, mpp_align_wxh2yuv422);
     } break;
     case H265_CHROMA_444 : {
         switch (sps->bit_depth) {
@@ -1545,7 +1535,7 @@ RK_S32 mpp_hevc_decode_nal_sps(HEVCContext *s)
             ret = MPP_ERR_PROTOL;
             goto err;
         }
-        mpp_slots_set_prop(s->slots, SLOTS_LEN_ALIGN, rkv_len_align_444);
+        mpp_slots_set_prop(s->slots, SLOTS_LEN_ALIGN, mpp_align_wxh2yuv444);
     } break;
     }
 
