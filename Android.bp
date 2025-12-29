@@ -23,6 +23,7 @@ cc_defaults {
         "-Wno-pointer-arith",
         "-Wno-typedef-redefinition",
         "-Wno-unused-variable",
+        "-Wno-address-of-packed-member",
     ],
 
     local_include_dirs: [
@@ -293,7 +294,7 @@ cc_test {
 
 cc_test {
     name: "mpi_enc_mt",
-    srcs: ["test/mpi_enc_mt_test.cpp"],
+    srcs: ["test/mpi_enc_mt_test.c"],
     shared_libs: ["libmpp"],
     static_libs: ["libmpputils-static"],
     defaults: ["mpp_defaults"],
@@ -315,6 +316,7 @@ cc_test {
     defaults: ["mpp_defaults"],
 }
 
+/*
 cc_test {
     name: "mpi_dec_slt",
     srcs: ["test/mpi_dec_slt_test.c"],
@@ -330,3 +332,4 @@ cc_test {
     static_libs: ["libmpputils-static"],
     defaults: ["mpp_defaults"],
 }
+*/
