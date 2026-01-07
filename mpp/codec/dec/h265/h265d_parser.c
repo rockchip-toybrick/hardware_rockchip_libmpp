@@ -197,8 +197,8 @@ static void mpp_fetch_timestamp(SplitContext_t *s, RK_S32 off)
     s->dts = s->pts = -1;
     s->offset = 0;
     for (i = 0; i < MPP_PARSER_PTS_NB; i++) {
-        h265d_dbg_time("s->cur_offset %lld s->cur_frame_offset[%d] %lld s->frame_offset %lld s->next_frame_offset %lld",
-                       s->cur_offset, i, s->cur_frame_offset[i], s->frame_offset, s->next_frame_offset);
+        h265d_dbg_pts("s->cur_offset %lld s->cur_frame_offset[%d] %lld s->frame_offset %lld s->next_frame_offset %lld",
+                      s->cur_offset, i, s->cur_frame_offset[i], s->frame_offset, s->next_frame_offset);
         if ( s->cur_offset + off >= s->cur_frame_offset[i]
              && (s->frame_offset < s->cur_frame_offset[i] ||
                  (!s->frame_offset && !s->next_frame_offset)) // first field/frame
@@ -230,8 +230,8 @@ static RK_S32 h265d_split_frame(void *sc,
         s->cur_frame_end[i] = s->cur_offset + buf_size;
         s->cur_frame_pts[i] = pts;
         s->cur_frame_dts[i] = dts;
-        h265d_dbg_time("s->cur_frame_start_index = %d,cur_frame_offset = %lld,s->cur_frame_end = %lld pts = %lld",
-                       s->cur_frame_start_index, s->cur_frame_offset[i], s->cur_frame_end[i], pts);
+        h265d_dbg_pts("s->cur_frame_start_index = %d,cur_frame_offset = %lld,s->cur_frame_end = %lld pts = %lld",
+                      s->cur_frame_start_index, s->cur_frame_offset[i], s->cur_frame_end[i], pts);
     }
 
     if (s->fetch_timestamp) {
@@ -1999,7 +1999,7 @@ MPP_RET h265d_prepare(void *ctx, MppPacket pkt, HalDecTask *task)
     buf = (RK_U8 *)mpp_packet_get_pos(pkt);
     pts = mpp_packet_get_pts(pkt);
     dts = mpp_packet_get_dts(pkt);
-    h265d_dbg_time("prepare get pts %lld", pts);
+    h265d_dbg_pts("prepare get pts %lld", pts);
     length = (RK_S32)mpp_packet_get_length(pkt);
 
     if (mpp_packet_get_flag(pkt) & MPP_PACKET_FLAG_EXTRA_DATA) {
@@ -2030,7 +2030,7 @@ MPP_RET h265d_prepare(void *ctx, MppPacket pkt, HalDecTask *task)
             length = split_size;
             s->checksum_buf = buf;  //check with openhevc
             s->checksum_buf_size = split_size;
-            h265d_dbg_time("split frame get pts %lld", sc->pts);
+            h265d_dbg_pts("split frame get pts %lld", sc->pts);
             s->pts = sc->pts;
             s->dts = sc->dts;
             s->eos = (s->eos && (mpp_packet_get_length(pkt) < 4)) ? 1 : 0;
