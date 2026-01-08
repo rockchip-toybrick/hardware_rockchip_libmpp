@@ -45,8 +45,6 @@ static   RK_U32 av_clip_uintp2(RK_S32 a, RK_S32 p)
     else                   return  a;
 }
 
-RK_U32 vp9d_debug = 0;
-
 #define VP9_SYNCCODE 0x498342
 //#define dump
 #ifdef dump

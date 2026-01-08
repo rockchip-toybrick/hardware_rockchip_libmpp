@@ -25,15 +25,14 @@
 #include "mpp_packet_impl.h"
 #include "rk_hdr_meta_com.h"
 
+#include "mpp_parser.h"
 #include "h265d_debug.h"
 #include "h265d_parser.h"
 #include "h265d_syntax.h"
-#include "h265d_api.h"
 #include "h2645d_sei.h"
 
 #define START_CODE 0x000001 ///< start_code_prefix_one_3bytes
 
-RK_U32 h265d_debug;
 #ifdef dump
 FILE *fp = NULL;
 #endif
@@ -1970,6 +1969,15 @@ static RK_S32 hevc_parser_extradata(HEVCContext *s)
     return ret;
 }
 
+MPP_RET h265d_flush(void *ctx)
+{
+    RK_S32 ret = 0;
+    do {
+        ret = mpp_hevc_output_frame(ctx, 1);
+    } while (ret);
+    return MPP_OK;
+}
+
 MPP_RET h265d_prepare(void *ctx, MppPacket pkt, HalDecTask *task)
 {
 
@@ -2332,15 +2340,6 @@ MPP_RET h265d_init(void *ctx, ParserCfg *parser_cfg)
     return 0;
 }
 
-MPP_RET h265d_flush(void *ctx)
-{
-    RK_S32 ret = 0;
-    do {
-        ret = mpp_hevc_output_frame(ctx, 1);
-    } while (ret);
-    return MPP_OK;
-}
-
 MPP_RET h265d_reset(void *ctx)
 {
     H265dContext_t *h265dctx = (H265dContext_t *)ctx;
@@ -2405,7 +2404,7 @@ MPP_RET h265d_callback(void *ctx, void *err_info)
     return MPP_OK;
 }
 
-const ParserApi api_h265d_parser = {
+const ParserApi mpp_h265d = {
     .name = "h265d_parse",
     .coding = MPP_VIDEO_CodingHEVC,
     .ctx_size = sizeof(H265dContext_t),
@@ -2420,3 +2419,4 @@ const ParserApi api_h265d_parser = {
     .callback = h265d_callback,
 };
 
+MPP_PARSER_API_REGISTER(mpp_h265d);
