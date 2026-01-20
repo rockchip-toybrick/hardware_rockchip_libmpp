@@ -1623,7 +1623,8 @@ RK_S32 mpp_hevc_extract_rbsp(HEVCContext *s, const RK_U8 *src, int length,
 
 static RK_S32 split_nal_units(HEVCContext *s, RK_U8 *buf, RK_U32 length)
 {
-    RK_S32 i, consumed;
+    RK_U32 i;
+    RK_S32 consumed;
     RK_U32 total_consumed = 0;
     MPP_RET ret = MPP_OK;
     s->nb_nals = 0;
@@ -1653,7 +1654,7 @@ static RK_S32 split_nal_units(HEVCContext *s, RK_U8 *buf, RK_U32 length)
             if (buf[0] != 0 || buf[1] != 0 || buf[2] != 1) {
                 RK_U32 state = (RK_U32) - 1;
                 int has_nal = 0;
-                for (i = 0; i < (RK_S32)length; i++) {
+                for (i = 0; i < length; i++) {
                     state = (state << 8) | buf[i];
                     if (((state >> 8) & 0xFFFFFF) == START_CODE) {
                         has_nal = 1;
@@ -1748,7 +1749,7 @@ static RK_S32 split_nal_units(HEVCContext *s, RK_U8 *buf, RK_U32 length)
             for (i = 0; i < s->nal_length_size; i++)
                 next_nal_length = (next_nal_length << 8) | buf[i];
 
-            if (next_nal_length >= 3 && (RK_U32)(s->nal_length_size + next_nal_length) <= length) {
+            if (next_nal_length >= 3 && s->nal_length_size + next_nal_length <= length) {
                 const RK_U8 *next_nal_header = buf + s->nal_length_size;
                 RK_U8 next_nal_unit_type = (next_nal_header[0] >> 1) & 0x3F;
                 RK_U8 next_first_slice_flag = next_nal_header[2] >> 7;

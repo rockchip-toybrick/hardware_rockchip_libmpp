@@ -641,7 +641,7 @@ extern "C" {
 RK_S32  av1d_get_relative_dist(const AV1SeqHeader *seq, RK_U32 a, RK_U32 b);
 MPP_RET av1d_read_obu_header(BitReadCtx_t *gb, AV1OBUHeader *hdr);
 MPP_RET av1d_parser_fragment_header(Av1UnitFragment *frag);
-MPP_RET av1d_get_fragment_units(Av1Codec *ctx, Av1UnitFragment *frag);
+MPP_RET av1d_get_fragment_units(Av1UnitFragment *frag);
 MPP_RET av1d_read_fragment_uints(Av1Codec *ctx, Av1UnitFragment *frag);
 MPP_RET av1d_fragment_reset(Av1UnitFragment *frag);
 
